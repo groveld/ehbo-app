@@ -7,9 +7,10 @@ export const DEMO = {
   ehbo: '+31600000003',
   postLead: '+31600000004',
   postMember: '+31600000005',
+  mobileEhbo: '+31600000006',
 } as const;
 
-/** Vult een leeg evenement met een paar posten, een EHBO-eenheid en het kernteam. */
+/** Vult een leeg evenement met een paar posten, twee EHBO-eenheden en het kernteam. */
 export function seedDemo(db: EventDb) {
   const sql = db.raw;
   db.transaction(() => {
@@ -22,6 +23,7 @@ export function seedDemo(db: EventDb) {
     person.run(DEMO.ehbo, 'Eva EHBO');
     person.run(DEMO.postLead, 'Wim Water');
     person.run(DEMO.postMember, 'Vera Verkeer');
+    person.run(DEMO.mobileEhbo, 'Mo Mobiel');
     sql.prepare('INSERT INTO admins (phone) VALUES (?) ON CONFLICT(phone) DO NOTHING').run(DEMO.admin);
     sql.prepare('UPDATE core_team SET phone = ? WHERE is_coordinator = 1').run(DEMO.coordinator);
 
@@ -38,8 +40,11 @@ export function seedDemo(db: EventDb) {
     contact.run(traffic, DEMO.postMember, 'lid', null, null);
     contact.run(start, DEMO.coordinator, 'lid', null, null);
 
-    const unit = Number(sql.prepare("INSERT INTO ehbo_units (name, kind, post_id, has_aed, status) VALUES ('Team 1', 'vast', ?, 1, 'uit_dienst')").run(ehboPost).lastInsertRowid);
+    const unit = Number(sql.prepare("INSERT INTO ehbo_units (name, kind, post_id, has_aed) VALUES ('Team 1', 'vast', ?, 1)").run(ehboPost).lastInsertRowid);
     sql.prepare('INSERT INTO ehbo_unit_members (unit_id, phone) VALUES (?, ?)').run(unit, DEMO.ehbo);
+    // Mobiel, zonder AED, met standplaats bij Kruising 4: dichter bij de waterpost dan Team 1.
+    const mobile = Number(sql.prepare("INSERT INTO ehbo_units (name, kind, mobility, post_id, has_aed, sort) VALUES ('Team 2', 'mobiel', 'fiets', ?, 0, 1)").run(traffic).lastInsertRowid);
+    sql.prepare('INSERT INTO ehbo_unit_members (unit_id, phone) VALUES (?, ?)').run(mobile, DEMO.mobileEhbo);
 
     const run = sql.prepare('INSERT INTO runs (name, distance_km, discipline, date, start_time, sort) VALUES (?, ?, ?, ?, ?, ?)');
     run.run('Kidsrun', 1, 'lopen', '2026-12-31', '12:00', 0);

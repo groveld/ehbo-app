@@ -105,6 +105,10 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 16 | Vliegtuigmodus aan, app afsluiten en openen | Kaart, posten, contacten en postdetails werken; bellen en navigeren starten de telefoon-apps |
 | 17 | Postdetail › **Navigeer** | Navigatie-app opent met de route naar de post (te kiezen in Menu › Navigeren met) |
 | 18 | Beheer › Evenement › vierkant logo › **Vierkant logo kiezen** (PNG, minstens 512 × 512), korte naam invullen en opslaan; app verwijderen en opnieuw op het beginscherm zetten | Eigen icoon met de korte naam eronder; testmelding toont hetzelfde icoon |
+| 19 | Twee toestellen: één als postverantwoordelijke (Waterpost), één als EHBO (Team 1). EHBO › **Vrij**; post › **Post openen** › **EHBO** › versturen | EHBO-toestel krijgt binnen 5 s een oproep met alarm, ook met scherm uit; post ziet "We zoeken een EHBO'er" met aftellen |
+| 20 | EHBO › **Accepteren & navigeren** | Navigatie-app opent; post ziet "Hulp is onderweg" met naam en belknop; coördinator krijgt een kopie |
+| 21 | EHBO › **Ik ben ter plaatse** › **Incident afronden** | Post ziet "EHBO is er" en daarna "Klaar"; EHBO is weer vrij |
+| 22 | Nieuwe melding, EHBO reageert niet | Na 30 s gaat de oproep naar alle vrije eenheden, na 60 s krijgt de coördinator een alarm |
 
 Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
 
@@ -155,5 +159,16 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | POST | `/api/subscriptions` | medewerker | Abonnement opslaan `{ subscription }` |
 | DELETE | `/api/subscriptions` | medewerker | Abonnement verwijderen `{ endpoint }` |
 | POST | `/api/test-push` | medewerker | Testmelding naar je eigen toestel `{ endpoint, delaySeconds }` |
+| GET | `/api/live` | medewerker | Live stand (SSE): oproepen, eenheden en open/dicht van posten; bij elke wijziging een nieuw bericht, hartslag elke 30 s |
+| GET | `/api/live/state` | medewerker | Dezelfde stand in één antwoord |
+| POST | `/api/incidents` | post | EHBO-verzoek `{ postId, clientId, what, persons, responsive, note }`; dezelfde `clientId` telt één keer |
+| PUT | `/api/incidents/:id` | post | Melding aanvullen |
+| POST | `/api/incidents/:id/accept`, `/decline` | EHBO-eenheid | Accepteren of "kan niet" `{ unitId }` |
+| POST | `/api/incidents/:id/on-site`, `/close` | EHBO-eenheid | Ter plaatse; afronden `{ outcome, persons, note, stayHere }` |
+| POST | `/api/incidents/:id/withdraw` | post | Melding intrekken |
+| POST | `/api/incidents/:id/assign` | coördinator | Oproep toewijzen aan een eenheid `{ unitId }` |
+| PUT | `/api/units/:id/availability` | EHBO-eenheid | Vrij, even pauze of uit dienst |
+| PUT | `/api/units/:id/position` | EHBO-eenheid | Positie van een mobiele eenheid (alleen in het geheugen van de server) |
+| PUT | `/api/posts/:id/open` | postverantwoordelijke | Post open of dicht `{ open }` |
 
 Het nummer is in deze versie een identificatie, geen beveiliging (zie het functioneel ontwerp). Mislukte aanmeldpogingen worden per IP-adres afgeremd en elke aanmelding komt in het logboek.

@@ -4,7 +4,6 @@ import type { ApiError } from './index.ts';
 export type PostContactRole = 'verantwoordelijke' | 'lid' | 'reserve';
 export type UnitKind = 'vast' | 'mobiel';
 export type UnitMobility = 'te_voet' | 'fiets' | 'auto' | 'anders';
-export type UnitStatus = 'vrij' | 'bezet' | 'uit_dienst';
 
 export const POST_CONTACT_ROLE_LABEL: Record<PostContactRole, string> = {
   verantwoordelijke: 'Postverantwoordelijke',

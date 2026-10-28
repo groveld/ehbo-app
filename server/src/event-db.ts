@@ -160,6 +160,54 @@ const MIGRATIONS = [
     data BLOB NOT NULL
   );
   `,
+  // 5: EHBO-oproepen. De beschikbaarheid van een eenheid vervangt ehbo_units.status ("bezet" volgt uit een lopende oproep).
+  // Posities van eenheden staan alleen in het geheugen van de server, nooit in de database.
+  `
+  ALTER TABLE ehbo_units ADD COLUMN availability TEXT NOT NULL DEFAULT 'uit_dienst' CHECK (availability IN ('vrij', 'pauze', 'uit_dienst'));
+  ALTER TABLE ehbo_units ADD COLUMN stay_post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL;
+  CREATE TABLE incidents (
+    id              INTEGER PRIMARY KEY,
+    client_id       TEXT NOT NULL UNIQUE,
+    post_id         INTEGER NOT NULL REFERENCES posts(id),
+    reported_by     TEXT NOT NULL,
+    what            TEXT,
+    persons         TEXT,
+    responsive      TEXT,
+    note            TEXT,
+    aed             INTEGER NOT NULL DEFAULT 0,
+    status          TEXT NOT NULL CHECK (status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse', 'afgerond', 'ingetrokken')),
+    stage           TEXT NOT NULL CHECK (stage IN ('dichtstbij', 'alle')),
+    reported_at     TEXT NOT NULL,
+    sent_at         TEXT NOT NULL,
+    escalates_at    TEXT,
+    unit_id         INTEGER REFERENCES ehbo_units(id) ON DELETE SET NULL,
+    accepted_by     TEXT,
+    accepted_at     TEXT,
+    on_site_at      TEXT,
+    closed_at       TEXT,
+    outcome         TEXT,
+    outcome_persons TEXT,
+    outcome_note    TEXT
+  );
+  CREATE TABLE incident_dispatches (
+    incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
+    unit_id     INTEGER NOT NULL REFERENCES ehbo_units(id) ON DELETE CASCADE,
+    at          TEXT NOT NULL,
+    reason      TEXT NOT NULL CHECK (reason IN ('dichtstbij', 'aed', 'alle', 'handmatig')),
+    distance_km REAL,
+    declined_at TEXT,
+    accepted_at TEXT,
+    PRIMARY KEY (incident_id, unit_id)
+  );
+  CREATE TABLE incident_events (
+    id          INTEGER PRIMARY KEY,
+    incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
+    at          TEXT NOT NULL,
+    type        TEXT NOT NULL,
+    unit_id     INTEGER,
+    text        TEXT NOT NULL
+  );
+  `,
 ];
 
 export interface EventRow {
@@ -280,6 +328,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
       ON CONFLICT(endpoint) DO UPDATE SET phone = excluded.phone, p256dh = excluded.p256dh, auth = excluded.auth,
         user_agent = excluded.user_agent, last_seen_at = datetime('now')`),
     getSub: db.prepare('SELECT endpoint, phone, p256dh, auth FROM subscriptions WHERE endpoint = ?'),
+    subsForPhone: db.prepare('SELECT endpoint, phone, p256dh, auth FROM subscriptions WHERE phone = ?'),
     deleteSub: db.prepare('DELETE FROM subscriptions WHERE endpoint = ?'),
     markPush: db.prepare("UPDATE subscriptions SET last_push_at = datetime('now'), last_status = ? WHERE endpoint = ?"),
     countSubs: db.prepare('SELECT COUNT(*) AS n FROM subscriptions'),
@@ -323,6 +372,9 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
       const row = q.getSub.get(endpoint) as { endpoint: string; phone: string | null; p256dh: string; auth: string } | undefined;
       return row ? { endpoint: row.endpoint, phone: row.phone, keys: { p256dh: row.p256dh, auth: row.auth } } : undefined;
     },
+    /** Alle toestellen van één persoon. */
+    subscriptionsFor: (phone: string) => (q.subsForPhone.all(phone) as { endpoint: string; p256dh: string; auth: string }[])
+      .map((row) => ({ endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } })),
     deleteSubscription: (endpoint: string) => { q.deleteSub.run(endpoint); },
     markPush: (endpoint: string, status: number) => { q.markPush.run(status, endpoint); },
     countSubscriptions: () => (q.countSubs.get() as { n: number }).n,

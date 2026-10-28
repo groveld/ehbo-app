@@ -4,7 +4,6 @@ import {
   TEST_PUSH_MAX_DELAY,
   type ApiError,
   type PushPayload,
-  type PushSubscriptionData,
   type SubscribeRequest,
   type TestPushRequest,
   type TestPushResponse,
@@ -12,7 +11,7 @@ import {
 } from '@ehbo/shared';
 import { requireMe } from '../auth.ts';
 import type { EventDb } from '../event-db.ts';
-import { sendPush, type Vapid } from '../webpush.ts';
+import type { Notifier } from '../notify.ts';
 
 const subscriptionSchema = {
   type: 'object',
@@ -29,12 +28,12 @@ const subscriptionSchema = {
 
 export interface PushRouteOptions {
   db: EventDb;
-  vapid: Vapid;
+  notifier: Notifier;
   /** Alleen voor tests: push-endpoints via http toestaan. */
   allowInsecureEndpoints: boolean;
 }
 
-export async function pushRoutes(app: FastifyInstance, { db, vapid, allowInsecureEndpoints }: PushRouteOptions) {
+export async function pushRoutes(app: FastifyInstance, { db, notifier, allowInsecureEndpoints }: PushRouteOptions) {
   const lastTestPush = new Map<string, number>();
   const pendingPushes = new Set<NodeJS.Timeout>();
   const endpointPattern = allowInsecureEndpoints ? /^https?:\/\// : /^https:\/\//;
@@ -43,13 +42,7 @@ export async function pushRoutes(app: FastifyInstance, { db, vapid, allowInsecur
     for (const timer of pendingPushes) clearTimeout(timer);
   });
 
-  async function pushTo(subscription: PushSubscriptionData, payload: PushPayload) {
-    const result = await sendPush(subscription, payload, vapid, { ttl: 120, urgency: 'high' });
-    db.markPush(subscription.endpoint, result.status);
-    if (result.gone) db.deleteSubscription(subscription.endpoint);
-    app.log.info({ status: result.status, host: new URL(subscription.endpoint).host, detail: result.ok ? undefined : result.body }, 'push');
-    return result;
-  }
+  const { pushTo } = notifier;
 
   app.post<{ Body: SubscribeRequest }>('/api/subscriptions', {
     preHandler: requireMe,

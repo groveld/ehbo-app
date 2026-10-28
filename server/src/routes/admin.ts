@@ -23,6 +23,7 @@ import {
 } from '@ehbo/shared';
 import { adminDb } from '../admin-db.ts';
 import { BRAND_IMAGES, ICON_IMAGES, LOGO_MAX_SIDE, pngSize, setBrandImages } from '../brand.ts';
+import type { Calls } from '../calls.ts';
 import { requireAdmin } from '../auth.ts';
 import type { EventDb } from '../event-db.ts';
 import { parseGpx } from '../gpx.ts';
@@ -144,13 +145,16 @@ const unitSchema = {
   },
 } as const;
 
-export async function adminRoutes(app: FastifyInstance, { db }: { db: EventDb }) {
+export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: EventDb; calls: Calls }) {
   const admin = adminDb(db);
 
   app.addHook('preHandler', requireAdmin);
   // Na elke geslaagde wijziging een nieuwe versie van het evenementpakket.
   app.addHook('onResponse', async (request, reply) => {
-    if (request.method !== 'GET' && reply.statusCode < 300) db.bumpVersion();
+    if (request.method === 'GET' || reply.statusCode >= 300) return;
+    db.bumpVersion();
+    // Eenheden of posten kunnen veranderd zijn: de live stand opnieuw naar iedereen.
+    calls.changed();
   });
 
   // GPX-bestanden komen binnen als tekst, los van de JSON-limiet van 16 kB.

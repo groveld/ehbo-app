@@ -35,3 +35,8 @@ export function nearestUnit(pkg: EventPackage, post: PackagePost): { unit: Packa
   }
   return best;
 }
+
+/** De evenementcoördinator uit het kernteam (alleen in het pakket van medewerkers). */
+export const coordinatorOf = (pkg: EventPackage | null) => pkg?.coreTeam.find((c) => c.isCoordinator) ?? null;
+/** Kernteamlid met deze functie, bijv. "EHBO-coördinator". */
+export const coreTeamMember = (pkg: EventPackage | null, fn: string) => pkg?.coreTeam.find((c) => c.function.toLowerCase() === fn.toLowerCase()) ?? null;
