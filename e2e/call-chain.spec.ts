@@ -147,3 +147,29 @@ test('rapport: cijfers, CSV, afdrukpagina en de testmodus', async ({ browser }) 
   await admin.getByRole('switch', { name: 'Testmodus' }).click();
   await expect(admin.getByText('Testmodus · oproepen zijn proef')).toBeHidden({ timeout: 10_000 });
 });
+
+test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ browser }) => {
+  const admin = await staffPhone(browser, PHONE.admin);
+  await admin.goto('/beheer/info');
+  await admin.getByLabel('Contact voor vragen ({contact})').fill('Bea, beheer@example.org');
+  await admin.getByLabel('Kop van onderdeel 1').fill('Over {evenement}');
+  await admin.getByRole('button', { name: 'Opslaan' }).click();
+  await expect(admin.getByText('Opgeslagen.')).toBeVisible();
+  await admin.getByRole('link', { name: 'Bekijk de info-pagina' }).click();
+  await expect(admin.getByText('Over Silvesterloop 2026')).toBeVisible();
+  await expect(admin.getByText(/Bea, beheer@example\.org/)).toBeVisible();
+
+  await admin.goto('/overzicht/posten');
+  await admin.getByRole('link', { name: /Kruising 4/ }).first().click();
+  await expect(admin.getByText('Post is dicht')).toBeVisible();
+  await admin.getByRole('switch', { name: 'Post open' }).click();
+  await expect(admin.getByText('Post is open')).toBeVisible();
+  await admin.getByRole('switch', { name: 'Post open' }).click();
+  await expect(admin.getByText('Post is dicht')).toBeVisible();
+
+  // Terug naar de standaardtekst, zodat een volgende ronde hetzelfde begint.
+  await admin.goto('/beheer/info');
+  admin.once('dialog', (dialog) => void dialog.accept());
+  await admin.getByRole('button', { name: 'Terug naar de standaardtekst' }).click();
+  await expect(admin.getByText('Opgeslagen.')).toBeVisible();
+});

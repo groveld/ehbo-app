@@ -1,5 +1,5 @@
 // Beheer: vorm van de gegevens die het beheerscherm leest en opslaat.
-import type { Brand, EventStyle, PostContactRole, UnitKind, UnitMobility } from './event.ts';
+import type { Brand, EventStyle, InfoSection, PostContactRole, UnitKind, UnitMobility } from './event.ts';
 import type { UnitAvailability } from './incident.ts';
 
 /** Datum als jjjj-mm-dd, tijd als uu:mm. */
@@ -123,7 +123,20 @@ export interface AdminState {
   brand: Brand;
   /** Testmodus aan: oproepen en aanvragen zijn proef en komen niet in het rapport. */
   testMode: boolean;
+  info: InfoSettings;
 }
+
+/** Info & voorwaarden (2.6). In de teksten vult de app {evenement}, {beleid} en {contact} in. */
+export interface InfoSettings {
+  /** null = de standaardtekst. */
+  sections: InfoSection[] | null;
+  /** Waar het verwijderplan staat, bijv. "het verwijderplan van Stichting Silvesterloop". */
+  policy: string | null;
+  /** Voor vragen, bijv. een naam en e-mailadres. */
+  contact: string | null;
+}
+
+export const INFO_SECTIONS_MAX = 12;
 
 /** Grootste afbeelding die de server aanneemt, in base64-tekens (ongeveer 1,1 MB). */
 export const IMAGE_MAX_BASE64 = 1_500_000;

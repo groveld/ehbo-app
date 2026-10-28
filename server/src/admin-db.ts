@@ -9,6 +9,8 @@ import type {
   CoreTeamEntry,
   EmergencyNumber,
   EventSettings,
+  InfoSection,
+  InfoSettings,
   PostData,
   PostTypeInfo,
   RunData,
@@ -111,7 +113,18 @@ export function adminDb(events: EventDb) {
     const admins: AdminPerson[] = all('SELECT a.phone, p.name FROM admins a JOIN people p ON p.phone = a.phone ORDER BY p.name, a.phone')
       .map((a) => ({ phone: a.phone as string, name: a.name as string }));
 
-    return { event, runs, postTypes, posts, units, coreTeam, emergencyNumbers, admins, brand: getBrand(events), testMode: events.testMode() };
+    return { event, runs, postTypes, posts, units, coreTeam, emergencyNumbers, admins, brand: getBrand(events), testMode: events.testMode(), info: getInfo() };
+  }
+
+  function getInfo(): InfoSettings {
+    const e = events.getEvent();
+    return { sections: e.info_json ? JSON.parse(e.info_json) as InfoSection[] : null, policy: e.info_policy, contact: e.info_contact };
+  }
+
+  function saveInfo(info: InfoSettings) {
+    const sections = info.sections?.map((s) => ({ title: s.title.trim(), body: s.body.trim() })).filter((s) => s.title || s.body);
+    run('UPDATE event SET info_json = ?, info_policy = ?, info_contact = ? WHERE id = 1',
+      sections?.length ? JSON.stringify(sections) : null, info.policy?.trim() || null, info.contact?.trim() || null);
   }
 
   function saveEvent(e: EventSettings) {
@@ -204,6 +217,7 @@ export function adminDb(events: EventDb) {
   return {
     getState,
     saveEvent,
+    saveInfo,
     saveRun,
     setRunGpx,
     deleteRun: (id: number) => run('DELETE FROM runs WHERE id = ?', id).changes > 0,

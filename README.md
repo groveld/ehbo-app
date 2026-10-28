@@ -4,7 +4,7 @@ App voor de EHBO-coördinatie bij evenementen. Wat er werkt:
 
 1. **Installeren** als app op het beginscherm (iPhone en Android).
 2. **Aanmelden** met je telefoonnummer: de app zoekt zelf je functie en post op. Eenmalig info & voorwaarden, daarna meldingen en locatie aanzetten met een testmelding.
-3. **Beheer** (alleen beheerders): evenement en lopen met GPX, stijl (groot logo, vierkant logo als app-icoon, kleuren, korte naam), posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
+3. **Beheer** (alleen beheerders): evenement en lopen met GPX, info & voorwaarden, stijl (groot logo, vierkant logo als app-icoon, kleuren, korte naam), posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
 4. **Overzicht** voor medewerkers: kaart met alle posten, filter per soort, lijsten met bel- en navigeerknop, alle contacten, en per post de aanrijroute en de dichtstbijzijnde EHBO. Open oproepen staan rood bovenaan.
 5. **EHBO-oproepen**: de post zet zijn post open en vraagt EHBO aan; de dichtstbijzijnde vrije eenheid krijgt een alarm, na 30 s alle vrije eenheden. Accepteren, ter plaatse, afronden; de evenementcoördinator kijkt mee en kan zelf een eenheid inzetten.
 6. **Aanvragen** voor water, verkeer en vrijwilligers: in de wachtrij van de evenementcoördinator, die ze oppakt en afhandelt.
@@ -13,7 +13,6 @@ App voor de EHBO-coördinatie bij evenementen. Wat er werkt:
 
 9. **Rapport** voor de beheerder: kerncijfers en alle incidenten, als PDF en CSV. Een testmodus houdt proefoproepen buiten het rapport.
 
-Nog in aanbouw: de info-pagina aanpassen in het beheer.
 
 Gebouwd op de gekozen stack: TypeScript, een Fastify-server en een Vue 3-app (Vite, Pinia) in één container. De database is SQLite via de ingebouwde `node:sqlite`. De push-versleuteling (VAPID en aes128gcm) is eigen code, getest tegen de officiële testvector uit RFC 8291.
 
@@ -142,6 +141,7 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 24 | Post › **Water** › **Bijna op**; coördinator › Overzicht › **Verzoeken** › **Oppakken** › **Afgehandeld** | Post ziet plek in de wachtrij, daarna "wordt geregeld" en "afgehandeld", elk met een melding |
 | 25 | Beheer › **Rapport en testmodus** › Testmodus aan; proefoproep doen | Op elk scherm de balk "Testmodus"; meldingen beginnen met "Test"; de proefoproep staat niet in het rapport || 26 | Rapport › **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en alle incidenten; CSV opent met kolommen en goede tekens |
 | 26 | Rapport › **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en alle incidenten; CSV opent met kolommen en goede tekens |
+| 27 | Beheer › **Info & voorwaarden** › tekst aanpassen en opslaan; op een ander toestel Info openen | De nieuwe tekst, met de naam van het evenement en het contact ingevuld |
 
 Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
 
@@ -209,5 +209,6 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | GET | `/api/admin/report`, `/api/admin/report.csv` | beheerder | Rapport als JSON (scherm en afdrukpagina) of als CSV-download |
 | PUT | `/api/admin/test-mode` | beheerder | Testmodus aan of uit `{ on }` |
 | DELETE | `/api/admin/test-data` | beheerder | Proefoproepen en -aanvragen wissen |
+| PUT | `/api/admin/info` | beheerder | Info & voorwaarden `{ sections, policy, contact }`; `sections: null` = standaardtekst |
 
 Het nummer is in deze versie een identificatie, geen beveiliging (zie het functioneel ontwerp). Mislukte aanmeldpogingen worden per IP-adres afgeremd en elke aanmelding komt in het logboek.

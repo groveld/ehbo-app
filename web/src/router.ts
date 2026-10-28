@@ -63,6 +63,7 @@ export const router = createRouter({
     { path: '/deelnemer', name: 'deelnemer', component: () => import('./views/DeelnemerView.vue') },
     { path: '/beheer', name: 'beheer', component: () => import('./views/admin/BeheerView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/evenement', name: 'beheer-evenement', component: () => import('./views/admin/EvenementView.vue'), meta: { staff: true, admin: true } },
+    { path: '/beheer/info', name: 'beheer-info', component: () => import('./views/admin/InfoBeheerView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/rapport', name: 'beheer-rapport', component: () => import('./views/admin/RapportView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/rapport/afdrukken', name: 'beheer-rapport-afdrukken', component: () => import('./views/admin/RapportAfdrukView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/app-icoon', name: 'beheer-app-icoon', component: () => import('./views/admin/AppIcoonView.vue'), meta: { staff: true, admin: true } },
