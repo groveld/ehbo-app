@@ -1,8 +1,23 @@
 // Service worker: offline basis en pushmeldingen.
-const VERSION = '__APP_VERSION__';
-const CACHE = `ehbo-app-${VERSION}`;
-const SHELL = ['/', '/index.html', '/style.css', '/app.js', '/manifest.webmanifest',
-  '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-72.png'];
+import type { AppInfo, PushPayload } from '@ehbo/shared';
+
+declare let self: ServiceWorkerGlobalScope;
+// Ingevuld door de Vite-plugin in vite.config.ts.
+declare const __PRECACHE__: string[];
+declare const __BUILD_ID__: string;
+
+const BUILD_ID = __BUILD_ID__;
+/** Bij npm run dev levert Vite alles vers; de cache zou dan oude code tonen. */
+const DEV = BUILD_ID === 'dev';
+const CACHE = `ehbo-app-${BUILD_ID}`;
+const SHELL = [
+  ...__PRECACHE__,
+  '/manifest.webmanifest',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/badge-72.png',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -17,28 +32,33 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
+  if (DEV || event.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
   if (event.request.mode === 'navigate') {
     // Pagina: eerst netwerk, zonder bereik de bewaarde versie.
-    event.respondWith(fetch(event.request).catch(() => caches.match('/index.html')));
+    event.respondWith(fetch(event.request).catch(async () => (await caches.match('/index.html')) ?? Response.error()));
     return;
   }
   // Overige bestanden: direct uit de cache, op de achtergrond verversen.
   event.respondWith((async () => {
     const cached = await caches.match(event.request, { ignoreSearch: true });
     const network = fetch(event.request).then(async (res) => {
-      if (res.ok) (await caches.open(CACHE)).put(event.request, res.clone());
+      if (res.ok) await (await caches.open(CACHE)).put(event.request, res.clone());
       return res;
-    }).catch(() => cached);
+    }).catch(() => cached ?? Response.error());
     return cached ?? network;
   })());
 });
 
 self.addEventListener('push', (event) => {
-  let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data?.text() }; }
+  let data: Partial<PushPayload> = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data?.text() };
+  }
   const title = data.title || 'EHBO-app';
-  const options = {
+  // vibrate en renotify ontbreken nog in de TypeScript-typen, maar Android gebruikt ze wel.
+  const options: NotificationOptions & { vibrate: number[]; renotify: boolean; timestamp: number } = {
     body: data.body || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/badge-72.png',
@@ -60,18 +80,26 @@ self.addEventListener('notificationclick', (event) => {
   const target = new URL(event.notification.data?.url || '/', location.origin).href;
   event.waitUntil((async () => {
     for (const client of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) {
-      if ('focus' in client) { await client.focus(); if ('navigate' in client) client.navigate(target).catch(() => {}); return; }
+      if ('focus' in client) {
+        await client.focus();
+        if ('navigate' in client) await client.navigate(target).catch(() => {});
+        return;
+      }
     }
     await self.clients.openWindow(target);
   })());
 });
 
+function b64urlToUint8(b64: string) {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  return Uint8Array.from(atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+}
+
 // Als de browser het abonnement vernieuwt, geven we het nieuwe direct aan de server door.
 self.addEventListener('pushsubscriptionchange', (event) => {
-  event.waitUntil((async () => {
-    const info = await fetch('/api/info').then((r) => r.json());
-    const key = Uint8Array.from(atob(info.vapidPublicKey.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - info.vapidPublicKey.length % 4) % 4)), (c) => c.charCodeAt(0));
-    const sub = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+  (event as ExtendableEvent).waitUntil((async () => {
+    const info: AppInfo = await fetch('/api/info').then((r) => r.json());
+    const sub = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64urlToUint8(info.vapidPublicKey) });
     await fetch('/api/subscriptions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON() }) });
   })());
 });

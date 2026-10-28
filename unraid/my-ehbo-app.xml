@@ -11,9 +11,9 @@
   <Privileged>false</Privileged>
   <Overview>EHBO Evenementen-app: posten, contacten en EHBO-oproepen met pushmeldingen.</Overview>
   <Category>Tools:</Category>
-  <WebUI>http://[IP]:[PORT:8080]/?browser=1</WebUI>
+  <WebUI>http://[IP]:[PORT:3000]/?browser=1</WebUI>
   <ExtraParams>--user 99:100 --restart unless-stopped</ExtraParams>
-  <Config Name="Webpoort" Target="8080" Default="8080" Mode="tcp" Description="Hier wijst de Cloudflare-tunnel naar." Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Webpoort" Target="3000" Default="3080" Mode="tcp" Description="Voor toegang vanaf je thuisnetwerk. De Cloudflare-tunnel wijst via het Docker-netwerk naar ehbo-app:3000." Type="Port" Display="always" Required="false" Mask="false">3080</Config>
   <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/ehbo-app" Mode="rw" Description="Database en VAPID-sleutels. Maak hier back-ups van." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/ehbo-app</Config>
   <Config Name="VAPID_SUBJECT" Target="VAPID_SUBJECT" Default="mailto:beheer@jouwdomein.nl" Mode="" Description="Contactadres voor de push-diensten van Apple en Google (mailto:... of https://...)." Type="Variable" Display="always" Required="true" Mask="false">mailto:beheer@jouwdomein.nl</Config>
   <Config Name="TZ" Target="TZ" Default="Europe/Amsterdam" Mode="" Description="Tijdzone" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Amsterdam</Config>

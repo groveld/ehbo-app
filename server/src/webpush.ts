@@ -1,19 +1,37 @@
 // Web Push zonder externe pakketten: VAPID (RFC 8292) en aes128gcm-versleuteling (RFC 8291 / RFC 8188).
 import crypto from 'node:crypto';
+import type { PushSubscriptionData } from '@ehbo/shared';
+
+export interface VapidKeys {
+  publicKey: string;
+  privateKey: string;
+}
+
+export interface Vapid extends VapidKeys {
+  subject: string;
+}
+
+export interface PushResult {
+  ok: boolean;
+  status: number;
+  /** Abonnement bestaat niet meer en moet weg. */
+  gone: boolean;
+  body: string;
+}
 
 export const b64url = {
-  encode: (buf) => Buffer.from(buf).toString('base64url'),
-  decode: (str) => Buffer.from(str, 'base64url'),
+  encode: (buf: Uint8Array | string) => Buffer.from(buf).toString('base64url'),
+  decode: (str: string) => Buffer.from(str, 'base64url'),
 };
 
 /** Nieuwe VAPID-sleutels (P-256). publicKey = 65 bytes ongecomprimeerd, privateKey = 32 bytes, beide base64url. */
-export function generateVapidKeys() {
+export function generateVapidKeys(): VapidKeys {
   const ecdh = crypto.createECDH('prime256v1');
   ecdh.generateKeys();
   return { publicKey: b64url.encode(ecdh.getPublicKey()), privateKey: b64url.encode(ecdh.getPrivateKey()) };
 }
 
-function privateKeyObject(publicKeyB64, privateKeyB64) {
+function privateKeyObject(publicKeyB64: string, privateKeyB64: string) {
   const pub = b64url.decode(publicKeyB64);
   if (pub.length !== 65 || pub[0] !== 0x04) throw new Error('VAPID public key moet 65 bytes ongecomprimeerd zijn');
   return crypto.createPrivateKey({
@@ -23,7 +41,7 @@ function privateKeyObject(publicKeyB64, privateKeyB64) {
 }
 
 /** Maakt de Authorization-header voor een push-endpoint. */
-export function vapidAuthorization(endpoint, { publicKey, privateKey, subject }, expiresInSeconds = 12 * 3600) {
+export function vapidAuthorization(endpoint: string, { publicKey, privateKey, subject }: Vapid, expiresInSeconds = 12 * 3600) {
   const aud = new URL(endpoint).origin;
   const header = b64url.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
   const payload = b64url.encode(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + expiresInSeconds, sub: subject }));
@@ -32,13 +50,17 @@ export function vapidAuthorization(endpoint, { publicKey, privateKey, subject },
   return `vapid t=${data}.${b64url.encode(signature)}, k=${publicKey}`;
 }
 
-const hmac = (key, data) => crypto.createHmac('sha256', key).update(data).digest();
+const hmac = (key: crypto.BinaryLike, data: crypto.BinaryLike) => crypto.createHmac('sha256', key).update(data).digest();
 
 /**
  * Versleutelt een bericht voor één abonnement (één record, aes128gcm).
  * `asKeys` en `salt` zijn alleen bedoeld voor tests met vaste waarden.
  */
-export function encryptPayload(plaintext, { p256dh, auth }, { asKeys, salt } = {}) {
+export function encryptPayload(
+  plaintext: string,
+  { p256dh, auth }: PushSubscriptionData['keys'],
+  { asKeys, salt }: { asKeys?: { privateKey: string }; salt?: string } = {},
+) {
   const uaPublic = b64url.decode(p256dh);
   const authSecret = b64url.decode(auth);
   if (uaPublic.length !== 65) throw new Error('p256dh moet 65 bytes zijn');
@@ -74,13 +96,15 @@ export function encryptPayload(plaintext, { p256dh, auth }, { asKeys, salt } = {
   return Buffer.concat([header, asPublic, ciphertext]);
 }
 
-/**
- * Stuurt een pushbericht. Geeft { ok, status, gone, body } terug.
- * gone = true betekent: abonnement bestaat niet meer, verwijderen.
- */
-export async function sendPush(subscription, payload, vapid, { ttl = 60, urgency = 'high', topic } = {}) {
+/** Stuurt een pushbericht naar de push-dienst van het abonnement. */
+export async function sendPush(
+  subscription: PushSubscriptionData,
+  payload: string | object,
+  vapid: Vapid,
+  { ttl = 60, urgency = 'high', topic }: { ttl?: number; urgency?: 'very-low' | 'low' | 'normal' | 'high'; topic?: string } = {},
+): Promise<PushResult> {
   const body = encryptPayload(typeof payload === 'string' ? payload : JSON.stringify(payload), subscription.keys);
-  const headers = {
+  const headers: Record<string, string> = {
     TTL: String(ttl),
     Urgency: urgency,
     'Content-Encoding': 'aes128gcm',

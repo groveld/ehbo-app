@@ -21,35 +21,39 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 | `docs/functioneel-ontwerp.md` | Full functional design and **all decisions**. The source of truth; update it when a decision changes. |
 | `docs/design/index.html` | Gallery of all 31 screens in process order. `docs/design/screens/*.html` are the per-screen references to build from. |
 | `docs/design/source/` | Original design canvas, for re-import into Claude. Don't edit by hand. |
-| `src/`, `public/`, `test/` | **Current test version** (phase 1): install check + Web Push, zero dependencies. |
+| `server/` | Fastify server (TypeScript, run directly by Node). `src/app.ts` routes, `src/db.ts` data-access layer, `src/webpush.ts` our own Web Push. Tests in `test/`. |
+| `web/` | Vue 3 + Vite + Pinia app. `src/sw.ts` is the service worker, built as `/sw.js` by the plugin in `vite.config.ts`. Icons and manifest in `public/`. |
+| `shared/` | Types and fixed lists used by both server and web (`@ehbo/shared`). |
 | `.github/workflows/build.yml` | Test → build → smoke test → push to GHCR → clean old images. |
 | `unraid/`, `docker-compose.yml` | Deployment. |
 
 ## Status (28 Oct 2026)
 
 - Design finished; no open questions.
-- Phase 1 (test version) is live at https://silvesterloop.groveld.com. Install and push work on Windows and iPhone. Android is not tested yet.
-- Known deployment issue, parked by the owner: the Unraid template maps `/config` and port 5000, but the app uses `/data` and 8080. Data and VAPID keys are lost on update until this is fixed. Fix the template (`/data`, `--user 99:100`, chown appdata), or make the image follow PUID/PGID//config.
-- Next: phase 2 in the work plan, "Basis en beheer". Migrate to the chosen stack below.
+- Phase 1 (test version: install check + Web Push) is live at https://silvesterloop.groveld.com. Install and push work on Windows and iPhone. Android is not tested yet.
+- The test version now runs on the chosen stack below (branch `feat/production-stack`). Verified locally in Edge, in both production and dev mode: service worker, subscribe, real push via WNS, offline reload.
+- The Unraid container now uses `/data`, `--user 99:100` and port 3000, so data and VAPID keys survive updates.
+- Next: phase 2 in the work plan, "Basis en beheer".
 
 ## Chosen stack (decided 28 Oct 2026)
 
 - **TypeScript** everywhere. Monorepo layout `server/`, `web/`, `shared/` (shared types and fixed lists).
 - **web:** Vue 3, Vite and Pinia. Own service worker for the offline shell and event package. MapLibre GL with OSM vector tiles as **PMTiles**, served from our own server and cached offline.
-- **server:** Node 22 and Fastify, in one container. It holds the API, call logic, escalation timers and report. **SQLite with one file per event**, WAL mode, behind a single data-access layer so Postgres stays possible.
+- **server:** Node 22.18+ and Fastify 5, in one container. Node runs the `.ts` files directly (type stripping), so there is no server build step: use only erasable syntax (no enums, namespaces or parameter properties) and import with `.ts` extensions. `tsconfig.base.json` enforces this. It holds the API, call logic, escalation timers and report. **SQLite with one file per event**, WAL mode, behind a single data-access layer so Postgres stays possible.
 - **Live updates:** Server-Sent Events with a heartbeat every 30 s. Cloudflare drops idle connections after 100 s.
-- **Push:** our own Web Push module (VAPID ES256 and aes128gcm), already in `src/webpush.js` and tested against the RFC 8291 vector. Reuse it; don't add `web-push`.
+- **Push:** our own Web Push module (VAPID ES256 and aes128gcm) in `server/src/webpush.ts`, tested against the RFC 8291 vector. Reuse it; don't add `web-push`.
+- **Service worker:** our own, no Workbox. In dev (`BUILD_ID === 'dev'`) it handles push but not fetches, so Vite always serves fresh code.
+- **TypeScript 6**, not 7: vue-tsc still needs the JavaScript-based compiler.
 - **Tests:** `node:test` for units, Playwright end-to-end in CI for the call chain (login → request → call → close).
 - **Report:** CSV, plus a print-friendly page saved as PDF.
 
-The test version has zero npm dependencies only because the sandbox it was built in had no registry access. The real build may use npm normally.
 
 ## Infrastructure
 
 - Image `ghcr.io/groveld/ehbo-app:latest`, built on every push to `main`. Tags `v*` also produce semver tags.
-- Unraid with Docker on network `proxynet`, container `ehbo-app`, port 8080. Appdata `/mnt/user/appdata/ehbo-app` maps to `/data`, which holds the DB and VAPID keys, so back it up. Unraid auto-updates nightly.
+- Unraid with Docker on network `proxynet`, container `ehbo-app`. The app listens on **3000** inside the container; host port 3080 is only for LAN access. Appdata `/mnt/user/appdata/ehbo-app` maps to `/data`, which holds the DB and VAPID keys, so back it up. Unraid auto-updates nightly.
 - **From week 52, freeze the image** (pin `:sha-…` or a version, or turn off auto-update), so nothing ships unnoticed on 31 Dec.
-- Reachable only via Cloudflare Tunnel: `silvesterloop.groveld.com` → `http://ehbo-app:8080`. All caching is off for the hostname. No Cloudflare Access (it breaks install and push). Rocket Loader is off.
+- Reachable only via Cloudflare Tunnel: `silvesterloop.groveld.com` → `http://ehbo-app:3000`. All caching is off for the hostname. No Cloudflare Access (it breaks install and push). Rocket Loader is off.
 - The server needs outbound HTTPS to the push services (Apple, FCM, Mozilla).
 
 ## Design rules (keep screens consistent)
@@ -85,19 +89,25 @@ The test version has zero npm dependencies only because the sandbox it was built
 - **No signal:** maps, contacts, calling and navigating all work offline. The help button falls back to calling the nearest EHBO unit and the coordinator directly.
 - **Privacy:** no casualty names or medical details are stored. Positions are not stored.
 
-## Commands (test version)
+## Commands
+
+npm workspaces: `shared`, `server`, `web`.
 
 ```sh
-npm test       # node --test, includes the RFC 8291 vector
-npm run dev    # http://localhost:8080, data in ./data
-npm run icons  # regenerate icons (Python + Pillow)
+npm run dev        # Vite on http://localhost:3080, proxies /api to the server on 3000; data in ./data
+npm test           # node --test in server/, includes the RFC 8291 vector
+npm run typecheck  # tsc for shared and server, vue-tsc + tsc for web
+npm run build      # web/dist
+npm start          # production mode: server on 3000 serving web/dist
+npm run icons      # regenerate icons into web/public/icons (Python + Pillow)
 ```
 
-Requires Node ≥ 22.13 (`node:sqlite`). For browser testing without installing, open `/?browser=1`.
+Requires Node ≥ 22.18 (type stripping, `node:sqlite`). For browser testing without installing, open `/?browser=1`. Offline behaviour can only be tested with `build` + `start`.
 
 ## Conventions
 
 - GitHub Actions follow the owner's existing workflow style (pinned action versions, GHCR, cleanup keeping 5 untagged). Dependabot updates actions and the Docker base image weekly.
 - Keep `README.md` (Dutch, operator-facing: setup, Unraid, Cloudflare, phone test list) up to date when deployment changes.
 - When a decision changes, update the **Besluiten** table in `docs/functioneel-ontwerp.md` in the same commit.
-- Small, focused commits. Tests must pass, and CI runs a container smoke test before publishing.
+- Small, focused commits. Type check and tests must pass, and CI runs a container smoke test before publishing.
+- Web app packages are `devDependencies` of `web/` (they're bundled at build time), so the runtime image only installs the server's dependencies.

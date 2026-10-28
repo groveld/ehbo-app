@@ -181,7 +181,7 @@ Eén Docker Compose-stack op je eigen server, met een webapp (PWA) op een subdom
 flowchart LR
     T[Telefoon / PWA] -- https --> CF[Cloudflare]
     CF -- tunnel --> CD[cloudflared]
-    CD -- http --> A["ehbo-app:8080<br/>(Docker op Unraid)"]
+    CD -- http --> A["ehbo-app:3000<br/>(Docker op Unraid)"]
     A --- DB[(SQLite per evenement<br/>/data)]
     A -- uitgaand --> PD[Push-diensten<br/>Apple / Google]
     PD -- melding --> T
@@ -327,6 +327,15 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Handleiding | Wij maken de inhoud; verspreiden en de deadline liggen bij de evenementcoördinator |
 | Database | SQLite, één bestand per evenement; stack: TypeScript, Vue 3 + Vite, Fastify, SSE, MapLibre + PMTiles, eigen Web Push-module |
 | Aanmelden | Telefoonnummer; sms-code als latere uitbreiding |
+
+**Besloten tijdens de bouw**
+
+| Punt | Besluit |
+| --- | --- |
+| Poort (28 okt) | De app luistert in de container op 3000; de tunnel wijst via het Docker-netwerk naar `ehbo-app:3000`. Lokaal en op het thuisnetwerk: 3080 |
+| Server zonder compileerstap (28 okt) | Node draait de TypeScript van de server direct (type stripping, Node 22.18+). Daardoor alleen 'wegstreepbare' TypeScript: geen enums, namespaces of parameter properties |
+| TypeScript 6 (28 okt) | Nog niet TypeScript 7: vue-tsc (typecontrole van de Vue-bestanden) werkt nog op de JavaScript-versie van TypeScript |
+| Service worker (28 okt) | Eigen `web/src/sw.ts`, door een kleine Vite-plugin gebouwd als `/sw.js` met de lijst van te bewaren bestanden; geen Workbox |
 
 **Nog open**
 
