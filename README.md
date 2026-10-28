@@ -8,6 +8,8 @@ Eerste, kleine versie van de app. Hij doet nog niets inhoudelijks, maar controle
 
 Geen externe npm-pakketten: alleen Node 22 met ingebouwde modules (`node:http`, `node:sqlite`, `node:crypto`). De push-versleuteling (VAPID en aes128gcm) is getest tegen de officiële testvector uit RFC 8291.
 
+**Ontwerp en besluiten:** zie [`docs/`](docs/README.md): functioneel ontwerp, alle schermen en het gekozen stack. Context voor Claude Code staat in [`CLAUDE.md`](CLAUDE.md).
+
 ## Overzicht
 
 ```

@@ -1,0 +1,13 @@
+{
+  "editor.formatOnSave": true,
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "search.exclude": {
+    "data/**": true,
+    "docs/design/source/**": true
+  },
+  "files.associations": {
+    "*.dc.html": "html"
+  }
+}

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wat heb je nodig</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A5C3B}a:hover{color:#06402A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F5F1; color: #16181D; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+  <header style="padding: 20px 16px 8px 20px; display: flex; align-items: flex-start; gap: 12px;">
+    <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1;">
+      <span style="font-size: 12px; color: #555A63;">Postverantwoordelijke · [Naam]</span>
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Waterpost 3 · brug</h1>
+      <span style="font-size: 13px; color: #555A63;">km 21,1 · <strong style="color: #0A5C3B;">post open</strong> sinds 09:12</span>
+    </div>
+    <button style="flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #EDB9B4; background: #FDF1F0; color: #A61F18; font: 600 13px 'IBM Plex Sans', sans-serif; display: flex; align-items: center; gap: 6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>Post sluiten</button>
+  </header>
+
+  <div style="padding: 14px 16px 0; display: flex; flex-direction: column; gap: 10px;">
+    <span style="font-size: 16px; font-weight: 700; padding-left: 4px;">Wat heb je nodig?</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+      <a href="EhboVerzoek.dc.html" style="height: 128px; border-radius: 18px; background: #FBE3E1; border: 2px solid #C8261E; color: #16181D; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; box-sizing: border-box; text-decoration: none;">
+        <span style="width: 44px; height: 44px; border-radius: 12px; background: #C8261E; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 18 18" aria-hidden="true"><path d="M6 0h6v6h6v6h-6v6H6v-6H0V6h6z" fill="#FFFFFF"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 18px; font-weight: 700;">EHBO</span><span style="font-size: 13px; color: #3E434B;">Eerste hulp nodig</span></span>
+      </a>
+      <a href="AanvraagVerstuurd.dc.html" style="height: 128px; border-radius: 18px; background: #E4EEF7; border: 1px solid #B8D0E6; color: #16181D; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; box-sizing: border-box; text-decoration: none;">
+        <span style="width: 44px; height: 44px; border-radius: 12px; background: #1F6FB2; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.7c-3 4-6 7.2-6 10.8a6 6 0 0 0 12 0c0-3.6-3-6.8-6-10.8z"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 18px; font-weight: 700;">Water</span><span style="font-size: 13px; color: #3E434B;">Bijvullen</span></span>
+      </a>
+      <a href="#" style="height: 128px; border-radius: 18px; background: #FBE6D2; border: 1px solid #EDC7A2; color: #16181D; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; box-sizing: border-box; text-decoration: none;">
+        <span style="width: 44px; height: 44px; border-radius: 12px; background: #D9781C; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 21h16L12 3z"></path><path d="M8.5 13h7"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 18px; font-weight: 700;">Verkeer</span><span style="font-size: 13px; color: #3E434B;">Hulp bij regelen</span></span>
+      </a>
+      <a href="#" style="height: 128px; border-radius: 18px; background: #EDE4F7; border: 1px solid #D2C1EA; color: #16181D; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; box-sizing: border-box; text-decoration: none;">
+        <span style="width: 44px; height: 44px; border-radius: 12px; background: #7A4BB7; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4"></circle><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path><path d="M19 8v6"></path><path d="M22 11h-6"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 18px; font-weight: 700;">Vrijwilliger</span><span style="font-size: 13px; color: #3E434B;">Aflossing, uitval</span></span>
+      </a>
+      <a href="#" style="grid-column: 1 / -1; height: 72px; border-radius: 18px; background: #FFFFFF; border: 1px solid #D4D1C7; color: #16181D; display: flex; align-items: center; gap: 14px; padding: 0 16px; box-sizing: border-box; text-decoration: none;">
+        <span style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; background: #16181D; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 17px; font-weight: 700;">Anders</span><span style="font-size: 13px; color: #3E434B;">Bel de evenementcoördinator</span></span>
+      </a>
+    </div>
+  </div>
+
+  <div style="margin: 12px 16px 0; background: #FFFFFF; border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px;">
+    <span style="flex-grow: 1; color: #3E434B;">Open verzoeken van deze post</span>
+    <span style="font-weight: 700;">geen</span>
+  </div>
+
+  <div style="flex-grow: 1;"></div>
+
+  <div style="margin: 0 16px; padding: 12px 14px; border-radius: 16px; background: #16181D; color: #FFFFFF; display: flex; align-items: center; gap: 12px;">
+    <span style="font-size: 15px; font-weight: 700; flex-grow: 1;">Levensgevaar? Bel eerst 112</span>
+    <a href="#" style="height: 48px; padding: 0 18px; border-radius: 12px; background: #C8261E; color: #FFFFFF; display: flex; align-items: center; font-weight: 700; font-size: 14px; text-decoration: none;">112</a>
+  </div>
+
+  <div style="height: 24px;"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

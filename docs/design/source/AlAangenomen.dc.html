@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Oproep al aangenomen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A5C3B}a:hover{color:#06402A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F5F1; color: #16181D; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; padding: 0 20px;">
+
+  <div style="padding-top: 96px; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center;">
+    <span style="width: 80px; height: 80px; border-radius: 50%; background: #E2EFE7; color: #0A7D4F; display: flex; align-items: center; justify-content: center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700; line-height: 1.2;">Oproep is al aangenomen</h1>
+    <p style="margin: 0; font-size: 16px; color: #3E434B; line-height: 1.5;"><strong>Team 1</strong> gaat naar Waterpost 3.<br>Je hoeft niet te komen.</p>
+  </div>
+
+  <div style="margin-top: 32px; background: #FFFFFF; border-radius: 16px; padding: 4px 14px;">
+    <div style="display: flex; align-items: center; gap: 12px; height: 50px; font-size: 14px;"><span style="flex-grow: 1; color: #555A63;">Aangenomen</span><span style="font-family: 'IBM Plex Mono', monospace;">11:03</span></div>
+    <div style="height: 1px; background: #ECE9E1;"></div>
+    <div style="display: flex; align-items: center; gap: 12px; height: 50px; font-size: 14px;"><span style="flex-grow: 1; color: #555A63;">Jouw status</span><span style="font-weight: 600; color: #0A5C3B;">Weer vrij</span></div>
+  </div>
+
+  <div style="flex-grow: 1;"></div>
+
+  <a href="EhboStandby.dc.html" style="height: 56px; border-radius: 16px; background: #16181D; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; text-decoration: none;">Terug naar stand-by</a>
+  <a href="#" style="height: 48px; margin: 6px 0 18px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;">Toch helpen? Bel Team 1</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

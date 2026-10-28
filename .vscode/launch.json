@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Server (dev)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/server.js",
+      "runtimeArgs": ["--disable-warning=ExperimentalWarning"],
+      "env": { "DATA_DIR": "${workspaceFolder}/data", "PORT": "8080" },
+      "console": "integratedTerminal"
+    }
+  ]
+}

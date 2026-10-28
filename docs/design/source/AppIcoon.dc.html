@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>App-icoon</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A5C3B}a:hover{color:#06402A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F5F1; color: #16181D; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; padding: 20px 16px;">
+
+  <h1 style="margin: 0 4px; font-size: 24px; font-weight: 700;">App-icoon</h1>
+  <span style="margin: 4px 4px 0; font-size: 13px; color: #555A63;">Zo staat de app op het beginscherm</span>
+
+  <div style="margin-top: 14px; background: #2A2D35; border-radius: 22px; padding: 22px 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 18px; column-gap: 8px;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="width: 60px; height: 60px; border-radius: 15px; background: #4A4E58;"></span><span style="font-size: 11px; color: #DCDDE0;">Klok</span></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="width: 60px; height: 60px; border-radius: 15px; background: #4A4E58;"></span><span style="font-size: 11px; color: #DCDDE0;">Foto's</span></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="width: 60px; height: 60px; border-radius: 15px; background: #4A4E58;"></span><span style="font-size: 11px; color: #DCDDE0;">Kaart</span></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="width: 60px; height: 60px; border-radius: 15px; background: #4A4E58;"></span><span style="font-size: 11px; color: #DCDDE0;">Notities</span></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+      <span role="img" aria-label="App-icoon Silvesterloop" style="width: 60px; height: 60px; border-radius: 15px; background: #F2C230; color: #16181D; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; letter-spacing: -0.02em;">SL</span>
+      <span style="font-size: 11px; color: #FFFFFF; font-weight: 600;">Silvesterloop</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="width: 60px; height: 60px; border-radius: 15px; background: #4A4E58;"></span><span style="font-size: 11px; color: #DCDDE0;">Muziek</span></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="width: 60px; height: 60px; border-radius: 15px; background: #4A4E58;"></span><span style="font-size: 11px; color: #DCDDE0;">Weer</span></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="width: 60px; height: 60px; border-radius: 15px; background: #4A4E58;"></span><span style="font-size: 11px; color: #DCDDE0;">Agenda</span></div>
+  </div>
+
+  <div style="margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+    <div style="background: #FFFFFF; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <svg width="110" height="110" viewBox="0 0 110 110" role="img" aria-label="Standaard app-icoon: route met start en finishvlag">
+        <rect width="110" height="110" rx="26" fill="#16181D"></rect>
+        <path d="M24 82 C24 60 44 62 52 50 S58 30 80 30" fill="none" stroke="#F2C230" stroke-width="7" stroke-linecap="round"></path>
+        <circle cx="24" cy="84" r="7" fill="#F2C230"></circle>
+        <path d="M80 30 V16" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"></path>
+        <path d="M80 16 h14 l-4 5 l4 5 h-14 z" fill="#FFFFFF"></path>
+      </svg>
+      <span style="font-size: 13px; font-weight: 700;">Standaard</span>
+      <span style="font-size: 12px; color: #555A63; text-align: center; line-height: 1.4;">Als er geen eigen vierkant logo is</span>
+    </div>
+    <div style="background: #FFFFFF; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <span role="img" aria-label="App-icoon met eigen logo" style="width: 110px; height: 110px; border-radius: 26px; background: #F2C230; color: #16181D; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 36px; letter-spacing: -0.02em;">SL</span>
+      <span style="font-size: 13px; font-weight: 700;">Met eigen logo</span>
+      <span style="font-size: 12px; color: #555A63; text-align: center; line-height: 1.4;">Het vierkante logo uit Evenement</span>
+    </div>
+  </div>
+
+  <div style="margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: #EFEDE6; font-size: 13px; color: #3E434B; line-height: 1.45;">
+    De naam onder het icoon is de korte naam van het evenement (max. 12 tekens). Upload het vierkante logo als PNG van minstens 512 × 512 pixels.
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
