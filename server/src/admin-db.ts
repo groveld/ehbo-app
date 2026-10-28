@@ -111,7 +111,7 @@ export function adminDb(events: EventDb) {
     const admins: AdminPerson[] = all('SELECT a.phone, p.name FROM admins a JOIN people p ON p.phone = a.phone ORDER BY p.name, a.phone')
       .map((a) => ({ phone: a.phone as string, name: a.name as string }));
 
-    return { event, runs, postTypes, posts, units, coreTeam, emergencyNumbers, admins, brand: getBrand(events) };
+    return { event, runs, postTypes, posts, units, coreTeam, emergencyNumbers, admins, brand: getBrand(events), testMode: events.testMode() };
   }
 
   function saveEvent(e: EventSettings) {

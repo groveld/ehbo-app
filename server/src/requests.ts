@@ -16,7 +16,8 @@ export interface RequestsOptions {
 
 export type Requests = ReturnType<typeof createRequests>;
 
-export function createRequests(db: EventDb, { notify, changed, now = () => new Date() }: RequestsOptions) {
+export function createRequests(db: EventDb, { notify: send, changed, now = () => new Date() }: RequestsOptions) {
+  const notify: RequestsOptions['notify'] = (phones, payload) => send(phones, db.testMode() ? { ...payload, title: `Test · ${payload.title}` } : payload);
   const sql = db.raw;
   const get = (query: string, ...params: (string | number | null)[]) => sql.prepare(query).get(...params) as Row | undefined;
   const all = (query: string, ...params: (string | number | null)[]) => sql.prepare(query).all(...params) as Row[];
@@ -40,6 +41,7 @@ export function createRequests(db: EventDb, { notify, changed, now = () => new D
       const position = queue.indexOf(r.id as number);
       return {
         id: r.id as number,
+        isTest: r.is_test === 1,
         postId: r.post_id as number,
         kind: r.kind as RequestKind,
         detail: r.detail as string | null,
@@ -74,8 +76,8 @@ export function createRequests(db: EventDb, { notify, changed, now = () => new D
     if (!atPost(me, body.postId) && !handles(me)) throw httpError(403, 'Je kunt alleen een aanvraag doen vanaf je eigen post');
     if (post.is_open !== 1) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
     checkDetail(body.kind, body.detail);
-    const id = Number(run(`INSERT INTO requests (client_id, post_id, kind, detail, status, reported_by, created_at)
-                           VALUES (?, ?, ?, ?, 'aangevraagd', ?, ?)`, body.clientId, body.postId, body.kind, body.detail, me.phone, iso()).lastInsertRowid);
+    const id = Number(run(`INSERT INTO requests (client_id, post_id, kind, detail, status, reported_by, created_at, is_test)
+                           VALUES (?, ?, ?, ?, 'aangevraagd', ?, ?, ?)`, body.clientId, body.postId, body.kind, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);
     const coordinator = db.coordinatorPhone();
     if (coordinator) {
       notify([coordinator], { title: `${REQUEST_KINDS[body.kind].label} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/overzicht/verzoeken' });

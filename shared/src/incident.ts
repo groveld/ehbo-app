@@ -89,6 +89,8 @@ export interface IncidentEvent {
 
 export interface LiveIncident extends IncidentDetails {
   id: number;
+  /** Gedaan in de testmodus: telt niet mee in het rapport. */
+  isTest: boolean;
   postId: number;
   status: IncidentStatus;
   stage: IncidentStage;
@@ -127,6 +129,8 @@ export interface LiveState {
   posts: { id: number; isOpen: boolean }[];
   /** Aanvragen voor water, verkeer en vrijwilligers (wachtrij van de coördinator). */
   requests: LiveRequest[];
+  /** Testmodus: oproepen en aanvragen zijn proef en komen niet in het rapport. */
+  testMode: boolean;
 }
 
 /** SSE: hartslag, zodat Cloudflare de verbinding niet na 100 s stil sluit. */

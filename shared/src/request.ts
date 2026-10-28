@@ -22,6 +22,8 @@ export interface NewRequest {
 
 export interface LiveRequest {
   id: number;
+  /** Gedaan in de testmodus. */
+  isTest: boolean;
   postId: number;
   kind: RequestKind;
   detail: string | null;

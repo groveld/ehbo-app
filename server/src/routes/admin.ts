@@ -18,6 +18,7 @@ import {
   type IconUpload,
   type LogoUpload,
   type PostData,
+  type Report,
   type RunData,
   type UnitData,
 } from '@ehbo/shared';
@@ -27,6 +28,7 @@ import type { Calls } from '../calls.ts';
 import { requireAdmin } from '../auth.ts';
 import type { EventDb } from '../event-db.ts';
 import { parseGpx } from '../gpx.ts';
+import { buildReport, reportCsv } from '../report.ts';
 
 const GPX_LIMIT = 10 * 1024 * 1024;
 
@@ -155,6 +157,32 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
     db.bumpVersion();
     // Eenheden of posten kunnen veranderd zijn: de live stand opnieuw naar iedereen.
     calls.changed();
+  });
+
+  // Rapport (6.1): als JSON voor het scherm en de afdrukpagina, en als CSV om te downloaden.
+  app.get<{ Reply: Report }>('/api/admin/report', async () => buildReport(db));
+  app.get('/api/admin/report.csv', async (_request, reply) => {
+    const report = buildReport(db);
+    const day = report.event.startDate ?? report.generatedAt.slice(0, 10);
+    reply.header('Content-Disposition', `attachment; filename="rapport-${day}.csv"`).type('text/csv; charset=utf-8');
+    return reportCsv(report);
+  });
+
+  // Testmodus: proefoproepen en -aanvragen komen niet in het rapport. Na afloop kun je ze wissen.
+  app.put<{ Body: { on: boolean }; Reply: AdminState }>('/api/admin/test-mode', {
+    schema: { body: { type: 'object', required: ['on'], properties: { on: { type: 'boolean' } } } },
+  }, async (request) => {
+    db.raw.prepare('UPDATE event SET test_mode = ? WHERE id = 1').run(request.body.on ? 1 : 0);
+    return admin.getState();
+  });
+  app.delete<{ Reply: AdminState }>('/api/admin/test-data', async () => {
+    const open = db.raw.prepare("SELECT COUNT(*) AS n FROM incidents WHERE is_test = 1 AND status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse')").get() as { n: number };
+    if (open.n) throw Object.assign(new Error('Er lopen nog proefoproepen. Rond ze eerst af of trek ze in.'), { statusCode: 409 });
+    db.transaction(() => {
+      db.raw.prepare('DELETE FROM incidents WHERE is_test = 1').run();
+      db.raw.prepare('DELETE FROM requests WHERE is_test = 1').run();
+    });
+    return admin.getState();
   });
 
   // GPX-bestanden komen binnen als tekst, los van de JSON-limiet van 16 kB.

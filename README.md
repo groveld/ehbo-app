@@ -11,7 +11,9 @@ App voor de EHBO-coördinatie bij evenementen. Wat er werkt:
 7. **Deelnemers**: route, starttijden (favoriete loop vooraan) en de posten langs de route, zonder namen of nummers.
 8. **Zonder bereik**: alle vaste gegevens en de kaart staan op de telefoon. Een EHBO-verzoek zonder bereik toont wie je kunt bellen en gaat vanzelf weg zodra er weer bereik is.
 
-Nog in aanbouw: het rapport (PDF en CSV) met testmodus, en de info-pagina aanpassen in het beheer.
+9. **Rapport** voor de beheerder: kerncijfers en alle incidenten, als PDF en CSV. Een testmodus houdt proefoproepen buiten het rapport.
+
+Nog in aanbouw: de info-pagina aanpassen in het beheer.
 
 Gebouwd op de gekozen stack: TypeScript, een Fastify-server en een Vue 3-app (Vite, Pinia) in één container. De database is SQLite via de ingebouwde `node:sqlite`. De push-versleuteling (VAPID en aes128gcm) is eigen code, getest tegen de officiële testvector uit RFC 8291.
 
@@ -138,6 +140,8 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 22 | Nieuwe melding, EHBO reageert niet | Na 30 s gaat de oproep naar alle vrije eenheden, na 60 s krijgt de coördinator een alarm |
 | 23 | Post: vliegtuigmodus aan, **EHBO** › versturen | Scherm "Bel de EHBO direct" met belknoppen; vliegtuigmodus uit: de melding gaat vanzelf weg en de EHBO krijgt de oproep |
 | 24 | Post › **Water** › **Bijna op**; coördinator › Overzicht › **Verzoeken** › **Oppakken** › **Afgehandeld** | Post ziet plek in de wachtrij, daarna "wordt geregeld" en "afgehandeld", elk met een melding |
+| 25 | Beheer › **Rapport en testmodus** › Testmodus aan; proefoproep doen | Op elk scherm de balk "Testmodus"; meldingen beginnen met "Test"; de proefoproep staat niet in het rapport || 26 | Rapport › **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en alle incidenten; CSV opent met kolommen en goede tekens |
+| 26 | Rapport › **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en alle incidenten; CSV opent met kolommen en goede tekens |
 
 Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
 
@@ -202,5 +206,8 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | POST | `/api/requests` | post | Aanvraag water, verkeer of vrijwilliger `{ postId, kind, detail, clientId }` |
 | PUT | `/api/requests/:id` | post | Aanvullen `{ detail }` |
 | POST | `/api/requests/:id/pick`, `/done`, `/withdraw` | coördinator, post | Oppakken, afhandelen (coördinator, kernteam, beheerder) of intrekken (post) |
+| GET | `/api/admin/report`, `/api/admin/report.csv` | beheerder | Rapport als JSON (scherm en afdrukpagina) of als CSV-download |
+| PUT | `/api/admin/test-mode` | beheerder | Testmodus aan of uit `{ on }` |
+| DELETE | `/api/admin/test-data` | beheerder | Proefoproepen en -aanvragen wissen |
 
 Het nummer is in deze versie een identificatie, geen beveiliging (zie het functioneel ontwerp). Mislukte aanmeldpogingen worden per IP-adres afgeremd en elke aanmelding komt in het logboek.

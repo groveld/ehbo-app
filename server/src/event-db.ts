@@ -224,6 +224,12 @@ const MIGRATIONS = [
     done_at     TEXT
   );
   `,
+  // 7: testmodus. Wat in de testmodus wordt gemeld of aangevraagd, is proef en komt niet in het rapport.
+  `
+  ALTER TABLE event ADD COLUMN test_mode INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE incidents ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE requests ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 export interface EventRow {
@@ -349,6 +355,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     markPush: db.prepare("UPDATE subscriptions SET last_push_at = datetime('now'), last_status = ? WHERE endpoint = ?"),
     countSubs: db.prepare('SELECT COUNT(*) AS n FROM subscriptions'),
     bumpVersion: db.prepare('UPDATE event SET version = version + 1 WHERE id = 1'),
+    testMode: db.prepare('SELECT test_mode FROM event WHERE id = 1'),
   };
 
   if (adminPhone && (q.countAdmins.get() as { n: number }).n === 0) {
@@ -397,6 +404,9 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
 
     /** Na elke wijziging door een beheerder: telefoons halen dan het nieuwe evenementpakket op. */
     bumpVersion: () => { q.bumpVersion.run(); },
+
+    /** Testmodus: oproepen en aanvragen zijn proef (melding met "Test" ervoor) en komen niet in het rapport. */
+    testMode: () => (q.testMode.get() as { test_mode: number }).test_mode === 1,
 
     close: () => db.close(),
   };

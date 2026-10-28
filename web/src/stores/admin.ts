@@ -1,7 +1,7 @@
 // Beheer: de volledige stand van het evenement. Elke wijziging stuurt de nieuwe stand terug.
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, LogoUpload, PostData, RunData, UnitData } from '@ehbo/shared';
+import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, LogoUpload, PostData, Report, RunData, UnitData } from '@ehbo/shared';
 import { api, ApiRequestError } from '../api.ts';
 import { makeIconSet, makeLogo } from '../images.ts';
 import { useSessionStore } from './session.ts';
@@ -61,5 +61,9 @@ export const useAdminStore = defineStore('admin', () => {
     saveEmergencyNumbers: (numbers: EmergencyNumber[]) => change('/api/admin/emergency-numbers', 'PUT', numbers),
     addAdmin: (request: AddAdminRequest) => change('/api/admin/admins', 'POST', request),
     removeAdmin: (phone: string) => change(`/api/admin/admins/${encodeURIComponent(phone)}`, 'DELETE'),
+    // Rapport en testmodus. De testmodus verandert ook de live stand (banner op alle telefoons).
+    loadReport: () => api<Report>('/api/admin/report'),
+    setTestMode: (on: boolean) => change('/api/admin/test-mode', 'PUT', { on }),
+    deleteTestData: () => change('/api/admin/test-data', 'DELETE'),
   };
 });
