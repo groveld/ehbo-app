@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// Gekleurd kopblok (oproep, verstuurd, onderweg, stand-by): altijd 140 px hoog, tekst bovenaan, titel 26 px.
-defineProps<{ tone: 'red' | 'orange' | 'green' | 'dark'; label: string; title: string; sub?: string }>();
+// Gekleurd kopblok (oproep, verstuurd, onderweg, stand-by, aanvraag): altijd 140 px hoog, tekst bovenaan, titel 26 px.
+defineProps<{ tone: 'red' | 'orange' | 'green' | 'dark' | 'blue'; label: string; title: string; sub?: string }>();
 </script>
 
 <template>
@@ -29,6 +29,7 @@ h1 { font-size: 26px; font-weight: 700; line-height: 1.15; overflow: hidden; tex
 .orange { background: var(--warn-line); color: var(--ink); }
 .green { background: var(--ok); color: #FFFFFF; }
 .dark { background: var(--primary); color: #FFFFFF; }
+.blue { background: var(--info-icon); color: #FFFFFF; }
 .dark .label { color: #8FD1AE; }
 .dark .sub { color: var(--soft-text); }
 </style>

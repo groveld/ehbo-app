@@ -13,6 +13,7 @@ import {
   type IncidentEventType,
   type IncidentPersons,
   type LiveIncident,
+  type LiveRequest,
   type LiveState,
   type LiveUnit,
   type Me,
@@ -37,6 +38,8 @@ export interface CallsOptions {
   notify: (phones: Iterable<string>, payload: PushPayload) => void;
   schedule?: Schedule;
   now?: () => Date;
+  /** Aanvragen (water, verkeer, vrijwilliger) die mee in de live stand gaan. */
+  requests?: () => LiveRequest[];
 }
 
 const httpError = (statusCode: number, message: string) => Object.assign(new Error(message), { statusCode });
@@ -67,7 +70,7 @@ interface Post {
 
 export type Calls = ReturnType<typeof createCalls>;
 
-export function createCalls(db: EventDb, { notify, schedule = defaultSchedule, now = () => new Date() }: CallsOptions) {
+export function createCalls(db: EventDb, { notify, schedule = defaultSchedule, now = () => new Date(), requests = () => [] }: CallsOptions) {
   const sql = db.raw;
   const all = (query: string, ...params: (string | number | null)[]) => sql.prepare(query).all(...params) as Row[];
   const get = (query: string, ...params: (string | number | null)[]) => sql.prepare(query).get(...params) as Row | undefined;
@@ -209,6 +212,7 @@ export function createCalls(db: EventDb, { notify, schedule = defaultSchedule, n
       incidents: all('SELECT * FROM incidents ORDER BY id DESC').map((row) => toLive(row, eventsById)),
       units: units().map((u): LiveUnit => ({ id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId })),
       posts: [...posts().values()].map((p) => ({ id: p.id, isOpen: p.isOpen })),
+      requests: requests(),
     };
   }
 

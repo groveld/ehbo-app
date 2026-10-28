@@ -5,8 +5,11 @@ import type {
   CloseIncident,
   IncidentDetails,
   LiveIncident,
+  LiveRequest,
   LiveState,
   NewIncident,
+  NewRequest,
+  RequestKind,
   UnitAvailability,
 } from '@ehbo/shared';
 import { api, ApiRequestError } from '../api.ts';
@@ -256,5 +259,19 @@ export const useLiveStore = defineStore('live', () => {
     withdraw: (id: number) => act(`/api/incidents/${id}/withdraw`, 'POST'),
     setAvailability: (unitId: number, availability: UnitAvailability) => act(`/api/units/${unitId}/availability`, 'PUT', { availability }),
     setPostOpen: (postId: number, open: boolean) => act(`/api/posts/${postId}/open`, 'PUT', { open }),
+    // Aanvragen (water, verkeer, vrijwilliger): geen spoed, dus zonder outbox; zonder bereik bel je de coördinator.
+    requests: computed(() => state.value?.requests ?? []),
+    requestById: (id: number) => state.value?.requests?.find((r) => r.id === id) ?? null,
+    async request(postId: number, kind: RequestKind) {
+      const created = await api<LiveRequest>('/api/requests', {
+        method: 'POST', body: { postId, kind, detail: null, clientId: crypto.randomUUID() } satisfies NewRequest,
+      });
+      await refresh();
+      return created;
+    },
+    setRequestDetail: (id: number, detail: string | null) => act(`/api/requests/${id}`, 'PUT', { detail }),
+    pickRequest: (id: number) => act(`/api/requests/${id}/pick`, 'POST'),
+    finishRequest: (id: number) => act(`/api/requests/${id}/done`, 'POST'),
+    withdrawRequest: (id: number) => act(`/api/requests/${id}/withdraw`, 'POST'),
   };
 });

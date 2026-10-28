@@ -1,7 +1,7 @@
 // De oproepketen van begin tot eind, met twee telefoons: een post en een EHBO-eenheid (testgegevens uit server/src/demo.ts).
 import { devices, expect, test, type Browser, type Page } from '@playwright/test';
 
-const PHONE = { postLead: '0600000004', mobileEhbo: '0600000006' } as const;
+const PHONE = { postLead: '0600000004', mobileEhbo: '0600000006', coordinator: '0600000002' } as const;
 
 /** Nieuwe telefoon: aanmelden zoals een medewerker, tot het startscherm. */
 async function staffPhone(browser: Browser, phone: string, place?: RegExp): Promise<Page> {
@@ -93,6 +93,32 @@ test('zonder bereik: bellen, en de melding gaat vanzelf weg zodra er weer bereik
   post.once('dialog', (dialog) => void dialog.accept());
   await post.getByRole('button', { name: 'Melding intrekken' }).click();
   await expect(post.getByText('Wat heb je nodig?')).toBeVisible();
+  post.once('dialog', (dialog) => void dialog.accept());
+  await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await expect(post.getByText('POST IS DICHT')).toBeVisible();
+});
+
+test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', async ({ browser }) => {
+  const post = await staffPhone(browser, PHONE.postLead, /Waterpost 3/);
+  await post.getByRole('button', { name: 'Post openen' }).click();
+  await post.getByRole('button', { name: /^Water/ }).click();
+  await expect(post.getByRole('heading', { name: 'Water aangevraagd' })).toBeVisible();
+  await expect(post.getByText(/plek 1 in de wachtrij/)).toBeVisible();
+  await post.getByRole('button', { name: 'Bijna op' }).click();
+  await expect(post.getByRole('button', { name: 'Bijna op' })).toHaveAttribute('aria-pressed', 'true');
+
+  const coordinator = await staffPhone(browser, PHONE.coordinator);
+  await coordinator.getByRole('link', { name: 'Verzoeken' }).click();
+  const card = coordinator.locator('.request').filter({ hasText: 'Waterpost 3' });
+  await expect(card).toContainText('bijna op');
+  await card.getByRole('button', { name: 'Oppakken' }).click();
+  await expect(card).toContainText('Opgepakt door jou');
+  await expect(post.getByText('Cor Coördinator regelt het.')).toBeVisible({ timeout: 10_000 });
+
+  await card.getByRole('button', { name: 'Afgehandeld' }).click();
+  await expect(post.getByRole('heading', { name: 'Water: afgehandeld' })).toBeVisible({ timeout: 10_000 });
+
+  await post.getByRole('button', { name: 'Terug naar mijn post' }).click();
   post.once('dialog', (dialog) => void dialog.accept());
   await post.getByRole('button', { name: 'Post sluiten' }).click();
   await expect(post.getByText('POST IS DICHT')).toBeVisible();

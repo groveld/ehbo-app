@@ -2,8 +2,8 @@
 // 3.1 · Post openen en 3.2 · Post open: wat heb je nodig? Het startscherm van een post.
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { POST_CONTACT_ROLE_LABEL, formatKm, formatPhone, telHref } from '@ehbo/shared';
-import Icon from '../components/Icon.vue';
+import { POST_CONTACT_ROLE_LABEL, REQUEST_KINDS, formatKm, formatPhone, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
+import Icon, { type IconName } from '../components/Icon.vue';
 import Sos112Bar from '../components/Sos112Bar.vue';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentSummary } from '../incidents.ts';
@@ -38,12 +38,22 @@ const planned = computed(() => {
   return [kmLabel(p.km), times].filter(Boolean).join(' · ');
 });
 
-// Water, verkeer en vrijwilliger gaan in fase 4 naar de wachtrij; tot dan bel je de coördinator, net als bij "Anders".
+// Water, verkeer en vrijwilliger: een aanvraag in de wachtrij van de coördinator (5.1). Kleuren uit het schermontwerp.
 const TILES = [
-  { key: 'water', label: 'Water', sub: 'Bijvullen', bg: '#E4EEF7', line: '#B8D0E6', icon: '#1F6FB2' },
-  { key: 'verkeer', label: 'Verkeer', sub: 'Hulp bij regelen', bg: '#FBE6D2', line: '#EDC7A2', icon: '#D9781C' },
-  { key: 'vrijwilliger', label: 'Vrijwilliger', sub: 'Aflossing, uitval', bg: '#EDE4F7', line: '#D2C1EA', icon: '#7A4BB7' },
-] as const;
+  { key: 'water', bg: '#E4EEF7', line: '#B8D0E6', icon: '#1F6FB2', iconText: '#FFFFFF', iconName: 'drop' },
+  { key: 'verkeer', bg: '#FBE6D2', line: '#EDC7A2', icon: '#D9781C', iconText: '#16181D', iconName: 'cone' },
+  { key: 'vrijwilliger', bg: '#EDE4F7', line: '#D2C1EA', icon: '#7A4BB7', iconText: '#FFFFFF', iconName: 'personAdd' },
+] as const satisfies readonly { key: RequestKind; bg: string; line: string; icon: string; iconText: string; iconName: IconName }[];
+/** Open aanvragen van deze post, onder de tegels. */
+const openRequests = computed(() => live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'aangevraagd' || r.status === 'opgepakt')));
+
+async function ask(kind: RequestKind) {
+  if (!post.value) return;
+  let id: number | null = null;
+  // Zonder bereik lukt een aanvraag niet; dan bel je de coördinator (de foutmelding zegt dat).
+  const ok = await run(async () => { id = (await live.request(post.value!.id, kind)).id; });
+  if (ok && id !== null) router.push({ name: 'aanvraag', params: { id } });
+}
 
 async function setOpen(value: boolean) {
   if (!post.value) return;
@@ -101,13 +111,13 @@ async function setOpen(value: boolean) {
             <span class="tile-icon" style="background: var(--danger)"><Icon name="cross" :size="22" /></span>
             <span class="tile-text"><span class="tile-label">EHBO</span><span class="tile-sub">Eerste hulp nodig</span></span>
           </RouterLink>
-          <a
-            v-for="t in TILES" :key="t.key" :href="coordinator ? telHref(coordinator.phone) : undefined" class="tile"
-            :style="{ background: t.bg, borderColor: t.line }" :aria-label="`${t.label}: bel de evenementcoördinator`"
+          <button
+            v-for="t in TILES" :key="t.key" class="tile" :disabled="busy"
+            :style="{ background: t.bg, borderColor: t.line }" @click="ask(t.key)"
           >
-            <span class="tile-icon" :style="{ background: t.icon }"><Icon name="phone" :size="20" /></span>
-            <span class="tile-text"><span class="tile-label">{{ t.label }}</span><span class="tile-sub">{{ t.sub }} · bel coördinator</span></span>
-          </a>
+            <span class="tile-icon" :style="{ background: t.icon, color: t.iconText }"><Icon :name="t.iconName" :size="22" /></span>
+            <span class="tile-text"><span class="tile-label">{{ REQUEST_KINDS[t.key].label }}</span><span class="tile-sub">{{ REQUEST_KINDS[t.key].sub }}</span></span>
+          </button>
           <a :href="coordinator ? telHref(coordinator.phone) : undefined" class="tile other">
             <span class="tile-icon" style="background: var(--primary)"><Icon name="phone" :size="20" /></span>
             <span class="tile-text"><span class="tile-label">Anders</span><span class="tile-sub">Bel de evenementcoördinator</span></span>
@@ -115,6 +125,12 @@ async function setOpen(value: boolean) {
         </div>
 
         <div class="card requests">
+          <RouterLink v-for="r in openRequests" :key="`r${r.id}`" :to="{ name: 'aanvraag', params: { id: r.id } }" class="request">
+            <span class="mono at">{{ clock(r.createdAt) }}</span>
+            <span class="grow">{{ [REQUEST_KINDS[r.kind].label, requestDetailLabel(r.kind, r.detail)].filter(Boolean).join(' · ') }}</span>
+            <span class="state blue">{{ r.status === 'opgepakt' ? 'wordt geregeld' : `plek ${r.position}` }}</span>
+            <Icon name="forward" :size="16" />
+          </RouterLink>
           <RouterLink v-for="w in waiting" :key="w.clientId" :to="{ name: 'geen-bereik', params: { clientId: w.clientId } }" class="request">
             <span class="mono at">{{ clock(w.reportedAt) }}</span>
             <span class="grow">EHBO · {{ incidentSummary(w) }}</span>
@@ -129,7 +145,7 @@ async function setOpen(value: boolean) {
               <Icon name="forward" :size="16" />
             </RouterLink>
           </template>
-          <div v-else-if="!waiting.length" class="request"><span class="grow muted">Open verzoeken van deze post</span><strong>geen</strong></div>
+          <div v-else-if="!waiting.length && !openRequests.length" class="request"><span class="grow muted">Open verzoeken van deze post</span><strong>geen</strong></div>
         </div>
       </template>
 
@@ -176,6 +192,7 @@ h1 { font-size: 24px; font-weight: 700; line-height: 1.2; }
 .request + .request { border-top: 1px solid var(--divider); }
 .at { color: var(--muted); }
 .state { font-weight: 700; color: var(--danger); }
+.state.blue { color: var(--info); }
 .muted { color: var(--ink-2); }
 .sos-gap { margin: 18px 0 0; }
 </style>
