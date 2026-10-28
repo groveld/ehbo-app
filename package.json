@@ -16,12 +16,14 @@
     "dev": "concurrently --kill-others -n server,web -c yellow,cyan \"npm run dev -w server\" \"npm run dev -w web\"",
     "build": "npm run build -w web",
     "start": "npm start -w server",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p e2e",
     "test": "npm test --workspaces --if-present",
     "icons": "python3 tools/make-icons.py",
-    "seed": "npm run seed -w server"
+    "seed": "npm run seed -w server",
+    "e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.5",
     "concurrently": "^10.0.6",
     "typescript": "~6.0.3"

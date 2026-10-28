@@ -47,6 +47,12 @@ jobs:
       - name: Build web app
         run: npm run build
 
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end test (call chain)
+        run: npm run e2e
+
   build-and-publish:
     needs: test
     runs-on: ubuntu-latest

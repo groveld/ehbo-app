@@ -18,23 +18,27 @@ export function postSubtitle(pkg: EventPackage, post: PackagePost) {
   return [kmLabel(post.km), who].filter(Boolean).join(' · ');
 }
 
+export interface UnitDistance {
+  unit: PackageUnit;
+  post: PackagePost;
+  km: number;
+}
+
 /**
- * Dichtstbijzijnde EHBO-eenheid, hemelsbreed: een vaste eenheid op haar EHBO-post, een mobiele op haar standplaats.
- * Eenheden zonder plek tellen niet mee. (Status vrij/bezet komt met de oproepen in fase 3.)
+ * EHBO-eenheden op afstand, hemelsbreed: een vaste eenheid op haar EHBO-post, een mobiele op haar standplaats.
+ * Werkt zonder bereik, uit het evenementpakket. Eenheden zonder plek tellen niet mee; wie uit dienst is (als dat bekend is) ook niet.
  */
-export function nearestUnit(pkg: EventPackage, post: PackagePost): { unit: PackageUnit; post: PackagePost; km: number } | null {
+export function unitsByDistance(pkg: EventPackage, post: PackagePost, offDuty: (unitId: number) => boolean = () => false): UnitDistance[] {
   const from = lngLat(post);
-  if (!from) return null;
-  let best: { unit: PackageUnit; post: PackagePost; km: number } | null = null;
-  for (const unit of pkg.units) {
+  if (!from) return [];
+  return pkg.units.flatMap((unit) => {
     const at = unit.postId !== null ? pkg.posts.find((p) => p.id === unit.postId) : undefined;
     const to = at && lngLat(at);
-    if (!at || !to) continue;
-    const km = distanceKm(from, to);
-    if (!best || km < best.km) best = { unit, post: at, km };
-  }
-  return best;
+    return at && to && !offDuty(unit.id) ? [{ unit, post: at, km: distanceKm(from, to) }] : [];
+  }).sort((a, b) => a.km - b.km);
 }
+
+export const nearestUnit = (pkg: EventPackage, post: PackagePost) => unitsByDistance(pkg, post)[0] ?? null;
 
 /** De evenementcoördinator uit het kernteam (alleen in het pakket van medewerkers). */
 export const coordinatorOf = (pkg: EventPackage | null) => pkg?.coreTeam.find((c) => c.isCoordinator) ?? null;

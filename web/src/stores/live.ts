@@ -9,7 +9,7 @@ import type {
   NewIncident,
   UnitAvailability,
 } from '@ehbo/shared';
-import { api } from '../api.ts';
+import { api, ApiRequestError } from '../api.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
 import { useSessionStore } from './session.ts';
@@ -20,10 +20,23 @@ const OPEN = ['verstuurd', 'geaccepteerd', 'ter_plaatse'] as const;
 
 export const isOpen = (incident: LiveIncident) => (OPEN as readonly string[]).includes(incident.status);
 
+/** De melding kwam niet aan (geen of slecht bereik); hij staat klaar en gaat vanzelf weg zodra er bereik is. */
+export class OfflineError extends Error {
+  clientId: string;
+
+  constructor(clientId: string) {
+    super('Geen bereik');
+    this.clientId = clientId;
+  }
+}
+
 export const useLiveStore = defineStore('live', () => {
   const session = useSessionStore();
   const pkg = usePackageStore();
   const state = ref<LiveState | null>(load('ehbo.live'));
+  /** Nog niet bij de server aangekomen. De server telt dezelfde clientId maar één keer, dus opnieuw versturen kan altijd. */
+  const outbox = ref<NewIncident[]>(load('ehbo.outbox') ?? []);
+  watch(outbox, (value) => save('ehbo.outbox', value.length ? value : null), { deep: true });
   const connected = ref(false);
   /** Verschil tussen de klok van de server en die van de telefoon, voor de aftelring. */
   const clockOffset = ref(0);
@@ -54,7 +67,11 @@ export const useLiveStore = defineStore('live', () => {
       setState(JSON.parse((e as MessageEvent<string>).data) as LiveState);
     });
     // De hartslag is een commentaarregel; die komt niet als gebeurtenis binnen, maar houdt de verbinding wel open.
-    source.addEventListener('open', () => { lastMessage = Date.now(); connected.value = true; });
+    source.addEventListener('open', () => {
+      lastMessage = Date.now();
+      connected.value = true;
+      void flush();
+    });
     source.addEventListener('error', () => { connected.value = false; });
     watchdog = setInterval(() => {
       if (Date.now() - lastMessage > STALE_MS) void refresh().then(connect);
@@ -86,6 +103,7 @@ export const useLiveStore = defineStore('live', () => {
       disconnect();
       state.value = null;
       save('ehbo.live', null);
+      outbox.value = [];
     }
   }, { immediate: true });
   document.addEventListener('visibilitychange', () => {
@@ -149,18 +167,86 @@ export const useLiveStore = defineStore('live', () => {
     return state.value!;
   };
 
-  async function report(request: Omit<NewIncident, 'clientId' | 'reportedAt'>) {
-    const incident = await api<LiveIncident>('/api/incidents', {
-      method: 'POST',
-      body: { ...request, clientId: crypto.randomUUID(), reportedAt: new Date(serverNow.value).toISOString() } satisfies NewIncident,
+  // ---- Melding zonder bereik: blijft op de telefoon staan en gaat vanzelf weg zodra er bereik is ----
+
+  /** Wat later alsnog is aangekomen (clientId → melding), of door de server is geweigerd (clientId → reden). */
+  const delivered = ref<Record<string, number>>({});
+  const refused = ref<Record<string, string>>({});
+
+  async function post(item: NewIncident) {
+    // Slecht bereik: niet eindeloos wachten. Komt hij toch aan, dan telt de server hem bij de volgende poging niet dubbel.
+    const res = await fetch('/api/incidents', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item), signal: AbortSignal.timeout(10_000),
     });
-    await refresh();
-    return incident;
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new ApiRequestError(res.status, body);
+    return body as LiveIncident;
+  }
+
+  const drop = (clientId: string) => { outbox.value = outbox.value.filter((i) => i.clientId !== clientId); };
+
+  /** Gooit OfflineError als de melding (nog) niet is aangekomen; hij staat dan in de outbox. */
+  async function report(request: Omit<NewIncident, 'clientId' | 'reportedAt'>) {
+    const item: NewIncident = { ...request, clientId: crypto.randomUUID(), reportedAt: new Date(serverNow.value).toISOString() };
+    outbox.value.push(item);
+    try {
+      const incident = await post(item);
+      drop(item.clientId);
+      delivered.value[item.clientId] = incident.id;
+      await refresh();
+      return incident;
+    } catch (err) {
+      if (err instanceof ApiRequestError) {
+        drop(item.clientId);
+        throw err;
+      }
+      startFlushing();
+      throw new OfflineError(item.clientId);
+    }
+  }
+
+  let flushing = false;
+  async function flush() {
+    if (flushing || !session.me) return;
+    flushing = true;
+    try {
+      for (const item of [...outbox.value]) {
+        try {
+          delivered.value[item.clientId] = (await post(item)).id;
+          drop(item.clientId);
+        } catch (err) {
+          if (!(err instanceof ApiRequestError)) break; // nog geen bereik: later opnieuw
+          refused.value[item.clientId] = err.message;
+          drop(item.clientId);
+        }
+      }
+      if (Object.keys(delivered.value).length) await refresh();
+    } finally {
+      flushing = false;
+    }
+  }
+
+  let flushTimer: ReturnType<typeof setInterval> | null = null;
+  function startFlushing() {
+    flushTimer ??= setInterval(() => {
+      if (!outbox.value.length) {
+        clearInterval(flushTimer!);
+        flushTimer = null;
+        return;
+      }
+      void flush();
+    }, 10_000);
+  }
+  window.addEventListener('online', () => void flush());
+  if (outbox.value.length) {
+    startFlushing();
+    void flush();
   }
 
   return {
     state, connected, serverNow, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
     incidentById, unitState, postOpen, secondsLeft, needsAed, refresh, connect, report,
+    outbox, delivered, refused, flush,
     update: (id: number, details: IncidentDetails) => act(`/api/incidents/${id}`, 'PUT', details),
     accept: (id: number, unitId: number) => act(`/api/incidents/${id}/accept`, 'POST', { unitId }),
     decline: (id: number, unitId: number) => act(`/api/incidents/${id}/decline`, 'POST', { unitId }),

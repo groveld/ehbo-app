@@ -26,6 +26,8 @@ const canOpen = computed(() => myRole.value?.role === 'verantwoordelijke' || ses
 const coordinator = computed(() => coordinatorOf(store.pkg));
 const nearest = computed(() => (store.pkg && post.value ? nearestUnit(store.pkg, post.value) : null));
 const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id));
+/** Meldingen die zonder bereik op deze telefoon wachten. */
+const waiting = computed(() => live.outbox.filter((i) => i.postId === post.value?.id));
 
 /** Eerst wie je bent, dan de post; "gepland" zolang de post dicht is, anders sinds wanneer hij open is. */
 const eyebrow = computed(() => [myRole.value?.title, session.me?.name].filter(Boolean).join(' · '));
@@ -113,6 +115,12 @@ async function setOpen(value: boolean) {
         </div>
 
         <div class="card requests">
+          <RouterLink v-for="w in waiting" :key="w.clientId" :to="{ name: 'geen-bereik', params: { clientId: w.clientId } }" class="request">
+            <span class="mono at">{{ clock(w.reportedAt) }}</span>
+            <span class="grow">EHBO · {{ incidentSummary(w) }}</span>
+            <span class="state">wacht op bereik</span>
+            <Icon name="forward" :size="16" />
+          </RouterLink>
           <template v-if="openIncidents.length">
             <RouterLink v-for="i in openIncidents" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="request">
               <span class="mono at">{{ clock(i.reportedAt) }}</span>
@@ -121,7 +129,7 @@ async function setOpen(value: boolean) {
               <Icon name="forward" :size="16" />
             </RouterLink>
           </template>
-          <div v-else class="request"><span class="grow muted">Open verzoeken van deze post</span><strong>geen</strong></div>
+          <div v-else-if="!waiting.length" class="request"><span class="grow muted">Open verzoeken van deze post</span><strong>geen</strong></div>
         </div>
       </template>
 

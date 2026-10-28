@@ -31,6 +31,7 @@ telefoon ◄──── melding ──── push-dienst Apple / Google ◄─�
 1. Maak een repository aan en zet deze bestanden erin (branch `main`).
 2. De workflow `.github/workflows/build.yml` draait bij elke push en pull request:
    - typecontrole, `npm test` en de webapp bouwen;
+   - end-to-end-test van de oproepketen in Chromium (`npm run e2e`, Playwright);
    - Docker-image bouwen;
    - rooktest: container starten en `/healthz`, `/api/info`, het manifest en de service worker opvragen;
    - op `main` publiceren als `ghcr.io/<owner>/<repo>:latest` en `:sha-<commit>`; een tag `v1.2.3` geeft ook `:1.2.3`;
@@ -109,6 +110,7 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 20 | EHBO › **Accepteren & navigeren** | Navigatie-app opent; post ziet "Hulp is onderweg" met naam en belknop; coördinator krijgt een kopie |
 | 21 | EHBO › **Ik ben ter plaatse** › **Incident afronden** | Post ziet "EHBO is er" en daarna "Klaar"; EHBO is weer vrij |
 | 22 | Nieuwe melding, EHBO reageert niet | Na 30 s gaat de oproep naar alle vrije eenheden, na 60 s krijgt de coördinator een alarm |
+| 23 | Post: vliegtuigmodus aan, **EHBO** › versturen | Scherm "Bel de EHBO direct" met belknoppen; vliegtuigmodus uit: de melding gaat vanzelf weg en de EHBO krijgt de oproep |
 
 Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
 

@@ -2,11 +2,11 @@
 // 4.1 · Post: EHBO-verzoek invullen. Alles is optioneel; versturen kan meteen. Met incidentId: een verstuurde melding aanvullen.
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { INCIDENT_PERSONS, INCIDENT_WHAT, NOTE_MAX, RESPONSIVE, telHref, type IncidentDetails } from '@ehbo/shared';
+import { INCIDENT_PERSONS, INCIDENT_WHAT, NOTE_MAX, RESPONSIVE, type IncidentDetails } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import Sos112Bar from '../components/Sos112Bar.vue';
-import { coordinatorOf, kmLabel, nearestUnit } from '../posts.ts';
-import { useLiveStore } from '../stores/live.ts';
+import { kmLabel } from '../posts.ts';
+import { OfflineError, useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
 const props = defineProps<{ id?: string; incidentId?: string }>();
@@ -24,10 +24,6 @@ const form = reactive<IncidentDetails>({
 });
 const busy = ref(false);
 const error = ref('');
-/** Geen bereik: dan bel je zelf (de melding automatisch later versturen volgt in 3c). */
-const offline = ref(false);
-const nearest = computed(() => (store.pkg && post.value ? nearestUnit(store.pkg, post.value) : null));
-const coordinator = computed(() => coordinatorOf(store.pkg));
 
 /** Nog eens tikken op een gekozen antwoord haalt het weg; alles blijft optioneel. */
 const toggle = <K extends keyof IncidentDetails>(key: K, value: IncidentDetails[K]) => {
@@ -38,7 +34,6 @@ async function send() {
   if (!post.value) return;
   busy.value = true;
   error.value = '';
-  offline.value = false;
   const details = { ...form, note: form.note?.trim() || null };
   try {
     if (existing.value) {
@@ -49,8 +44,9 @@ async function send() {
       router.replace({ name: 'melding', params: { id: incident.id } });
     }
   } catch (err) {
-    if (!navigator.onLine || err instanceof TypeError) offline.value = true;
-    else error.value = (err as Error).message;
+    // Geen bereik: de melding wacht op de telefoon; intussen bel je zelf (4.9).
+    if (err instanceof OfflineError) router.replace({ name: 'geen-bereik', params: { clientId: err.clientId } });
+    else error.value = err instanceof TypeError ? 'Geen bereik. Probeer het zo opnieuw, of bel de EHBO.' : (err as Error).message;
   } finally {
     busy.value = false;
   }
@@ -99,14 +95,6 @@ async function send() {
     <div class="grow" />
     <div class="stack gap-6 footer">
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-      <div v-if="offline" class="note warn stack gap-8" role="alert">
-        <strong>Geen bereik: de melding is niet verstuurd.</strong>
-        <span>Bel zelf de EHBO en de evenementcoördinator.</span>
-        <div class="btn-pair">
-          <a v-if="nearest?.unit.members[0]" :href="telHref(nearest.unit.members[0].phone)" class="btn light">Bel {{ nearest.unit.name }}</a>
-          <a v-if="coordinator" :href="telHref(coordinator.phone)" class="btn light">Bel coördinator</a>
-        </div>
-      </div>
       <button class="btn danger" :disabled="busy" @click="send">
         <Icon name="bell" :size="20" />{{ busy ? 'Versturen…' : existing ? 'Aanvulling versturen' : 'EHBO-verzoek versturen' }}
       </button>
