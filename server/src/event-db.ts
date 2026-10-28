@@ -152,6 +152,14 @@ const MIGRATIONS = [
     data         BLOB NOT NULL
   );
   `,
+  // 4: eigen logo's (groot logo en het vierkante logo in alle icoonmaten, als PNG); kleuren en korte naam staan in style_json.
+  `
+  ALTER TABLE event ADD COLUMN brand_version INTEGER NOT NULL DEFAULT 0;
+  CREATE TABLE brand_images (
+    name TEXT PRIMARY KEY,
+    data BLOB NOT NULL
+  );
+  `,
 ];
 
 export interface EventRow {

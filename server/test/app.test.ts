@@ -27,7 +27,6 @@ function fakeWebDir(root: string) {
   fs.mkdirSync(path.join(web, 'icons'));
   fs.writeFileSync(path.join(web, 'index.html'), '<!doctype html><title>EHBO-app</title>');
   fs.writeFileSync(path.join(web, 'sw.js'), 'self.addEventListener("push", () => {});');
-  fs.writeFileSync(path.join(web, 'manifest.webmanifest'), JSON.stringify({ display: 'standalone' }));
   fs.writeFileSync(path.join(web, 'assets', 'index-abc123.js'), 'console.log(1)');
   fs.writeFileSync(path.join(web, 'icons', 'icon-512.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
   return web;
@@ -104,7 +103,16 @@ test('webapp: bestanden, cache-headers en terugval op index.html', async () => {
   assert.equal(sw.headers['cache-control'], 'no-cache');
   assert.equal(sw.headers['service-worker-allowed'], '/');
 
-  assert.equal((await api('/manifest.webmanifest')).json().display, 'standalone');
+  const manifest = await api('/manifest.webmanifest');
+  assert.equal(manifest.headers['cache-control'], 'no-cache');
+  assert.equal(manifest.json().name, 'Silvesterloop 2026', 'manifest komt van de server, met de naam van het evenement');
+  assert.equal(manifest.json().short_name, 'Silvesterloo', 'zonder korte naam de eerste 12 tekens');
+  assert.match(manifest.json().icons[0].src, /^\/brand\/icon-192\.png\?v=\d+$/);
+  const icon = await api('/brand/icon-192.png');
+  assert.equal(icon.statusCode, 302, 'zonder eigen logo het standaardicoon');
+  assert.equal(icon.headers.location, '/icons/icon-192.png');
+  assert.equal((await api('/brand/logo.png')).statusCode, 404);
+  assert.equal((await api('/brand/onzin.png')).statusCode, 404);
   assert.match(String((await api('/assets/index-abc123.js')).headers['cache-control']), /immutable/);
   assert.equal((await api('/icons/icon-512.png')).headers['cache-control'], 'public, max-age=3600');
   assert.equal((await api('/bestaat-niet.png')).statusCode, 404);

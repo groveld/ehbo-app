@@ -51,7 +51,8 @@ export default defineConfig({
   server: {
     port: 3080,
     strictPort: true,
-    proxy: { '/api': SERVER, '/healthz': SERVER },
+    // Logo's en het manifest komen per evenement van de server.
+    proxy: { '/api': SERVER, '/healthz': SERVER, '/brand': SERVER, '/manifest.webmanifest': SERVER },
   },
   build: {
     rolldownOptions: {

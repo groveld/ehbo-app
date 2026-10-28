@@ -13,6 +13,9 @@ const CACHE = `ehbo-app-${BUILD_ID}`;
 const SHELL = [
   ...__PRECACHE__,
   '/manifest.webmanifest',
+  // Eigen logo van het evenement; zonder eigen logo verwijst de server naar het standaardicoon.
+  '/brand/icon-192.png',
+  '/brand/apple-touch-icon.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',
@@ -67,7 +70,7 @@ self.addEventListener('push', (event) => {
   // vibrate en renotify ontbreken nog in de TypeScript-typen, maar Android gebruikt ze wel.
   const options: NotificationOptions & { vibrate: number[]; renotify: boolean; timestamp: number } = {
     body: data.body || '',
-    icon: '/icons/icon-192.png',
+    icon: '/brand/icon-192.png',
     badge: '/icons/badge-72.png',
     tag: data.tag || 'ehbo',
     renotify: true,

@@ -1,21 +1,28 @@
 // Beheer-API: alleen voor beheerders. Elke wijziging geeft de nieuwe stand terug.
 import type { FastifyInstance } from 'fastify';
 import {
+  COLOR_PATTERN,
   DATE_PATTERN,
   ESCALATION_MAX_SECONDS,
   ESCALATION_MIN_SECONDS,
+  IMAGE_MAX_BASE64,
+  SHORT_NAME_MAX,
   TIME_PATTERN,
   normalizePhone,
+  styleProblem,
   type AddAdminRequest,
   type AdminState,
   type CoreTeamEntry,
   type EmergencyNumber,
   type EventSettings,
+  type IconUpload,
+  type LogoUpload,
   type PostData,
   type RunData,
   type UnitData,
 } from '@ehbo/shared';
 import { adminDb } from '../admin-db.ts';
+import { BRAND_IMAGES, ICON_IMAGES, LOGO_MAX_SIDE, pngSize, setBrandImages } from '../brand.ts';
 import { requireAdmin } from '../auth.ts';
 import type { EventDb } from '../event-db.ts';
 import { parseGpx } from '../gpx.ts';
@@ -40,15 +47,40 @@ const idParams = { type: 'object', required: ['id'], properties: { id: { type: '
 
 const eventSchema = {
   type: 'object',
-  required: ['name', 'startLocation', 'startDate', 'endDate', 'escalationSeconds'],
+  required: ['name', 'startLocation', 'startDate', 'endDate', 'escalationSeconds', 'style'],
   properties: {
     name: { type: 'string', minLength: 1, maxLength: 80 },
     startLocation: optionalText(120),
     startDate: date,
     endDate: date,
     escalationSeconds: { type: 'integer', minimum: ESCALATION_MIN_SECONDS, maximum: ESCALATION_MAX_SECONDS },
+    style: {
+      type: 'object',
+      required: ['shortName', 'primaryColor', 'accentColor'],
+      properties: {
+        shortName: optionalText(SHORT_NAME_MAX),
+        primaryColor: { type: 'string', pattern: COLOR_PATTERN },
+        accentColor: { type: 'string', pattern: COLOR_PATTERN },
+      },
+    },
   },
 } as const;
+
+/** PNG als base64. */
+const png = { type: 'string', minLength: 1, maxLength: IMAGE_MAX_BASE64 } as const;
+const IMAGE_BODY_LIMIT = 4 * 1024 * 1024;
+
+/** PNG uit base64, met de juiste maat; anders een foutmelding. */
+function pngOf(base64: string, what: string, size: number | null) {
+  const data = Buffer.from(base64, 'base64');
+  const dims = pngSize(data);
+  if (!dims) throw badRequest(`${what} is geen PNG`);
+  if (size !== null && (dims.width !== size || dims.height !== size)) throw badRequest(`${what} moet ${size} × ${size} pixels zijn`);
+  if (size === null && (Math.max(dims.width, dims.height) > LOGO_MAX_SIDE || Math.min(dims.width, dims.height) < 1)) {
+    throw badRequest(`${what} mag hoogstens ${LOGO_MAX_SIDE} pixels breed of hoog zijn`);
+  }
+  return data;
+}
 
 const runSchema = {
   type: 'object',
@@ -130,7 +162,39 @@ export async function adminRoutes(app: FastifyInstance, { db }: { db: EventDb })
   app.put<{ Body: EventSettings; Reply: AdminState }>('/api/admin/event', { schema: { body: eventSchema } }, async (request) => {
     const { startDate, endDate } = request.body;
     if (startDate && endDate && endDate < startDate) throw badRequest('De einddatum ligt voor de begindatum');
+    const problem = styleProblem(request.body.style);
+    if (problem) throw badRequest(problem);
     admin.saveEvent(request.body);
+    return admin.getState();
+  });
+
+  // Logo's: de app stuurt kant-en-klare PNG's; elke upload of verwijdering geeft een nieuwe versie van de afbeeldingen.
+  app.put<{ Body: LogoUpload; Reply: AdminState }>('/api/admin/brand/logo', {
+    bodyLimit: IMAGE_BODY_LIMIT,
+    schema: { body: { type: 'object', required: ['png'], properties: { png } } },
+  }, async (request) => {
+    setBrandImages(db, { logo: pngOf(request.body.png, 'Het logo', null) });
+    return admin.getState();
+  });
+  app.put<{ Body: IconUpload; Reply: AdminState }>('/api/admin/brand/icon', {
+    bodyLimit: IMAGE_BODY_LIMIT,
+    schema: { body: { type: 'object', required: ['icon512', 'icon192', 'maskable512', 'appleTouch'], properties: { icon512: png, icon192: png, maskable512: png, appleTouch: png } } },
+  }, async (request) => {
+    const { icon512, icon192, maskable512, appleTouch } = request.body;
+    setBrandImages(db, {
+      'icon-512': pngOf(icon512, 'Het app-icoon', BRAND_IMAGES['icon-512'].size),
+      'icon-192': pngOf(icon192, 'Het kleine app-icoon', BRAND_IMAGES['icon-192'].size),
+      'icon-maskable-512': pngOf(maskable512, 'Het Android-icoon', BRAND_IMAGES['icon-maskable-512'].size),
+      'apple-touch-icon': pngOf(appleTouch, 'Het iPhone-icoon', BRAND_IMAGES['apple-touch-icon'].size),
+    });
+    return admin.getState();
+  });
+  app.delete<{ Reply: AdminState }>('/api/admin/brand/logo', async () => {
+    setBrandImages(db, { logo: null });
+    return admin.getState();
+  });
+  app.delete<{ Reply: AdminState }>('/api/admin/brand/icon', async () => {
+    setBrandImages(db, Object.fromEntries(ICON_IMAGES.map((name) => [name, null])));
     return admin.getState();
   });
 

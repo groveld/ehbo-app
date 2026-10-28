@@ -4,12 +4,16 @@ import { useRoute, useRouter } from 'vue-router';
 import { usePackageStore } from './stores/package.ts';
 import { usePushStore } from './stores/push.ts';
 import { useSessionStore } from './stores/session.ts';
+import { applyTheme } from './theme.ts';
 
 const push = usePushStore();
 const pkg = usePackageStore();
 const session = useSessionStore();
 const route = useRoute();
 const router = useRouter();
+
+// Kleuren en naam van het evenement; zonder bereik uit de bewaarde gegevens.
+watch(() => session.event, applyTheme, { immediate: true });
 
 // Sessie verlopen of nummer niet meer ingepland: terug naar het begin.
 watch(() => session.me, (me) => {

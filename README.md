@@ -6,7 +6,7 @@ App voor de EHBO-coördinatie bij evenementen, in aanbouw. Wat er nu werkt:
 2. **Aanmelden** met je telefoonnummer: de app zoekt zelf je functie en post op. Eenmalig info & voorwaarden, daarna meldingen en locatie aanzetten met een testmelding.
 3. **Uitrol**: GitHub bouwt bij elke push een Docker-image, Unraid draait het, Cloudflare Tunnel maakt het bereikbaar.
 
-4. **Beheer** (alleen beheerders): evenement en lopen met GPX, posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
+4. **Beheer** (alleen beheerders): evenement en lopen met GPX, stijl (groot logo, vierkant logo als app-icoon, kleuren, korte naam), posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
 
 5. **Overzicht** voor medewerkers: kaart met alle posten, filter per soort, lijsten met bel- en navigeerknop, alle contacten, en per post de aanrijroute en de dichtstbijzijnde EHBO.
 6. **Deelnemers**: route, starttijden (favoriete loop vooraan) en de posten langs de route, zonder namen of nummers.
@@ -75,7 +75,7 @@ In Zero Trust › Networks › Tunnels › jouw tunnel › **Public hostname**:
 Belangrijk voor installeren en meldingen:
 
 - **Geen Cloudflare Access** op deze hostname. Een inlogscherm breekt de geïnstalleerde app en de aanmelding voor meldingen.
-- **Cache:** maak een *Cache Rule* voor deze hostname: **Bypass cache** voor `/sw.js`, `/manifest.webmanifest` en `/api/*`. De app stuurt zelf al `no-cache`, dit is een extra zekerheid.
+- **Cache:** maak een *Cache Rule* voor deze hostname: **Bypass cache** voor `/sw.js`, `/manifest.webmanifest`, `/brand/*` (logo's en app-icoon van het evenement) en `/api/*`. De app stuurt zelf al `no-cache`, dit is een extra zekerheid.
 - **Rocket Loader uit** voor deze hostname (Speed › Optimization). Rocket Loader herschrijft scripts en breekt de service worker.
 - *Always Use HTTPS* aan.
 - De server moet **uitgaand** internet hebben naar de push-diensten (`web.push.apple.com`, `fcm.googleapis.com`, `updates.push.services.mozilla.com`), en voor het ophalen van de kaart naar `build-metadata.protomaps.dev`, `build.protomaps.com` en `protomaps.github.io`. Dit loopt niet via de tunnel.
@@ -104,6 +104,7 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 15 | Overzicht openen | Kaart met posten en parcours; rechtsboven **Offline klaar** |
 | 16 | Vliegtuigmodus aan, app afsluiten en openen | Kaart, posten, contacten en postdetails werken; bellen en navigeren starten de telefoon-apps |
 | 17 | Postdetail › **Navigeer** | Navigatie-app opent met de route naar de post (te kiezen in Menu › Navigeren met) |
+| 18 | Beheer › Evenement › vierkant logo › **Vierkant logo kiezen** (PNG, minstens 512 × 512), korte naam invullen en opslaan; app verwijderen en opnieuw op het beginscherm zetten | Eigen icoon met de korte naam eronder; testmelding toont hetzelfde icoon |
 
 Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
 
@@ -140,7 +141,10 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | --- | --- | --- | --- |
 | GET | `/healthz` | iedereen | Gezondheidscheck |
 | GET | `/api/info` | iedereen | Versie, commit, publieke VAPID-sleutel |
-| GET | `/api/event` | iedereen | Naam, datum en info-tekst van het evenement (zonder namen of nummers) |
+| GET | `/api/event` | iedereen | Naam, datum, info-tekst, kleuren en logo's van het evenement (zonder namen of nummers) |
+| GET | `/manifest.webmanifest` | iedereen | Manifest met de naam, korte naam, kleur en iconen van het evenement |
+| GET | `/brand/<naam>.png` | iedereen | Groot logo en app-iconen; zonder eigen logo een verwijzing naar het standaardicoon |
+| PUT/DELETE | `/api/admin/brand/logo`, `/api/admin/brand/icon` | beheerder | Groot logo of vierkant logo (alle icoonmaten, door de app gemaakt) opslaan of verwijderen |
 | GET | `/api/package` | iedereen | Evenementpakket voor offline gebruik; medewerkers krijgen ook contacten, eenheden en kernteam. `If-None-Match` geeft 304 |
 | GET | `/map/<versie>/…` | iedereen | Kaarttegels, lettertypen en iconen |
 | GET/POST | `/api/admin/map` | beheerder | Kaart ophalen (op de achtergrond) en de voortgang |

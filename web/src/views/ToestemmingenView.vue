@@ -109,7 +109,7 @@ onMounted(() => {
 .state.ok { color: var(--ok-text); }
 .state.bad { color: var(--danger); }
 .turn-on { min-height: 44px; padding: 0 4px; border: none; background: none; font: 700 13px var(--sans); color: var(--ok-text); text-decoration: underline; cursor: pointer; }
-.test { margin-top: 22px; padding: 18px; border-radius: 18px; background: var(--ink); color: #FFFFFF; }
+.test { margin-top: 22px; padding: 18px; border-radius: 18px; background: var(--primary); color: #FFFFFF; }
 .test-title { font-size: 16px; font-weight: 700; }
 .test-text { font-size: 14px; color: var(--soft-text); line-height: 1.45; }
 .test-small { font-size: 12px; color: var(--soft-text); }

@@ -54,5 +54,5 @@ const posts = computed(() => store.pkg?.posts.filter((p) => filter.value === nul
   flex-shrink: 0; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);
   font: 600 14px var(--sans); color: var(--ink); cursor: pointer; white-space: nowrap;
 }
-.chip-btn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
+.chip-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #FFFFFF; }
 </style>

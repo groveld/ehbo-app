@@ -35,7 +35,8 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 - Now: phase 2 in the work plan, "Basis en beheer", split into three PRs:
   - **2a**: data model for all of phase 2, phone-number login with roles, screens 2.1–2.7, temporary start screen. Merged and live.
   - **2b**: admin API and screens 1.1–1.5 plus a post list, in `web/src/views/admin/`. Merged and live. Style and logos (1.1 "Stijl", 1.6) are a separate step after 2c.
-  - **2c** (branch `feat/phase2c-overview`): event package (`server/src/routes/package.ts`), offline map (`server/src/map.ts`, `routes/map.ts`, `web/src/components/EventMap.vue`, `stores/package.ts`), overview with tabs (`web/src/views/overzicht/`), post detail (3.5), participant view (2.8), map picking in the post form, menu with navigation-app choice. Done, verified in Edge with real Protomaps data, online and offline.
+  - **2c**: event package (`server/src/routes/package.ts`), offline map (`server/src/map.ts`, `routes/map.ts`, `web/src/components/EventMap.vue`, `stores/package.ts`), overview with tabs (`web/src/views/overzicht/`), post detail (3.5), participant view (2.8), map picking in the post form, menu with navigation-app choice. Merged and live.
+  - **Style and logos** (branch `feat/style-logos`): 1.1 "Stijl" and 1.6 (`web/src/views/admin/AppIcoonView.vue`). Colors and short name in `event.style_json`; logos as PNG in `brand_images` (`server/src/brand.ts`, `routes/brand.ts`), served at `/brand/<name>.png`, with a redirect to `/icons/…` when there is no own logo. The browser resizes uploads (`web/src/images.ts`); `web/src/theme.ts` sets `--primary`/`--accent`. The manifest is built by the server, not a file in `web/public/`.
 
 ## Chosen stack (decided 28 Oct 2026)
 

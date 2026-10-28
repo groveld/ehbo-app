@@ -51,6 +51,52 @@ export const DEFAULT_INFO: InfoSection[] = [
   { title: 'Bewaren & vragen', body: 'Na het evenement worden de gegevens verwijderd volgens {beleid}. Vragen: {contact}.' },
 ];
 
+/** Stijl per evenement. De signaalkleuren (rood, groen, soorten posten) liggen vast. */
+export interface EventStyle {
+  /** Naam onder het app-icoon; leeg = de naam van het evenement. */
+  shortName: string | null;
+  /** Hoofdkleur: knoppen en donkere vlakken, met witte tekst. */
+  primaryColor: string;
+  /** Accentkleur: vlakken met donkere tekst. */
+  accentColor: string;
+}
+
+export const DEFAULT_STYLE: EventStyle = { shortName: null, primaryColor: '#16181D', accentColor: '#F2C230' };
+export const SHORT_NAME_MAX = 12;
+export const COLOR_PATTERN = '^#[0-9A-Fa-f]{6}$';
+/** Tekstkleur op de accentkleur; ook op een licht accent is tekst zo leesbaar. */
+export const INK = '#16181D';
+/** Minimaal contrast voor gewone tekst (WCAG AA). */
+export const MIN_CONTRAST = 4.5;
+
+/** Contrastverhouding tussen twee kleuren (#rrggbb) volgens WCAG, van 1 tot 21. */
+export function contrastRatio(a: string, b: string) {
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    }) as [number, number, number];
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/** Waarom deze kleuren niet leesbaar zijn, of null als ze goed zijn. */
+export function styleProblem(style: Pick<EventStyle, 'primaryColor' | 'accentColor'>) {
+  if (contrastRatio(style.primaryColor, '#FFFFFF') < MIN_CONTRAST) return 'De hoofdkleur is te licht: witte tekst erop is slecht leesbaar';
+  if (contrastRatio(style.accentColor, INK) < MIN_CONTRAST) return 'De accentkleur is te donker: donkere tekst erop is slecht leesbaar';
+  return null;
+}
+
+/** Eigen logo's van het evenement, als adres; null = geen eigen logo (de app toont dan de standaard). */
+export interface Brand {
+  /** Groot logo (startscherm, rapport). */
+  logo: string | null;
+  /** Vierkant logo als app-icoon, 192 × 192. */
+  icon: string | null;
+}
+
 /** Wat iedereen mag zien, ook zonder aanmelding: GET /api/event */
 export interface PublicEvent {
   name: string;
@@ -58,6 +104,8 @@ export interface PublicEvent {
   startDate: string | null;
   endDate: string | null;
   info: InfoSection[];
+  style: EventStyle;
+  brand: Brand;
 }
 
 /** Eén plek of functie waarop iemand is ingepland. */

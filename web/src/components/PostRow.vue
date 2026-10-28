@@ -38,5 +38,5 @@ const subtitle = computed(() => postSubtitle(props.pkg, props.post));
 .sub { font-size: 13px; color: var(--muted); }
 .round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; -webkit-touch-callout: none; }
 .call { background: var(--soft); color: var(--ink); }
-.nav { background: var(--ink); color: #FFFFFF; }
+.nav { background: var(--primary); color: #FFFFFF; }
 </style>

@@ -2,6 +2,7 @@
 import type { FastifyInstance } from 'fastify';
 import { DEFAULT_INFO, normalizePhone, type ApiError, type InfoSection, type LoginRequest, type LoginUnknown, type Me, type PublicEvent } from '@ehbo/shared';
 import { SESSION_COOKIE, hashSessionToken, newSessionToken, requireMe, sessionExpiry, sqliteTime } from '../auth.ts';
+import { getBrand, getStyle } from '../brand.ts';
 import type { EventDb } from '../event-db.ts';
 import { resolveMe } from '../roles.ts';
 
@@ -33,6 +34,8 @@ export async function sessionRoutes(app: FastifyInstance, { db }: { db: EventDb 
       startDate: event.start_date,
       endDate: event.end_date,
       info: info.map((s) => ({ title: fill(s.title), body: fill(s.body) })),
+      style: getStyle(db),
+      brand: getBrand(db),
     };
   });
 
