@@ -126,6 +126,13 @@ const MIGRATIONS = [
     last_status  INTEGER
   );
   `,
+  // 2: het parcours uit GPX, vereenvoudigd tot een lijn voor de kaart.
+  `
+  ALTER TABLE runs ADD COLUMN gpx_filename TEXT;
+  ALTER TABLE runs ADD COLUMN track_json TEXT;
+  ALTER TABLE runs ADD COLUMN track_points INTEGER;
+  ALTER TABLE runs ADD COLUMN track_km REAL;
+  `,
 ];
 
 export interface EventRow {
@@ -249,6 +256,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     deleteSub: db.prepare('DELETE FROM subscriptions WHERE endpoint = ?'),
     markPush: db.prepare("UPDATE subscriptions SET last_push_at = datetime('now'), last_status = ? WHERE endpoint = ?"),
     countSubs: db.prepare('SELECT COUNT(*) AS n FROM subscriptions'),
+    bumpVersion: db.prepare('UPDATE event SET version = version + 1 WHERE id = 1'),
   };
 
   if (adminPhone && (q.countAdmins.get() as { n: number }).n === 0) {
@@ -291,6 +299,9 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     deleteSubscription: (endpoint: string) => { q.deleteSub.run(endpoint); },
     markPush: (endpoint: string, status: number) => { q.markPush.run(status, endpoint); },
     countSubscriptions: () => (q.countSubs.get() as { n: number }).n,
+
+    /** Na elke wijziging door een beheerder: telefoons halen dan het nieuwe evenementpakket op. */
+    bumpVersion: () => { q.bumpVersion.run(); },
 
     close: () => db.close(),
   };

@@ -6,7 +6,9 @@ App voor de EHBO-coördinatie bij evenementen, in aanbouw. Wat er nu werkt:
 2. **Aanmelden** met je telefoonnummer: de app zoekt zelf je functie en post op. Eenmalig info & voorwaarden, daarna meldingen en locatie aanzetten met een testmelding.
 3. **Uitrol**: GitHub bouwt bij elke push een Docker-image, Unraid draait het, Cloudflare Tunnel maakt het bereikbaar.
 
-Het beheerscherm om posten en mensen in te voeren volgt in fase 2b; tot dan staat er alleen de beheerder uit `ADMIN_PHONE` in.
+4. **Beheer** (alleen beheerders): evenement en lopen met GPX, posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
+
+Het overzicht met kaart, de deelnemerspagina en eigen logo's volgen nog.
 
 Gebouwd op de gekozen stack: TypeScript, een Fastify-server en een Vue 3-app (Vite, Pinia) in één container. De database is SQLite via de ingebouwde `node:sqlite`. De push-versleuteling (VAPID en aes128gcm) is eigen code, getest tegen de officiële testvector uit RFC 8291.
 
@@ -91,6 +93,8 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 9 | **Klaar** › **Controle van installatie** › **Over 10 s** en meteen vergrendelen | Melding op het vergrendelscherm, met geluid of trilling |
 | 10 | App volledig afsluiten en opnieuw openen | Nog steeds aangemeld; geen info-pagina meer |
 | 11 | Vliegtuigmodus aan, app openen | App opent (offline), nog steeds aangemeld |
+| 12 | Startscherm › **Beheer** › Posten › **+ Post toevoegen**, bij de post staan › **Huidige GPS-positie vastleggen** | Coördinaten met nauwkeurigheid (± m); groen bij 15 m of beter |
+| 13 | Jezelf of een tweede toestel als contactpersoon toevoegen, opslaan, met dat nummer aanmelden | "Nummer herkend" met de post en de rol |
 
 Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
 

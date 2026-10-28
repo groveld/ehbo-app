@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Tijdelijk startscherm (fase 2a). Het overzicht met kaart komt in fase 2c, stand-by en de post in fase 3.
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Call112 from '../components/Call112.vue';
 import Icon from '../components/Icon.vue';
@@ -17,6 +17,9 @@ const comingNext = computed(() => {
     default: return 'Hier komt het overzicht met kernteam, posten en de kaart.';
   }
 });
+
+// Rollen kunnen intussen gewijzigd zijn (bijv. door het beheer).
+onMounted(() => session.refresh());
 
 async function logout() {
   await session.logout();
@@ -43,6 +46,7 @@ async function logout() {
     <p class="note info coming">{{ comingNext }} Je bent aangemeld en klaar voor de volgende versie.</p>
 
     <nav class="stack gap-10 menu">
+      <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn primary"><Icon name="settings" :size="20" />Beheer</RouterLink>
       <RouterLink v-if="me.assignments.length > 1" :to="{ name: 'herkend' }" class="btn">Andere plek kiezen</RouterLink>
       <RouterLink :to="{ name: 'toestemmingen' }" class="btn"><Icon name="bell" :size="18" />Meldingen en locatie</RouterLink>
       <RouterLink :to="{ name: 'info' }" class="btn"><Icon name="info" :size="18" />Info &amp; voorwaarden</RouterLink>

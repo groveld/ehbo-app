@@ -6,6 +6,8 @@ declare module 'vue-router' {
   interface RouteMeta {
     /** Alleen voor aangemelde medewerkers. */
     staff?: boolean;
+    /** Alleen voor beheerders. */
+    admin?: boolean;
   }
 }
 
@@ -22,6 +24,13 @@ export const router = createRouter({
     { path: '/start', name: 'start', component: () => import('./views/StartView.vue'), meta: { staff: true } },
     { path: '/controle', name: 'controle', component: () => import('./views/ControleView.vue'), meta: { staff: true } },
     { path: '/deelnemer', name: 'deelnemer', component: () => import('./views/DeelnemerView.vue') },
+    { path: '/beheer', name: 'beheer', component: () => import('./views/admin/BeheerView.vue'), meta: { staff: true, admin: true } },
+    { path: '/beheer/evenement', name: 'beheer-evenement', component: () => import('./views/admin/EvenementView.vue'), meta: { staff: true, admin: true } },
+    { path: '/beheer/lopen/:id', name: 'beheer-loop', component: () => import('./views/admin/LoopView.vue'), props: true, meta: { staff: true, admin: true } },
+    { path: '/beheer/posten', name: 'beheer-posten', component: () => import('./views/admin/PostenView.vue'), meta: { staff: true, admin: true } },
+    { path: '/beheer/posten/:id', name: 'beheer-post', component: () => import('./views/admin/PostView.vue'), props: true, meta: { staff: true, admin: true } },
+    { path: '/beheer/eenheden', name: 'beheer-eenheden', component: () => import('./views/admin/EenhedenView.vue'), meta: { staff: true, admin: true } },
+    { path: '/beheer/eenheden/:id', name: 'beheer-eenheid', component: () => import('./views/admin/EenheidView.vue'), props: true, meta: { staff: true, admin: true } },
     { path: '/:pad(.*)*', redirect: '/' },
   ],
 });
@@ -29,6 +38,7 @@ export const router = createRouter({
 router.beforeEach((to) => {
   const session = useSessionStore();
   if (to.meta.staff && !session.me) return { name: 'welkom' };
+  if (to.meta.admin && !session.me?.isAdmin) return { name: 'start' };
   // Aangemeld: het startscherm in plaats van de keuze medewerker of deelnemer.
   if (to.name === 'welkom' && session.me) return { name: 'start' };
   // Medewerkers zetten de app eerst op het beginscherm.

@@ -7,6 +7,7 @@ import fastifyStatic from '@fastify/static';
 import type { ApiError, AppInfo } from '@ehbo/shared';
 import { registerSessions } from './auth.ts';
 import type { EventDb } from './event-db.ts';
+import { adminRoutes } from './routes/admin.ts';
 import { pushRoutes } from './routes/push.ts';
 import { sessionRoutes } from './routes/session.ts';
 import type { Vapid } from './webpush.ts';
@@ -60,6 +61,7 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
 
   app.register(sessionRoutes, { db });
   app.register(pushRoutes, { db, vapid, allowInsecureEndpoints });
+  app.register(adminRoutes, { db });
 
   const hasWeb = webDir !== undefined && fs.existsSync(path.join(webDir, 'index.html'));
   if (hasWeb) {
