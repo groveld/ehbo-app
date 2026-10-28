@@ -1,7 +1,7 @@
 // De oproepketen van begin tot eind, met twee telefoons: een post en een EHBO-eenheid (testgegevens uit server/src/demo.ts).
 import { devices, expect, test, type Browser, type Page } from '@playwright/test';
 
-const PHONE = { postLead: '0600000004', mobileEhbo: '0600000006', coordinator: '0600000002' } as const;
+const PHONE = { admin: '0600000001', postLead: '0600000004', mobileEhbo: '0600000006', coordinator: '0600000002' } as const;
 
 /** Nieuwe telefoon: aanmelden zoals een medewerker, tot het startscherm. */
 async function staffPhone(browser: Browser, phone: string, place?: RegExp): Promise<Page> {
@@ -122,4 +122,28 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   post.once('dialog', (dialog) => void dialog.accept());
   await post.getByRole('button', { name: 'Post sluiten' }).click();
   await expect(post.getByText('POST IS DICHT')).toBeVisible();
+});
+
+test('rapport: cijfers, CSV, afdrukpagina en de testmodus', async ({ browser }) => {
+  const admin = await staffPhone(browser, PHONE.admin);
+  await admin.goto('/beheer/rapport');
+  await expect(admin.getByRole('heading', { name: 'Rapport' })).toBeVisible();
+  // De eerste test rondde een oproep af bij de waterpost.
+  await expect(admin.getByText(/Waterpost 3/).first()).toBeVisible();
+  await expect(admin.getByText('geholpen').first()).toBeVisible();
+
+  const download = admin.waitForEvent('download');
+  await admin.getByRole('link', { name: 'CSV-export' }).click();
+  expect((await download).suggestedFilename()).toBe('rapport-2026-12-31.csv');
+
+  await admin.getByRole('link', { name: 'PDF-export' }).click();
+  await expect(admin.getByRole('heading', { name: 'Rapport Silvesterloop 2026' })).toBeVisible();
+  await expect(admin.getByRole('cell', { name: 'Ter plaatse geholpen' }).first()).toBeVisible();
+  await admin.getByRole('button', { name: 'Terug' }).click();
+
+  admin.once('dialog', (dialog) => void dialog.accept());
+  await admin.getByRole('switch', { name: 'Testmodus' }).click();
+  await expect(admin.getByText('Testmodus · oproepen zijn proef')).toBeVisible({ timeout: 10_000 });
+  await admin.getByRole('switch', { name: 'Testmodus' }).click();
+  await expect(admin.getByText('Testmodus · oproepen zijn proef')).toBeHidden({ timeout: 10_000 });
 });

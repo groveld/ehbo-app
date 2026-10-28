@@ -121,6 +121,8 @@ export interface AdminState {
   emergencyNumbers: EmergencyNumber[];
   admins: AdminPerson[];
   brand: Brand;
+  /** Testmodus aan: oproepen en aanvragen zijn proef en komen niet in het rapport. */
+  testMode: boolean;
 }
 
 /** Grootste afbeelding die de server aanneemt, in base64-tekens (ongeveer 1,1 MB). */

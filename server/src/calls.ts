@@ -70,7 +70,9 @@ interface Post {
 
 export type Calls = ReturnType<typeof createCalls>;
 
-export function createCalls(db: EventDb, { notify, schedule = defaultSchedule, now = () => new Date(), requests = () => [] }: CallsOptions) {
+export function createCalls(db: EventDb, { notify: send, schedule = defaultSchedule, now = () => new Date(), requests = () => [] }: CallsOptions) {
+  // In de testmodus begint elke melding met "Test", zodat niemand een proefoproep voor echt aanziet.
+  const notify: CallsOptions['notify'] = (phones, payload) => send(phones, db.testMode() ? { ...payload, title: `Test · ${payload.title}` } : payload);
   const sql = db.raw;
   const all = (query: string, ...params: (string | number | null)[]) => sql.prepare(query).all(...params) as Row[];
   const get = (query: string, ...params: (string | number | null)[]) => sql.prepare(query).get(...params) as Row | undefined;
@@ -184,6 +186,7 @@ export function createCalls(db: EventDb, { notify, schedule = defaultSchedule, n
       responsive: row.responsive as LiveIncident['responsive'],
       note: row.note as string | null,
       aed: row.aed === 1,
+      isTest: row.is_test === 1,
       reportedAt: row.reported_at as string,
       sentAt: row.sent_at as string,
       escalatesAt: row.escalates_at as string | null,
@@ -213,6 +216,7 @@ export function createCalls(db: EventDb, { notify, schedule = defaultSchedule, n
       units: units().map((u): LiveUnit => ({ id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId })),
       posts: [...posts().values()].map((p) => ({ id: p.id, isOpen: p.isOpen })),
       requests: requests(),
+      testMode: db.testMode(),
     };
   }
 
@@ -364,9 +368,10 @@ export function createCalls(db: EventDb, { notify, schedule = defaultSchedule, n
 
     const id = db.transaction(() => {
       const incidentId = Number(run(`
-        INSERT INTO incidents (client_id, post_id, reported_by, what, persons, responsive, note, aed, status, stage, reported_at, sent_at, escalates_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'verstuurd', 'dichtstbij', ?, ?, ?)`,
-      body.clientId, post.id, me.phone, body.what, body.persons, body.responsive, body.note?.trim() || null, aed ? 1 : 0, reportedAt, sentAt, escalatesAt).lastInsertRowid);
+        INSERT INTO incidents (client_id, post_id, reported_by, what, persons, responsive, note, aed, status, stage, reported_at, sent_at, escalates_at, is_test)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'verstuurd', 'dichtstbij', ?, ?, ?, ?)`,
+      body.clientId, post.id, me.phone, body.what, body.persons, body.responsive, body.note?.trim() || null, aed ? 1 : 0, reportedAt, sentAt, escalatesAt,
+      db.testMode() ? 1 : 0).lastInsertRowid);
       log(incidentId, 'gemeld', `Gemeld door ${post.name}`);
       if (first) {
         addDispatch(incidentId, first.unit.id, 'dichtstbij', first.km);

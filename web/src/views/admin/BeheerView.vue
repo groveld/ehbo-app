@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 1.2 · Beheerders, kernteam, noodnummers, en de weg naar evenement, posten en EHBO-eenheden.
+// 1.2 · Beheerders, kernteam, noodnummers, en de weg naar evenement, posten, EHBO-eenheden en het rapport.
 import { ref } from 'vue';
 import { formatPhone, type CoreTeamEntry, type EmergencyNumber } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
@@ -61,6 +61,14 @@ async function saveNumbers() {
         <RouterLink :to="{ name: 'beheer-eenheden' }" class="list-row">
           <Icon name="cross" :size="20" />
           <span class="main"><span class="title-line">EHBO-eenheden</span><span class="sub">{{ state.units.length }} eenheden</span></span>
+          <Icon name="forward" :size="18" />
+        </RouterLink>
+        <RouterLink :to="{ name: 'beheer-rapport' }" class="list-row">
+          <Icon name="list" :size="20" />
+          <span class="main">
+            <span class="title-line">Rapport en testmodus<span v-if="state.testMode" class="tag warn">testmodus aan</span></span>
+            <span class="sub">Incidenten, PDF en CSV; proefoproepen voor het evenement</span>
+          </span>
           <Icon name="forward" :size="18" />
         </RouterLink>
       </nav>

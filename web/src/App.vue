@@ -53,5 +53,14 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- Testmodus: op elk scherm zichtbaar, zodat niemand een proefoproep voor echt aanziet. Niet op de afdrukpagina. -->
+  <div v-if="live.state?.testMode && route.name !== 'beheer-rapport-afdrukken'" class="test-banner" role="status">Testmodus · oproepen zijn proef</div>
   <RouterView />
 </template>
+
+<style scoped>
+.test-banner {
+  position: sticky; top: 0; z-index: 50; padding: max(4px, env(safe-area-inset-top)) 12px 4px;
+  background: var(--warn-line); color: var(--ink); font-size: 12px; font-weight: 700; text-align: center; letter-spacing: .02em;
+}
+</style>
