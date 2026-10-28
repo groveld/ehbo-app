@@ -105,6 +105,10 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 16 | Vliegtuigmodus aan, app afsluiten en openen | Kaart, posten, contacten en postdetails werken; bellen en navigeren starten de telefoon-apps |
 | 17 | Postdetail › **Navigeer** | Navigatie-app opent met de route naar de post (te kiezen in Menu › Navigeren met) |
 | 18 | Beheer › Evenement › vierkant logo › **Vierkant logo kiezen** (PNG, minstens 512 × 512), korte naam invullen en opslaan; app verwijderen en opnieuw op het beginscherm zetten | Eigen icoon met de korte naam eronder; testmelding toont hetzelfde icoon |
+| 19 | Twee toestellen: één als postverantwoordelijke (Waterpost), één als EHBO (Team 1). EHBO › **Vrij**; post › **Post openen** › **EHBO** › versturen | EHBO-toestel krijgt binnen 5 s een oproep met alarm, ook met scherm uit; post ziet "We zoeken een EHBO'er" met aftellen |
+| 20 | EHBO › **Accepteren & navigeren** | Navigatie-app opent; post ziet "Hulp is onderweg" met naam en belknop; coördinator krijgt een kopie |
+| 21 | EHBO › **Ik ben ter plaatse** › **Incident afronden** | Post ziet "EHBO is er" en daarna "Klaar"; EHBO is weer vrij |
+| 22 | Nieuwe melding, EHBO reageert niet | Na 30 s gaat de oproep naar alle vrije eenheden, na 60 s krijgt de coördinator een alarm |
 
 Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
 

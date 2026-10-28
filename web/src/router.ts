@@ -2,6 +2,18 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { canUseAsStaff } from './platform.ts';
 import { useSessionStore } from './stores/session.ts';
 
+/** EHBO'ers naar stand-by, postverantwoordelijken naar hun post (de gekozen plek als dat een post is), de rest naar het overzicht. */
+export function homeRoute() {
+  const session = useSessionStore();
+  const me = session.me!;
+  if (me.home === 'ehbo') return { name: 'stand-by' };
+  if (me.home === 'post') {
+    const post = session.place?.kind === 'post' ? session.place : me.assignments.find((a) => a.kind === 'post' && a.role === 'verantwoordelijke');
+    if (post?.postId) return { name: 'post-home', params: { id: post.postId } };
+  }
+  return { name: 'kaart' };
+}
+
 declare module 'vue-router' {
   interface RouteMeta {
     /** Alleen voor aangemelde medewerkers. */
@@ -36,6 +48,15 @@ export const router = createRouter({
       ],
     },
     { path: '/post/:id', name: 'post', component: () => import('./views/PostDetailView.vue'), props: true, meta: { staff: true } },
+    // Post: startscherm (3.1/3.2), EHBO-verzoek (4.1) en de melding daarna (4.2/4.6).
+    { path: '/post/:id/start', name: 'post-home', component: () => import('./views/PostHomeView.vue'), props: true, meta: { staff: true } },
+    { path: '/post/:id/ehbo', name: 'ehbo-verzoek', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
+    { path: '/melding/:id', name: 'melding', component: () => import('./views/MeldingView.vue'), props: true, meta: { staff: true } },
+    { path: '/melding/:incidentId/aanvullen', name: 'aanvullen', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
+    // EHBO: stand-by (3.3), oproep (4.3–4.7) en afronden (4.8).
+    { path: '/stand-by', name: 'stand-by', component: () => import('./views/StandbyView.vue'), meta: { staff: true } },
+    { path: '/oproep/:id', name: 'oproep', component: () => import('./views/OproepView.vue'), props: true, meta: { staff: true } },
+    { path: '/oproep/:id/afronden', name: 'afronden', component: () => import('./views/AfrondenView.vue'), props: true, meta: { staff: true } },
     { path: '/controle', name: 'controle', component: () => import('./views/ControleView.vue'), meta: { staff: true } },
     { path: '/deelnemer', name: 'deelnemer', component: () => import('./views/DeelnemerView.vue') },
     { path: '/beheer', name: 'beheer', component: () => import('./views/admin/BeheerView.vue'), meta: { staff: true, admin: true } },
@@ -56,8 +77,8 @@ router.beforeEach((to) => {
   if (to.meta.admin && !session.me?.isAdmin) return { name: 'start' };
   // Aangemeld: het startscherm in plaats van de keuze medewerker of deelnemer.
   if (to.name === 'welkom' && session.me) return { name: 'start' };
-  // Beheerders, kernteam en overige medewerkers beginnen in het overzicht (stand-by en post volgen in fase 3).
-  if (to.name === 'start' && session.me?.home === 'overzicht') return { name: 'kaart' };
+  // Startscherm volgens de belangrijkste rol: stand-by, de eigen post, of het overzicht.
+  if (to.name === 'start' && session.me) return homeRoute();
   // Medewerkers zetten de app eerst op het beginscherm.
   if (to.name === 'aanmelden' && !canUseAsStaff) return { name: 'installeren' };
 });

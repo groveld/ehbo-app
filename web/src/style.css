@@ -113,3 +113,15 @@ textarea.input { height: auto; min-height: 72px; padding: 10px 12px; line-height
 .form-footer { position: sticky; bottom: 0; z-index: 5; padding: 12px 0 max(16px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 18px); display: flex; flex-direction: column; gap: 8px; }
 .error-text { font-size: 13px; font-weight: 600; color: var(--danger); }
 .danger-link { color: var(--danger); }
+
+/* Oproepen: groene hoofdknop (accepteren, ter plaatse, afronden), tijdlijn, tegels met een getal. */
+.btn.go { height: 56px; border-radius: 16px; background: var(--ok); color: #FFFFFF; font-weight: 700; font-size: 16px; }
+.btn-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.timeline { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.timeline .row { display: flex; gap: 10px; align-items: baseline; }
+.timeline .at { font-family: var(--mono); color: var(--muted); width: 44px; flex-shrink: 0; }
+.timeline .warn { color: #8A4A0B; }
+.facts { display: grid; grid-template-columns: repeat(var(--facts, 3), minmax(0, 1fr)); gap: 8px; }
+.fact { background: var(--card); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.fact .label { font-size: 12px; color: var(--muted); }
+.fact .value { font-size: 18px; font-weight: 700; }

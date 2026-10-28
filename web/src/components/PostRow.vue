@@ -7,14 +7,15 @@ import { postSubtitle, primaryContact } from '../posts.ts';
 import Icon from './Icon.vue';
 import PostBadge from './PostBadge.vue';
 
-const props = defineProps<{ pkg: EventPackage; post: PackagePost }>();
+/** alert: er is een open oproep bij deze post (rode rand en badge). */
+const props = defineProps<{ pkg: EventPackage; post: PackagePost; alert?: boolean }>();
 const type = computed(() => props.pkg.postTypes.find((t) => t.id === props.post.typeId));
 const contact = computed(() => primaryContact(props.post));
 const subtitle = computed(() => postSubtitle(props.pkg, props.post));
 </script>
 
 <template>
-  <div class="post-row">
+  <div class="post-row" :class="{ alert }">
     <RouterLink :to="{ name: 'post', params: { id: post.id } }" class="main">
       <PostBadge :type="type" :size="40" />
       <span class="text">
@@ -32,6 +33,7 @@ const subtitle = computed(() => postSubtitle(props.pkg, props.post));
 
 <style scoped>
 .post-row { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 14px; background: var(--card); border-radius: 16px; }
+.post-row.alert { border: 2px solid var(--danger); padding: 10px 10px 10px 12px; }
 .main { display: flex; align-items: center; gap: 12px; flex-grow: 1; min-width: 0; color: var(--ink); text-decoration: none; }
 .text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .name { font-size: 15px; font-weight: 700; line-height: 1.25; }
