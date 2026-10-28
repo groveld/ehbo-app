@@ -30,10 +30,9 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 ## Status (28 Oct 2026)
 
 - Design finished; no open questions.
-- Phase 1 (test version: install check + Web Push) is live at https://silvesterloop.groveld.com. Install and push work on Windows and iPhone. Android is not tested yet.
-- The test version now runs on the chosen stack below (branch `feat/production-stack`). Verified locally in Edge, in both production and dev mode: service worker, subscribe, real push via WNS, offline reload.
-- The Unraid container now uses `/data`, `--user 99:100` and port 3000, so data and VAPID keys survive updates.
-- Next: phase 2 in the work plan, "Basis en beheer".
+- Phase 1 (test version: install check + Web Push) is **done**, tagged `v0.2.0`. It runs on the chosen stack below at https://silvesterloop.groveld.com. Install and push are confirmed on Windows, iPhone and Android.
+- The Unraid container uses `/data`, `--user 99:100` and port 3000, so data and VAPID keys survive updates.
+- Now: phase 2 in the work plan, "Basis en beheer".
 
 ## Chosen stack (decided 28 Oct 2026)
 
