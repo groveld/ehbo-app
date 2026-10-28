@@ -50,7 +50,7 @@ In Zero Trust › Networks › Tunnels › jouw tunnel › **Public hostname**:
 
 | Veld | Waarde |
 | --- | --- |
-| Subdomain / domain | bijv. `silvesterloop2026` . `groveld.com` |
+| Subdomain / domain | `silvesterloop` . `groveld.com` |
 | Service | `HTTP` · `<unraid-ip>:8080` (of `ehbo-app:8080` als cloudflared in hetzelfde Docker-netwerk draait) |
 
 Belangrijk voor installeren en meldingen:
