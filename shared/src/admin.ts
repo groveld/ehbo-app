@@ -1,5 +1,5 @@
 // Beheer: vorm van de gegevens die het beheerscherm leest en opslaat.
-import type { PostContactRole, UnitKind, UnitMobility, UnitStatus } from './event.ts';
+import type { Brand, EventStyle, PostContactRole, UnitKind, UnitMobility, UnitStatus } from './event.ts';
 
 /** Datum als jjjj-mm-dd, tijd als uu:mm. */
 export const DATE_PATTERN = '^\\d{4}-\\d{2}-\\d{2}$';
@@ -15,6 +15,7 @@ export interface EventSettings {
   endDate: string | null;
   /** Na zoveel seconden zonder acceptatie gaat een EHBO-oproep naar alle vrije eenheden. */
   escalationSeconds: number;
+  style: EventStyle;
 }
 
 export interface RunData {
@@ -118,6 +119,25 @@ export interface AdminState {
   coreTeam: CoreTeamEntry[];
   emergencyNumbers: EmergencyNumber[];
   admins: AdminPerson[];
+  brand: Brand;
+}
+
+/** Grootste afbeelding die de server aanneemt, in base64-tekens (ongeveer 1,1 MB). */
+export const IMAGE_MAX_BASE64 = 1_500_000;
+/** Kleinste maat van het vierkante logo, zodat het app-icoon scherp is. */
+export const ICON_MIN_SIZE = 512;
+
+/** PUT /api/admin/brand/icon: het vierkante logo in alle maten, door de app gemaakt (PNG, base64). */
+export interface IconUpload {
+  icon512: string;
+  icon192: string;
+  maskable512: string;
+  appleTouch: string;
+}
+
+/** PUT /api/admin/brand/logo: het grote logo (PNG, base64). */
+export interface LogoUpload {
+  png: string;
 }
 
 export interface AddAdminRequest {

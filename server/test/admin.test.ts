@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { AdminState, PostData, UnitData } from '@ehbo/shared';
+import { DEFAULT_STYLE, type AdminState, type PostData, type UnitData } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
 import { openEventDb, type EventDb } from '../src/event-db.ts';
@@ -25,6 +25,21 @@ const call = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: 
   app.inject({ method, url, payload, headers: { cookie, ...headers } });
 
 const version = () => (db.raw.prepare('SELECT version FROM event').get() as { version: number }).version;
+
+const EVENT = {
+  name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 30, style: DEFAULT_STYLE,
+};
+
+/** Begin van een PNG met de gevraagde maat, als base64; meer leest de server niet. */
+function png(width: number, height = width) {
+  const data = Buffer.alloc(33);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(data);
+  data.writeUInt32BE(13, 8);
+  data.write('IHDR', 12, 'latin1');
+  data.writeUInt32BE(width, 16);
+  data.writeUInt32BE(height, 20);
+  return data.toString('base64');
+}
 
 before(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ehbo-admin-'));
@@ -55,7 +70,7 @@ test('alleen beheerders', async () => {
 
 test('evenement opslaan; einddatum niet voor begindatum', async () => {
   const before = version();
-  const event = { name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 45 };
+  const event = { ...EVENT, escalationSeconds: 45 };
   const res = await call('PUT', '/api/admin/event', event);
   assert.equal(res.statusCode, 200, res.body);
   assert.equal((res.json() as AdminState).event.escalationSeconds, 45);
@@ -63,6 +78,48 @@ test('evenement opslaan; einddatum niet voor begindatum', async () => {
   assert.equal((await call('PUT', '/api/admin/event', { ...event, endDate: '2026-12-30' })).statusCode, 400);
   assert.equal((await call('PUT', '/api/admin/event', { ...event, escalationSeconds: 5 })).statusCode, 400);
   assert.equal((await call('PUT', '/api/admin/event', { ...event, startDate: '31-12-2026' })).statusCode, 400);
+});
+
+test('stijl: korte naam en kleuren, alleen leesbare kleuren', async () => {
+  const style = { shortName: ' Silvester ', primaryColor: '#1d3557', accentColor: '#F2C230' };
+  const state = (await call('PUT', '/api/admin/event', { ...EVENT, style })).json() as AdminState;
+  assert.deepEqual(state.event.style, { shortName: 'Silvester', primaryColor: '#1D3557', accentColor: '#F2C230' });
+  assert.equal((await app.inject({ url: '/manifest.webmanifest' })).json().short_name, 'Silvester');
+  assert.equal((await app.inject({ url: '/api/event' })).json().style.primaryColor, '#1D3557', 'iedereen krijgt de kleuren');
+
+  const light = await call('PUT', '/api/admin/event', { ...EVENT, style: { ...style, primaryColor: '#F2C230' } });
+  assert.equal(light.statusCode, 400);
+  assert.match(light.json().error, /hoofdkleur is te licht/);
+  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, style: { ...style, accentColor: '#333333' } })).statusCode, 400);
+  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, style: { ...style, shortName: 'Veel te lange naam' } })).statusCode, 400);
+  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, style: { ...style, primaryColor: 'red' } })).statusCode, 400);
+  await call('PUT', '/api/admin/event', EVENT);
+});
+
+test('logo en app-icoon uploaden, tonen en verwijderen', async () => {
+  const icon = { icon512: png(512), icon192: png(192), maskable512: png(512), appleTouch: png(180) };
+  assert.equal((await call('PUT', '/api/admin/brand/icon', icon, staffCookie)).statusCode, 403);
+  assert.equal((await call('PUT', '/api/admin/brand/icon', { ...icon, icon192: png(200) })).statusCode, 400, 'verkeerde maat');
+  assert.equal((await call('PUT', '/api/admin/brand/icon', { ...icon, icon192: Buffer.from('<svg/>').toString('base64') })).statusCode, 400, 'geen PNG');
+
+  let state = (await call('PUT', '/api/admin/brand/icon', icon)).json() as AdminState;
+  assert.match(state.brand.icon!, /^\/brand\/icon-192\.png\?v=\d+$/);
+  const served = await app.inject({ url: '/brand/icon-192.png' });
+  assert.equal(served.statusCode, 200);
+  assert.equal(served.headers['content-type'], 'image/png');
+  assert.equal(served.rawPayload.readUInt32BE(16), 192);
+  assert.equal((await app.inject({ url: '/manifest.webmanifest' })).json().icons[0].src, state.brand.icon, 'manifest wijst naar de nieuwe versie');
+
+  assert.equal((await call('PUT', '/api/admin/brand/logo', { png: png(3000, 600) })).statusCode, 400, 'te groot');
+  state = (await call('PUT', '/api/admin/brand/logo', { png: png(1200, 400) })).json() as AdminState;
+  assert.ok(state.brand.logo);
+  assert.equal((await app.inject({ url: '/api/event' })).json().brand.logo, state.brand.logo);
+
+  state = (await call('DELETE', '/api/admin/brand/icon')).json() as AdminState;
+  assert.equal(state.brand.icon, null);
+  assert.equal((await app.inject({ url: '/brand/apple-touch-icon.png' })).headers.location, '/icons/apple-touch-icon.png');
+  state = (await call('DELETE', '/api/admin/brand/logo')).json() as AdminState;
+  assert.equal(state.brand.logo, null);
 });
 
 test('loop toevoegen, GPX uploaden en verwijderen', async () => {

@@ -15,8 +15,9 @@ const staffRoute = canUseAsStaff ? { name: 'aanmelden' } : { name: 'installeren'
 <template>
   <main class="screen">
     <div class="stack gap-18 top">
-      <!-- Groot logo van het evenement; per evenement in te stellen (fase 2b). -->
-      <span role="img" :aria-label="`Logo ${name}`" class="logo">{{ name }}</span>
+      <!-- Groot logo van het evenement (Beheer → Evenement → Stijl); zonder logo de naam op de accentkleur. -->
+      <img v-if="session.event?.brand.logo" :src="session.event.brand.logo" :alt="`Logo ${name}`" class="logo-image">
+      <span v-else role="img" :aria-label="`Logo ${name}`" class="logo">{{ name }}</span>
       <div class="stack gap-6">
         <span class="eyebrow">{{ name }}<template v-if="session.event?.startDate"> · {{ formatDate(session.event.startDate) }}</template></span>
         <h1 class="title xl">Welkom</h1>
@@ -54,12 +55,13 @@ const staffRoute = canUseAsStaff ? { name: 'aanmelden' } : { name: 'installeren'
   align-self: flex-start; max-width: 100%; min-width: 180px; padding: 16px 18px; border-radius: 16px;
   background: var(--accent); color: var(--ink); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; text-transform: uppercase;
 }
+.logo-image { align-self: flex-start; max-width: 100%; max-height: 96px; object-fit: contain; object-position: left center; }
 .choices { padding-top: 36px; }
 .choice {
   display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: 18px;
   background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none;
 }
-.choice.dark { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
+.choice.dark { background: var(--primary); border-color: var(--primary); color: #FFFFFF; }
 .circle { width: 52px; height: 52px; }
 .text { gap: 2px; flex-grow: 1; }
 .label { font-size: 18px; font-weight: 700; }

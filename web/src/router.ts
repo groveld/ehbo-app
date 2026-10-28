@@ -40,6 +40,7 @@ export const router = createRouter({
     { path: '/deelnemer', name: 'deelnemer', component: () => import('./views/DeelnemerView.vue') },
     { path: '/beheer', name: 'beheer', component: () => import('./views/admin/BeheerView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/evenement', name: 'beheer-evenement', component: () => import('./views/admin/EvenementView.vue'), meta: { staff: true, admin: true } },
+    { path: '/beheer/app-icoon', name: 'beheer-app-icoon', component: () => import('./views/admin/AppIcoonView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/lopen/:id', name: 'beheer-loop', component: () => import('./views/admin/LoopView.vue'), props: true, meta: { staff: true, admin: true } },
     { path: '/beheer/posten', name: 'beheer-posten', component: () => import('./views/admin/PostenView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/posten/:id', name: 'beheer-post', component: () => import('./views/admin/PostView.vue'), props: true, meta: { staff: true, admin: true } },

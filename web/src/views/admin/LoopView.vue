@@ -110,5 +110,4 @@ async function onFile(event: Event) {
 
 <style scoped>
 .file { cursor: pointer; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>

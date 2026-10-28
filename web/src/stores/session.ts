@@ -1,13 +1,15 @@
 // Het evenement en de aangemelde medewerker. Beide worden lokaal bewaard, zodat de app zonder bereik blijft werken.
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
-import type { LoginUnknown, Me, PublicEvent } from '@ehbo/shared';
+import { DEFAULT_STYLE, type LoginUnknown, type Me, type PublicEvent } from '@ehbo/shared';
 import { api, ApiRequestError } from '../api.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
 
 export const useSessionStore = defineStore('session', () => {
-  const event = ref<PublicEvent | null>(load('ehbo.event'));
+  const stored = load<Omit<PublicEvent, 'style' | 'brand'> & Partial<PublicEvent>>('ehbo.event');
+  // Bewaard door een oudere versie van de app: zonder stijl en logo's.
+  const event = ref<PublicEvent | null>(stored && { style: DEFAULT_STYLE, brand: { logo: null, icon: null }, ...stored });
   const me = ref<Me | null>(load('ehbo.me'));
   /** Gekozen plek als iemand op meer plekken staat (index in me.assignments). Wisselen kan later via het menu. */
   const placeIndex = ref<number>(load('ehbo.place') ?? 0);

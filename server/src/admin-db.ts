@@ -14,6 +14,7 @@ import type {
   RunData,
   UnitData,
 } from '@ehbo/shared';
+import { getBrand, getStyle, saveStyle } from './brand.ts';
 import type { EventDb } from './event-db.ts';
 import type { Track } from './gpx.ts';
 
@@ -42,6 +43,7 @@ export function adminDb(events: EventDb) {
       startDate: e.start_date as string | null,
       endDate: e.end_date as string | null,
       escalationSeconds: e.escalation_seconds as number,
+      style: getStyle(events),
     };
 
     const runs: AdminRun[] = all('SELECT * FROM runs ORDER BY sort, id').map((r) => ({
@@ -109,12 +111,15 @@ export function adminDb(events: EventDb) {
     const admins: AdminPerson[] = all('SELECT a.phone, p.name FROM admins a JOIN people p ON p.phone = a.phone ORDER BY p.name, a.phone')
       .map((a) => ({ phone: a.phone as string, name: a.name as string }));
 
-    return { event, runs, postTypes, posts, units, coreTeam, emergencyNumbers, admins };
+    return { event, runs, postTypes, posts, units, coreTeam, emergencyNumbers, admins, brand: getBrand(events) };
   }
 
   function saveEvent(e: EventSettings) {
-    run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ? WHERE id = 1',
-      e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds);
+    events.transaction(() => {
+      run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ? WHERE id = 1',
+        e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds);
+      saveStyle(events, e.style);
+    });
   }
 
   function saveRun(id: number | null, r: RunData): number | null {

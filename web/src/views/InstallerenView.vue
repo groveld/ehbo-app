@@ -12,7 +12,8 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const session = useSessionStore();
-const appName = computed(() => `EHBO ${session.event?.name ?? 'app'}`);
+// Zo heet de app onder het icoon (de korte naam uit het manifest).
+const appName = computed(() => session.event?.style.shortName || session.event?.name || 'EHBO-app');
 const installPrompt = ref<BeforeInstallPromptEvent | null>(null);
 const installed = ref(false);
 
@@ -46,7 +47,7 @@ onBeforeUnmount(() => {
 <template>
   <main class="screen">
     <div class="stack gap-14 top">
-      <img src="/icons/icon-192.png" alt="" width="64" height="64" class="square-logo">
+      <img :src="session.event?.brand.icon ?? '/icons/icon-192.png'" alt="" width="64" height="64" class="square-logo">
       <h1 class="title">Zet de app eerst op je beginscherm</h1>
       <p class="lead">Alleen dan krijg je meldingen en werkt de app ook zonder bereik. Het kost 10 seconden.</p>
       <span class="chip">Herkend: {{ deviceLabel }}</span>
@@ -92,6 +93,6 @@ onBeforeUnmount(() => {
 .steps-gap { margin-top: 22px; }
 .hint { margin-top: 14px; }
 .step { display: flex; gap: 14px; align-items: center; font-size: 15px; }
-.num { width: 32px; height: 32px; background: var(--ink); color: #FFFFFF; font-size: 14px; }
+.num { width: 32px; height: 32px; background: var(--primary); color: #FFFFFF; font-size: 14px; }
 .test-link { align-self: center; padding: 8px; color: var(--muted); }
 </style>

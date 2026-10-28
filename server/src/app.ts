@@ -9,6 +9,7 @@ import { registerSessions } from './auth.ts';
 import type { EventDb } from './event-db.ts';
 import { protomapsSource, type MapSource } from './map.ts';
 import { adminRoutes } from './routes/admin.ts';
+import { brandRoutes } from './routes/brand.ts';
 import { mapRoutes } from './routes/map.ts';
 import { packageRoutes } from './routes/package.ts';
 import { pushRoutes } from './routes/push.ts';
@@ -29,7 +30,7 @@ export interface AppOptions {
 }
 
 // Bestanden die nooit lang in een cache (ook niet bij Cloudflare) mogen blijven.
-const NO_CACHE = new Set(['index.html', 'sw.js', 'manifest.webmanifest']);
+const NO_CACHE = new Set(['index.html', 'sw.js']);
 
 export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = false, mapSource = protomapsSource, logger = false }: AppOptions) {
   const app = Fastify({
@@ -67,6 +68,7 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   app.register(sessionRoutes, { db });
   app.register(pushRoutes, { db, vapid, allowInsecureEndpoints });
   app.register(adminRoutes, { db });
+  app.register(brandRoutes, { db });
   app.register(packageRoutes, { db });
   app.register(mapRoutes, { db, mapSource });
 

@@ -1,8 +1,10 @@
 // Beheer: de volledige stand van het evenement. Elke wijziging stuurt de nieuwe stand terug.
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, PostData, RunData, UnitData } from '@ehbo/shared';
+import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, LogoUpload, PostData, RunData, UnitData } from '@ehbo/shared';
 import { api, ApiRequestError } from '../api.ts';
+import { makeIconSet, makeLogo } from '../images.ts';
+import { useSessionStore } from './session.ts';
 
 export const useAdminStore = defineStore('admin', () => {
   const state = ref<AdminState | null>(null);
@@ -25,6 +27,12 @@ export const useAdminStore = defineStore('admin', () => {
     state.value = await api<AdminState>(path, { method, body });
   }
 
+  /** Naam, kleuren of logo's gewijzigd: ook de openbare gegevens (stijl van de app zelf) bijwerken. */
+  async function changeStyle(path: string, method: 'PUT' | 'DELETE', body?: object) {
+    await change(path, method, body);
+    await useSessionStore().loadEvent();
+  }
+
   async function uploadGpx(runId: number, file: File) {
     const res = await fetch(`/api/admin/runs/${runId}/gpx?filename=${encodeURIComponent(file.name)}`, {
       method: 'PUT',
@@ -38,7 +46,11 @@ export const useAdminStore = defineStore('admin', () => {
 
   return {
     state, loading, postTypeById, postById, load, uploadGpx,
-    saveEvent: (e: EventSettings) => change('/api/admin/event', 'PUT', e),
+    uploadLogo: async (file: File) => changeStyle('/api/admin/brand/logo', 'PUT', { png: await makeLogo(file) } satisfies LogoUpload),
+    uploadIcon: async (file: File) => changeStyle('/api/admin/brand/icon', 'PUT', await makeIconSet(file)),
+    deleteLogo: () => changeStyle('/api/admin/brand/logo', 'DELETE'),
+    deleteIcon: () => changeStyle('/api/admin/brand/icon', 'DELETE'),
+    saveEvent: (e: EventSettings) => changeStyle('/api/admin/event', 'PUT', e),
     saveRun: (id: number | null, r: RunData) => change(id === null ? '/api/admin/runs' : `/api/admin/runs/${id}`, id === null ? 'POST' : 'PUT', r),
     deleteRun: (id: number) => change(`/api/admin/runs/${id}`, 'DELETE'),
     savePost: (id: number | null, p: PostData) => change(id === null ? '/api/admin/posts' : `/api/admin/posts/${id}`, id === null ? 'POST' : 'PUT', p),
