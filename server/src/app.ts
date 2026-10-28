@@ -6,10 +6,13 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import type { ApiError, AppInfo } from '@ehbo/shared';
 import { registerSessions } from './auth.ts';
+import { createCalls, type CallsOptions } from './calls.ts';
 import type { EventDb } from './event-db.ts';
 import { protomapsSource, type MapSource } from './map.ts';
+import { createNotifier } from './notify.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { brandRoutes } from './routes/brand.ts';
+import { callRoutes } from './routes/calls.ts';
 import { mapRoutes } from './routes/map.ts';
 import { packageRoutes } from './routes/package.ts';
 import { pushRoutes } from './routes/push.ts';
@@ -26,13 +29,15 @@ export interface AppOptions {
   allowInsecureEndpoints?: boolean;
   /** Bron van de kaart; tests geven een nep-bron mee. */
   mapSource?: () => Promise<MapSource>;
+  /** Alleen voor tests: meldingen opvangen, timers zelf laten aflopen en de klok zetten. */
+  calls?: Partial<Pick<CallsOptions, 'notify' | 'schedule' | 'now'>>;
   logger?: FastifyServerOptions['logger'];
 }
 
 // Bestanden die nooit lang in een cache (ook niet bij Cloudflare) mogen blijven.
 const NO_CACHE = new Set(['index.html', 'sw.js']);
 
-export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = false, mapSource = protomapsSource, logger = false }: AppOptions) {
+export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = false, mapSource = protomapsSource, calls: callOptions = {}, logger = false }: AppOptions) {
   const app = Fastify({
     logger,
     logController: new LogController({ disableRequestLogging: true }),
@@ -65,9 +70,16 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
     subscriptions: db.countSubscriptions(),
   }));
 
+  const notifier = createNotifier(db, vapid, app.log);
+  const calls = createCalls(db, { notify: notifier.toPhones, ...callOptions });
+  // Lopende oproepen gaan na een herstart verder waar ze waren.
+  app.addHook('onReady', async () => calls.resume());
+  app.addHook('onClose', async () => calls.stop());
+
   app.register(sessionRoutes, { db });
-  app.register(pushRoutes, { db, vapid, allowInsecureEndpoints });
-  app.register(adminRoutes, { db });
+  app.register(pushRoutes, { db, notifier, allowInsecureEndpoints });
+  app.register(callRoutes, { calls });
+  app.register(adminRoutes, { db, calls });
   app.register(brandRoutes, { db });
   app.register(packageRoutes, { db });
   app.register(mapRoutes, { db, mapSource });

@@ -291,8 +291,8 @@ Elke fase eindigt met iets wat je zelf kunt proberen op je telefoon; pas als het
 | --- | --- | --- |
 | Ontwerp afronden | Open punten beslissen, datum vast, server en subdomein klaar | Ontwerp akkoord, Docker-host bereikbaar via https |
 | Basis en beheer | Docker-stack, evenement en lopen, posten met GPS, EHBO-eenheden, beheerders, aanmelden met nummer, overzicht en kaart offline, bellen en navigeren | Jij kunt de marathon volledig invoeren en op twee telefoons offline bekijken |
-| EHBO-verzoek en meldingen | Verzoek-tegels, EHBO-verzoek, push, dichtstbijzijnde eenheid, 30 s-escalatie, AED-voorrang, al aangenomen, ter plaatse, afronden, geen-bereik-terugval | Proefoproep komt binnen 5 s binnen op iPhone en Android, ook met scherm uit |
-| Verzoeken en rapport | Water, verkeer, vrijwilliger in de wachtrij; post openen/sluiten; info-pagina; testmodus; rapport PDF en CSV | Rapport van een proefdag klopt met wat er gebeurd is |
+| EHBO-verzoek en meldingen | Post openen/sluiten, verzoek-tegels, EHBO-verzoek, push, dichtstbijzijnde eenheid, 30 s-escalatie, AED-voorrang, al aangenomen, ter plaatse, afronden, geen-bereik-terugval | Proefoproep komt binnen 5 s binnen op iPhone en Android, ook met scherm uit |
+| Verzoeken en rapport | Water, verkeer, vrijwilliger in de wachtrij; info-pagina; testmodus; rapport PDF en CSV | Rapport van een proefdag klopt met wat er gebeurd is |
 | Testen op telefoons | Proefdag met 5–10 mensen en echte toestellen, verschillende iPhones en Androids | Geen blokkerende fouten; go of no-go |
 | Uitrol en handleiding | Handleiding met schermafbeeldingen, QR-code, iedereen installeert en doet een testmelding | Handleiding aangeleverd aan de evenementcoördinator; alle medewerkers staan in de app |
 
@@ -349,6 +349,13 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Overzicht (28 okt) | Vier tabbladen zoals in het schermontwerp: Kaart, Posten, Verzoeken (volgt in fase 3), Contacten. Op dit scherm staat de tabbalk onderaan in plaats van 112; 112 staat bij de noodnummers in Contacten. Het menu (rechtsboven) bevat beheer, meldingen, info, navigatie-app en afmelden |
 | Dichte posten (28 okt) | Grijs op de kaart zodra posten open en dicht kunnen (fase 4); tot dan staan alle posten in hun eigen kleur |
 | Letters (28 okt) | Start/finish "S/F" en stempelpost "St", zoals in het schermontwerp |
+| Fase 3 in delen (28 okt) | "EHBO-verzoek en meldingen" in drie delen: 3a de oproeplogica op de server (oproep, escalatie, AED, accepteren, afronden, push, live stand), 3b de schermen, 3c geen bereik, herhalend alarm in de app en de end-to-end-test |
+| Post open/dicht naar fase 3 (28 okt) | Zonder open post geen verzoek en telt een EHBO-post niet mee; daarom komt open/dicht al in fase 3 (API in 3a, scherm 3.1 in 3b) in plaats van fase 4. Open/dicht is live (via de live stand), niet in het evenementpakket |
+| Beschikbaarheid eenheid (28 okt) | Vrij, even pauze of uit dienst, zoals op scherm 3.3; "bezet" volgt uit een lopende oproep. Wie een oproep accepteert, staat daarmee in dienst |
+| AED bij niet aanspreekbaar (28 okt) | De AED-eenheid blijft opgeroepen tot er een eenheid met AED heeft geaccepteerd, ook als een eenheid zonder AED al onderweg is. Daardoor kunnen twee eenheden dezelfde oproep aannemen; de eerste is de hoofdeenheid. Wordt de persoon later niet aanspreekbaar (aanvullen), dan gaat de oproep alsnog naar de dichtstbijzijnde AED-eenheid |
+| Herhalen en de coördinator (28 okt) | Na de escalatie herhaalt het alarm elke escalatietijd (hoogstens 10 keer) bij alle vrije eenheden, ook wie inmiddels vrij is gekomen. Bij de eerste herhaling (na twee keer de escalatietijd, standaard 60 s) krijgt de coördinator een alarm om de eenheden te bellen; de app kan niet zelf bellen |
+| Handmatig toewijzen (28 okt) | De coördinator wijst een eenheid toe nadat die telefonisch akkoord is; dat telt als aangenomen. Kan ook als er al een eenheid onderweg is (extra hulp) |
+| Posities (28 okt) | De laatste GPS-positie van een mobiele eenheid staat alleen in het geheugen van de server en telt 3 minuten; daarna de standplaats. Na een herstart is hij weg, tot de volgende positie (elke minuut) |
 
 **Nog open**
 

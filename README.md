@@ -155,5 +155,16 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | POST | `/api/subscriptions` | medewerker | Abonnement opslaan `{ subscription }` |
 | DELETE | `/api/subscriptions` | medewerker | Abonnement verwijderen `{ endpoint }` |
 | POST | `/api/test-push` | medewerker | Testmelding naar je eigen toestel `{ endpoint, delaySeconds }` |
+| GET | `/api/live` | medewerker | Live stand (SSE): oproepen, eenheden en open/dicht van posten; bij elke wijziging een nieuw bericht, hartslag elke 30 s |
+| GET | `/api/live/state` | medewerker | Dezelfde stand in één antwoord |
+| POST | `/api/incidents` | post | EHBO-verzoek `{ postId, clientId, what, persons, responsive, note }`; dezelfde `clientId` telt één keer |
+| PUT | `/api/incidents/:id` | post | Melding aanvullen |
+| POST | `/api/incidents/:id/accept`, `/decline` | EHBO-eenheid | Accepteren of "kan niet" `{ unitId }` |
+| POST | `/api/incidents/:id/on-site`, `/close` | EHBO-eenheid | Ter plaatse; afronden `{ outcome, persons, note, stayHere }` |
+| POST | `/api/incidents/:id/withdraw` | post | Melding intrekken |
+| POST | `/api/incidents/:id/assign` | coördinator | Oproep toewijzen aan een eenheid `{ unitId }` |
+| PUT | `/api/units/:id/availability` | EHBO-eenheid | Vrij, even pauze of uit dienst |
+| PUT | `/api/units/:id/position` | EHBO-eenheid | Positie van een mobiele eenheid (alleen in het geheugen van de server) |
+| PUT | `/api/posts/:id/open` | postverantwoordelijke | Post open of dicht `{ open }` |
 
 Het nummer is in deze versie een identificatie, geen beveiliging (zie het functioneel ontwerp). Mislukte aanmeldpogingen worden per IP-adres afgeremd en elke aanmelding komt in het logboek.

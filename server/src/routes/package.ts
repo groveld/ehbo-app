@@ -31,7 +31,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
       ...(staff ? { address: p.address, accessRoute: p.accessRoute, contacts: p.contacts.map(({ name, phone, role }) => ({ name, phone, role })) } : {}),
     })),
     runs: state.runs.map((r) => ({ id: r.id, name: r.name, distanceKm: r.distanceKm, discipline: r.discipline, date: r.date, startTime: r.startTime, line: lines.get(r.id) ?? null })),
-    units: staff ? state.units.map(({ status: _, ...u }) => u) : [],
+    units: staff ? state.units.map(({ availability: _, ...u }) => u) : [],
     coreTeam: staff ? state.coreTeam.filter((c) => c.phone).map((c) => ({ ...c, phone: c.phone! })) : [],
     emergencyNumbers: staff ? state.emergencyNumbers : [],
     map,

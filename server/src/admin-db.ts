@@ -96,7 +96,7 @@ export function adminDb(events: EventDb) {
       mobility: u.mobility as AdminUnit['mobility'],
       postId: u.post_id as number | null,
       hasAed: u.has_aed === 1,
-      status: u.status as AdminUnit['status'],
+      availability: u.availability as AdminUnit['availability'],
       members: membersByUnit.get(u.id as number) ?? [],
     }));
 
