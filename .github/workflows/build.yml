@@ -1,65 +1,82 @@
-name: Testen en image bouwen
+---
+name: Build and Publish Docker Image
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     tags: ["v*"]
   pull_request:
-  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  USERNAME: ${{ github.actor }}
+  PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Tests
+
+      - name: Run tests
         run: npm test
 
-  image:
+  build-and-publish:
     needs: test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Image-namen en tags bepalen
-        id: meta
-        uses: docker/metadata-action@v5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
         with:
-          images: ghcr.io/${{ github.repository }}
+          fetch-depth: 0
+
+      - name: Log in to the Container registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.USERNAME }}
+          password: ${{ env.PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=sha,prefix=sha-,format=short
             type=ref,event=pr
 
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Inloggen bij GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Bouwen (en publiceren buiten pull requests)
-        uses: docker/build-push-action@v6
+      - name: Build image (load locally for the smoke test)
+        uses: docker/build-push-action@v7.4.0
         with:
           context: .
+          file: Dockerfile
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          load: true
+          tags: ehbo-app:smoke
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
             GIT_SHA=${{ github.sha }}
@@ -67,11 +84,45 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Rooktest van het image
+      - name: Smoke test
         run: |
-          docker run -d --name smoke -p 8080:8080 -e VAPID_SUBJECT=mailto:ci@example.org ${{ fromJSON(steps.meta.outputs.json).tags[0] }} || \
-            (docker buildx build --load -t smoke:local . && docker run -d --name smoke -p 8080:8080 -e VAPID_SUBJECT=mailto:ci@example.org smoke:local)
+          docker run -d --name smoke -p 8080:8080 -e VAPID_SUBJECT=mailto:ci@example.org ehbo-app:smoke
           for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8080/healthz && break; sleep 1; done
           curl -fsS http://127.0.0.1:8080/api/info
           curl -fsS -o /dev/null http://127.0.0.1:8080/manifest.webmanifest
+          curl -fsS -o /dev/null http://127.0.0.1:8080/sw.js
           docker logs smoke
+
+      - name: Build and Publish Docker image
+        id: build
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+            GIT_SHA=${{ github.sha }}
+            BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
+          cache-from: type=gha
+
+      - name: Image digest
+        if: github.event_name != 'pull_request'
+        run: echo ${{ steps.build.outputs.digest }}
+
+  cleanup:
+    needs: build-and-publish
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old container images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ github.event.repository.name }}
+          package-type: "container"
+          min-versions-to-keep: 5
+          delete-only-untagged-versions: true

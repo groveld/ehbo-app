@@ -22,8 +22,10 @@ telefoon ◄──── melding ──── push-dienst Apple / Google ◄─�
 2. De workflow `.github/workflows/build.yml` draait bij elke push en pull request:
    - `npm test`;
    - Docker-image bouwen;
+   - rooktest: container starten en `/healthz`, `/api/info`, het manifest en de service worker opvragen;
    - op `main` publiceren als `ghcr.io/<owner>/<repo>:latest` en `:sha-<commit>`; een tag `v1.2.3` geeft ook `:1.2.3`;
-   - rooktest: container starten en `/healthz`, `/api/info` en het manifest opvragen.
+   - oude, ongetagde images opruimen (laatste 5 blijven bewaard).
+   Pull requests worden alleen getest en gebouwd, niet gepubliceerd. Dependabot houdt de actions en het Node-basisimage bij.
 3. Het image is standaard **privé**. Kies één van twee:
    - maak het package openbaar (GitHub › Packages › ehbo-app › Package settings › Change visibility). Er staan geen geheimen in het image; of
    - log op Unraid in: `docker login ghcr.io -u <github-gebruiker>` met een *personal access token* met alleen `read:packages`.
@@ -40,7 +42,9 @@ telefoon ◄──── melding ──── push-dienst Apple / Google ◄─�
 
 **Of met Docker Compose:** zie `docker-compose.yml`.
 
-**Bijwerken:** na een nieuwe build in Unraid op *Check for updates* › *update* (of Watchtower). In de app zie je bovenaan welke versie draait.
+**Bijwerken:** Unraid controleert elke nacht op een nieuw `:latest`-image en werkt automatisch bij. Elke push naar `main` staat dus de volgende ochtend live; in de app zie je bovenaan welke versie draait.
+
+> **Rond het evenement:** zet vanaf week 52 de automatische update voor deze container uit, of zet het image vast op een geteste versie (bijv. `ghcr.io/groveld/ehbo-app:sha-abc1234` of `:1.0.0`). Zo kan een late wijziging nooit ongemerkt op 31 december live gaan.
 
 > **Back-up:** `app.sqlite` in appdata bevat de VAPID-sleutels. Gaan die verloren, dan moet iedereen meldingen opnieuw aanzetten. Neem deze map mee in je back-up.
 
