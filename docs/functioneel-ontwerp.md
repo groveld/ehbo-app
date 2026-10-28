@@ -191,7 +191,7 @@ flowchart LR
 
 Alleen de oproep loopt via de server en de push-diensten; kaart en contacten staan ook op de telefoon zelf.
 
-**Gekozen stack (28 oktober 2026).** Eén repository met `server/` (Node 22 + Fastify, TypeScript), `web/` (Vue 3 + Vite) en `shared/` (gedeelde typen en vaste lijsten). Tests met node:test, en de oproepketen (aanmelden → verzoek → oproep → afronden) end-to-end met Playwright in GitHub Actions. Rapport als CSV en als printvriendelijke pagina voor PDF. De testversie in groveld/ehbo-app is het startpunt; de push-module en service worker worden hergebruikt.
+**Gekozen stack (28 oktober 2026).** Eén repository met `server/` (Node + Fastify, TypeScript), `web/` (Vue 3 + Vite) en `shared/` (gedeelde typen en vaste lijsten). Tests met node:test, en de oproepketen (aanmelden → verzoek → oproep → afronden) end-to-end met Playwright in GitHub Actions. Rapport als CSV en als printvriendelijke pagina voor PDF. De testversie in groveld/ehbo-app is het startpunt; de push-module en service worker worden hergebruikt.
 
 | Onderdeel | Voorstel | Waarom |
 | --- | --- | --- |
@@ -333,7 +333,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Punt | Besluit |
 | --- | --- |
 | Poort (28 okt) | De app luistert in de container op 3000; de tunnel wijst via het Docker-netwerk naar `ehbo-app:3000`. Lokaal en op het thuisnetwerk: 3080 |
-| Server zonder compileerstap (28 okt) | Node draait de TypeScript van de server direct (type stripping, Node 22.18+). Daardoor alleen 'wegstreepbare' TypeScript: geen enums, namespaces of parameter properties |
+| Server zonder compileerstap (28 okt) | Node draait de TypeScript van de server direct (type stripping). Daardoor alleen 'wegstreepbare' TypeScript: geen enums, namespaces of parameter properties |
 | TypeScript 6 (28 okt) | Nog niet TypeScript 7: vue-tsc (typecontrole van de Vue-bestanden) werkt nog op de JavaScript-versie van TypeScript |
 | Service worker (28 okt) | Eigen `web/src/sw.ts`, door een kleine Vite-plugin gebouwd als `/sw.js` met de lijst van te bewaren bestanden; geen Workbox |
 | Fases 2a, 2b, 2c (28 okt) | Fase "Basis en beheer" in drie delen, elk apart te testen: 2a aanmelden en rollen, 2b beheerschermen, 2c overzicht, kaart offline en deelnemers |
@@ -341,6 +341,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Aanmelden (28 okt) | Sessie in een HttpOnly-cookie, geldig tot de dag na het evenement. Rollen worden bij elk verzoek opnieuw bepaald: wie van een post wordt gehaald, is direct afgemeld. Mislukte pogingen worden per IP-adres afgeremd, gelukte niet (bij een briefing zit iedereen achter één wifi-adres) |
 | Eerste beheerder (28 okt) | Instelling `ADMIN_PHONE` op de server; alleen gebruikt zolang het evenement nog geen beheerder heeft |
 | Evenementbestand (28 okt) | `events/<naam>.sqlite`, nu gekozen met de instelling `EVENT`. Het subdomein bepaalt het evenement zodra er een tweede evenement op dezelfde server komt |
+| Node 26 (28 okt) | Overal dezelfde versie: Docker-image, CI en de TypeScript-typen. Node 26 is sinds oktober 2026 de LTS-versie |
 
 **Nog open**
 
