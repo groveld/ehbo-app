@@ -45,7 +45,7 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 - **Live updates:** Server-Sent Events with a heartbeat every 30 s. Cloudflare drops idle connections after 100 s.
 - **Push:** our own Web Push module (VAPID ES256 and aes128gcm) in `server/src/webpush.ts`, tested against the RFC 8291 vector. Reuse it; don't add `web-push`.
 - **Service worker:** our own, no Workbox. In dev (`BUILD_ID === 'dev'`) it handles push but not fetches, so Vite always serves fresh code.
-- **TypeScript 6**, not 7: vue-tsc still needs the JavaScript-based compiler.
+- **TypeScript 6**, not 7: vue-tsc still needs the JavaScript-based compiler. Upgrading breaks `npm run typecheck` for `web/` (`ERR_PACKAGE_PATH_NOT_EXPORTED ./lib/tsc`). Dependabot ignores TypeScript, Node and `@types/node` majors; move those deliberately, together.
 - **Tests:** `node:test` for units, Playwright end-to-end in CI for the call chain (login → request → call → close).
 - **Report:** CSV, plus a print-friendly page saved as PDF.
 
