@@ -33,9 +33,19 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
 
       - name: Run tests
         run: npm test
+
+      - name: Build web app
+        run: npm run build
 
   build-and-publish:
     needs: test
@@ -86,11 +96,12 @@ jobs:
 
       - name: Smoke test
         run: |
-          docker run -d --name smoke -p 8080:8080 -e VAPID_SUBJECT=mailto:ci@example.org ehbo-app:smoke
-          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8080/healthz && break; sleep 1; done
-          curl -fsS http://127.0.0.1:8080/api/info
-          curl -fsS -o /dev/null http://127.0.0.1:8080/manifest.webmanifest
-          curl -fsS -o /dev/null http://127.0.0.1:8080/sw.js
+          docker run -d --name smoke -p 3080:3000 -e VAPID_SUBJECT=mailto:ci@example.org ehbo-app:smoke
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:3080/healthz && break; sleep 1; done
+          curl -fsS http://127.0.0.1:3080/api/info
+          curl -fsS http://127.0.0.1:3080/ | grep -q '<div id="app">'
+          curl -fsS -o /dev/null http://127.0.0.1:3080/manifest.webmanifest
+          curl -fsS http://127.0.0.1:3080/sw.js | grep -q 'ehbo-app-'
           docker logs smoke
 
       - name: Build and Publish Docker image

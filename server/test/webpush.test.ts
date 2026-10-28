@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import http from 'node:http';
-import { encryptPayload, generateVapidKeys, sendPush, b64url } from '../src/webpush.js';
+import type { AddressInfo } from 'node:net';
+import { encryptPayload, generateVapidKeys, sendPush, b64url } from '../src/webpush.ts';
 
 // RFC 8291, bijlage A: officiële testvector.
 test('aes128gcm-versleuteling komt exact overeen met RFC 8291 bijlage A', () => {
@@ -18,12 +19,12 @@ test('aes128gcm-versleuteling komt exact overeen met RFC 8291 bijlage A', () => 
 });
 
 // Ontsleutelen zoals een browser dat doet (RFC 8291 §3.4, vanuit de ontvanger).
-function decrypt(body, uaEcdh, authSecret) {
+function decrypt(body: Buffer, uaEcdh: crypto.ECDH, authSecret: Buffer) {
   const salt = body.subarray(0, 16);
   const idlen = body.readUInt8(20);
   const asPublic = body.subarray(21, 21 + idlen);
   const ciphertext = body.subarray(21 + idlen);
-  const hmac = (k, d) => crypto.createHmac('sha256', k).update(d).digest();
+  const hmac = (k: crypto.BinaryLike, d: crypto.BinaryLike) => crypto.createHmac('sha256', k).update(d).digest();
   const ecdhSecret = uaEcdh.computeSecret(asPublic);
   const prkKey = hmac(authSecret, ecdhSecret);
   const ikm = hmac(prkKey, Buffer.concat([Buffer.from('WebPush: info\0'), uaEcdh.getPublicKey(), asPublic, Buffer.from([1])]));
@@ -43,14 +44,14 @@ test('sendPush levert een geldig ondertekend en ontsleutelbaar bericht af', asyn
   ua.generateKeys();
   const authSecret = crypto.randomBytes(16);
 
-  let received;
+  let received: { headers: http.IncomingHttpHeaders; body: Buffer } | undefined;
   const server = http.createServer((req, res) => {
-    const chunks = [];
-    req.on('data', (c) => chunks.push(c));
+    const chunks: Buffer[] = [];
+    req.on('data', (c: Buffer) => chunks.push(c));
     req.on('end', () => { received = { headers: req.headers, body: Buffer.concat(chunks) }; res.writeHead(201); res.end(); });
   });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  const endpoint = `http://127.0.0.1:${server.address().port}/push/abc`;
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const endpoint = `http://127.0.0.1:${(server.address() as AddressInfo).port}/push/abc`;
 
   const result = await sendPush(
     { endpoint, keys: { p256dh: b64url.encode(ua.getPublicKey()), auth: b64url.encode(authSecret) } },
@@ -58,6 +59,7 @@ test('sendPush levert een geldig ondertekend en ontsleutelbaar bericht af', asyn
     vapid,
   );
   server.close();
+  assert.ok(received);
 
   assert.equal(result.ok, true);
   assert.equal(received.headers['content-encoding'], 'aes128gcm');
@@ -65,10 +67,10 @@ test('sendPush levert een geldig ondertekend en ontsleutelbaar bericht af', asyn
   assert.equal(received.headers.ttl, '60');
 
   // VAPID-handtekening controleren met de publieke sleutel.
-  const m = /^vapid t=([^,]+), k=(.+)$/.exec(received.headers.authorization);
+  const m = /^vapid t=([^,]+), k=(.+)$/.exec(String(received.headers.authorization));
   assert.ok(m, 'Authorization-header heeft het vapid-formaat');
   assert.equal(m[2], vapid.publicKey);
-  const [h, p, s] = m[1].split('.');
+  const [h, p, s] = m[1]!.split('.') as [string, string, string];
   const pub = b64url.decode(vapid.publicKey);
   const key = crypto.createPublicKey({ format: 'jwk', key: { kty: 'EC', crv: 'P-256', x: b64url.encode(pub.subarray(1, 33)), y: b64url.encode(pub.subarray(33)) } });
   assert.ok(crypto.verify('sha256', Buffer.from(`${h}.${p}`), { key, dsaEncoding: 'ieee-p1363' }, b64url.decode(s)), 'handtekening klopt');
@@ -84,9 +86,9 @@ test('sendPush meldt een verlopen abonnement (410) als gone', async () => {
   const ua = crypto.createECDH('prime256v1');
   ua.generateKeys();
   const server = http.createServer((req, res) => { req.resume(); req.on('end', () => { res.writeHead(410); res.end('gone'); }); });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   const result = await sendPush(
-    { endpoint: `http://127.0.0.1:${server.address().port}/x`, keys: { p256dh: b64url.encode(ua.getPublicKey()), auth: b64url.encode(crypto.randomBytes(16)) } },
+    { endpoint: `http://127.0.0.1:${(server.address() as AddressInfo).port}/x`, keys: { p256dh: b64url.encode(ua.getPublicKey()), auth: b64url.encode(crypto.randomBytes(16)) } },
     'x', vapid,
   );
   server.close();

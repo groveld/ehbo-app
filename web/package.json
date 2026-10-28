@@ -1,0 +1,22 @@
+{
+  "name": "@ehbo/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "De PWA: Vue 3, Vite en Pinia, met een eigen service worker.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc -p tsconfig.app.json && tsc -p tsconfig.sw.json && tsc -p tsconfig.node.json"
+  },
+  "devDependencies": {
+    "@ehbo/shared": "*",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "@vue/tsconfig": "^0.9.1",
+    "pinia": "^4.1.0",
+    "vite": "^8.3.5",
+    "vue": "^3.5.44",
+    "vue-tsc": "^3.3.13"
+  }
+}

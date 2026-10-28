@@ -2,13 +2,29 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Server (dev)",
+      "name": "Server (dev, API op 3000)",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/src/server.js",
+      "program": "${workspaceFolder}/server/src/index.ts",
       "runtimeArgs": ["--disable-warning=ExperimentalWarning"],
-      "env": { "DATA_DIR": "${workspaceFolder}/data", "PORT": "8080" },
+      "env": { "DATA_DIR": "${workspaceFolder}/data", "PORT": "3000" },
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Web (Vite op 3080)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Server + web",
+      "configurations": ["Server (dev, API op 3000)", "Web (Vite op 3080)"],
+      "stopAll": true
     }
   ]
 }

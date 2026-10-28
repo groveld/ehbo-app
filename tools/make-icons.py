@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw
 INK = (22, 24, 29, 255)
 YELLOW = (242, 194, 48, 255)
 WHITE = (255, 255, 255, 255)
-OUT = Path(__file__).resolve().parent.parent / 'public' / 'icons'
+OUT = Path(__file__).resolve().parent.parent / 'web' / 'public' / 'icons'
 S = 1024  # tekenformaat; daarna verkleinen voor scherpe randen
 
 
