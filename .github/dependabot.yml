@@ -47,6 +47,9 @@ updates:
     ignore:
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # vue-tsc werkt nog niet met TypeScript 7 (de nieuwe, niet in JavaScript geschreven compiler).
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       npm:
         patterns:
