@@ -25,7 +25,11 @@ const props = withDefaults(defineProps<{
   picking?: boolean;
   picked?: LngLat | null;
   interactive?: boolean;
-}>(), { posts: undefined, focusPostId: null, highlightRunId: null, showUser: true, picking: false, picked: null, interactive: true });
+  /** Posten met een open oproep: rood, met een gloed. */
+  alertPostIds?: number[];
+  /** Dichte posten: grijs. */
+  closedPostIds?: number[];
+}>(), { posts: undefined, focusPostId: null, highlightRunId: null, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], closedPostIds: () => [] });
 
 const emit = defineEmits<{ select: [postId: number]; pick: [lngLat: LngLat] }>();
 
@@ -68,8 +72,9 @@ function markerElement(post: PackagePost) {
   const type = props.pkg.postTypes.find((t) => t.id === post.typeId);
   const el = document.createElement('button');
   el.type = 'button';
-  el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${post.id === props.focusPostId ? ' focus' : ''}`;
-  el.style.background = type?.color ?? '#6B7079';
+  const alert = props.alertPostIds.includes(post.id);
+  el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${post.id === props.focusPostId ? ' focus' : ''}${alert ? ' alert' : ''}`;
+  el.style.background = alert ? '#C8261E' : props.closedPostIds.includes(post.id) ? '#A8A59C' : (type?.color ?? '#6B7079');
   el.setAttribute('aria-label', post.name);
   if (type?.key === 'ehbo') el.innerHTML = CROSS;
   else {
@@ -165,7 +170,7 @@ onMounted(() => {
   void startUserLocation();
 });
 
-watch(() => [props.posts, props.pkg, props.focusPostId], drawPosts);
+watch(() => [props.posts, props.pkg, props.focusPostId, props.alertPostIds, props.closedPostIds], drawPosts);
 watch(() => props.picked, drawPicked);
 watch(() => [props.highlightRunId, props.pkg], () => (map?.getSource('lopen') as GeoJSONSource | undefined)?.setData(runFeatures()));
 
@@ -189,6 +194,7 @@ onBeforeUnmount(() => {
 }
 .event-map :deep(.post-marker.small) { font-size: 9px; letter-spacing: -0.02em; }
 .event-map :deep(.post-marker.ehbo) { border-radius: 8px; }
+.event-map :deep(.post-marker.alert) { width: 32px; height: 32px; box-shadow: 0 0 0 10px rgba(200, 38, 30, .2); z-index: 1; }
 .event-map :deep(.post-marker.focus) { width: 36px; height: 36px; box-shadow: 0 0 0 8px rgba(31, 111, 178, .25); }
 .event-map :deep(.user-dot) {
   width: 16px; height: 16px; border-radius: 50%; background: #1F6FB2; border: 3px solid #FFFFFF; box-shadow: 0 0 0 6px rgba(31, 111, 178, .25);

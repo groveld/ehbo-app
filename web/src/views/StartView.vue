@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Menu, en tijdelijk startscherm voor EHBO'ers en postverantwoordelijken (hun eigen startscherm komt in fase 3).
+// Menu: naar je eigen startscherm (stand-by of post), het overzicht, beheer, meldingen, navigatie-app en afmelden.
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Call112 from '../components/Call112.vue';
@@ -13,9 +13,8 @@ const router = useRouter();
 const me = computed(() => session.me!);
 const navApp = ref<NavApp>(getNavApp());
 
-const comingNext = computed(() => (me.value.home === 'ehbo'
-  ? 'Hier komt je stand-by-scherm voor oproepen.'
-  : 'Hier komt het startscherm van je post, met de hulpknop.'));
+const myPosts = computed(() => me.value.assignments.filter((a) => a.kind === 'post'));
+const isEhbo = computed(() => me.value.assignments.some((a) => a.kind === 'ehbo'));
 
 // Rollen kunnen intussen gewijzigd zijn (bijv. door het beheer).
 onMounted(() => session.refresh());
@@ -51,9 +50,12 @@ async function logout() {
       </span>
     </div>
 
-    <p v-if="!props.menu && me.home !== 'overzicht'" class="note info coming">{{ comingNext }} Tot die tijd vind je alles in het overzicht.</p>
 
     <nav class="stack gap-10 menu">
+      <RouterLink v-if="isEhbo" :to="{ name: 'stand-by' }" class="btn"><Icon name="cross" :size="20" />Stand-by en oproepen</RouterLink>
+      <RouterLink v-for="p in myPosts" :key="p.postId" :to="{ name: 'post-home', params: { id: p.postId } }" class="btn">
+        <Icon name="pin" :size="20" />{{ myPosts.length > 1 ? (p.detail?.split(' · ')[0] ?? 'Mijn post') : 'Mijn post' }}
+      </RouterLink>
       <RouterLink :to="{ name: 'kaart' }" class="btn" :class="{ primary: !props.menu }"><Icon name="map" :size="20" />Overzicht en kaart</RouterLink>
       <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn"><Icon name="settings" :size="20" />Beheer</RouterLink>
       <RouterLink v-if="me.assignments.length > 1" :to="{ name: 'herkend' }" class="btn">Andere plek kiezen</RouterLink>
@@ -84,7 +86,6 @@ async function logout() {
 .text { gap: 2px; flex-grow: 1; }
 .name { font-size: 16px; font-weight: 700; }
 .detail { font-size: 14px; color: var(--ink-2); }
-.coming { margin-top: 14px; }
 .menu { margin-top: 18px; }
 .nav-app { margin: 18px 0 6px; }
 select.input { appearance: auto; }

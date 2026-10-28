@@ -356,6 +356,10 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Herhalen en de coördinator (28 okt) | Na de escalatie herhaalt het alarm elke escalatietijd (hoogstens 10 keer) bij alle vrije eenheden, ook wie inmiddels vrij is gekomen. Bij de eerste herhaling (na twee keer de escalatietijd, standaard 60 s) krijgt de coördinator een alarm om de eenheden te bellen; de app kan niet zelf bellen |
 | Handmatig toewijzen (28 okt) | De coördinator wijst een eenheid toe nadat die telefonisch akkoord is; dat telt als aangenomen. Kan ook als er al een eenheid onderweg is (extra hulp) |
 | Posities (28 okt) | De laatste GPS-positie van een mobiele eenheid staat alleen in het geheugen van de server en telt 3 minuten; daarna de standplaats. Na een herstart is hij weg, tot de volgende positie (elke minuut) |
+| Tegels water, verkeer, vrijwilliger (28 okt) | Tot de wachtrij er is (fase 4) bellen deze tegels de evenementcoördinator, net als "Anders" |
+| Positie op de achtergrond (28 okt) | Een webapp krijgt geen GPS zolang hij op de achtergrond staat of het scherm uit is. Een mobiele eenheid deelt haar positie dus alleen met de app open; anders telt na 3 minuten de standplaats. Staat in de handleiding |
+| Reistijd (28 okt) | Een schatting uit de afstand hemelsbreed: te voet 5, fiets 15, auto 30, anders en vast 15 km/u |
+| Oproep in beeld (28 okt) | Komt er een oproep binnen terwijl de app open is, dan gaat de app direct naar het oproepscherm en trilt hij; niet als je net een andere oproep afrondt (dan staat hij op stand-by) |
 
 **Nog open**
 
