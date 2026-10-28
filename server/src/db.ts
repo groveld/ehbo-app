@@ -19,8 +19,6 @@ export function openAppDb(dataDir: string): AppDb {
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
-    -- Push-abonnementen staan sinds fase 2 in het evenementbestand, gekoppeld aan een medewerker.
-    DROP TABLE IF EXISTS subscriptions;
   `);
 
   const q = {

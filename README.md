@@ -1,18 +1,17 @@
 # EHBO Evenementen-app
 
-App voor de EHBO-coördinatie bij evenementen, in aanbouw. Wat er nu werkt:
+App voor de EHBO-coördinatie bij evenementen. Wat er werkt:
 
 1. **Installeren** als app op het beginscherm (iPhone en Android).
 2. **Aanmelden** met je telefoonnummer: de app zoekt zelf je functie en post op. Eenmalig info & voorwaarden, daarna meldingen en locatie aanzetten met een testmelding.
-3. **Uitrol**: GitHub bouwt bij elke push een Docker-image, Unraid draait het, Cloudflare Tunnel maakt het bereikbaar.
+3. **Beheer** (alleen beheerders): evenement en lopen met GPX, stijl (groot logo, vierkant logo als app-icoon, kleuren, korte naam), posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
+4. **Overzicht** voor medewerkers: kaart met alle posten, filter per soort, lijsten met bel- en navigeerknop, alle contacten, en per post de aanrijroute en de dichtstbijzijnde EHBO. Open oproepen staan rood bovenaan.
+5. **EHBO-oproepen**: de post zet zijn post open en vraagt EHBO aan; de dichtstbijzijnde vrije eenheid krijgt een alarm, na 30 s alle vrije eenheden. Accepteren, ter plaatse, afronden; de evenementcoördinator kijkt mee en kan zelf een eenheid inzetten.
+6. **Aanvragen** voor water, verkeer en vrijwilligers: in de wachtrij van de evenementcoördinator, die ze oppakt en afhandelt.
+7. **Deelnemers**: route, starttijden (favoriete loop vooraan) en de posten langs de route, zonder namen of nummers.
+8. **Zonder bereik**: alle vaste gegevens en de kaart staan op de telefoon. Een EHBO-verzoek zonder bereik toont wie je kunt bellen en gaat vanzelf weg zodra er weer bereik is.
 
-4. **Beheer** (alleen beheerders): evenement en lopen met GPX, stijl (groot logo, vierkant logo als app-icoon, kleuren, korte naam), posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
-
-5. **Overzicht** voor medewerkers: kaart met alle posten, filter per soort, lijsten met bel- en navigeerknop, alle contacten, en per post de aanrijroute en de dichtstbijzijnde EHBO.
-6. **Deelnemers**: route, starttijden (favoriete loop vooraan) en de posten langs de route, zonder namen of nummers.
-7. **Zonder bereik**: alle vaste gegevens en de kaart staan op de telefoon. De beheerder haalt de kaart één keer op (Beheer › Evenement › Kaart ophalen); telefoons slaan hem daarna vanzelf op.
-
-Oproepen, verzoeken en eigen logo's volgen nog.
+Nog in aanbouw: het rapport (PDF en CSV) met testmodus, en de info-pagina aanpassen in het beheer.
 
 Gebouwd op de gekozen stack: TypeScript, een Fastify-server en een Vue 3-app (Vite, Pinia) in één container. De database is SQLite via de ingebouwde `node:sqlite`. De push-versleuteling (VAPID en aes128gcm) is eigen code, getest tegen de officiële testvector uit RFC 8291.
 
@@ -43,18 +42,45 @@ telefoon ◄──── melding ──── push-dienst Apple / Google ◄─�
 
 ## 2. Unraid
 
-**Via template (aanbevolen):**
+Docker › **Add Container**, met deze instellingen:
 
-1. Vervang `OWNER/REPO` in `unraid/my-ehbo-app.xml` door je repository (kleine letters).
-2. Kopieer het bestand naar `/boot/config/plugins/dockerMan/templates-user/`.
-3. Docker › Add Container › Template **ehbo-app**.
-4. Vul **VAPID_SUBJECT** in met een echt adres, bijvoorbeeld `mailto:beheer@jouwdomein.nl`. Zonder geldig adres weigert Apple meldingen.
-5. Vul **ADMIN_PHONE** in met het telefoonnummer van de eerste beheerder. Die kan daarna in de app andere beheerders toevoegen. Het nummer wordt alleen gebruikt zolang het evenement nog geen beheerder heeft.
-6. Apply. De container draait als `99:100` (nobody:users) en bewaart alles in `/mnt/user/appdata/ehbo-app`.
+| Instelling | Waarde |
+| --- | --- |
+| Name | `ehbo-app` |
+| Repository | `ghcr.io/groveld/ehbo-app:latest` (rond het evenement een vaste versie, zie hieronder) |
+| Network | hetzelfde netwerk als cloudflared (bij ons `proxynet`) |
+| Extra parameters | `--user 99:100 --restart unless-stopped` (nobody:users, zodat appdata schrijfbaar is) |
+| Poort | container `3000` → host `3080` (alleen voor testen vanaf het thuisnetwerk) |
+| Pad | container `/data` → `/mnt/user/appdata/ehbo-app` (database en VAPID-sleutels; back-up maken) |
+| WebUI | `http://[IP]:[PORT:3000]/?browser=1` |
 
-De app luistert in de container op poort **3000**. Zet de container in hetzelfde Docker-netwerk als cloudflared (bij ons `proxynet`); dan heeft de tunnel geen gepubliceerde poort nodig. De poort `3080` op de Unraid-server is alleen handig om vanaf je thuisnetwerk te testen.
+| Variabele | Verplicht | Waarde |
+| --- | --- | --- |
+| `VAPID_SUBJECT` | ja | Contactadres voor de push-diensten, bijv. `mailto:beheer@jouwdomein.nl`. Zonder geldig adres weigert Apple meldingen |
+| `ADMIN_PHONE` | ja | Telefoonnummer van de eerste beheerder, bijv. `0612345678`. Alleen gebruikt zolang het evenement nog geen beheerder heeft; daarna beheer je beheerders in de app |
+| `TZ` | nee | `Europe/Amsterdam` |
+| `EVENT` | nee | Naam van het evenementbestand in `appdata/events/` (standaard `silvesterloop`) |
 
-**Of met Docker Compose:** zie `docker-compose.yml`.
+De app luistert in de container op poort **3000**. In hetzelfde Docker-netwerk als cloudflared heeft de tunnel geen gepubliceerde poort nodig.
+
+**Of met Docker Compose:**
+
+```yaml
+services:
+  ehbo-app:
+    image: ghcr.io/groveld/ehbo-app:latest
+    container_name: ehbo-app
+    restart: unless-stopped
+    user: "99:100"
+    ports:
+      - "3080:3000"
+    environment:
+      TZ: Europe/Amsterdam
+      VAPID_SUBJECT: "mailto:beheer@jouwdomein.nl"
+      ADMIN_PHONE: "0612345678"
+    volumes:
+      - /mnt/user/appdata/ehbo-app:/data
+```
 
 **Gegevens:** `app.sqlite` bevat de VAPID-sleutels van de server, `events/<evenement>.sqlite` alles van één evenement (posten, mensen, aanmeldingen). Archiveren of verwijderen na afloop = dat ene bestand.
 
@@ -128,8 +154,8 @@ npm run dev        # open http://localhost:3080/?browser=1 (Vite); de API draait
 npm test           # servertests
 npm run typecheck  # TypeScript-controle van alle onderdelen
 npm run build      # webapp bouwen naar web/dist
+npm run e2e        # end-to-end-test (na npm run build; eenmalig npx playwright install chromium)
 npm start          # server op http://localhost:3000, met de gebouwde webapp
-npm run icons      # iconen opnieuw maken (vereist Python + Pillow)
 ```
 
 | Map | Wat |

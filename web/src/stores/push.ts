@@ -1,4 +1,4 @@
-// Service worker, toestemming en push-abonnement: de toestand van de testversie.
+// Service worker, toestemming en push-abonnement van dit toestel.
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { AppInfo, PushSubscriptionData, TestPushResponse } from '@ehbo/shared';

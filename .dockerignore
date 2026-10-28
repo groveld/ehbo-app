@@ -5,7 +5,4 @@
 **/dist
 data
 docs
-tools
-unraid
 *.md
-docker-compose.yml
