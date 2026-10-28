@@ -342,6 +342,8 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Eerste beheerder (28 okt) | Instelling `ADMIN_PHONE` op de server; alleen gebruikt zolang het evenement nog geen beheerder heeft |
 | Evenementbestand (28 okt) | `events/<naam>.sqlite`, nu gekozen met de instelling `EVENT`. Het subdomein bepaalt het evenement zodra er een tweede evenement op dezelfde server komt |
 | Node 26 (28 okt) | Overal dezelfde versie: Docker-image, CI en de TypeScript-typen. Node 26 is sinds oktober 2026 de LTS-versie |
+| Beheer, fase 2b (28 okt) | Schermen 1.1 t/m 1.5, plus een lijst met posten (niet in het schermontwerp, zelfde opzet als de EHBO-eenheden). Een post krijgt zijn plek via GPS ter plaatse (de app meet tot 20 s en houdt de nauwkeurigste meting) of door coördinaten te plakken; prikken op de kaart volgt met de kaart in 2c |
+| Stijl en logo's (28 okt) | Eigen logo's, kleuren en het app-icoon (1.1 "Stijl" en 1.6) komen in een aparte stap na 2c: het vierkante logo moet ook het app-icoon en de meldingsiconen worden |
 
 **Nog open**
 

@@ -12,7 +12,7 @@ export class ApiRequestError extends Error {
 }
 
 /** JSON naar en van de server; gooit ApiRequestError bij een foutstatus. */
-export async function api<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: object } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: object } = {}): Promise<T> {
   const res = await fetch(path, {
     method: init.method ?? 'GET',
     headers: init.body ? { 'Content-Type': 'application/json' } : undefined,

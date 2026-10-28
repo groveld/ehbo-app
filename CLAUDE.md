@@ -33,8 +33,8 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 - Phase 1 (test version: install check + Web Push) is **done**, tagged `v0.2.0`. It runs on the chosen stack below at https://silvesterloop.groveld.com. Install and push are confirmed on Windows, iPhone and Android.
 - The Unraid container uses `/data`, `--user 99:100` and port 3000, so data and VAPID keys survive updates.
 - Now: phase 2 in the work plan, "Basis en beheer", split into three PRs:
-  - **2a** (branch `feat/phase2a-login`): data model for all of phase 2, phone-number login with roles, screens 2.1–2.7, temporary start screen. Done, verified in Edge.
-  - **2b**: admin screens 1.1–1.5 (event + runs with GPX, posts with GPS, EHBO units, core team, emergency numbers, admins).
+  - **2a**: data model for all of phase 2, phone-number login with roles, screens 2.1–2.7, temporary start screen. Merged and live.
+  - **2b** (branch `feat/phase2b-admin`): admin API (`server/src/routes/admin.ts`, `admin-db.ts`, `gpx.ts`) and screens 1.1–1.5 plus a post list, in `web/src/views/admin/`. Done, verified in Edge. Not in 2b: style and logos (1.1 "Stijl", 1.6), and picking a post on the map (needs 2c).
   - **2c**: overview + offline map (3.4), post detail with call/navigate (3.5), participant view (2.8), event package. The server downloads the map area itself from the Protomaps builds (owner's choice).
 
 ## Chosen stack (decided 28 Oct 2026)
@@ -78,6 +78,7 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 
 - **Login:** `POST /api/session` with a phone number; the session is a random token in an HttpOnly cookie, only its SHA-256 is stored. It lasts until the day after the event's end date (60 days without one). Roles are resolved on every request, so removing someone's number logs them out immediately. Failed attempts are throttled per IP; successful ones aren't (a whole briefing shares one Wi-Fi address).
 - **First admin** comes from `ADMIN_PHONE`, only while the event has no admins at all.
+- **Admin API** (`/api/admin/*`): every change returns the full `AdminState` and bumps `event.version` (the event package version 2c will use). Phone numbers are normalized server-side; a bad one returns 400 naming the person. Saving a post or unit replaces its contacts or members; a person's name lives in `people` and is shared everywhere. An admin can't remove their own number.
 - **Data:** `data/app.sqlite` holds server settings (VAPID keys); `data/events/<EVENT>.sqlite` holds everything about one event. Schema changes go in `MIGRATIONS` in `event-db.ts` (append only; `PRAGMA user_version` tracks progress).
 
 - **Roles** follow from the phone number:
