@@ -1,5 +1,5 @@
 # EHBO Evenementen-app — geen externe npm-pakketten nodig.
-FROM node:22-alpine
+FROM node:25-alpine
 
 ARG APP_VERSION=dev
 ARG GIT_SHA=onbekend
