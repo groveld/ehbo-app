@@ -1,7 +1,7 @@
 # EHBO Evenementen-app: Fastify-server met de gebouwde Vue-app, in één container.
 
 # ---- Bouwen: typen controleren en de webapp bouwen (de tests draaien in CI) ----
-FROM node:25-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY shared/package.json shared/
@@ -14,7 +14,7 @@ COPY web web
 RUN npm run typecheck && npm run build
 
 # ---- Draaien: alleen de runtime-pakketten van de server ----
-FROM node:25-alpine
+FROM node:26-alpine
 
 ARG APP_VERSION=dev
 ARG GIT_SHA=onbekend
