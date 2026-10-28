@@ -1,0 +1,15 @@
+# Voorbeeld voor lokaal testen of voor Unraid met de Docker Compose-plugin.
+# Vervang OWNER/REPO door je GitHub-gebruiker en repository (kleine letters).
+services:
+  ehbo-app:
+    image: ghcr.io/OWNER/REPO:latest
+    container_name: ehbo-app
+    restart: unless-stopped
+    user: "99:100"              # Unraid: nobody:users, zodat appdata schrijfbaar is
+    ports:
+      - "8080:8080"             # cloudflared wijst naar http://<unraid-ip>:8080
+    environment:
+      TZ: Europe/Amsterdam
+      VAPID_SUBJECT: "mailto:beheer@jouwdomein.nl"   # verplicht: echt contactadres
+    volumes:
+      - /mnt/user/appdata/ehbo-app:/data

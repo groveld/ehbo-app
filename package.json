@@ -1,0 +1,14 @@
+{
+  "name": "ehbo-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EHBO Evenementen-app: posten, contacten en EHBO-oproepen. Testversie voor installatie en pushmeldingen.",
+  "type": "module",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "APP_VERSION=dev node --disable-warning=ExperimentalWarning --watch src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "icons": "python3 tools/make-icons.py"
+  }
+}

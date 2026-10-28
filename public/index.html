@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>EHBO-app · testversie</title>
+  <meta name="description" content="Testversie: installeren en pushmeldingen controleren.">
+  <meta name="theme-color" content="#16181D">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="EHBO-app">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="stylesheet" href="/style.css?v=__APP_VERSION__">
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <img src="/icons/icon-192.png" alt="" width="48" height="48" class="logo">
+      <div>
+        <p class="eyebrow">Testversie · <span id="version">__APP_VERSION__</span></p>
+        <h1>EHBO-app</h1>
+      </div>
+    </header>
+
+    <!-- Getoond als de app niet vanaf het beginscherm is geopend -->
+    <section id="install" class="card" hidden>
+      <h2>Zet de app eerst op je beginscherm</h2>
+      <p class="muted">Alleen dan krijg je meldingen en werkt de app ook zonder bereik.</p>
+      <p class="chip" id="device"></p>
+
+      <div id="install-ios" hidden>
+        <ol class="steps">
+          <li>Tik onderin op <strong>Deel</strong> <span aria-hidden="true">(vierkant met pijl omhoog)</span></li>
+          <li>Kies <strong>Zet op beginscherm</strong></li>
+          <li>Open <strong>EHBO-app</strong> vanaf je beginscherm</li>
+        </ol>
+        <p class="warn" id="ios-old" hidden>Je iPhone heeft iOS 16.4 of nieuwer nodig voor meldingen. Werk iOS eerst bij via Instellingen › Algemeen › Software-update.</p>
+      </div>
+
+      <div id="install-android" hidden>
+        <button id="install-btn" class="btn primary" hidden>Installeren</button>
+        <ol class="steps" id="install-android-manual">
+          <li>Tik rechtsboven op het menu <strong>⋮</strong></li>
+          <li>Kies <strong>App installeren</strong> of <strong>Toevoegen aan startscherm</strong></li>
+          <li>Open <strong>EHBO-app</strong> vanaf je startscherm</li>
+        </ol>
+      </div>
+
+      <div id="install-desktop" hidden>
+        <p>Open deze pagina op je telefoon, of installeer via het installatie-icoon in de adresbalk.</p>
+      </div>
+
+      <a href="?browser=1" class="link small">Alleen testen in de browser (voor beheer)</a>
+    </section>
+
+    <!-- Getoond als de app geïnstalleerd is (of in testmodus) -->
+    <section id="app" hidden>
+      <div class="card">
+        <h2>Controle</h2>
+        <dl class="checks">
+          <div><dt>Geïnstalleerd</dt><dd id="st-installed">–</dd></div>
+          <div><dt>Service worker</dt><dd id="st-sw">–</dd></div>
+          <div><dt>Meldingen</dt><dd id="st-perm">–</dd></div>
+          <div><dt>Aangemeld bij server</dt><dd id="st-sub">–</dd></div>
+          <div><dt>Server</dt><dd id="st-server">–</dd></div>
+        </dl>
+      </div>
+
+      <div class="card">
+        <h2>Meldingen</h2>
+        <p class="muted" id="perm-help">Zet meldingen aan en stuur jezelf een testmelding.</p>
+        <button id="enable-btn" class="btn primary">Meldingen aanzetten</button>
+        <div class="row">
+          <button id="test-now" class="btn" disabled>Testmelding nu</button>
+          <button id="test-later" class="btn" disabled>Over 10 s</button>
+        </div>
+        <p class="muted small">Tip: tik op "Over 10 s" en vergrendel direct je telefoon. Zo test je een melding op het vergrendelscherm.</p>
+        <button id="disable-btn" class="link small" hidden>Meldingen uitzetten</button>
+      </div>
+
+      <div class="card">
+        <h2>Logboek</h2>
+        <ol id="log" class="log" aria-live="polite"></ol>
+      </div>
+    </section>
+
+    <a href="tel:112" class="btn danger sos">Noodgeval: bel 112</a>
+  </main>
+  <script src="/app.js?v=__APP_VERSION__" type="module"></script>
+</body>
+</html>
