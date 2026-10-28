@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Nummer herkend</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A5C3B}a:hover{color:#06402A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F5F1; color: #16181D; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; padding: 0 24px;">
+
+  <div style="padding-top: 72px; display: flex; flex-direction: column; gap: 6px;">
+    <span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #0A5C3B;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+      Nummer herkend
+    </span>
+    <h1 style="margin: 0; font-size: 30px; font-weight: 700; line-height: 1.15;">Hoi [Voornaam]</h1>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #555A63;">06-12 34 56 78</span>
+  </div>
+
+  <div style="margin-top: 28px; display: flex; flex-direction: column; gap: 10px;">
+    <span style="font-size: 14px; font-weight: 600;">Jij staat ingepland als</span>
+
+    <div style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 14px; border: 2px solid #16181D;">
+      <span style="width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%; background: #1F6FB2; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px;">W</span>
+      <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+        <span style="font-size: 16px; font-weight: 700;">Posthouder</span>
+        <span style="font-size: 14px; color: #3E434B;">Waterpost 3 · brug · km 21,1</span>
+        <span style="font-size: 13px; color: #555A63;">10:15 – 13:30</span>
+      </div>
+    </div>
+
+    <div style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 14px; border: 1px solid #DEDBD2;">
+      <span style="width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%; background: #D9781C; color: #16181D; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px;">V</span>
+      <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+        <span style="font-size: 16px; font-weight: 700;">Verkeersregelaar</span>
+        <span style="font-size: 14px; color: #3E434B;">Kruising 4 · km 9,7</span>
+        <span style="font-size: 13px; color: #555A63;">08:30 – 10:00</span>
+      </div>
+    </div>
+    <span style="font-size: 13px; color: #555A63;">Sta je op meer plekken? Kies waar je nu bent. Wisselen kan later via het menu.</span>
+  </div>
+
+  <div style="margin-top: 22px; background: #E2EFE7; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #0A4D33;">
+    <span style="font-weight: 700;">Wat je straks ziet</span>
+    <span style="line-height: 1.45;">De hulpknop voor jouw post, en het volledige overzicht: alle posten en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.</span>
+  </div>
+
+  <div style="flex-grow: 1;"></div>
+
+  <button style="height: 56px; border-radius: 16px; border: none; background: #16181D; color: #FFFFFF; font: 700 16px 'IBM Plex Sans', sans-serif;">Klopt, start</button>
+  <a href="#" style="height: 48px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;">Dit ben ik niet</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

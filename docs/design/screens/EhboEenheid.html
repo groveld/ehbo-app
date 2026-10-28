@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1.5 · EHBO-eenheid: vast of mobiel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A5C3B}a:hover{color:#06402A}
+input{box-sizing:border-box}
+</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F5F1; color: #16181D; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+  <header style="padding: 14px 12px 6px; display: flex; align-items: center; gap: 4px;">
+    <a href="EhboEenheden.dc.html" aria-label="Terug" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #16181D;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></a>
+    <h1 style="margin: 0; font-size: 20px; font-weight: 700;">EHBO-eenheid</h1>
+  </header>
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 4px 16px 0; flex-grow: 1; overflow: hidden;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <label for="team-naam" style="font-size: 13px; font-weight: 600;">Naam</label>
+      <input id="team-naam" value="Team 3" style="height: 44px; border-radius: 10px; border: 1px solid #D4D1C7; padding: 0 12px; font: 400 15px 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #16181D;">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 13px; font-weight: 600;">Soort</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <button style="height: 56px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; color: #16181D; font: 500 14px 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;"><span style="font-weight: 700;">Vast</span><span style="font-size: 12px; color: #555A63;">eigen EHBO-post</span></button>
+        <button style="height: 56px; border-radius: 12px; border: 2px solid #16181D; background: #FFFFFF; color: #16181D; font: 500 14px 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;"><span style="font-weight: 700;">Mobiel</span><span style="font-size: 12px; color: #555A63;">rijdt of loopt rond</span></button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;">
+        <button style="height: 48px; border-radius: 10px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Te voet</button>
+        <button style="height: 48px; border-radius: 10px; border: 2px solid #16181D; background: #FFFFFF; font: 600 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Fiets</button>
+        <button style="height: 48px; border-radius: 10px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Auto</button>
+        <button style="height: 48px; border-radius: 10px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Anders</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 13px; font-weight: 600;">Standplaats (optioneel)</span>
+      <div style="background: #FFFFFF; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; border: 2px solid #16181D;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 30px; height: 30px; border-radius: 50%; background: #7A4BB7; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;">St</span>
+          <span style="flex-grow: 1; font-size: 15px; font-weight: 600;">Bij Stempelpost 2 · km 30,5</span>
+          <a href="#" style="font-size: 13px; font-weight: 600;">Wijzig</a>
+        </div>
+        <span style="font-size: 12px; color: #555A63; line-height: 1.4;">Staat als klein kruisje bij deze post op de kaart. Het team kan onderweg zijn; de post houdt een oogje in het zeil.</span>
+      </div>
+      <a href="#" style="font-size: 13px; font-weight: 600; padding-left: 4px;">Geen standplaats (niet op de kaart)</a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 13px; font-weight: 600;">Leden</span>
+      <div style="background: #FFFFFF; border-radius: 14px; padding: 4px 14px;">
+        <div style="display: flex; align-items: center; gap: 10px; height: 46px; font-size: 14px;"><span style="flex-grow: 1;">[Naam]</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #555A63;">06-…</span></div>
+      </div>
+      <a href="#" style="font-size: 13px; font-weight: 600; padding-left: 4px;">+ Lid toevoegen</a>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px; background: #FFFFFF; border-radius: 14px; padding: 10px 14px; border: 2px solid #16181D;">
+      <span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px; background: #C8261E; color: #FFFFFF; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 12 5.5 5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"></path><path d="m12.5 8-2 4h3l-2 4"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1;"><span style="font-size: 15px; font-weight: 700;">AED bij zich</span><span style="font-size: 12px; color: #555A63;">Voorrang bij "niet aanspreekbaar"</span></span>
+      <button role="switch" aria-checked="true" aria-label="AED bij zich" style="width: 52px; height: 32px; border-radius: 999px; border: none; background: #16181D; position: relative; padding: 0;"><span style="position: absolute; right: 4px; top: 4px; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF;"></span></button>
+    </div>
+  </div>
+
+  <div style="padding: 12px 16px 22px;">
+    <button style="width: 100%; height: 56px; border-radius: 16px; border: none; background: #16181D; color: #FFFFFF; font: 700 16px 'IBM Plex Sans', sans-serif;">Opslaan</button>
+  </div>
+</div>
+</body>
+</html>

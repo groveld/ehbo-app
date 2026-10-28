@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Incident afronden</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A5C3B}a:hover{color:#06402A}
+textarea{box-sizing:border-box}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F5F1; color: #16181D; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+  <header style="padding: 18px 20px 10px; display: flex; flex-direction: column; gap: 2px;">
+    <span style="font-size: 12px; color: #555A63;">Waterpost 3 · ter plaatse sinds 11:07</span>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700;">Incident afronden</h1>
+  </header>
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 0 20px; flex-grow: 1; overflow: hidden;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 14px; font-weight: 600;">Afloop</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <button style="height: 48px; border-radius: 12px; border: 2px solid #16181D; background: #FFFFFF; font: 600 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Ter plaatse geholpen</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Gestopt, naar finish</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Ambulance (112)</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Doorverwezen SEH/arts</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Hulp geweigerd</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Loos alarm</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <label for="notitie" style="font-size: 14px; font-weight: 600;">Korte notitie</label>
+      <textarea id="notitie" rows="2" style="border-radius: 10px; border: 1px solid #D4D1C7; padding: 10px 12px; font: 400 14px 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #16181D; resize: none;">Loper duizelig, gekoeld en drinken gegeven.</textarea>
+      <span style="font-size: 12px; color: #555A63;">Geen namen of medische details. Komt in het evenementrapport.</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 14px; font-weight: 600;">Waar ben je na afloop?</span>
+      <div style="background: #FFFFFF; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; border: 2px solid #16181D;">
+        <span style="width: 20px; height: 20px; border-radius: 50%; border: 6px solid #16181D; box-sizing: border-box;"></span>
+        <span style="display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 14px; font-weight: 600;">Ik blijf hier even</span><span style="font-size: 12px; color: #555A63;">Telt als dichtstbij voor Waterpost 3 en omgeving</span></span>
+      </div>
+      <div style="background: #FFFFFF; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; border: 1px solid #D4D1C7;">
+        <span style="width: 20px; height: 20px; border-radius: 50%; border: 2px solid #A8A59C; box-sizing: border-box;"></span>
+        <span style="display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 14px; font-weight: 600;">Terug naar EHBO-post 2</span><span style="font-size: 12px; color: #555A63;">Weer beschikbaar vanaf je vaste post</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 12px 16px 22px;">
+    <button style="width: 100%; height: 56px; border-radius: 16px; border: none; background: #0A7D4F; color: #FFFFFF; font: 700 16px 'IBM Plex Sans', sans-serif;">Afronden &amp; weer beschikbaar</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

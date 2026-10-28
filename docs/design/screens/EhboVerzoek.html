@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4.1 · Post: EHBO-verzoek invullen</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A5C3B}a:hover{color:#06402A}
+textarea{box-sizing:border-box}
+</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F5F1; color: #16181D; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+  <header style="padding: 14px 12px 6px; display: flex; align-items: center; gap: 4px;">
+    <a href="Hulpvraag.dc.html" aria-label="Terug" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #16181D;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></a>
+    <div style="display: flex; flex-direction: column;">
+      <span style="font-size: 12px; color: #555A63;">Waterpost 3 · km 21,1</span>
+      <h1 style="margin: 0; font-size: 20px; font-weight: 700;">EHBO aanvragen</h1>
+    </div>
+  </header>
+
+  <div style="margin: 6px 16px 0; padding: 12px 14px; border-radius: 14px; background: #16181D; color: #FFFFFF; display: flex; align-items: center; gap: 12px;">
+    <span style="font-size: 14px; flex-grow: 1; line-height: 1.4;"><strong>Levensgevaar?</strong> Bel eerst 112, vul daarna dit in.</span>
+    <a href="#" style="height: 48px; padding: 0 16px; border-radius: 12px; background: #C8261E; color: #FFFFFF; display: flex; align-items: center; font-weight: 700; font-size: 14px; text-decoration: none;">112</a>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 0; flex-grow: 1; overflow: hidden;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 14px; font-weight: 600;">Wat is er aan de hand?</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <button style="height: 48px; border-radius: 12px; border: 2px solid #16181D; background: #FFFFFF; font: 600 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Onwel / flauw</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Gevallen / letsel</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Kramp / blessure</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Weet ik niet</button>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 14px; font-weight: 600; flex-grow: 1;">Aantal personen</span>
+      <button style="width: 48px; height: 48px; border-radius: 10px; border: 2px solid #16181D; background: #FFFFFF; font: 600 14px 'IBM Plex Sans', sans-serif; color: #16181D;">1</button>
+      <button style="width: 48px; height: 48px; border-radius: 10px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">2</button>
+      <button style="width: 48px; height: 48px; border-radius: 10px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">3+</button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 14px; font-weight: 600;">Is de persoon aanspreekbaar?</span>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+        <button style="height: 48px; border-radius: 12px; border: 2px solid #16181D; background: #FFFFFF; font: 600 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Ja</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Nee</button>
+        <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 500 14px 'IBM Plex Sans', sans-serif; color: #16181D;">Weet niet</button>
+      </div>
+      <span style="font-size: 12px; color: #7A3F06; line-height: 1.4;">Bij "nee" gaat de dichtstbijzijnde eenheid met AED direct mee. Bel ook 112.</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <label for="toelichting" style="font-size: 14px; font-weight: 600;">Toelichting (optioneel)</label>
+      <textarea id="toelichting" rows="2" placeholder="Bijv. zit naast de kraam, loper met rood shirt" style="border-radius: 10px; border: 1px solid #D4D1C7; padding: 10px 12px; font: 400 14px 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #16181D; resize: none;"></textarea>
+    </div>
+  </div>
+
+  <div style="padding: 12px 16px 22px; display: flex; flex-direction: column; gap: 6px;">
+    <a href="MeldingVerstuurd.dc.html" style="height: 56px; border-radius: 16px; background: #C8261E; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; font-size: 16px; text-decoration: none;"><svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><path d="M6 0h6v6h6v6h-6v6H6v-6H0V6h6z" fill="#FFFFFF"></path></svg>EHBO-verzoek versturen</a>
+    <span style="font-size: 12px; color: #555A63; text-align: center;">Alles is optioneel: versturen kan meteen</span>
+  </div>
+</div>
+</body>
+</html>

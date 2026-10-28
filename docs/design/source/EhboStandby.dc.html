@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>EHBO stand-by</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A5C3B}a:hover{color:#06402A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F5F1; color: #16181D; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="background: #0A7D4F; color: #FFFFFF; padding: 20px 20px 18px; height: 140px; box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: 6px;">
+    <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em;">TEAM 3 · VAST · EHBO-POST 2</span>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700;">Beschikbaar</h1>
+    <span style="font-size: 15px;">Je krijgt oproepen uit de buurt. Houd de telefoon bij je.</span>
+  </div>
+
+  <div style="padding: 14px 16px 0; display: flex; flex-direction: column; gap: 8px;">
+    <span style="font-size: 13px; font-weight: 600; padding-left: 4px;">Mijn status</span>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <button style="height: 48px; border-radius: 12px; border: 2px solid #0A7D4F; background: #E2EFE7; color: #0A4D33; font: 700 14px 'IBM Plex Sans', sans-serif;">Vrij</button>
+      <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; color: #16181D; font: 500 14px 'IBM Plex Sans', sans-serif;">Even pauze</button>
+      <button style="height: 48px; border-radius: 12px; border: 1px solid #D4D1C7; background: #FFFFFF; color: #16181D; font: 500 14px 'IBM Plex Sans', sans-serif;">Uit dienst</button>
+    </div>
+  </div>
+
+  <div style="margin: 14px 16px 0; background: #FFFFFF; border-radius: 16px; padding: 4px 14px;">
+    <div style="display: flex; align-items: center; gap: 12px; height: 50px;"><span style="font-size: 14px; flex-grow: 1;">Positie</span><span style="font-size: 14px; font-weight: 600;">EHBO-post 2 · km 14,0</span></div>
+    <div style="height: 1px; background: #ECE9E1;"></div>
+    <div style="display: flex; align-items: center; gap: 12px; height: 50px;"><span style="font-size: 14px; flex-grow: 1;">Teamleden</span><span style="font-size: 14px; font-weight: 600;">[Naam], [Naam]</span></div>
+    <div style="height: 1px; background: #ECE9E1;"></div>
+    <div style="display: flex; align-items: center; gap: 12px; height: 50px;"><span style="font-size: 14px; flex-grow: 1;">Andere eenheden vrij</span><span style="font-size: 14px; font-weight: 600;">2 van 3</span></div>
+  </div>
+
+  <div style="padding: 14px 16px 0; display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 13px; font-weight: 600; padding-left: 4px;">Vandaag</span>
+    <div style="background: #FFFFFF; border-radius: 16px; padding: 4px 14px;">
+      <div style="display: flex; align-items: center; gap: 10px; height: 48px; font-size: 14px;"><span style="font-family: 'IBM Plex Mono', monospace; color: #555A63; font-size: 13px;">10:41</span><span style="flex-grow: 1;">Stempelpost · kramp</span><span style="font-size: 12px; font-weight: 600; color: #0A5C3B;">afgerond</span></div>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1;"></div>
+
+  <span style="margin: 0 20px 6px; font-size: 13px; font-weight: 600;">Bellen</span>
+  <div style="margin: 0 16px 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+    <a href="#" style="height: 48px; border-radius: 14px; background: #EFEDE6; color: #16181D; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; text-decoration: none;">EHBO-coördinator</a>
+    <a href="#" style="height: 48px; border-radius: 14px; background: #EFEDE6; color: #16181D; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; text-decoration: none;">Evenementcoördinator</a>
+  </div>
+  <a href="#" style="margin: 0 16px 24px; height: 56px; border-radius: 14px; background: #C8261E; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; text-decoration: none;">Bel 112</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

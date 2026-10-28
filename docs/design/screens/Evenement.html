@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1.1 · Evenement instellen</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A5C3B}a:hover{color:#06402A}
+input{box-sizing:border-box}
+</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F5F1; color: #16181D; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+  <header style="padding: 16px 20px 8px; display: flex; flex-direction: column; gap: 2px;">
+    <span style="font-size: 12px; color: #555A63;">Beheer · silvesterloop.groveld.com</span>
+    <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Evenement</h1>
+  </header>
+
+  <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 16px; flex-grow: 1; overflow: hidden;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <label for="ev-naam" style="font-size: 13px; font-weight: 600;">Naam evenement</label>
+      <input id="ev-naam" value="Silvesterloop 2026" style="height: 42px; border-radius: 10px; border: 1px solid #D4D1C7; padding: 0 12px; font: 400 15px 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #16181D;">
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <label for="ev-begin" style="font-size: 13px; font-weight: 600;">Begindatum</label>
+        <input id="ev-begin" value="31-12-2026" style="height: 42px; border-radius: 10px; border: 1px solid #D4D1C7; padding: 0 12px; font: 400 15px 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #16181D;">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <label for="ev-eind" style="font-size: 13px; font-weight: 600;">Einddatum</label>
+        <input id="ev-eind" value="31-12-2026" style="height: 42px; border-radius: 10px; border: 1px solid #D4D1C7; padding: 0 12px; font: 400 15px 'IBM Plex Sans', sans-serif; background: #FFFFFF; color: #16181D;">
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 13px; font-weight: 600;">Lopen · start Eetcafé De Trilker, Poppenwier</span>
+      <div style="background: #FFFFFF; border-radius: 14px; padding: 2px 14px;">
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 42px;">
+          <span style="font-size: 14px; font-weight: 700; width: 64px;">Kidsrun</span>
+          <span style="font-size: 12px; color: #555A63; flex-grow: 1;">lopen · 12:00</span>
+          <span style="font-size: 12px; font-weight: 600; color: #7A3F06;">GPX ontbreekt</span>
+        </div>
+        <div style="height: 1px; background: #ECE9E1;"></div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 42px;">
+          <span style="font-size: 14px; font-weight: 700; width: 64px;">5 km</span>
+          <span style="font-size: 12px; color: #555A63; flex-grow: 1;">lopen + wandelen · 12:00</span>
+          <span style="font-size: 12px; font-weight: 600; color: #7A3F06;">GPX ontbreekt</span>
+        </div>
+        <div style="height: 1px; background: #ECE9E1;"></div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 42px;">
+          <span style="font-size: 14px; font-weight: 700; width: 64px;">10 km</span>
+          <span style="font-size: 12px; color: #555A63; flex-grow: 1;">lopen + wandelen · 12:00</span>
+          <span style="font-size: 12px; font-weight: 600; color: #7A3F06;">GPX ontbreekt</span>
+        </div>
+        <div style="height: 1px; background: #ECE9E1;"></div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 42px;">
+          <span style="font-size: 14px; font-weight: 700; width: 64px;">21 km</span>
+          <span style="font-size: 12px; color: #555A63; flex-grow: 1;">lopen + wandelen · 12:00</span>
+          <span style="font-size: 12px; font-weight: 600; color: #7A3F06;">GPX ontbreekt</span>
+        </div>
+      </div>
+      <a href="#" style="font-size: 13px; font-weight: 600; padding-left: 4px;">+ Loop toevoegen</a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 13px; font-weight: 600;">Stijl</span>
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px;">
+        <div style="background: #FFFFFF; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
+          <span role="img" aria-label="Groot logo" style="height: 48px; border-radius: 10px; background: #F2C230; color: #16181D; display: flex; align-items: center; padding: 0 10px; font-weight: 700; font-size: 14px; letter-spacing: -0.01em;">SILVESTERLOOP 2026</span>
+          <span style="font-size: 12px; color: #555A63;">Groot logo · startscherm, rapport</span>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
+          <span role="img" aria-label="Vierkant logo" style="width: 48px; height: 48px; border-radius: 12px; background: #F2C230; color: #16181D; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px;">SL</span>
+          <span style="font-size: 12px; color: #555A63;">Vierkant · app-icoon</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border-radius: 14px; padding: 8px 14px;">
+        <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Kleuren</span>
+        <span style="width: 26px; height: 26px; border-radius: 50%; background: #16181D;" role="img" aria-label="Hoofdkleur antraciet"></span>
+        <span style="width: 26px; height: 26px; border-radius: 50%; background: #F2C230;" role="img" aria-label="Accentkleur geel"></span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border-radius: 14px; padding: 8px 14px;">
+      <span style="flex-grow: 1; font-size: 13px; line-height: 1.35;"><strong>EHBO-escalatie:</strong> naar alle EHBO-eenheden na</span>
+      <button aria-label="Minder" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 600 16px 'IBM Plex Sans', sans-serif; color: #16181D;">−</button>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px;">30 s</span>
+      <button aria-label="Meer" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 600 16px 'IBM Plex Sans', sans-serif; color: #16181D;">+</button>
+    </div>
+  </div>
+
+  <div style="padding: 10px 16px 20px;">
+    <button style="width: 100%; height: 56px; border-radius: 16px; border: none; background: #16181D; color: #FFFFFF; font: 700 16px 'IBM Plex Sans', sans-serif;">Opslaan</button>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "anthropic.claude-code",
+    "vue.volar",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-playwright.playwright",
+    "bierner.markdown-mermaid",
+    "github.vscode-github-actions",
+    "ms-azuretools.vscode-docker",
+    "qwtel.sqlite-viewer",
+    "editorconfig.editorconfig"
+  ]
+}
