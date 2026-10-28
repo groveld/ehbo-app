@@ -1,4 +1,7 @@
 // Parcours uit een GPX-bestand: de punten van de route (trkpt of rtept) en de lengte.
+import { distanceKm } from '@ehbo/shared';
+
+export { distanceKm };
 
 export interface Track {
   /** [lengtegraad, breedtegraad], zoals MapLibre ze verwacht; hooguit MAX_POINTS. */
@@ -9,14 +12,6 @@ export interface Track {
 }
 
 const MAX_POINTS = 2000;
-
-/** Afstand in km tussen twee punten (haversine). */
-export function distanceKm([lng1, lat1]: [number, number], [lng2, lat2]: [number, number]) {
-  const rad = Math.PI / 180;
-  const a = Math.sin(((lat2 - lat1) * rad) / 2) ** 2
-    + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(((lng2 - lng1) * rad) / 2) ** 2;
-  return 6371.0088 * 2 * Math.asin(Math.sqrt(a));
-}
 
 export function parseGpx(xml: string): Track {
   const all: [number, number][] = [];

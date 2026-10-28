@@ -1,0 +1,50 @@
+// Evenementpakket (GET /api/package): alles voor gebruik zonder bereik, in één antwoord met een versie.
+import type { FastifyInstance } from 'fastify';
+import type { EventPackage, LngLat, PackageMap } from '@ehbo/shared';
+import { adminDb } from '../admin-db.ts';
+import type { EventDb } from '../event-db.ts';
+import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
+
+export function buildPackage(db: EventDb, staff: boolean): EventPackage {
+  const state = adminDb(db).getState();
+  const eventVersion = (db.raw.prepare('SELECT version FROM event WHERE id = 1').get() as { version: number }).version;
+  const lines = new Map((db.raw.prepare('SELECT id, track_json FROM runs WHERE track_json IS NOT NULL').all() as { id: number; track_json: string }[])
+    .map((r) => [r.id, JSON.parse(r.track_json) as LngLat[]]));
+
+  const meta = mapMeta(db);
+  const map: PackageMap | null = meta && {
+    version: mapVersion(db),
+    bbox: meta.bbox,
+    maxZoom: MAX_ZOOM,
+    tiles: (db.raw.prepare('SELECT z, x, y FROM map_tiles ORDER BY z, x, y').all() as { z: number; x: number; y: number }[]).map((t) => [t.z, t.x, t.y]),
+    assets: assetPaths(),
+  };
+
+  return {
+    version: `${eventVersion}.${map?.version ?? 0}.${staff ? 's' : 'p'}`,
+    staff,
+    event: { name: state.event.name, startDate: state.event.startDate, endDate: state.event.endDate, startLocation: state.event.startLocation },
+    postTypes: state.postTypes,
+    posts: state.posts.map((p) => ({
+      id: p.id, typeId: p.typeId, name: p.name, km: p.km, lat: p.lat, lng: p.lng, isOpen: p.isOpen, timeFrom: p.timeFrom, timeTo: p.timeTo,
+      // Namen, nummers en aanrijroutes alleen voor medewerkers.
+      ...(staff ? { address: p.address, accessRoute: p.accessRoute, contacts: p.contacts.map(({ name, phone, role }) => ({ name, phone, role })) } : {}),
+    })),
+    runs: state.runs.map((r) => ({ id: r.id, name: r.name, distanceKm: r.distanceKm, discipline: r.discipline, date: r.date, startTime: r.startTime, line: lines.get(r.id) ?? null })),
+    units: staff ? state.units.map(({ status: _, ...u }) => u) : [],
+    coreTeam: staff ? state.coreTeam.filter((c) => c.phone).map((c) => ({ ...c, phone: c.phone! })) : [],
+    emergencyNumbers: staff ? state.emergencyNumbers : [],
+    map,
+  };
+}
+
+export async function packageRoutes(app: FastifyInstance, { db }: { db: EventDb }) {
+  app.get('/api/package', async (request, reply) => {
+    const pkg = buildPackage(db, request.me !== null);
+    const etag = `"${pkg.version}"`;
+    reply.header('ETag', etag);
+    // De app stuurt de versie die hij al heeft; dan hoeft er niets over de lijn.
+    if (request.headers['if-none-match'] === etag) return reply.code(304).send();
+    return pkg satisfies EventPackage;
+  });
+}

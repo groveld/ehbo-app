@@ -14,9 +14,9 @@ export const POST_CONTACT_ROLE_LABEL: Record<PostContactRole, string> = {
 
 /** Standaardsoorten posten bij een nieuw evenement; de beheerder kan ze aanpassen en aanvullen. */
 export const DEFAULT_POST_TYPES = [
-  { key: 'start_finish', name: 'Start/finish', letter: 'F', color: '#16181D' },
+  { key: 'start_finish', name: 'Start/finish', letter: 'S/F', color: '#16181D' },
   { key: 'water', name: 'Waterpost', letter: 'W', color: '#1F6FB2' },
-  { key: 'stempel', name: 'Stempelpost', letter: 'S', color: '#7A4BB7' },
+  { key: 'stempel', name: 'Stempelpost', letter: 'St', color: '#7A4BB7' },
   { key: 'verkeer', name: 'Verkeer', letter: 'V', color: '#D9781C', personLabel: 'Verkeersregelaar' },
   { key: 'ehbo', name: 'EHBO-post', letter: '+', color: '#0A7D4F' },
   { key: 'anders', name: 'Anders', letter: 'A', color: '#6B7079' },

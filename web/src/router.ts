@@ -22,6 +22,20 @@ export const router = createRouter({
     { path: '/info', name: 'info', component: () => import('./views/InfoView.vue') },
     { path: '/toestemmingen', name: 'toestemmingen', component: () => import('./views/ToestemmingenView.vue'), meta: { staff: true } },
     { path: '/start', name: 'start', component: () => import('./views/StartView.vue'), meta: { staff: true } },
+    { path: '/menu', name: 'menu', component: () => import('./views/StartView.vue'), props: { menu: true }, meta: { staff: true } },
+    {
+      path: '/overzicht',
+      component: () => import('./views/overzicht/OverzichtLayout.vue'),
+      meta: { staff: true },
+      children: [
+        { path: '', redirect: { name: 'kaart' } },
+        { path: 'kaart', name: 'kaart', component: () => import('./views/overzicht/KaartView.vue'), meta: { staff: true } },
+        { path: 'posten', name: 'posten', component: () => import('./views/overzicht/PostenTab.vue'), meta: { staff: true } },
+        { path: 'verzoeken', name: 'verzoeken', component: () => import('./views/overzicht/VerzoekenTab.vue'), meta: { staff: true } },
+        { path: 'contacten', name: 'contacten', component: () => import('./views/overzicht/ContactenTab.vue'), meta: { staff: true } },
+      ],
+    },
+    { path: '/post/:id', name: 'post', component: () => import('./views/PostDetailView.vue'), props: true, meta: { staff: true } },
     { path: '/controle', name: 'controle', component: () => import('./views/ControleView.vue'), meta: { staff: true } },
     { path: '/deelnemer', name: 'deelnemer', component: () => import('./views/DeelnemerView.vue') },
     { path: '/beheer', name: 'beheer', component: () => import('./views/admin/BeheerView.vue'), meta: { staff: true, admin: true } },
@@ -41,6 +55,8 @@ router.beforeEach((to) => {
   if (to.meta.admin && !session.me?.isAdmin) return { name: 'start' };
   // Aangemeld: het startscherm in plaats van de keuze medewerker of deelnemer.
   if (to.name === 'welkom' && session.me) return { name: 'start' };
+  // Beheerders, kernteam en overige medewerkers beginnen in het overzicht (stand-by en post volgen in fase 3).
+  if (to.name === 'start' && session.me?.home === 'overzicht') return { name: 'kaart' };
   // Medewerkers zetten de app eerst op het beginscherm.
   if (to.name === 'aanmelden' && !canUseAsStaff) return { name: 'installeren' };
 });

@@ -133,6 +133,25 @@ const MIGRATIONS = [
   ALTER TABLE runs ADD COLUMN track_points INTEGER;
   ALTER TABLE runs ADD COLUMN track_km REAL;
   `,
+  // 3: kaart voor offline gebruik (tegels en lettertypen/iconen uit Protomaps), en de letters uit het schermontwerp.
+  `
+  UPDATE post_types SET letter = 'S/F' WHERE key = 'start_finish' AND letter = 'F';
+  UPDATE post_types SET letter = 'St' WHERE key = 'stempel' AND letter = 'S';
+  ALTER TABLE event ADD COLUMN map_version INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE event ADD COLUMN map_json TEXT;
+  CREATE TABLE map_tiles (
+    z    INTEGER NOT NULL,
+    x    INTEGER NOT NULL,
+    y    INTEGER NOT NULL,
+    data BLOB NOT NULL,
+    PRIMARY KEY (z, x, y)
+  ) WITHOUT ROWID;
+  CREATE TABLE map_assets (
+    path         TEXT PRIMARY KEY,
+    content_type TEXT NOT NULL,
+    data         BLOB NOT NULL
+  );
+  `,
 ];
 
 export interface EventRow {

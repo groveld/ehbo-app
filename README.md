@@ -8,7 +8,11 @@ App voor de EHBO-coördinatie bij evenementen, in aanbouw. Wat er nu werkt:
 
 4. **Beheer** (alleen beheerders): evenement en lopen met GPX, posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
 
-Het overzicht met kaart, de deelnemerspagina en eigen logo's volgen nog.
+5. **Overzicht** voor medewerkers: kaart met alle posten, filter per soort, lijsten met bel- en navigeerknop, alle contacten, en per post de aanrijroute en de dichtstbijzijnde EHBO.
+6. **Deelnemers**: route, starttijden (favoriete loop vooraan) en de posten langs de route, zonder namen of nummers.
+7. **Zonder bereik**: alle vaste gegevens en de kaart staan op de telefoon. De beheerder haalt de kaart één keer op (Beheer › Evenement › Kaart ophalen); telefoons slaan hem daarna vanzelf op.
+
+Oproepen, verzoeken en eigen logo's volgen nog.
 
 Gebouwd op de gekozen stack: TypeScript, een Fastify-server en een Vue 3-app (Vite, Pinia) in één container. De database is SQLite via de ingebouwde `node:sqlite`. De push-versleuteling (VAPID en aes128gcm) is eigen code, getest tegen de officiële testvector uit RFC 8291.
 
@@ -74,7 +78,8 @@ Belangrijk voor installeren en meldingen:
 - **Cache:** maak een *Cache Rule* voor deze hostname: **Bypass cache** voor `/sw.js`, `/manifest.webmanifest` en `/api/*`. De app stuurt zelf al `no-cache`, dit is een extra zekerheid.
 - **Rocket Loader uit** voor deze hostname (Speed › Optimization). Rocket Loader herschrijft scripts en breekt de service worker.
 - *Always Use HTTPS* aan.
-- De server moet **uitgaand** internet hebben naar de push-diensten (`web.push.apple.com`, `fcm.googleapis.com`, `updates.push.services.mozilla.com`). Dit loopt niet via de tunnel.
+- De server moet **uitgaand** internet hebben naar de push-diensten (`web.push.apple.com`, `fcm.googleapis.com`, `updates.push.services.mozilla.com`), en voor het ophalen van de kaart naar `build-metadata.protomaps.dev`, `build.protomaps.com` en `protomaps.github.io`. Dit loopt niet via de tunnel.
+- `/map/*` (kaarttegels) mag bij Cloudflare in de cache: de versie zit in het adres en de server stuurt `immutable`. Laat de bestaande regel voor `/sw.js`, het manifest en `/api/*` staan.
 
 ## 4. Testen op een telefoon
 
@@ -95,6 +100,10 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 11 | Vliegtuigmodus aan, app openen | App opent (offline), nog steeds aangemeld |
 | 12 | Startscherm › **Beheer** › Posten › **+ Post toevoegen**, bij de post staan › **Huidige GPS-positie vastleggen** | Coördinaten met nauwkeurigheid (± m); groen bij 15 m of beter |
 | 13 | Jezelf of een tweede toestel als contactpersoon toevoegen, opslaan, met dat nummer aanmelden | "Nummer herkend" met de post en de rol |
+| 14 | Beheer › Evenement › **Kaart ophalen** | Na ± 10–30 s: "… kaarttegels opgeslagen" |
+| 15 | Overzicht openen | Kaart met posten en parcours; rechtsboven **Offline klaar** |
+| 16 | Vliegtuigmodus aan, app afsluiten en openen | Kaart, posten, contacten en postdetails werken; bellen en navigeren starten de telefoon-apps |
+| 17 | Postdetail › **Navigeer** | Navigatie-app opent met de route naar de post (te kiezen in Menu › Navigeren met) |
 
 Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
 
@@ -132,6 +141,9 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | GET | `/healthz` | iedereen | Gezondheidscheck |
 | GET | `/api/info` | iedereen | Versie, commit, publieke VAPID-sleutel |
 | GET | `/api/event` | iedereen | Naam, datum en info-tekst van het evenement (zonder namen of nummers) |
+| GET | `/api/package` | iedereen | Evenementpakket voor offline gebruik; medewerkers krijgen ook contacten, eenheden en kernteam. `If-None-Match` geeft 304 |
+| GET | `/map/<versie>/…` | iedereen | Kaarttegels, lettertypen en iconen |
+| GET/POST | `/api/admin/map` | beheerder | Kaart ophalen (op de achtergrond) en de voortgang |
 | POST | `/api/session` | iedereen | Aanmelden `{ phone }`; zet de sessiecookie. 404 als het nummer onbekend is |
 | DELETE | `/api/session` | iedereen | Afmelden |
 | GET | `/api/me` | medewerker | Naam, rollen en startscherm |

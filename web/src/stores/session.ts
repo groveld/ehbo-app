@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import type { LoginUnknown, Me, PublicEvent } from '@ehbo/shared';
 import { api, ApiRequestError } from '../api.ts';
 import { load, save } from '../storage.ts';
+import { usePackageStore } from './package.ts';
 
 export const useSessionStore = defineStore('session', () => {
   const event = ref<PublicEvent | null>(load('ehbo.event'));
@@ -33,7 +34,10 @@ export const useSessionStore = defineStore('session', () => {
     try {
       me.value = await api<Me>('/api/me');
     } catch (err) {
-      if (err instanceof ApiRequestError && err.status === 401) me.value = null;
+      if (err instanceof ApiRequestError && err.status === 401) {
+        me.value = null;
+        usePackageStore().clearStaffData();
+      }
     }
   }
 
@@ -43,6 +47,8 @@ export const useSessionStore = defineStore('session', () => {
       me.value = await api<Me>('/api/session', { method: 'POST', body: { phone } });
       placeIndex.value = 0;
       unknown.value = null;
+      // Medewerkers krijgen het pakket met namen en nummers.
+      void usePackageStore().refresh();
       return 'ok';
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 404) {
@@ -57,6 +63,8 @@ export const useSessionStore = defineStore('session', () => {
     await api('/api/session', { method: 'DELETE' }).catch(() => {});
     me.value = null;
     placeIndex.value = 0;
+    usePackageStore().clearStaffData();
+    void usePackageStore().refresh();
   }
 
   async function acceptInfo() {
