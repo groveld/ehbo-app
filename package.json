@@ -22,7 +22,7 @@
     "seed": "npm run seed -w server"
   },
   "devDependencies": {
-    "@types/node": "^22.18.0",
+    "@types/node": "^26.6.5",
     "concurrently": "^10.0.6",
     "typescript": "~6.0.3"
   }
