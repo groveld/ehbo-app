@@ -30,8 +30,8 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 ## Status (28 Oct 2026)
 
 - Design finished; no open questions. Live at https://silvesterloop.groveld.com.
-- **Done:** phase 1 (install check and Web Push, `v0.2.0`), phase 2 "Basis en beheer" (login and roles, admin screens, event package, offline map, overview, style and logos), phase 3 "EHBO-verzoek en meldingen" (call engine, screens, no-signal fallback, in-app alarm, e2e test).
-- **Now:** phase 4 "Verzoeken en rapport", in parts: 4a the request queue (water, traffic, volunteer), 4b the report (PDF, CSV) with test mode, then the info page in admin.
+- **Done:** phase 1 (install check and Web Push, `v0.2.0`), phase 2 "Basis en beheer" (login and roles, admin screens, event package, offline map, overview, style and logos), phase 3 "EHBO-verzoek en meldingen" (call engine, screens, no-signal fallback, in-app alarm, e2e test), phase 4 "Verzoeken en rapport" (request queue, report with PDF and CSV, test mode, info page in admin).
+- **Now:** "Testen op telefoons": a trial day with 5–10 people on real iPhones and Androids, in test mode (README phone test list), then go/no-go. After that "Uitrol en handleiding": manual with screenshots, QR code, everyone installs. From week 52 freeze the image.
 - **Report and test mode:** `server/src/report.ts` (report and CSV), routes in `routes/admin.ts`; screens `views/admin/RapportView.vue` (6.1) and `RapportAfdrukView.vue` (print page for PDF). Test mode is `event.test_mode` (migration 7) with `is_test` on incidents and requests; `db.testMode()` prefixes push titles with "Test". The banner is in `App.vue`.
 
 Where the main pieces live:

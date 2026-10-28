@@ -7,15 +7,19 @@ import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { navigationUrl } from '../navigate.ts';
+import { useSave } from '../composables/useSave.ts';
 import { kmLabel, nearestUnit, primaryContact, unitsAt } from '../posts.ts';
+import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
 
 const props = defineProps<{ id: string }>();
 const store = usePackageStore();
+const live = useLiveStore();
 const session = useSessionStore();
 const router = useRouter();
 const copied = ref(false);
+const toggle = useSave();
 
 const post = computed(() => store.postById.get(Number(props.id)) ?? null);
 const type = computed(() => (post.value ? store.typeById.get(post.value.typeId) : undefined));
@@ -23,6 +27,10 @@ const contact = computed(() => (post.value ? primaryContact(post.value) : null))
 const here = computed(() => (store.pkg && post.value ? unitsAt(store.pkg, post.value.id) : []));
 const nearest = computed(() => (store.pkg && post.value && !here.value.length ? nearestUnit(store.pkg, post.value) : null));
 const ROLE = { verantwoordelijke: 'verantwoordelijke', lid: 'lid', reserve: 'reserve' } as const;
+const isOpen = computed(() => (post.value ? live.postOpen(post.value.id, post.value.isOpen) : false));
+/** Zoals de server: de postverantwoordelijke van deze post, of een beheerder. */
+const canToggle = computed(() => session.me?.isAdmin
+  || session.me?.assignments.some((a) => a.kind === 'post' && a.postId === post.value?.id && a.role === 'verantwoordelijke'));
 
 const subtitle = computed(() => {
   const p = post.value;
@@ -77,6 +85,17 @@ async function copyGps() {
         <div v-if="post.accessRoute" class="fact"><span class="label">Aanrijroute hulpverlening</span><span>{{ post.accessRoute }}</span></div>
       </div>
 
+      <!-- Open of dicht, live. Een beheerder kan elke post open en dicht zetten, voor wie minder technisch is. -->
+      <div class="card open-row">
+        <span class="dot" :class="{ on: isOpen }" />
+        <span class="grow"><strong>{{ isOpen ? 'Post is open' : 'Post is dicht' }}</strong></span>
+        <button
+          v-if="canToggle" class="switch" role="switch" :aria-checked="isOpen" aria-label="Post open"
+          :disabled="toggle.busy.value" @click="toggle.run(() => live.setPostOpen(post!.id, !isOpen))"
+        />
+      </div>
+      <p v-if="toggle.error.value" class="error-text" role="alert">{{ toggle.error.value }}</p>
+
       <div v-if="post.contacts?.length" class="list">
         <div v-for="c in post.contacts" :key="c.phone" class="list-row">
           <span class="main">
@@ -109,6 +128,9 @@ async function copyGps() {
 </template>
 
 <style scoped>
+.open-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.open-row .dot { width: 10px; height: 10px; border-radius: 50%; background: #A8A59C; }
+.open-row .dot.on { background: var(--ok); }
 .top { display: flex; align-items: center; gap: 4px; padding: max(14px, env(safe-area-inset-top)) 0 6px; margin-left: -12px; }
 .top-title { flex-grow: 1; font-size: 16px; font-weight: 700; }
 .edit { font-size: 14px; font-weight: 600; padding: 12px 0; }

@@ -63,6 +63,14 @@ async function saveNumbers() {
           <span class="main"><span class="title-line">EHBO-eenheden</span><span class="sub">{{ state.units.length }} eenheden</span></span>
           <Icon name="forward" :size="18" />
         </RouterLink>
+        <RouterLink :to="{ name: 'beheer-info' }" class="list-row">
+          <Icon name="info" :size="20" />
+          <span class="main">
+            <span class="title-line">Info &amp; voorwaarden</span>
+            <span class="sub">{{ state.info.sections ? 'Eigen tekst' : 'Standaardtekst' }}</span>
+          </span>
+          <Icon name="forward" :size="18" />
+        </RouterLink>
         <RouterLink :to="{ name: 'beheer-rapport' }" class="list-row">
           <Icon name="list" :size="20" />
           <span class="main">

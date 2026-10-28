@@ -1,7 +1,7 @@
 // Beheer: de volledige stand van het evenement. Elke wijziging stuurt de nieuwe stand terug.
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, LogoUpload, PostData, Report, RunData, UnitData } from '@ehbo/shared';
+import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, InfoSettings, LogoUpload, PostData, Report, RunData, UnitData } from '@ehbo/shared';
 import { api, ApiRequestError } from '../api.ts';
 import { makeIconSet, makeLogo } from '../images.ts';
 import { useSessionStore } from './session.ts';
@@ -65,5 +65,7 @@ export const useAdminStore = defineStore('admin', () => {
     loadReport: () => api<Report>('/api/admin/report'),
     setTestMode: (on: boolean) => change('/api/admin/test-mode', 'PUT', { on }),
     deleteTestData: () => change('/api/admin/test-data', 'DELETE'),
+    // De info-pagina is openbaar (/api/event): na opslaan ook die bijwerken.
+    saveInfo: (info: InfoSettings) => changeStyle('/api/admin/info', 'PUT', info),
   };
 });

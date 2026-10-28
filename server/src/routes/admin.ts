@@ -6,6 +6,7 @@ import {
   ESCALATION_MAX_SECONDS,
   ESCALATION_MIN_SECONDS,
   IMAGE_MAX_BASE64,
+  INFO_SECTIONS_MAX,
   SHORT_NAME_MAX,
   TIME_PATTERN,
   normalizePhone,
@@ -16,6 +17,7 @@ import {
   type EmergencyNumber,
   type EventSettings,
   type IconUpload,
+  type InfoSettings,
   type LogoUpload,
   type PostData,
   type Report,
@@ -311,6 +313,28 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
   }, async (request) => {
     if (request.body.filter((c) => c.isCoordinator).length > 1) throw badRequest('Er is maar één evenementcoördinator');
     admin.saveCoreTeam(request.body.map((c) => ({ ...c, phone: c.phone?.trim() ? phoneOf(c.phone, c.name || c.function) : null })));
+    return admin.getState();
+  });
+
+  // Info & voorwaarden: eigen teksten, of null voor de standaardtekst.
+  app.put<{ Body: InfoSettings; Reply: AdminState }>('/api/admin/info', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['sections', 'policy', 'contact'],
+        properties: {
+          sections: {
+            type: ['array', 'null'],
+            maxItems: INFO_SECTIONS_MAX,
+            items: { type: 'object', required: ['title', 'body'], properties: { title: text(80), body: text(2000) } },
+          },
+          policy: optionalText(200),
+          contact: optionalText(200),
+        },
+      },
+    },
+  }, async (request) => {
+    admin.saveInfo(request.body);
     return admin.getState();
   });
 

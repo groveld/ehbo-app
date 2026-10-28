@@ -218,3 +218,23 @@ test('beheerders: toevoegen, eigen nummer niet verwijderen', async () => {
   assert.equal((await call('DELETE', `/api/admin/admins/${encodeURIComponent('+31699887766')}`)).statusCode, 200);
   assert.equal((await call('DELETE', `/api/admin/admins/${encodeURIComponent('+31699887766')}`)).statusCode, 404);
 });
+
+test('info & voorwaarden: eigen tekst met plaatshouders, terug naar de standaard', async () => {
+  const info = {
+    sections: [{ title: 'Over {evenement}', body: 'Vragen? {contact}. Bewaren volgens {beleid}.' }, { title: ' ', body: '' }],
+    policy: 'het verwijderplan van Stichting Silvesterloop',
+    contact: 'Bea, beheer@example.org',
+  };
+  const state = (await call('PUT', '/api/admin/info', info)).json() as AdminState;
+  assert.equal(state.info.sections?.length, 1, 'lege onderdelen vallen weg');
+  const event = (await app.inject({ url: '/api/event' })).json();
+  assert.deepEqual(event.info, [{
+    title: 'Over Silvesterloop 2026',
+    body: 'Vragen? Bea, beheer@example.org. Bewaren volgens het verwijderplan van Stichting Silvesterloop.',
+  }]);
+  assert.equal((await call('PUT', '/api/admin/info', info, staffCookie)).statusCode, 403);
+
+  const reset = (await call('PUT', '/api/admin/info', { sections: null, policy: null, contact: null })).json() as AdminState;
+  assert.equal(reset.info.sections, null);
+  assert.match((await app.inject({ url: '/api/event' })).json().info[0].title, /Waarvoor is deze app/);
+});
