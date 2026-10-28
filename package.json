@@ -5,7 +5,7 @@
   "description": "EHBO Evenementen-app: posten, contacten en EHBO-oproepen. Testversie voor installatie en pushmeldingen.",
   "type": "module",
   "engines": {
-    "node": ">=22.18"
+    "node": ">=26"
   },
   "workspaces": [
     "shared",

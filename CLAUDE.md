@@ -41,7 +41,7 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 
 - **TypeScript** everywhere. Monorepo layout `server/`, `web/`, `shared/` (shared types and fixed lists).
 - **web:** Vue 3, Vite and Pinia. Own service worker for the offline shell and event package. MapLibre GL with OSM vector tiles as **PMTiles**, served from our own server and cached offline.
-- **server:** Node 22.18+ and Fastify 5, in one container. Node runs the `.ts` files directly (type stripping), so there is no server build step: use only erasable syntax (no enums, namespaces or parameter properties) and import with `.ts` extensions. `tsconfig.base.json` enforces this. It holds the API, call logic, escalation timers and report. **SQLite with one file per event**, WAL mode, behind a single data-access layer so Postgres stays possible.
+- **server:** Node 26 (LTS; same version in CI, Docker and `@types/node`) and Fastify 5, in one container. Node runs the `.ts` files directly (type stripping), so there is no server build step: use only erasable syntax (no enums, namespaces or parameter properties) and import with `.ts` extensions. `tsconfig.base.json` enforces this. It holds the API, call logic, escalation timers and report. **SQLite with one file per event**, WAL mode, behind a single data-access layer so Postgres stays possible.
 - **Live updates:** Server-Sent Events with a heartbeat every 30 s. Cloudflare drops idle connections after 100 s.
 - **Push:** our own Web Push module (VAPID ES256 and aes128gcm) in `server/src/webpush.ts`, tested against the RFC 8291 vector. Reuse it; don't add `web-push`.
 - **Service worker:** our own, no Workbox. In dev (`BUILD_ID === 'dev'`) it handles push but not fetches, so Vite always serves fresh code.
@@ -108,7 +108,7 @@ npm start          # production mode: server on 3000 serving web/dist
 npm run icons      # regenerate icons into web/public/icons (Python + Pillow)
 ```
 
-Requires Node ≥ 22.18 (type stripping, `node:sqlite`). For browser testing without installing, open `/?browser=1`. Offline behaviour can only be tested with `build` + `start`.
+Requires Node ≥ 26. For browser testing without installing, open `/?browser=1`. Offline behaviour can only be tested with `build` + `start`.
 
 ## Conventions
 

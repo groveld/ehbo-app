@@ -27,6 +27,10 @@ updates:
       time: "06:00"
       timezone: "Europe/Amsterdam"
     open-pull-requests-limit: 1
+    # Een nieuwe Node-hoofdversie kiezen we zelf, tegelijk voor image, CI en @types/node.
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
     cooldown:
       default-days: 7
     assignees:
@@ -40,6 +44,9 @@ updates:
       time: "06:00"
       timezone: "Europe/Amsterdam"
     open-pull-requests-limit: 1
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       npm:
         patterns:

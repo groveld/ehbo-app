@@ -50,7 +50,7 @@ export function vapidAuthorization(endpoint: string, { publicKey, privateKey, su
   return `vapid t=${data}.${b64url.encode(signature)}, k=${publicKey}`;
 }
 
-const hmac = (key: crypto.BinaryLike, data: crypto.BinaryLike) => crypto.createHmac('sha256', key).update(data).digest();
+const hmac = (key: crypto.BinaryLike, data: Buffer | string) => crypto.createHmac('sha256', key).update(data).digest();
 
 /**
  * Versleutelt een bericht voor één abonnement (één record, aes128gcm).

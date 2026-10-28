@@ -98,7 +98,7 @@ Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app van
 
 ## Lokaal ontwikkelen
 
-Vereist Node 22.18 of nieuwer: de server draait zijn TypeScript direct met Node, zonder compileerstap.
+Vereist Node 26 of nieuwer: de server draait zijn TypeScript direct met Node, zonder compileerstap.
 
 ```sh
 npm install        # eenmalig

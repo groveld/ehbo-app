@@ -24,7 +24,7 @@ function decrypt(body: Buffer, uaEcdh: crypto.ECDH, authSecret: Buffer) {
   const idlen = body.readUInt8(20);
   const asPublic = body.subarray(21, 21 + idlen);
   const ciphertext = body.subarray(21 + idlen);
-  const hmac = (k: crypto.BinaryLike, d: crypto.BinaryLike) => crypto.createHmac('sha256', k).update(d).digest();
+  const hmac = (k: crypto.BinaryLike, d: Buffer | string) => crypto.createHmac('sha256', k).update(d).digest();
   const ecdhSecret = uaEcdh.computeSecret(asPublic);
   const prkKey = hmac(authSecret, ecdhSecret);
   const ikm = hmac(prkKey, Buffer.concat([Buffer.from('WebPush: info\0'), uaEcdh.getPublicKey(), asPublic, Buffer.from([1])]));
