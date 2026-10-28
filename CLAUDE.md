@@ -22,27 +22,26 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 | `docs/design/index.html` | Gallery of all 31 screens in process order. `docs/design/screens/*.html` are the per-screen references to build from. |
 | `docs/design/source/` | Original design canvas, for re-import into Claude. Don't edit by hand. |
 | `server/` | Fastify server (TypeScript, run directly by Node). `src/app.ts` wires it up; `src/routes/` the API; `src/event-db.ts` the per-event data-access layer with migrations; `src/roles.ts` phone number → roles; `src/auth.ts` sessions; `src/db.ts` server settings (VAPID keys); `src/webpush.ts` our own Web Push; `src/demo.ts` fictional test data (`npm run seed`). Tests in `test/`. |
-| `web/` | Vue 3 + Vite + Pinia + Vue Router app. One file per screen in `src/views/`, named after the design screen. `src/sw.ts` is the service worker, built as `/sw.js` by the plugin in `vite.config.ts`. Icons and manifest in `public/`. |
+| `web/` | Vue 3 + Vite + Pinia + Vue Router app. One file per screen in `src/views/`, named after the design screen. `src/sw.ts` is the service worker, built as `/sw.js` by the plugin in `vite.config.ts`. Default icons in `public/icons/`; the manifest comes from the server. |
 | `shared/` | Types and fixed lists used by both server and web (`@ehbo/shared`). |
 | `.github/workflows/build.yml` | Test → build → smoke test → push to GHCR → clean old images. |
-| `unraid/`, `docker-compose.yml` | Deployment. |
+| `e2e/`, `playwright.config.ts` | Playwright end-to-end test of the call chain and requests. |
 
 ## Status (28 Oct 2026)
 
-- Design finished; no open questions.
-- Phase 1 (test version: install check + Web Push) is **done**, tagged `v0.2.0`. It runs on the chosen stack below at https://silvesterloop.groveld.com. Install and push are confirmed on Windows, iPhone and Android.
-- The Unraid container uses `/data`, `--user 99:100` and port 3000, so data and VAPID keys survive updates.
-- Phase 2, "Basis en beheer", is done (PRs 2a, 2b, 2c and style):
-  - **2a**: data model for all of phase 2, phone-number login with roles, screens 2.1–2.7, temporary start screen. Merged and live.
-  - **2b**: admin API and screens 1.1–1.5 plus a post list, in `web/src/views/admin/`. Merged and live. Style and logos (1.1 "Stijl", 1.6) are a separate step after 2c.
-  - **2c**: event package (`server/src/routes/package.ts`), offline map (`server/src/map.ts`, `routes/map.ts`, `web/src/components/EventMap.vue`, `stores/package.ts`), overview with tabs (`web/src/views/overzicht/`), post detail (3.5), participant view (2.8), map picking in the post form, menu with navigation-app choice. Merged and live.
-  - **Style and logos**: 1.1 "Stijl" and 1.6 (`web/src/views/admin/AppIcoonView.vue`). Colors and short name in `event.style_json`; logos as PNG in `brand_images` (`server/src/brand.ts`, `routes/brand.ts`), served at `/brand/<name>.png`, with a redirect to `/icons/…` when there is no own logo. The browser resizes uploads (`web/src/images.ts`); `web/src/theme.ts` sets `--primary`/`--accent`. The manifest is built by the server, not a file in `web/public/`.
-- Phase 3, "EHBO-verzoek en meldingen", is done, in three PRs (decided 28 Oct; post open/close moved here from phase 4):
-  - **3a** (branch `feat/phase3a-calls`): the call engine on the server. `server/src/calls.ts` (dispatch, escalation, AED, accept, on site, close, withdraw, assign, availability, positions), `routes/calls.ts` (API and SSE at `/api/live`), `notify.ts` (push to all devices of a person). Types in `shared/src/incident.ts`. Tests in `test/calls.test.ts` use a manual scheduler and capture pushes.
-  - **3b** (branch `feat/phase3b-screens`, on top of 3a): post home 3.1/3.2 (`PostHomeView`), EHBO request and details 4.1 (`EhboVerzoekView`), sent/help on the way 4.2/4.6 plus manual assign for the coordinator (`MeldingView`), stand-by 3.3 (`StandbyView`), call/all units/already taken/en route 4.3–4.7 (`OproepView`), closing 4.8 (`AfrondenView`). Live state in `web/src/stores/live.ts` (SSE, actions, GPS sharing for mobile units); `components/StatusBlock.vue` is the 140 px header. Open calls are red on the map and in the Verzoeken tab.
-  - **3c** (branch `feat/phase3c-offline`, on top of 3b): no-signal fallback 4.9 (`GeenBereikView`); requests without signal wait in an outbox in `stores/live.ts` and are resent (on `online`, on reconnect, every 10 s) with the same `clientId`; repeating sound and vibration while a call waits (`web/src/alarm.ts`); Playwright test in `e2e/` (`e2e/server.ts` starts a seeded server on 3090; one worker, tests clean up after themselves).
-- Now: phase 4, "Verzoeken en rapport" (decided 28 Oct): 4a the request queue, 4b the report (PDF, CSV) with test mode, then the info page in admin.
-  - **4a** (branch `feat/phase4a-requests`): water, traffic and volunteer requests. `server/src/requests.ts` and `routes/requests.ts` (migration 6, table `requests`); requests are part of the live state. Post screen 5.1 (`AanvraagView`), queue 5.2 in the Verzoeken tab, tiles on the post home. Tests in `test/requests.test.ts` and `e2e/`.  - **4a** (branch `feat/phase4a-requests`): water, traffic and volunteer requests. `server/src/requests.ts` and `routes/requests.ts` (migration 6, table `requests`); requests are part of the live state. Post screen 5.1 (`AanvraagView`), queue 5.2 in the Verzoeken tab, tiles on the post home. Tests in `test/requests.test.ts` and `e2e/`.
+- Design finished; no open questions. Live at https://silvesterloop.groveld.com.
+- **Done:** phase 1 (install check and Web Push, `v0.2.0`), phase 2 "Basis en beheer" (login and roles, admin screens, event package, offline map, overview, style and logos), phase 3 "EHBO-verzoek en meldingen" (call engine, screens, no-signal fallback, in-app alarm, e2e test).
+- **Now:** phase 4 "Verzoeken en rapport", in parts: 4a the request queue (water, traffic, volunteer), 4b the report (PDF, CSV) with test mode, then the info page in admin.
+
+Where the main pieces live:
+
+- **Event package and offline map:** `server/src/routes/package.ts`, `server/src/map.ts`, `routes/map.ts`; on the phone `web/src/stores/package.ts` and `components/EventMap.vue`.
+- **Style and logos:** colors and short name in `event.style_json`, logos as PNG in `brand_images` (`server/src/brand.ts`, `routes/brand.ts`), served at `/brand/<name>.png` with a redirect to `/icons/…` when there is no own logo. The browser resizes uploads (`web/src/images.ts`); `web/src/theme.ts` sets `--primary`/`--accent`. The manifest is built by the server.
+- **Calls:** `server/src/calls.ts` (dispatch, escalation, AED, accept, on site, close, withdraw, assign, availability, positions) and `routes/calls.ts` (API and SSE at `/api/live`); `notify.ts` pushes to every device of a person. Types in `shared/src/incident.ts`. Tests in `test/calls.test.ts` use a manual scheduler and capture pushes.
+- **Requests:** `server/src/requests.ts` and `routes/requests.ts` (table `requests`); part of the live state. Types in `shared/src/request.ts`.
+- **Screens for calls and requests:** post home 3.1/3.2 (`PostHomeView`), EHBO request 4.1 (`EhboVerzoekView`), follow-up 4.2/4.6 with manual assign (`MeldingView`), stand-by 3.3 (`StandbyView`), call 4.3–4.7 (`OproepView`), closing 4.8 (`AfrondenView`), no signal 4.9 (`GeenBereikView`), request 5.1 (`AanvraagView`), queue 5.2 in the Verzoeken tab. `components/StatusBlock.vue` is the 140 px header.
+- **Live state on the phone:** `web/src/stores/live.ts`: SSE with a watchdog, all actions, the outbox for EHBO requests without signal (resent with the same `clientId`), GPS sharing for mobile units. `web/src/alarm.ts` is the repeating sound and vibration.
+- **End-to-end:** `e2e/` with Playwright; `e2e/server.ts` starts a seeded server on 3090. One worker; tests clean up after themselves.
 
 ## Chosen stack (decided 28 Oct 2026)
 
@@ -55,7 +54,6 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 - **TypeScript 6**, not 7: vue-tsc still needs the JavaScript-based compiler. Upgrading breaks `npm run typecheck` for `web/` (`ERR_PACKAGE_PATH_NOT_EXPORTED ./lib/tsc`). Dependabot ignores TypeScript, Node and `@types/node` majors; move those deliberately, together.
 - **Tests:** `node:test` for units, Playwright end-to-end in CI for the call chain (login → request → call → close).
 - **Report:** CSV, plus a print-friendly page saved as PDF.
-
 
 ## Infrastructure
 
@@ -115,7 +113,6 @@ npm test           # node --test in server/, includes the RFC 8291 vector
 npm run typecheck  # tsc for shared and server, vue-tsc + tsc for web
 npm run build      # web/dist
 npm start          # production mode: server on 3000 serving web/dist
-npm run icons      # regenerate icons into web/public/icons (Python + Pillow)
 npm run e2e        # Playwright end-to-end test of the call chain (needs `npm run build` and `npx playwright install chromium`)
 ```
 
