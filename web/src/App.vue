@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { startAlarm, stopAlarm, unlockAudio } from './alarm.ts';
 import { useLiveStore } from './stores/live.ts';
 import { usePackageStore } from './stores/package.ts';
 import { usePushStore } from './stores/push.ts';
@@ -22,16 +23,21 @@ watch(() => session.me, (me) => {
   if (!me && route.meta.staff) router.replace({ name: 'welkom' });
 });
 
-// Nieuwe oproep voor mijn eenheid terwijl de app open is: meteen naar het oproepscherm, met trillen.
+// Nieuwe oproep voor mijn eenheid terwijl de app open is: meteen naar het oproepscherm.
 // Niet midden in het afronden van een andere oproep; daar staat de oproep wel op stand-by.
 const seen = new Set<number>(live.invitations.map((i) => i.id));
 watch(() => live.invitations.map((i) => i.id), (ids) => {
   const fresh = ids.find((id) => !seen.has(id));
   for (const id of ids) seen.add(id);
   if (fresh === undefined || route.name === 'afronden') return;
-  navigator.vibrate?.([400, 150, 400, 150, 800]);
   if (!(route.name === 'oproep' && route.params.id === String(fresh))) router.push({ name: 'oproep', params: { id: fresh } });
 });
+
+// Zolang een oproep op reactie wacht: geluid en trillen, tot accepteren of "kan niet". Op de achtergrond doet de pushmelding dat.
+const visible = ref(document.visibilityState === 'visible');
+document.addEventListener('visibilitychange', () => (visible.value = document.visibilityState === 'visible'));
+document.addEventListener('pointerdown', unlockAudio);
+watch(() => live.invitations.length > 0 && visible.value, (ringing) => (ringing ? startAlarm() : stopAlarm()), { immediate: true });
 
 onMounted(() => {
   push.registerWorker();

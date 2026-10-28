@@ -360,6 +360,9 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Positie op de achtergrond (28 okt) | Een webapp krijgt geen GPS zolang hij op de achtergrond staat of het scherm uit is. Een mobiele eenheid deelt haar positie dus alleen met de app open; anders telt na 3 minuten de standplaats. Staat in de handleiding |
 | Reistijd (28 okt) | Een schatting uit de afstand hemelsbreed: te voet 5, fiets 15, auto 30, anders en vast 15 km/u |
 | Oproep in beeld (28 okt) | Komt er een oproep binnen terwijl de app open is, dan gaat de app direct naar het oproepscherm en trilt hij; niet als je net een andere oproep afrondt (dan staat hij op stand-by) |
+| Melding zonder bereik (28 okt) | Lukt versturen niet binnen 10 s, dan blijft de melding op de telefoon staan en toont de app scherm 4.9 met de dichtstbijzijnde eenheden en de coördinator om te bellen. De app verstuurt hem opnieuw zodra er bereik is (en elke 10 s); de server telt dezelfde melding maar één keer. De tijd van melden is die van de post |
+| Alarm in de app (28 okt) | Zolang een oproep op reactie wacht en de app open is: elke 2,5 s een toon en trillen, tot accepteren of "kan niet". Geluid kan pas na de eerste tik in de app (eis van de browser). Met de app dicht zorgt de pushmelding voor het alarm |
+| End-to-end-test (28 okt) | Playwright in Chromium (als Pixel 7) bij elke build: aanmelden, post openen, EHBO-verzoek, oproep, accepteren, ter plaatse, afronden; en een melding zonder bereik die later vanzelf aankomt |
 
 **Nog open**
 

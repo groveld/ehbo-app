@@ -52,6 +52,7 @@ export const router = createRouter({
     { path: '/post/:id/start', name: 'post-home', component: () => import('./views/PostHomeView.vue'), props: true, meta: { staff: true } },
     { path: '/post/:id/ehbo', name: 'ehbo-verzoek', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
     { path: '/melding/:id', name: 'melding', component: () => import('./views/MeldingView.vue'), props: true, meta: { staff: true } },
+    { path: '/geen-bereik/:clientId', name: 'geen-bereik', component: () => import('./views/GeenBereikView.vue'), props: true, meta: { staff: true } },
     { path: '/melding/:incidentId/aanvullen', name: 'aanvullen', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
     // EHBO: stand-by (3.3), oproep (4.3–4.7) en afronden (4.8).
     { path: '/stand-by', name: 'stand-by', component: () => import('./views/StandbyView.vue'), meta: { staff: true } },

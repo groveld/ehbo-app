@@ -40,7 +40,7 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 - Now: phase 3, "EHBO-verzoek en meldingen", in three PRs (decided 28 Oct; post open/close moved here from phase 4):
   - **3a** (branch `feat/phase3a-calls`): the call engine on the server. `server/src/calls.ts` (dispatch, escalation, AED, accept, on site, close, withdraw, assign, availability, positions), `routes/calls.ts` (API and SSE at `/api/live`), `notify.ts` (push to all devices of a person). Types in `shared/src/incident.ts`. Tests in `test/calls.test.ts` use a manual scheduler and capture pushes.
   - **3b** (branch `feat/phase3b-screens`, on top of 3a): post home 3.1/3.2 (`PostHomeView`), EHBO request and details 4.1 (`EhboVerzoekView`), sent/help on the way 4.2/4.6 plus manual assign for the coordinator (`MeldingView`), stand-by 3.3 (`StandbyView`), call/all units/already taken/en route 4.3–4.7 (`OproepView`), closing 4.8 (`AfrondenView`). Live state in `web/src/stores/live.ts` (SSE, actions, GPS sharing for mobile units); `components/StatusBlock.vue` is the 140 px header. Open calls are red on the map and in the Verzoeken tab.
-  - **3c**: no-signal fallback (4.9), resending offline requests, repeating alarm in the app, Playwright end-to-end test.
+  - **3c** (branch `feat/phase3c-offline`, on top of 3b): no-signal fallback 4.9 (`GeenBereikView`); requests without signal wait in an outbox in `stores/live.ts` and are resent (on `online`, on reconnect, every 10 s) with the same `clientId`; repeating sound and vibration while a call waits (`web/src/alarm.ts`); Playwright test in `e2e/` (`e2e/server.ts` starts a seeded server on 3090; one worker, tests clean up after themselves).
 
 ## Chosen stack (decided 28 Oct 2026)
 
@@ -114,6 +114,7 @@ npm run typecheck  # tsc for shared and server, vue-tsc + tsc for web
 npm run build      # web/dist
 npm start          # production mode: server on 3000 serving web/dist
 npm run icons      # regenerate icons into web/public/icons (Python + Pillow)
+npm run e2e        # Playwright end-to-end test of the call chain (needs `npm run build` and `npx playwright install chromium`)
 ```
 
 Requires Node ≥ 26. For browser testing without installing, open `/?browser=1`. Offline behaviour can only be tested with `build` + `start`.
