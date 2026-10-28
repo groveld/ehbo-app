@@ -1,39 +1,64 @@
+/* Basisstijl volgens de vormgevingsregels (CLAUDE.md, "Design rules"). */
 :root {
-  --ink: #16181D; --ink-2: #3E434B; --muted: #555A63; --line: #DEDBD2;
+  --ink: #16181D; --ink-2: #3E434B; --muted: #555A63; --soft-text: #C9CBD0;
+  --line: #DEDBD2; --divider: #ECE9E1;
   --bg: #F6F5F1; --card: #FFFFFF; --soft: #EFEDE6;
-  --accent: #F2C230; --ok: #0A7D4F; --ok-bg: #E2EFE7; --warn: #7A3F06; --warn-bg: #FBE6D2; --danger: #C8261E;
+  --accent: #F2C230;
+  /* Signaalkleuren: vast, nooit per evenement aan te passen. */
+  --danger: #C8261E; --ok: #0A7D4F; --ok-text: #0A5C3B; --ok-bg: #E2EFE7;
+  --warn: #7A3F06; --warn-bg: #FBE6D2; --warn-line: #D9781C;
+  --info: #124A78; --info-bg: #E4EEF7; --info-icon: #1F6FB2;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
-body { font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-.wrap { max-width: 480px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; min-height: 100dvh; }
-.top { display: flex; align-items: center; gap: 12px; padding: 4px 4px 8px; }
-.logo { border-radius: 12px; }
-.eyebrow { margin: 0; font-size: 12px; color: var(--muted); }
-h1 { margin: 0; font-size: 24px; }
-h2 { margin: 0 0 8px; font-size: 18px; }
-p { margin: 0 0 10px; }
-.card { background: var(--card); border-radius: 16px; padding: 16px; }
-.muted { color: var(--muted); font-size: 14px; }
-.small { font-size: 13px; }
-.chip { display: inline-block; font-size: 12px; font-weight: 600; background: var(--soft); color: var(--ink-2); padding: 4px 10px; border-radius: 999px; }
-.warn { background: var(--warn-bg); color: var(--warn); padding: 10px 12px; border-radius: 12px; font-size: 14px; }
-.steps { padding-left: 20px; margin: 8px 0 12px; }
-.steps li { margin: 6px 0; }
-.btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; border-radius: 14px; border: none; background: var(--soft); color: var(--ink); font-family: inherit; font-weight: 600; font-size: 15px; line-height: 1; text-decoration: none; cursor: pointer; }
-.btn.primary { height: 56px; border-radius: 16px; background: var(--ink); color: #fff; font-weight: 700; font-size: 16px; margin-bottom: 10px; }
-.btn.danger { height: 56px; border-radius: 16px; background: var(--danger); color: #fff; font-weight: 700; font-size: 16px; }
-.btn:disabled { opacity: .45; cursor: default; }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-.link { background: none; border: none; padding: 8px 0; color: var(--ok); font-family: inherit; font-weight: 600; font-size: 14px; text-decoration: underline; cursor: pointer; display: inline-block; }
-.sos { margin-top: auto; }
-.checks { margin: 0; display: grid; gap: 0; }
-.checks div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--soft); }
-.checks div:first-child { border-top: none; }
-.checks dt { color: var(--ink-2); font-size: 14px; }
-.checks dd { margin: 0; font-weight: 600; font-size: 14px; text-align: right; }
-.ok { color: var(--ok); } .bad { color: var(--danger); } .pending { color: var(--warn); }
-.log { margin: 0; padding: 0; list-style: none; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-2); max-height: 220px; overflow: auto; }
-.log li { padding: 4px 0; border-top: 1px solid var(--soft); word-break: break-word; }
+body { font: 16px/1.45 var(--sans); -webkit-tap-highlight-color: transparent; }
+a { color: var(--ok-text); }
+h1, h2, p { margin: 0; }
 [hidden] { display: none !important; }
+
+/* Eén scherm: kolom over de volle hoogte, 112 of de hoofdknop onderaan. */
+.screen {
+  display: flex; flex-direction: column; min-height: 100dvh; max-width: 480px; margin: 0 auto;
+  padding: env(safe-area-inset-top) 24px max(26px, env(safe-area-inset-bottom));
+}
+.screen.tight { padding-left: 16px; padding-right: 16px; }
+.grow { flex-grow: 1; }
+.stack { display: flex; flex-direction: column; }
+.gap-6 { gap: 6px; } .gap-8 { gap: 8px; } .gap-10 { gap: 10px; } .gap-12 { gap: 12px; } .gap-14 { gap: 14px; } .gap-18 { gap: 18px; }
+
+.eyebrow { font-size: 13px; color: var(--muted); }
+.title { font-size: 28px; font-weight: 700; line-height: 1.2; }
+.title.xl { font-size: 32px; line-height: 1.15; }
+.lead { font-size: 15px; color: var(--ink-2); line-height: 1.45; }
+.small { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.mono { font-family: var(--mono); font-weight: 500; }
+
+.card { background: var(--card); border-radius: 16px; padding: 14px; }
+.card.outlined { border: 1px solid var(--line); }
+.card.selected { border: 2px solid var(--ink); }
+.divider { height: 1px; background: var(--divider); }
+.chip { align-self: flex-start; font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--soft); padding: 6px 10px; border-radius: 999px; }
+.note { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border-radius: 14px; background: var(--soft); font-size: 13px; color: var(--ink-2); line-height: 1.4; }
+.note.info { background: var(--info-bg); color: var(--info); }
+.note.ok { background: var(--ok-bg); color: #0A4D33; }
+.note.warn { background: var(--warn-bg); color: var(--warn); }
+
+/* Knoppen: hoofdknop 56, tweede knop 48, icoonknop 44 × 44. */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  height: 48px; border: none; border-radius: 14px; background: var(--soft); color: var(--ink);
+  font: 600 14px var(--sans); text-decoration: none; cursor: pointer;
+}
+.btn.primary { height: 56px; border-radius: 16px; background: var(--ink); color: #FFFFFF; font-weight: 700; font-size: 16px; }
+.btn.danger { height: 56px; border-radius: 16px; background: var(--danger); color: #FFFFFF; font-weight: 700; font-size: 16px; }
+.btn.light { background: #FFFFFF; color: var(--ink); font-weight: 700; border-radius: 12px; }
+.btn.link { background: none; font-size: 14px; color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: default; }
+.icon-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: none; background: none; color: var(--ink); cursor: pointer; padding: 0; }
+.sos { margin-top: 18px; }
+
+/* Rondje met letter of icoon (soort post, stap, rol). */
+.badge { flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 700; }

@@ -1,4 +1,6 @@
 // Afspraken tussen server en web: vorm van de API en van pushberichten.
+export * from './phone.ts';
+export * from './event.ts';
 
 /** Push-abonnement zoals de browser het geeft (PushSubscription.toJSON()). */
 export interface PushSubscriptionData {

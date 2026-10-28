@@ -11,5 +11,6 @@ services:
     environment:
       TZ: Europe/Amsterdam
       VAPID_SUBJECT: "mailto:beheer@jouwdomein.nl"   # verplicht: echt contactadres
+      ADMIN_PHONE: "0612345678"                      # eerste beheerder; daarna beheer je beheerders in de app
     volumes:
       - /mnt/user/appdata/ehbo-app:/data

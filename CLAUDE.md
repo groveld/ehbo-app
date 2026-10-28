@@ -21,8 +21,8 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 | `docs/functioneel-ontwerp.md` | Full functional design and **all decisions**. The source of truth; update it when a decision changes. |
 | `docs/design/index.html` | Gallery of all 31 screens in process order. `docs/design/screens/*.html` are the per-screen references to build from. |
 | `docs/design/source/` | Original design canvas, for re-import into Claude. Don't edit by hand. |
-| `server/` | Fastify server (TypeScript, run directly by Node). `src/app.ts` routes, `src/db.ts` data-access layer, `src/webpush.ts` our own Web Push. Tests in `test/`. |
-| `web/` | Vue 3 + Vite + Pinia app. `src/sw.ts` is the service worker, built as `/sw.js` by the plugin in `vite.config.ts`. Icons and manifest in `public/`. |
+| `server/` | Fastify server (TypeScript, run directly by Node). `src/app.ts` wires it up; `src/routes/` the API; `src/event-db.ts` the per-event data-access layer with migrations; `src/roles.ts` phone number → roles; `src/auth.ts` sessions; `src/db.ts` server settings (VAPID keys); `src/webpush.ts` our own Web Push; `src/demo.ts` fictional test data (`npm run seed`). Tests in `test/`. |
+| `web/` | Vue 3 + Vite + Pinia + Vue Router app. One file per screen in `src/views/`, named after the design screen. `src/sw.ts` is the service worker, built as `/sw.js` by the plugin in `vite.config.ts`. Icons and manifest in `public/`. |
 | `shared/` | Types and fixed lists used by both server and web (`@ehbo/shared`). |
 | `.github/workflows/build.yml` | Test → build → smoke test → push to GHCR → clean old images. |
 | `unraid/`, `docker-compose.yml` | Deployment. |
@@ -32,7 +32,10 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 - Design finished; no open questions.
 - Phase 1 (test version: install check + Web Push) is **done**, tagged `v0.2.0`. It runs on the chosen stack below at https://silvesterloop.groveld.com. Install and push are confirmed on Windows, iPhone and Android.
 - The Unraid container uses `/data`, `--user 99:100` and port 3000, so data and VAPID keys survive updates.
-- Now: phase 2 in the work plan, "Basis en beheer".
+- Now: phase 2 in the work plan, "Basis en beheer", split into three PRs:
+  - **2a** (branch `feat/phase2a-login`): data model for all of phase 2, phone-number login with roles, screens 2.1–2.7, temporary start screen. Done, verified in Edge.
+  - **2b**: admin screens 1.1–1.5 (event + runs with GPX, posts with GPS, EHBO units, core team, emergency numbers, admins).
+  - **2c**: overview + offline map (3.4), post detail with call/navigate (3.5), participant view (2.8), event package. The server downloads the map area itself from the Protomaps builds (owner's choice).
 
 ## Chosen stack (decided 28 Oct 2026)
 
@@ -72,6 +75,10 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 - Phone frame 390 × 844. Check every new screen against `docs/design/screens/`.
 
 ## Key behaviour (details in the design doc)
+
+- **Login:** `POST /api/session` with a phone number; the session is a random token in an HttpOnly cookie, only its SHA-256 is stored. It lasts until the day after the event's end date (60 days without one). Roles are resolved on every request, so removing someone's number logs them out immediately. Failed attempts are throttled per IP; successful ones aren't (a whole briefing shares one Wi-Fi address).
+- **First admin** comes from `ADMIN_PHONE`, only while the event has no admins at all.
+- **Data:** `data/app.sqlite` holds server settings (VAPID keys); `data/events/<EVENT>.sqlite` holds everything about one event. Schema changes go in `MIGRATIONS` in `event-db.ts` (append only; `PRAGMA user_version` tracks progress).
 
 - **Roles** follow from the phone number:
   - listed at a post → staff;

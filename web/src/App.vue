@@ -1,32 +1,26 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import CheckScreen from './components/CheckScreen.vue';
-import InstallScreen from './components/InstallScreen.vue';
-import { browserTest, isStandalone } from './platform.ts';
+import { onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { usePushStore } from './stores/push.ts';
+import { useSessionStore } from './stores/session.ts';
 
 const push = usePushStore();
-const showApp = isStandalone || browserTest;
+const session = useSessionStore();
+const route = useRoute();
+const router = useRouter();
+
+// Sessie verlopen of nummer niet meer ingepland: terug naar het begin.
+watch(() => session.me, (me) => {
+  if (!me && route.meta.staff) router.replace({ name: 'welkom' });
+});
 
 onMounted(() => {
   push.registerWorker();
-  if (!showApp) push.loadInfo();
+  session.loadEvent();
+  if (session.me) session.refresh();
 });
 </script>
 
 <template>
-  <main class="wrap">
-    <header class="top">
-      <img src="/icons/icon-192.png" alt="" width="48" height="48" class="logo">
-      <div>
-        <p class="eyebrow">Testversie · {{ push.info?.version ?? '…' }}</p>
-        <h1>EHBO-app</h1>
-      </div>
-    </header>
-
-    <CheckScreen v-if="showApp" />
-    <InstallScreen v-else />
-
-    <a href="tel:112" class="btn danger sos">Noodgeval: bel 112</a>
-  </main>
+  <RouterView />
 </template>

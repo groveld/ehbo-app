@@ -1,0 +1,59 @@
+<script setup lang="ts">
+// 2.6 · Info & voorwaarden. Voor iedereen te lezen; medewerkers bevestigen hem eenmalig bij de eerste aanmelding (?verder=1).
+import { computed, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import Icon from '../components/Icon.vue';
+import { useSessionStore } from '../stores/session.ts';
+
+const session = useSessionStore();
+const route = useRoute();
+const router = useRouter();
+const onboarding = computed(() => route.query.verder === '1' && session.me !== null);
+const error = ref('');
+
+// Direct geopend (bijv. via een link): er is geen vorige pagina.
+const back = () => (router.options.history.state.back ? router.back() : router.push('/'));
+
+async function accept() {
+  try {
+    await session.acceptInfo();
+    router.push({ name: 'toestemmingen' });
+  } catch (err) {
+    error.value = (err as Error).message;
+  }
+}
+</script>
+
+<template>
+  <main class="screen tight">
+    <header class="header">
+      <button aria-label="Terug" class="icon-btn" @click="back"><Icon name="back" /></button>
+      <h1 class="heading">Info &amp; voorwaarden</h1>
+    </header>
+
+    <div class="stack gap-10">
+      <section v-for="section in session.event?.info ?? []" :key="section.title" class="card stack section">
+        <h2 class="section-title">{{ section.title }}</h2>
+        <p class="section-body">{{ section.body }}</p>
+      </section>
+      <p v-if="!session.event" class="note">Geen bereik. De info-pagina verschijnt zodra de app één keer verbinding heeft gehad.</p>
+    </div>
+
+    <div class="grow" />
+    <div v-if="onboarding" class="stack gap-8 footer">
+      <p v-if="error" class="note warn" role="alert">{{ error }}</p>
+      <button class="btn primary" @click="accept">Gelezen, verder</button>
+      <span class="small center">Medewerkers zien dit eenmalig bij de eerste aanmelding</span>
+    </div>
+  </main>
+</template>
+
+<style scoped>
+.header { display: flex; align-items: center; gap: 4px; padding: 14px 0 6px; margin-left: -4px; }
+.heading { font-size: 20px; font-weight: 700; }
+.section { gap: 4px; }
+.section-title { font-size: 15px; font-weight: 700; }
+.section-body { font-size: 14px; color: var(--ink-2); line-height: 1.45; }
+.footer { padding-top: 12px; }
+.center { text-align: center; font-size: 12px; }
+</style>
