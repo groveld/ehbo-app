@@ -34,7 +34,8 @@ function serviceWorker(): Plugin {
     generateBundle(_options, bundle) {
       const sw = bundle['sw.js'];
       if (sw?.type !== 'chunk') return;
-      const names = Object.keys(bundle).filter((name) => name !== 'sw.js' && !name.endsWith('.map')).sort();
+      // .woff is alleen een terugval voor oude browsers; elke browser die de app kan installeren gebruikt .woff2.
+      const names = Object.keys(bundle).filter((name) => name !== 'sw.js' && !/\.(map|woff)$/.test(name)).sort();
       const hash = createHash('sha256');
       for (const name of names) {
         const item = bundle[name]!;

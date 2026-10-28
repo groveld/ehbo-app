@@ -1,10 +1,12 @@
-# EHBO Evenementen-app — testversie
+# EHBO Evenementen-app
 
-Eerste, kleine versie van de app. Hij doet nog niets inhoudelijks, maar controleert de drie dingen waar de rest op bouwt:
+App voor de EHBO-coördinatie bij evenementen, in aanbouw. Wat er nu werkt:
 
 1. **Installeren** als app op het beginscherm (iPhone en Android).
-2. **Pushmeldingen**: aanzetten, testmelding nu en na 10 seconden (vergrendelscherm).
+2. **Aanmelden** met je telefoonnummer: de app zoekt zelf je functie en post op. Eenmalig info & voorwaarden, daarna meldingen en locatie aanzetten met een testmelding.
 3. **Uitrol**: GitHub bouwt bij elke push een Docker-image, Unraid draait het, Cloudflare Tunnel maakt het bereikbaar.
+
+Het beheerscherm om posten en mensen in te voeren volgt in fase 2b; tot dan staat er alleen de beheerder uit `ADMIN_PHONE` in.
 
 Gebouwd op de gekozen stack: TypeScript, een Fastify-server en een Vue 3-app (Vite, Pinia) in één container. De database is SQLite via de ingebouwde `node:sqlite`. De push-versleuteling (VAPID en aes128gcm) is eigen code, getest tegen de officiële testvector uit RFC 8291.
 
@@ -40,13 +42,16 @@ telefoon ◄──── melding ──── push-dienst Apple / Google ◄─�
 2. Kopieer het bestand naar `/boot/config/plugins/dockerMan/templates-user/`.
 3. Docker › Add Container › Template **ehbo-app**.
 4. Vul **VAPID_SUBJECT** in met een echt adres, bijvoorbeeld `mailto:beheer@jouwdomein.nl`. Zonder geldig adres weigert Apple meldingen.
-5. Apply. De container draait als `99:100` (nobody:users) en bewaart alles in `/mnt/user/appdata/ehbo-app`.
+5. Vul **ADMIN_PHONE** in met het telefoonnummer van de eerste beheerder. Die kan daarna in de app andere beheerders toevoegen. Het nummer wordt alleen gebruikt zolang het evenement nog geen beheerder heeft.
+6. Apply. De container draait als `99:100` (nobody:users) en bewaart alles in `/mnt/user/appdata/ehbo-app`.
 
 De app luistert in de container op poort **3000**. Zet de container in hetzelfde Docker-netwerk als cloudflared (bij ons `proxynet`); dan heeft de tunnel geen gepubliceerde poort nodig. De poort `3080` op de Unraid-server is alleen handig om vanaf je thuisnetwerk te testen.
 
 **Of met Docker Compose:** zie `docker-compose.yml`.
 
-**Bijwerken:** Unraid controleert elke nacht op een nieuw `:latest`-image en werkt automatisch bij. Elke push naar `main` staat dus de volgende ochtend live; in de app zie je bovenaan welke versie draait.
+**Gegevens:** `app.sqlite` bevat de VAPID-sleutels van de server, `events/<evenement>.sqlite` alles van één evenement (posten, mensen, aanmeldingen). Archiveren of verwijderen na afloop = dat ene bestand.
+
+**Bijwerken:** Unraid controleert elke nacht op een nieuw `:latest`-image en werkt automatisch bij. Elke push naar `main` staat dus de volgende ochtend live; onder **Controle van installatie** in de app zie je welke versie draait.
 
 > **Rond het evenement:** zet vanaf week 52 de automatische update voor deze container uit, of zet het image vast op een geteste versie (bijv. `ghcr.io/groveld/ehbo-app:sha-abc1234` of `:1.0.0`). Zo kan een late wijziging nooit ongemerkt op 31 december live gaan.
 
@@ -77,17 +82,19 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | --- | --- | --- |
 | 1 | Adres openen in Safari (iPhone) of Chrome (Android) | Scherm "Zet de app eerst op je beginscherm", met het juiste toestel herkend |
 | 2 | iPhone: Deel › Zet op beginscherm. Android: knop **Installeren** | Icoon (antraciet met gele route) op het beginscherm |
-| 3 | App openen vanaf het beginscherm | Controle: Geïnstalleerd **ja**, Service worker **actief**, Server **bereikbaar** + versie |
-| 4 | **Meldingen aanzetten** | Toestemmingsvraag; daarna Meldingen **toegestaan**, Aangemeld **ja** |
-| 5 | **Testmelding nu** | Melding verschijnt, ook als de app open is |
-| 6 | **Over 10 s** en meteen vergrendelen | Melding op het vergrendelscherm, met geluid of trilling |
-| 7 | App volledig afsluiten (wegvegen), stap 6 via een tweede toestel of opnieuw | Melding komt nog steeds binnen |
-| 8 | Vliegtuigmodus aan, app openen | App opent (offline), Server **niet bereikbaar** |
-| 9 | Tik op een melding | App opent |
+| 3 | App openen vanaf het beginscherm › **Medewerker / vrijwilliger** | Scherm "Aanmelden" |
+| 4 | Een onbekend nummer invullen | "Dit nummer staat niet in de lijst" |
+| 5 | Het nummer uit `ADMIN_PHONE` invullen | "Nummer herkend", met rol **Beheerder** |
+| 6 | **Klopt, start** › **Gelezen, verder** | Scherm "Zet meldingen en locatie aan" |
+| 7 | Meldingen en locatie **Aanzetten** | Toestemmingsvragen; daarna allebei **Aan** |
+| 8 | **Stuur testmelding** | Melding verschijnt, ook als de app open is |
+| 9 | **Klaar** › **Controle van installatie** › **Over 10 s** en meteen vergrendelen | Melding op het vergrendelscherm, met geluid of trilling |
+| 10 | App volledig afsluiten en opnieuw openen | Nog steeds aangemeld; geen info-pagina meer |
+| 11 | Vliegtuigmodus aan, app openen | App opent (offline), nog steeds aangemeld |
 
-Lukt stap 4 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
+Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
 
-**Testen zonder installatie (alleen voor beheer, op een computer):** open `/?browser=1`.
+**Testen zonder installatie (alleen voor beheer, op een computer):** open `/?browser=1`; dat blijft gelden tot je het tabblad sluit.
 
 ## Lokaal ontwikkelen
 
@@ -95,7 +102,8 @@ Vereist Node 22.18 of nieuwer: de server draait zijn TypeScript direct met Node,
 
 ```sh
 npm install        # eenmalig
-npm run dev        # open http://localhost:3080 (Vite); de API draait op 3000, data in ./data
+npm run seed       # verzonnen testgegevens in ./data (posten, EHBO-eenheid, kernteam); toont de nummers om mee aan te melden
+npm run dev        # open http://localhost:3080/?browser=1 (Vite); de API draait op 3000
 npm test           # servertests
 npm run typecheck  # TypeScript-controle van alle onderdelen
 npm run build      # webapp bouwen naar web/dist
@@ -111,16 +119,21 @@ npm run icons      # iconen opnieuw maken (vereist Python + Pillow)
 
 Bij `npm run dev` slaat de service worker niets op voor offline gebruik, zodat je altijd de nieuwste code ziet. Offline testen doe je met `npm run build` en `npm start`.
 
-Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `VAPID_SUBJECT`, `LOG_LEVEL` (info), optioneel `VAPID_PUBLIC_KEY` en `VAPID_PRIVATE_KEY` (anders automatisch aangemaakt en bewaard).
+Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN_PHONE`, `EVENT` (silvesterloop), `VAPID_SUBJECT`, `LOG_LEVEL` (info), optioneel `VAPID_PUBLIC_KEY` en `VAPID_PRIVATE_KEY` (anders automatisch aangemaakt en bewaard).
 
-## API (testversie)
+## API
 
-| Methode | Pad | Doel |
-| --- | --- | --- |
-| GET | `/healthz` | Gezondheidscheck |
-| GET | `/api/info` | Versie, commit, publieke VAPID-sleutel |
-| POST | `/api/subscriptions` | Abonnement opslaan `{ subscription }` |
-| DELETE | `/api/subscriptions` | Abonnement verwijderen `{ endpoint }` |
-| POST | `/api/test-push` | Testmelding naar je eigen toestel `{ endpoint, delaySeconds }` |
+| Methode | Pad | Wie | Doel |
+| --- | --- | --- | --- |
+| GET | `/healthz` | iedereen | Gezondheidscheck |
+| GET | `/api/info` | iedereen | Versie, commit, publieke VAPID-sleutel |
+| GET | `/api/event` | iedereen | Naam, datum en info-tekst van het evenement (zonder namen of nummers) |
+| POST | `/api/session` | iedereen | Aanmelden `{ phone }`; zet de sessiecookie. 404 als het nummer onbekend is |
+| DELETE | `/api/session` | iedereen | Afmelden |
+| GET | `/api/me` | medewerker | Naam, rollen en startscherm |
+| POST | `/api/me/info-accepted` | medewerker | Info & voorwaarden bevestigd |
+| POST | `/api/subscriptions` | medewerker | Abonnement opslaan `{ subscription }` |
+| DELETE | `/api/subscriptions` | medewerker | Abonnement verwijderen `{ endpoint }` |
+| POST | `/api/test-push` | medewerker | Testmelding naar je eigen toestel `{ endpoint, delaySeconds }` |
 
-Er is nog geen aanmelding met telefoonnummer. Iedereen met het adres kan zich aanmelden voor meldingen, maar kan alleen zichzelf een testmelding sturen.
+Het nummer is in deze versie een identificatie, geen beveiliging (zie het functioneel ontwerp). Mislukte aanmeldpogingen worden per IP-adres afgeremd en elke aanmelding komt in het logboek.

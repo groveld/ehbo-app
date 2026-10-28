@@ -8,10 +8,12 @@
     "start": "node --disable-warning=ExperimentalWarning src/index.ts",
     "dev": "node --disable-warning=ExperimentalWarning --watch src/index.ts",
     "typecheck": "tsc -p .",
-    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.ts"
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.ts",
+    "seed": "node --disable-warning=ExperimentalWarning src/seed.ts"
   },
   "dependencies": {
     "@ehbo/shared": "*",
+    "@fastify/cookie": "^11.1.5",
     "@fastify/static": "^10.1.8",
     "fastify": "^5.12.7"
   }

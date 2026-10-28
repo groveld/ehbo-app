@@ -4,15 +4,22 @@
   "private": true,
   "description": "EHBO Evenementen-app: posten, contacten en EHBO-oproepen. Testversie voor installatie en pushmeldingen.",
   "type": "module",
-  "engines": { "node": ">=22.18" },
-  "workspaces": ["shared", "server", "web"],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
   "scripts": {
     "dev": "concurrently --kill-others -n server,web -c yellow,cyan \"npm run dev -w server\" \"npm run dev -w web\"",
     "build": "npm run build -w web",
     "start": "npm start -w server",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
-    "icons": "python3 tools/make-icons.py"
+    "icons": "python3 tools/make-icons.py",
+    "seed": "npm run seed -w server"
   },
   "devDependencies": {
     "@types/node": "^22.18.0",

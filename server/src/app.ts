@@ -1,23 +1,18 @@
-// HTTP: de API voor pushmeldingen en de gebouwde webapp (web/dist).
+// HTTP: de API en de gebouwde webapp (web/dist).
 import fs from 'node:fs';
 import path from 'node:path';
 import Fastify, { LogController, type FastifyError, type FastifyServerOptions } from 'fastify';
+import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
-import {
-  TEST_PUSH_MAX_DELAY,
-  type ApiError,
-  type AppInfo,
-  type PushPayload,
-  type SubscribeRequest,
-  type TestPushRequest,
-  type TestPushResponse,
-  type UnsubscribeRequest,
-} from '@ehbo/shared';
-import type { Db } from './db.ts';
-import { sendPush, type Vapid } from './webpush.ts';
+import type { ApiError, AppInfo } from '@ehbo/shared';
+import { registerSessions } from './auth.ts';
+import type { EventDb } from './event-db.ts';
+import { pushRoutes } from './routes/push.ts';
+import { sessionRoutes } from './routes/session.ts';
+import type { Vapid } from './webpush.ts';
 
 export interface AppOptions {
-  db: Db;
+  db: EventDb;
   vapid: Vapid;
   build: Pick<AppInfo, 'version' | 'commit' | 'builtAt'>;
   /** Map met de gebouwde webapp. Ontbreekt hij, dan draait alleen de API (bij `npm run dev` levert Vite de pagina's). */
@@ -30,45 +25,19 @@ export interface AppOptions {
 // Bestanden die nooit lang in een cache (ook niet bij Cloudflare) mogen blijven.
 const NO_CACHE = new Set(['index.html', 'sw.js', 'manifest.webmanifest']);
 
-const subscriptionSchema = {
-  type: 'object',
-  required: ['endpoint', 'keys'],
-  properties: {
-    endpoint: { type: 'string', maxLength: 2047 },
-    keys: {
-      type: 'object',
-      required: ['p256dh', 'auth'],
-      properties: { p256dh: { type: 'string', maxLength: 128 }, auth: { type: 'string', maxLength: 64 } },
-    },
-  },
-} as const;
-
 export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = false, logger = false }: AppOptions) {
   const app = Fastify({
     logger,
     logController: new LogController({ disableRequestLogging: true }),
     bodyLimit: 16 * 1024,
+    // Bereikbaar via Cloudflare Tunnel: request.protocol en request.ip komen uit X-Forwarded-*.
+    trustProxy: true,
   });
-  const lastTestPush = new Map<string, number>();
-  const pendingPushes = new Set<NodeJS.Timeout>();
-  const endpointPattern = allowInsecureEndpoints ? /^https?:\/\// : /^https:\/\//;
-
-  async function pushTo(subscription: SubscribeRequest['subscription'], payload: PushPayload) {
-    const result = await sendPush(subscription, payload, vapid, { ttl: 120, urgency: 'high' });
-    db.markPush(subscription.endpoint, result.status);
-    if (result.gone) db.deleteSubscription(subscription.endpoint);
-    app.log.info({ status: result.status, host: new URL(subscription.endpoint).host, detail: result.ok ? undefined : result.body }, 'push');
-    return result;
-  }
 
   app.addHook('onSend', async (request, reply) => {
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('Referrer-Policy', 'same-origin');
     if (request.url.startsWith('/api/') || request.url === '/healthz') reply.header('Cache-Control', 'no-store');
-  });
-
-  app.addHook('onClose', async () => {
-    for (const timer of pendingPushes) clearTimeout(timer);
   });
 
   app.setErrorHandler<FastifyError>((err, request, reply) => {
@@ -78,6 +47,9 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
     return reply.code(status).send({ error } satisfies ApiError);
   });
 
+  app.register(fastifyCookie);
+  app.after(() => registerSessions(app, db));
+
   app.get('/healthz', async () => ({ ok: true }));
 
   app.get<{ Reply: AppInfo }>('/api/info', async () => ({
@@ -86,58 +58,8 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
     subscriptions: db.countSubscriptions(),
   }));
 
-  app.post<{ Body: SubscribeRequest }>('/api/subscriptions', {
-    schema: { body: { type: 'object', required: ['subscription'], properties: { subscription: subscriptionSchema } } },
-  }, async (request, reply) => {
-    const { subscription } = request.body;
-    if (!endpointPattern.test(subscription.endpoint)) return reply.code(400).send({ error: 'Ongeldig abonnement' } satisfies ApiError);
-    db.upsertSubscription(subscription, request.headers['user-agent']);
-    return { ok: true };
-  });
-
-  app.delete<{ Body: UnsubscribeRequest }>('/api/subscriptions', {
-    schema: { body: { type: 'object', required: ['endpoint'], properties: { endpoint: { type: 'string' } } } },
-  }, async (request) => {
-    db.deleteSubscription(request.body.endpoint);
-    return { ok: true };
-  });
-
-  app.post<{ Body: TestPushRequest; Reply: TestPushResponse | ApiError }>('/api/test-push', {
-    schema: {
-      body: {
-        type: 'object',
-        required: ['endpoint'],
-        properties: { endpoint: { type: 'string' }, delaySeconds: { type: 'number', minimum: 0, maximum: TEST_PUSH_MAX_DELAY } },
-      },
-    },
-  }, async (request, reply) => {
-    const { endpoint, delaySeconds = 0 } = request.body;
-    const subscription = db.getSubscription(endpoint);
-    if (!subscription) return reply.code(404).send({ error: 'Abonnement niet gevonden; zet meldingen opnieuw aan' });
-    const now = Date.now();
-    if (now - (lastTestPush.get(endpoint) ?? 0) < 5000) return reply.code(429).send({ error: 'Wacht een paar seconden tussen testmeldingen' });
-    lastTestPush.set(endpoint, now);
-
-    const delay = Math.round(delaySeconds);
-    const payload: PushPayload = {
-      title: delay ? 'Testoproep (vertraagd)' : 'Testmelding',
-      body: `Pushmeldingen werken. Verstuurd om ${new Date(now + delay * 1000).toLocaleTimeString('nl-NL', { timeZone: 'Europe/Amsterdam' })}.`,
-      tag: 'test',
-      url: '/',
-      urgent: delay > 0,
-    };
-    if (delay) {
-      const timer = setTimeout(() => {
-        pendingPushes.delete(timer);
-        pushTo(subscription, payload).catch((err: Error) => app.log.error(err, 'push mislukt'));
-      }, delay * 1000);
-      pendingPushes.add(timer);
-      return reply.code(202).send({ ok: true, scheduledInSeconds: delay });
-    }
-    const result = await pushTo(subscription, payload);
-    if (!result.ok) return reply.code(502).send({ error: `Push-dienst gaf status ${result.status}`, detail: result.body, gone: result.gone });
-    return { ok: true };
-  });
+  app.register(sessionRoutes, { db });
+  app.register(pushRoutes, { db, vapid, allowInsecureEndpoints });
 
   const hasWeb = webDir !== undefined && fs.existsSync(path.join(webDir, 'index.html'));
   if (hasWeb) {

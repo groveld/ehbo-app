@@ -15,8 +15,21 @@ export const iosTooOld = iosVersion !== null && (iosVersion.major < 16 || (iosVe
 export const isStandalone =
   window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
-/** ?browser=1: de app in een gewone browser bekijken, zonder te installeren (voor beheer en testen). */
-export const browserTest = new URLSearchParams(location.search).has('browser');
+/**
+ * ?browser=1: de app in een gewone browser gebruiken, zonder te installeren (voor beheer en testen).
+ * Blijft gelden voor dit tabblad, ook na navigeren.
+ */
+export const browserTest = (() => {
+  try {
+    if (new URLSearchParams(location.search).has('browser')) sessionStorage.setItem('ehbo.browser', '1');
+    return sessionStorage.getItem('ehbo.browser') === '1';
+  } catch {
+    return new URLSearchParams(location.search).has('browser');
+  }
+})();
+
+/** Medewerkers moeten de app installeren; in testmodus mag het in de browser. */
+export const canUseAsStaff = isStandalone || browserTest;
 
 export const deviceLabel = isIOS
   ? `iPhone/iPad${iosVersion ? ` · iOS ${iosVersion.major}.${iosVersion.minor}` : ''}`
