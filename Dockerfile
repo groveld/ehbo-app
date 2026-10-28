@@ -11,7 +11,8 @@ RUN npm ci
 COPY shared shared
 COPY server server
 COPY web web
-RUN npm run typecheck && npm run build
+# Alleen de workspaces: de end-to-end-test (e2e/) zit niet in het image en draait in CI.
+RUN npm run typecheck --workspaces --if-present && npm run build
 
 # ---- Draaien: alleen de runtime-pakketten van de server ----
 FROM node:26-alpine
