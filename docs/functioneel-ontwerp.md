@@ -363,6 +363,8 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Melding zonder bereik (28 okt) | Lukt versturen niet binnen 10 s, dan blijft de melding op de telefoon staan en toont de app scherm 4.9 met de dichtstbijzijnde eenheden en de coördinator om te bellen. De app verstuurt hem opnieuw zodra er bereik is (en elke 10 s); de server telt dezelfde melding maar één keer. De tijd van melden is die van de post |
 | Alarm in de app (28 okt) | Zolang een oproep op reactie wacht en de app open is: elke 2,5 s een toon en trillen, tot accepteren of "kan niet". Geluid kan pas na de eerste tik in de app (eis van de browser). Met de app dicht zorgt de pushmelding voor het alarm |
 | End-to-end-test (28 okt) | Playwright in Chromium (als Pixel 7) bij elke build: aanmelden, post openen, EHBO-verzoek, oproep, accepteren, ter plaatse, afronden; en een melding zonder bereik die later vanzelf aankomt |
+| Fase 4 in delen (28 okt) | "Verzoeken en rapport" in delen: 4a de wachtrij met aanvragen (water, verkeer, vrijwilliger), 4b het rapport (PDF en CSV) met de testmodus, daarna de info-pagina in het beheer |
+| Aanvragen (28 okt) | Eén tik op de tegel en de aanvraag staat in de wachtrij; daarna kan de post optioneel aanvullen (water: beetje, flink, bijna op; verkeer: druk, onveilig, afzetting nodig; vrijwilliger: aflossing, uitval, extra hulp). De coördinator krijgt een gewone melding, geen alarm. Oppakken en afhandelen kan de evenementcoördinator, het kernteam en een beheerder; de post krijgt bij elke stap een melding. Een aanvraag wacht niet op bereik zoals een EHBO-melding: zonder bereik bel je de coördinator |
 
 **Nog open**
 

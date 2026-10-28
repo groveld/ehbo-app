@@ -1,4 +1,5 @@
 // EHBO-oproepen: van verzoek tot afronden, en de live stand die alle medewerkers zien.
+import type { LiveRequest } from './request.ts';
 
 /** Gemeld (op de telefoon) → verstuurd → geaccepteerd → ter plaatse → afgerond, of ingetrokken. */
 export type IncidentStatus = 'verstuurd' | 'geaccepteerd' | 'ter_plaatse' | 'afgerond' | 'ingetrokken';
@@ -124,6 +125,8 @@ export interface LiveState {
   incidents: LiveIncident[];
   units: LiveUnit[];
   posts: { id: number; isOpen: boolean }[];
+  /** Aanvragen voor water, verkeer en vrijwilligers (wachtrij van de coördinator). */
+  requests: LiveRequest[];
 }
 
 /** SSE: hartslag, zodat Cloudflare de verbinding niet na 100 s stil sluit. */

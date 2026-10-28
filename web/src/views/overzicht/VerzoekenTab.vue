@@ -1,15 +1,42 @@
 <script setup lang="ts">
-// Verzoeken: open EHBO-oproepen rood bovenaan, daarna wat vandaag is afgerond. De wachtrij (water, verkeer, vrijwilliger) volgt in fase 4.
-import { computed } from 'vue';
+// Verzoeken: open EHBO-oproepen rood bovenaan, dan de wachtrij met aanvragen (5.2: water, verkeer, vrijwilliger), dan wat is afgerond.
+import { computed, ref } from 'vue';
+import { REQUEST_KINDS, requestDetailLabel, telHref, type LiveRequest } from '@ehbo/shared';
 import Icon from '../../components/Icon.vue';
 import OverviewHeader from '../../components/OverviewHeader.vue';
 import { clock, incidentSummary, unitOf } from '../../incidents.ts';
+import { useSave } from '../../composables/useSave.ts';
+import { kmLabel, primaryContact } from '../../posts.ts';
 import { isOpen, useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
+import { useSessionStore } from '../../stores/session.ts';
 
 const store = usePackageStore();
 const live = useLiveStore();
+const session = useSessionStore();
 const closed = computed(() => live.incidents.filter((i) => !isOpen(i)));
+const { busy, error, run } = useSave();
+
+/** Wie de wachtrij beheert: de coördinator, het kernteam en beheerders (zoals de server). */
+const handles = computed(() => {
+  const me = session.me;
+  return Boolean(me && (me.isAdmin || me.assignments.some((a) => a.kind === 'kernteam')));
+});
+const showDone = ref(false);
+const openRequests = computed(() => live.requests.filter((r) => r.status === 'aangevraagd' || r.status === 'opgepakt').slice().reverse());
+const doneRequests = computed(() => live.requests.filter((r) => r.status === 'afgehandeld' || r.status === 'ingetrokken'));
+const KIND_STYLE = { water: ['#E4EEF7', '#124A78'], verkeer: ['#FBE6D2', '#7A3F06'], vrijwilliger: ['#EDE4F7', '#4E2A82'] } as const;
+const line = (r: LiveRequest) => {
+  const post = store.postById.get(r.postId);
+  return [post?.name, post ? kmLabel(post.km) : null, requestDetailLabel(r.kind, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
+};
+const postPhone = (r: LiveRequest) => {
+  const post = store.postById.get(r.postId);
+  return post ? primaryContact(post)?.phone ?? null : null;
+};
+const pickedText = (r: LiveRequest) => (r.status === 'opgepakt'
+  ? (r.pickedBy?.phone === session.me?.phone ? 'Opgepakt door jou' : `Opgepakt door ${r.pickedBy?.name}`)
+  : r.status === 'afgehandeld' ? 'Afgehandeld' : r.status === 'ingetrokken' ? 'Ingetrokken' : '');
 
 const STATUS = { verstuurd: 'zoekt EHBO', geaccepteerd: 'onderweg', ter_plaatse: 'ter plaatse', afgerond: 'afgerond', ingetrokken: 'ingetrokken' } as const;
 const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
@@ -46,7 +73,26 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
         </div>
       </template>
 
-      <p class="note info">Verzoeken voor water, verkeer en vrijwilligers komen hier in een volgende versie. Tot dan bellen posten de evenementcoördinator.</p>
+      <span class="section-title later">Aanvragen</span>
+      <div class="chips" role="group" aria-label="Aanvragen">
+        <button class="chip-btn" :aria-pressed="!showDone" @click="showDone = false">Open {{ openRequests.length }}</button>
+        <button class="chip-btn" :aria-pressed="showDone" @click="showDone = true">Afgehandeld {{ doneRequests.length }}</button>
+      </div>
+      <p v-if="error" class="error-text" role="alert">{{ error }}</p>
+      <div v-for="r in showDone ? doneRequests : openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'opgepakt' && r.pickedBy?.phone === session.me?.phone }">
+        <div class="request-top">
+          <span class="kind" :style="{ background: KIND_STYLE[r.kind][0], color: KIND_STYLE[r.kind][1] }">{{ REQUEST_KINDS[r.kind].label }}</span>
+          <span class="picked grow">{{ pickedText(r) }}</span>
+          <span class="mono at">{{ clock(r.createdAt) }}</span>
+        </div>
+        <span class="request-line">{{ line(r) }}</span>
+        <div v-if="handles && !showDone" class="request-actions">
+          <a v-if="postPhone(r)" :href="telHref(postPhone(r)!)" class="btn call" :aria-label="`Bel ${store.postById.get(r.postId)?.name}`"><Icon name="phone" :size="20" /></a>
+          <button v-if="r.status === 'aangevraagd'" class="btn primary-ish" :disabled="busy" @click="run(() => live.pickRequest(r.id))">Oppakken</button>
+          <button v-else class="btn done" :disabled="busy" @click="run(() => live.finishRequest(r.id))">Afgehandeld</button>
+        </div>
+      </div>
+      <p v-if="!(showDone ? doneRequests : openRequests).length" class="small">{{ showDone ? 'Nog niets afgehandeld.' : 'Geen open aanvragen.' }}</p>
     </div>
   </main>
 </template>
@@ -61,5 +107,19 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
 .state { font-size: 12px; font-weight: 700; text-align: right; color: var(--danger); }
 .state.geaccepteerd, .state.ter_plaatse { color: var(--ok-text); }
 .later { margin-top: 8px; }
+.chips { display: flex; gap: 8px; }
+.chip-btn { height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid #D4D1C7; background: var(--card); font: 500 13px var(--sans); color: var(--ink); cursor: pointer; }
+.chip-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #FFFFFF; font-weight: 600; }
+.request { display: flex; flex-direction: column; gap: 10px; }
+.request.mine { border: 2px solid var(--ink); }
+.request-top { display: flex; align-items: center; gap: 8px; }
+.kind { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+.picked { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.request-line { font-size: 15px; font-weight: 600; }
+.request-actions { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; }
+.request-actions .btn { height: 48px; border-radius: 12px; }
+.call { padding: 0; }
+.primary-ish { background: var(--primary); color: #FFFFFF; font-weight: 700; }
+.done { background: var(--ok); color: #FFFFFF; font-weight: 700; }
 .at { color: var(--muted); font-size: 13px; }
 </style>

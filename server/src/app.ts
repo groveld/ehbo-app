@@ -10,12 +10,14 @@ import { createCalls, type CallsOptions } from './calls.ts';
 import type { EventDb } from './event-db.ts';
 import { protomapsSource, type MapSource } from './map.ts';
 import { createNotifier } from './notify.ts';
+import { createRequests, type Requests } from './requests.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { brandRoutes } from './routes/brand.ts';
 import { callRoutes } from './routes/calls.ts';
 import { mapRoutes } from './routes/map.ts';
 import { packageRoutes } from './routes/package.ts';
 import { pushRoutes } from './routes/push.ts';
+import { requestRoutes } from './routes/requests.ts';
 import { sessionRoutes } from './routes/session.ts';
 import type { Vapid } from './webpush.ts';
 
@@ -71,7 +73,10 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   }));
 
   const notifier = createNotifier(db, vapid, app.log);
-  const calls = createCalls(db, { notify: notifier.toPhones, ...callOptions });
+  // Oproepen en aanvragen delen één live stand; de aanvragen melden hun wijzigingen via calls.changed.
+  let requests: Requests | null = null;
+  const calls = createCalls(db, { notify: notifier.toPhones, requests: () => requests?.list() ?? [], ...callOptions });
+  requests = createRequests(db, { notify: callOptions.notify ?? notifier.toPhones, changed: calls.changed, now: callOptions.now });
   // Lopende oproepen gaan na een herstart verder waar ze waren.
   app.addHook('onReady', async () => calls.resume());
   app.addHook('onClose', async () => calls.stop());
@@ -79,6 +84,7 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   app.register(sessionRoutes, { db });
   app.register(pushRoutes, { db, notifier, allowInsecureEndpoints });
   app.register(callRoutes, { calls });
+  app.register(requestRoutes, { calls, requests });
   app.register(adminRoutes, { db, calls });
   app.register(brandRoutes, { db });
   app.register(packageRoutes, { db });

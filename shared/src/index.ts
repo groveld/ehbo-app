@@ -5,6 +5,7 @@ export * from './admin.ts';
 export * from './package.ts';
 export * from './geo.ts';
 export * from './incident.ts';
+export * from './request.ts';
 
 /** Push-abonnement zoals de browser het geeft (PushSubscription.toJSON()). */
 export interface PushSubscriptionData {

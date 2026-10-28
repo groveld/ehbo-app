@@ -208,6 +208,22 @@ const MIGRATIONS = [
     text        TEXT NOT NULL
   );
   `,
+  // 6: eenvoudige aanvragen (water, verkeer, vrijwilliger) in de wachtrij van de evenementcoördinator.
+  `
+  CREATE TABLE requests (
+    id          INTEGER PRIMARY KEY,
+    client_id   TEXT NOT NULL UNIQUE,
+    post_id     INTEGER NOT NULL REFERENCES posts(id),
+    kind        TEXT NOT NULL CHECK (kind IN ('water', 'verkeer', 'vrijwilliger')),
+    detail      TEXT,
+    status      TEXT NOT NULL CHECK (status IN ('aangevraagd', 'opgepakt', 'afgehandeld', 'ingetrokken')),
+    reported_by TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    picked_at   TEXT,
+    picked_by   TEXT,
+    done_at     TEXT
+  );
+  `,
 ];
 
 export interface EventRow {
