@@ -7,7 +7,10 @@ import fastifyStatic from '@fastify/static';
 import type { ApiError, AppInfo } from '@ehbo/shared';
 import { registerSessions } from './auth.ts';
 import type { EventDb } from './event-db.ts';
+import { protomapsSource, type MapSource } from './map.ts';
 import { adminRoutes } from './routes/admin.ts';
+import { mapRoutes } from './routes/map.ts';
+import { packageRoutes } from './routes/package.ts';
 import { pushRoutes } from './routes/push.ts';
 import { sessionRoutes } from './routes/session.ts';
 import type { Vapid } from './webpush.ts';
@@ -20,13 +23,15 @@ export interface AppOptions {
   webDir?: string;
   /** Alleen voor tests: push-endpoints via http toestaan. */
   allowInsecureEndpoints?: boolean;
+  /** Bron van de kaart; tests geven een nep-bron mee. */
+  mapSource?: () => Promise<MapSource>;
   logger?: FastifyServerOptions['logger'];
 }
 
 // Bestanden die nooit lang in een cache (ook niet bij Cloudflare) mogen blijven.
 const NO_CACHE = new Set(['index.html', 'sw.js', 'manifest.webmanifest']);
 
-export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = false, logger = false }: AppOptions) {
+export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = false, mapSource = protomapsSource, logger = false }: AppOptions) {
   const app = Fastify({
     logger,
     logController: new LogController({ disableRequestLogging: true }),
@@ -62,6 +67,8 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   app.register(sessionRoutes, { db });
   app.register(pushRoutes, { db, vapid, allowInsecureEndpoints });
   app.register(adminRoutes, { db });
+  app.register(packageRoutes, { db });
+  app.register(mapRoutes, { db, mapSource });
 
   const hasWeb = webDir !== undefined && fs.existsSync(path.join(webDir, 'index.html'));
   if (hasWeb) {

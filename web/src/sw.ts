@@ -25,14 +25,21 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    for (const key of await caches.keys()) if (key !== CACHE) await caches.delete(key);
+    // Alleen oude app-versies opruimen; de kaart (ehbo-map-…) beheert de app zelf.
+    for (const key of await caches.keys()) if (key.startsWith('ehbo-app-') && key !== CACHE) await caches.delete(key);
     await self.clients.claim();
   })());
 });
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (DEV || event.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
+  if (event.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
+  // Kaarttegels staan vooraf in de cache en veranderen nooit (de versie zit in het pad).
+  if (url.pathname.startsWith('/map/')) {
+    event.respondWith((async () => (await caches.match(event.request)) ?? fetch(event.request))());
+    return;
+  }
+  if (DEV) return;
   if (event.request.mode === 'navigate') {
     // Pagina: eerst netwerk, zonder bereik de bewaarde versie.
     event.respondWith(fetch(event.request).catch(async () => (await caches.match('/index.html')) ?? Response.error()));

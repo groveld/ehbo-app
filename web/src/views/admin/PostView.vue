@@ -4,15 +4,19 @@ import { computed, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatPhone, type ContactData, type PostContactRole, type PostData } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
+import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
 import { useGpsFix } from '../../composables/useGpsFix.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
+import { usePackageStore } from '../../stores/package.ts';
 
 const props = defineProps<{ id: string }>();
 const admin = useAdminStore();
 const router = useRouter();
 const gps = useGpsFix();
+const pkg = usePackageStore();
+const picking = ref(false);
 const save = useSave();
 
 const isNew = computed(() => props.id === 'nieuw');
@@ -133,12 +137,22 @@ async function remove() {
           </div>
           <span v-else class="small">Nog geen locatie. Leg hem vast als je bij de post staat.</span>
           <p v-if="gps.error.value" class="error-text" role="alert">{{ gps.error.value }}</p>
-          <button v-if="!showCoords" class="add-link" @click="showCoords = true">Of: coördinaten plakken</button>
-          <div v-else class="paste">
+          <div class="alternatives">
+            <button v-if="pkg.pkg" class="add-link" :aria-expanded="picking" @click="picking = !picking">Of: punt op de kaart prikken</button>
+            <button v-if="!showCoords" class="add-link" @click="showCoords = true">Of: coördinaten plakken</button>
+          </div>
+          <div v-if="picking && pkg.pkg" class="pick-map">
+            <EventMap
+              :pkg="pkg.pkg" picking :focus-post-id="post?.id ?? null"
+              :picked="form.lat !== null && form.lng !== null ? [form.lng, form.lat] : null"
+              @pick="([lng, lat]) => Object.assign(form, { lat, lng, accuracyM: null })"
+            />
+          </div>
+          <span v-if="picking" class="small">Tik op de plek van de post. Zoom in voor een precieze plek.</span>
+          <div v-if="showCoords" class="paste">
             <input v-model="coordsText" class="input" inputmode="decimal" aria-label="Coördinaten" placeholder="53.14066, 5.81012">
             <button class="btn apply" @click="applyCoords">Gebruiken</button>
           </div>
-          <span class="small">Een punt op de kaart prikken kan zodra de kaart er is.</span>
         </div>
 
         <div class="row-2">
@@ -191,6 +205,8 @@ async function remove() {
 .location { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .location .tag { margin-left: 0; }
 .paste { display: flex; gap: 8px; }
+.alternatives { display: flex; flex-wrap: wrap; column-gap: 18px; }
+.pick-map { height: 280px; }
 .apply { width: auto; padding: 0 16px; height: 44px; flex-shrink: 0; }
 .contact-role { display: flex; gap: 8px; align-items: center; }
 select.input { appearance: auto; }

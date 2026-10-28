@@ -34,8 +34,8 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 - The Unraid container uses `/data`, `--user 99:100` and port 3000, so data and VAPID keys survive updates.
 - Now: phase 2 in the work plan, "Basis en beheer", split into three PRs:
   - **2a**: data model for all of phase 2, phone-number login with roles, screens 2.1–2.7, temporary start screen. Merged and live.
-  - **2b** (branch `feat/phase2b-admin`): admin API (`server/src/routes/admin.ts`, `admin-db.ts`, `gpx.ts`) and screens 1.1–1.5 plus a post list, in `web/src/views/admin/`. Done, verified in Edge. Not in 2b: style and logos (1.1 "Stijl", 1.6), and picking a post on the map (needs 2c).
-  - **2c**: overview + offline map (3.4), post detail with call/navigate (3.5), participant view (2.8), event package. The server downloads the map area itself from the Protomaps builds (owner's choice).
+  - **2b**: admin API and screens 1.1–1.5 plus a post list, in `web/src/views/admin/`. Merged and live. Style and logos (1.1 "Stijl", 1.6) are a separate step after 2c.
+  - **2c** (branch `feat/phase2c-overview`): event package (`server/src/routes/package.ts`), offline map (`server/src/map.ts`, `routes/map.ts`, `web/src/components/EventMap.vue`, `stores/package.ts`), overview with tabs (`web/src/views/overzicht/`), post detail (3.5), participant view (2.8), map picking in the post form, menu with navigation-app choice. Done, verified in Edge with real Protomaps data, online and offline.
 
 ## Chosen stack (decided 28 Oct 2026)
 
@@ -79,6 +79,8 @@ UI language is **Dutch**. Code, identifiers and commit messages are English.
 - **Login:** `POST /api/session` with a phone number; the session is a random token in an HttpOnly cookie, only its SHA-256 is stored. It lasts until the day after the event's end date (60 days without one). Roles are resolved on every request, so removing someone's number logs them out immediately. Failed attempts are throttled per IP; successful ones aren't (a whole briefing shares one Wi-Fi address).
 - **First admin** comes from `ADMIN_PHONE`, only while the event has no admins at all.
 - **Admin API** (`/api/admin/*`): every change returns the full `AdminState` and bumps `event.version` (the event package version 2c will use). Phone numbers are normalized server-side; a bad one returns 400 naming the person. Saving a post or unit replaces its contacts or members; a person's name lives in `people` and is shared everywhere. An admin can't remove their own number.
+- **Event package** (`GET /api/package`): all fixed data for offline use, versioned as `<event.version>.<map_version>.<s|p>`; the app sends `If-None-Match` and gets 304 when nothing changed. Participants (`p`) get no names, numbers, access routes, units or core team. Logging out deletes the staff package from the phone. `isOpen` is in the package but will become live data in phase 4.
+- **Offline map:** an admin presses "Kaart ophalen"; the server reads the area around all GPX tracks and posts (+2 km, zoom 0–15, max 6000 tiles) from the latest Protomaps build with range requests, plus fonts and sprites, and stores tiles gzipped in the event DB (`map_tiles`, `map_assets`). They're served at `/map/<map_version>/…` with `immutable`; the app stores every tile in a `ehbo-map-<version>` cache up front, and the service worker answers `/map/` from that cache. The style is `@protomaps/basemaps` (light, Dutch labels). MapLibre's worker must be passed explicitly (`setWorkerUrl` with a `?url` import), or the map stays blank.
 - **Data:** `data/app.sqlite` holds server settings (VAPID keys); `data/events/<EVENT>.sqlite` holds everything about one event. Schema changes go in `MIGRATIONS` in `event-db.ts` (append only; `PRAGMA user_version` tracks progress).
 
 - **Roles** follow from the phone number:

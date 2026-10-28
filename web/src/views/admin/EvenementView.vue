@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// 1.1 · Evenement instellen: naam, data, lopen en de EHBO-escalatietijd. Stijl en logo's volgen later.
+// 1.1 · Evenement instellen: naam, data, lopen, de kaart en de EHBO-escalatietijd. Stijl en logo's volgen later.
 import { reactive, ref, watchEffect } from 'vue';
 import { ESCALATION_MAX_SECONDS, ESCALATION_MIN_SECONDS, type EventSettings } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
+import MapSection from './MapSection.vue';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 
@@ -69,6 +70,8 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
         </div>
         <RouterLink :to="{ name: 'beheer-loop', params: { id: 'nieuw' } }" class="add-link">+ Loop toevoegen</RouterLink>
       </section>
+
+      <MapSection />
 
       <div class="card escalation">
         <span class="grow"><strong>EHBO-escalatie:</strong> naar alle EHBO-eenheden na</span>
