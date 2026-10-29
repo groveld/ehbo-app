@@ -119,17 +119,17 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 2 | iPhone: Deel › Zet op beginscherm. Android: knop **Installeren** | Icoon (antraciet met gele route) op het beginscherm |
 | 3 | App openen vanaf het beginscherm › **Medewerker / vrijwilliger** | Scherm "Aanmelden" |
 | 4 | Een onbekend nummer invullen | "Dit nummer staat niet in de lijst" |
-| 5 | Het nummer uit `ADMIN_PHONE` invullen | "Nummer herkend", met rol **Beheerder** |
+| 5 | Het nummer uit `ADMIN_PHONE` invullen | "Hoi …", met rol **Beheerder** |
 | 6 | **Klopt, start** | Scherm "Zet meldingen en locatie aan" |
 | 7 | Meldingen en locatie **Aanzetten** | Toestemmingsvragen; daarna allebei **Aan** |
 | 8 | **Stuur testmelding** | Melding verschijnt, ook als de app open is |
 | 9 | **Klaar** › **Controle van installatie** › **Over 10 s** en meteen vergrendelen | Melding op het vergrendelscherm, met geluid of trilling |
 | 10 | App volledig afsluiten en opnieuw openen | Nog steeds aangemeld; geen info-pagina meer |
 | 11 | Vliegtuigmodus aan, app openen | App opent (offline), nog steeds aangemeld |
-| 12 | Startscherm › **Beheer** › Posten › **+ Post toevoegen**, bij de post staan › **Huidige GPS-positie vastleggen** | Coördinaten met nauwkeurigheid (± m); groen bij 15 m of beter |
-| 13 | Jezelf of een tweede toestel als contactpersoon toevoegen, opslaan, met dat nummer aanmelden | "Nummer herkend" met de post en de rol |
+| 12 | Menu › **Beheer** › Posten › **+ Post toevoegen**, bij de post staan › **Huidige GPS-positie vastleggen** | Coördinaten met nauwkeurigheid (± m); groen bij 15 m of beter |
+| 13 | Jezelf of een tweede toestel als contactpersoon toevoegen, opslaan, met dat nummer aanmelden | "Hoi …" met de post en de rol |
 | 14 | Beheer › Evenement › **Kaart ophalen** | Na ± 10–30 s: "… kaarttegels opgeslagen" |
-| 15 | Overzicht openen | Kaart met posten en parcours; rechtsboven **Offline klaar** |
+| 15 | Overzicht openen | Kaart met posten en parcours |
 | 16 | Vliegtuigmodus aan, app afsluiten en openen | Kaart, posten, contacten en postdetails werken; bellen en navigeren starten de telefoon-apps |
 | 17 | Postdetail › **Navigeer** | Navigatie-app opent met de route naar de post (te kiezen in Menu › Navigeren met) |
 | 18 | Beheer › Evenement › vierkant logo › **Vierkant logo kiezen** (PNG, minstens 512 × 512), korte naam invullen en opslaan; app verwijderen en opnieuw op het beginscherm zetten | Eigen icoon met de korte naam eronder; testmelding toont hetzelfde icoon |

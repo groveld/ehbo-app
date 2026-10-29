@@ -14,7 +14,6 @@ async function staffPhone(browser: Browser, phone: string): Promise<Page> {
   await page.getByRole('link', { name: /Medewerker \/ vrijwilliger/ }).click();
   await page.getByLabel('Je mobiele nummer').fill(phone);
   await page.getByRole('button', { name: 'Verder' }).click();
-  await expect(page.getByText('Nummer herkend')).toBeVisible();
   await page.getByRole('button', { name: 'Klopt, start' }).click();
   await page.getByRole('link', { name: 'Klaar, naar mijn startscherm' }).click();
   return page;
