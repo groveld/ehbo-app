@@ -1,17 +1,18 @@
 <script setup lang="ts">
-// Menu: naar je eigen startscherm (stand-by of post), het overzicht, beheer, meldingen, navigatie-app en afmelden.
+// Menu (laatste tab): je plek, andere plekken als je er meer hebt, beheer, meldingen, info, navigatie-app en afmelden.
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
 import { getNavApp, NAV_APPS, setNavApp, type NavApp } from '../navigate.ts';
 import { useSessionStore } from '../stores/session.ts';
 
-const props = withDefaults(defineProps<{ menu?: boolean }>(), { menu: false });
 const session = useSessionStore();
 const router = useRouter();
 const me = computed(() => session.me!);
 const navApp = ref<NavApp>(getNavApp());
 
+// De tabbalk heeft één knop voor je eigen plek; wie er meer heeft, vindt de andere hier.
+const several = computed(() => me.value.assignments.length > 1);
 const myPosts = computed(() => me.value.assignments.filter((a) => a.kind === 'post'));
 const isEhbo = computed(() => me.value.assignments.some((a) => a.kind === 'ehbo'));
 
@@ -31,13 +32,9 @@ async function logout() {
 
 <template>
   <main v-if="session.me" class="screen">
-    <header v-if="props.menu" class="page-header">
-      <button class="icon-btn" aria-label="Terug" @click="router.back()"><Icon name="back" /></button>
-      <h1>Menu</h1>
-    </header>
-    <div v-else class="stack gap-6 top">
+    <div class="stack gap-6 top">
       <span class="eyebrow">{{ session.event?.name }}</span>
-      <h1 class="title">Hoi{{ session.firstName ? ` ${session.firstName}` : '' }}</h1>
+      <h1 class="title">Menu</h1>
     </div>
 
     <div v-if="session.place" class="card place">
@@ -49,15 +46,15 @@ async function logout() {
       </span>
     </div>
 
-
     <nav class="stack gap-10 menu">
-      <RouterLink v-if="isEhbo" :to="{ name: 'stand-by' }" class="btn"><Icon name="cross" :size="20" />Stand-by en oproepen</RouterLink>
-      <RouterLink v-for="p in myPosts" :key="p.postId" :to="{ name: 'post-home', params: { id: p.postId } }" class="btn">
-        <Icon name="pin" :size="20" />{{ myPosts.length > 1 ? (p.detail?.split(' · ')[0] ?? 'Mijn post') : 'Mijn post' }}
-      </RouterLink>
-      <RouterLink :to="{ name: 'kaart' }" class="btn" :class="{ primary: !props.menu }"><Icon name="map" :size="20" />Overzicht en kaart</RouterLink>
+      <template v-if="several">
+        <RouterLink v-if="isEhbo" :to="{ name: 'stand-by' }" class="btn"><Icon name="cross" :size="20" />Stand-by en oproepen</RouterLink>
+        <RouterLink v-for="p in myPosts" :key="p.postId" :to="{ name: 'post-home', params: { id: p.postId } }" class="btn">
+          <Icon name="pin" :size="20" />{{ myPosts.length > 1 ? (p.detail?.split(' · ')[0] ?? 'Mijn post') : 'Mijn post' }}
+        </RouterLink>
+        <RouterLink :to="{ name: 'herkend' }" class="btn">Andere plek kiezen</RouterLink>
+      </template>
       <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn"><Icon name="settings" :size="20" />Beheer</RouterLink>
-      <RouterLink v-if="me.assignments.length > 1" :to="{ name: 'herkend' }" class="btn">Andere plek kiezen</RouterLink>
       <RouterLink :to="{ name: 'toestemmingen' }" class="btn"><Icon name="bell" :size="18" />Meldingen en locatie</RouterLink>
       <RouterLink :to="{ name: 'info' }" class="btn"><Icon name="info" :size="18" />Info &amp; voorwaarden</RouterLink>
       <RouterLink :to="{ name: 'controle' }" class="btn">Controle van installatie</RouterLink>
@@ -75,8 +72,7 @@ async function logout() {
 </template>
 
 <style scoped>
-.top { padding-top: 56px; }
-.page-header { margin-bottom: 8px; }
+.top { padding-top: max(20px, env(safe-area-inset-top)); }
 .place { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
 .letter { width: 48px; height: 48px; color: #FFFFFF; font-size: 17px; }
 .text { gap: 2px; flex-grow: 1; }

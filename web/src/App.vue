@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { startAlarm, stopAlarm, unlockAudio } from './alarm.ts';
 import { useLiveStore } from './stores/live.ts';
 import { usePackageStore } from './stores/package.ts';
 import { usePushStore } from './stores/push.ts';
 import { useSessionStore } from './stores/session.ts';
+import TabBar from './components/TabBar.vue';
 import { applyTheme } from './theme.ts';
 
 const push = usePushStore();
@@ -14,6 +15,9 @@ const session = useSessionStore();
 const live = useLiveStore();
 const route = useRoute();
 const router = useRouter();
+
+// Eén tabbalk op elke pagina van een aangemelde medewerker, behalve de afdrukpagina van het rapport.
+const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info') && route.name !== 'beheer-rapport-afdrukken');
 
 // Kleuren en naam van het evenement; zonder bereik uit de bewaarde gegevens.
 watch(() => session.event, applyTheme, { immediate: true });
@@ -55,7 +59,8 @@ onMounted(() => {
 <template>
   <!-- Testmodus: op elk scherm zichtbaar, zodat niemand een proefoproep voor echt aanziet. Niet op de afdrukpagina. -->
   <div v-if="live.state?.testMode && route.name !== 'beheer-rapport-afdrukken'" class="test-banner" role="status">Testmodus · oproepen zijn proef</div>
-  <RouterView />
+  <div :class="{ 'with-tabs': tabs }"><RouterView /></div>
+  <TabBar v-if="tabs" />
 </template>
 
 <style scoped>

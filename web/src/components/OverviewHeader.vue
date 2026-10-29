@@ -1,8 +1,7 @@
 <script setup lang="ts">
-// Kop van de overzichtsschermen: evenement, titel, of de app klaar is voor gebruik zonder bereik, en het menu.
+// Kop van de overzichtsschermen: evenement, titel, en of de app klaar is voor gebruik zonder bereik.
 import { computed } from 'vue';
 import { usePackageStore } from '../stores/package.ts';
-import Icon from './Icon.vue';
 
 defineProps<{ title: string }>();
 const pkg = usePackageStore();
@@ -31,7 +30,6 @@ const status = computed(() => {
       <h1>{{ title }}</h1>
     </div>
     <span class="status" :class="status.tone" role="status"><span class="dot" />{{ status.text }}</span>
-    <RouterLink :to="{ name: 'menu' }" class="icon-btn" aria-label="Menu"><Icon name="menu" /></RouterLink>
   </header>
 </template>
 
@@ -45,5 +43,4 @@ h1 { font-size: 26px; font-weight: 700; line-height: 1.15; }
 .status.ok { background: var(--ok-bg); color: var(--ok-text); }
 .status.busy { background: var(--warn-bg); color: var(--warn); }
 .status.idle { background: var(--soft); color: var(--ink-2); }
-.icon-btn { margin: 0 -10px 0 -4px; }
 </style>
