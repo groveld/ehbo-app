@@ -143,7 +143,7 @@ async function copyLocation() {
 .title { display: flex; align-items: center; gap: 14px; margin: 10px 0 16px; }
 .type { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
-.map { height: 140px; margin-bottom: 12px; }
+.map { height: clamp(200px, 30dvh, 360px); margin-bottom: 12px; }
 .post-facts { gap: 0; margin-bottom: 12px; }
 .fact { border-radius: 0; padding: 10px 0; font-size: 14px; border-top: 1px solid var(--divider); }
 .fact:first-child { border-top: none; padding-top: 0; }

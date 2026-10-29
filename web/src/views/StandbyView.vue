@@ -56,6 +56,13 @@ const othersFree = computed(() => {
 const today = computed(() => live.incidents.filter((i) => !isOpen(i) && i.dispatches.some((d) => d.unitId === unitId.value && d.acceptedAt)));
 const ehboCoordinator = computed(() => coreTeamMember(store.pkg, 'EHBO-coördinator'));
 const coordinator = computed(() => coordinatorOf(store.pkg));
+/** De volgende in de lijn: de EHBO-coördinator, of de evenementcoördinator als je zelf EHBO-coördinator bent. */
+const callNext = computed(() => {
+  const me = session.me?.phone;
+  if (ehboCoordinator.value && ehboCoordinator.value.phone !== me) return { label: 'Bel EHBO-coördinator', phone: ehboCoordinator.value.phone };
+  if (coordinator.value && coordinator.value.phone !== me) return { label: 'Bel evenementcoördinator', phone: coordinator.value.phone };
+  return null;
+});
 
 const setAvailability = (value: UnitAvailability) => unitId.value !== null && run(() => live.setAvailability(unitId.value!, value));
 </script>
@@ -102,11 +109,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
       </div>
 
       <div class="grow" />
-      <span class="section-title call-label">Bellen</span>
-      <div class="btn-pair">
-        <a v-if="ehboCoordinator" :href="telHref(ehboCoordinator.phone)" class="btn">EHBO-coördinator</a>
-        <a v-if="coordinator" :href="telHref(coordinator.phone)" class="btn">Evenementcoördinator</a>
-      </div>
+      <a v-if="callNext" :href="telHref(callNext.phone)" class="btn"><Icon name="phone" :size="20" />{{ callNext.label }}</a>
       <a href="tel:112" class="btn danger sos"><Icon name="phone" :size="20" />Bel 112</a>
     </template>
   </main>
@@ -121,6 +124,5 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 .today { font-size: 14px; min-height: 48px; }
 .at { color: var(--muted); font-size: 13px; }
 .done { font-size: 12px; font-weight: 600; color: var(--ok-text); }
-.call-label { margin: 0 0 6px; }
 .sos { margin-top: 10px; }
 </style>
