@@ -59,6 +59,8 @@ export interface CloseIncident {
   note: string | null;
   /** Vaste eenheid: "ik blijf hier even", dan telt deze post als haar plek tot ze terug is. */
   stayHere: boolean;
+  /** Daarna even pauze (lunch, wc) in plaats van weer vrij. */
+  pause?: boolean;
 }
 
 export type DispatchReason = 'dichtstbij' | 'aed' | 'alle' | 'handmatig';

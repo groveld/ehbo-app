@@ -280,7 +280,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const phone = coordinator();
     if (!phone) return;
     const post = posts().get(row.post_id as number)!;
-    notify([phone], { title: `EHBO-oproep · ${post.name}`, body, tag: `kopie-${row.id as number}`, url: '/overzicht', urgent });
+    notify([phone], { title: `EHBO-oproep · ${post.name}`, body, tag: `kopie-${row.id as number}`, url: `/melding/${row.id as number}`, urgent });
   }
 
   /** Eenheden die nog op deze oproep kunnen reageren: opgeroepen, niet geweigerd, niet aangenomen. */
@@ -530,7 +530,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       // Alleen een vaste eenheid "blijft hier"; een mobiele eenheid geeft haar positie zelf door.
       const stay = body.stayHere && unit.kind === 'vast' && row.post_id !== unit.postId ? (row.post_id as number) : null;
       run('UPDATE ehbo_units SET stay_post_id = ? WHERE id = ?', stay, unitId);
-      log(id, 'afgerond', `Afgerond door ${unit.name}`, unitId);
+      // In dezelfde stap op pauze, zodat er tussendoor geen oproep binnenkomt.
+      if (body.pause) run("UPDATE ehbo_units SET availability = 'pauze' WHERE id = ?", unitId);
+      log(id, 'afgerond', `Afgerond door ${unit.name}${body.pause ? ', daarna even pauze' : ''}`, unitId);
     });
     copyToCoordinator(incidentRow(id), `Afgerond door ${unit.name}.`);
     changed();

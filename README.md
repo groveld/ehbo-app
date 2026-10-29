@@ -111,39 +111,7 @@ Belangrijk voor installeren en meldingen:
 
 ## 4. Testen op een telefoon
 
-Open het adres op de telefoon. Doe dit met minstens één iPhone en één Android-toestel.
-
-| # | Stap | Verwacht |
-| --- | --- | --- |
-| 1 | Adres openen in Safari (iPhone) of Chrome (Android) | Scherm "Zet de app eerst op je beginscherm", met het juiste toestel herkend |
-| 2 | iPhone: Deel › Zet op beginscherm. Android: knop **Installeren** | Icoon (antraciet met gele route) op het beginscherm |
-| 3 | App openen vanaf het beginscherm › **Medewerker / vrijwilliger** | Scherm "Aanmelden" |
-| 4 | Een onbekend nummer invullen | "Dit nummer staat niet in de lijst" |
-| 5 | Het nummer uit `ADMIN_PHONE` invullen | "Hoi …", met rol **Beheerder** |
-| 6 | **Klopt, start** | Scherm "Zet meldingen en locatie aan" |
-| 7 | Meldingen en locatie **Aanzetten** | Toestemmingsvragen; daarna allebei **Aan** |
-| 8 | **Stuur testmelding** | Melding verschijnt, ook als de app open is |
-| 9 | **Klaar** › **Controle van installatie** › **Over 10 s** en meteen vergrendelen | Melding op het vergrendelscherm, met geluid of trilling |
-| 10 | App volledig afsluiten en opnieuw openen | Nog steeds aangemeld; geen info-pagina meer |
-| 11 | Vliegtuigmodus aan, app openen | App opent (offline), nog steeds aangemeld |
-| 12 | Menu › **Beheer** › Posten › **+ Post toevoegen**, bij de post staan › **Huidige GPS-positie vastleggen** | Coördinaten met nauwkeurigheid (± m); groen bij 15 m of beter |
-| 13 | Jezelf of een tweede toestel als contactpersoon toevoegen, opslaan, met dat nummer aanmelden | "Hoi …" met de post en de rol |
-| 14 | Beheer › Evenement › **Kaart ophalen** | Na ± 10–30 s: "… kaarttegels opgeslagen" |
-| 15 | Overzicht openen | Kaart met posten en parcours |
-| 16 | Vliegtuigmodus aan, app afsluiten en openen | Kaart, posten, contacten en postdetails werken; bellen en navigeren starten de telefoon-apps |
-| 17 | Postdetail › **Navigeer** | Navigatie-app opent met de route naar de post (te kiezen in Menu › Navigeren met) |
-| 18 | Beheer › Evenement › vierkant logo › **Vierkant logo kiezen** (PNG, minstens 512 × 512), korte naam invullen en opslaan; app verwijderen en opnieuw op het beginscherm zetten | Eigen icoon met de korte naam eronder; testmelding toont hetzelfde icoon |
-| 19 | Twee toestellen: één als postverantwoordelijke (Waterpost), één als EHBO (Team 1). EHBO › **Vrij**; post › **Post openen** › **EHBO** › versturen | EHBO-toestel krijgt binnen 5 s een oproep met alarm, ook met scherm uit; post ziet "We zoeken een EHBO'er" met aftellen |
-| 20 | EHBO › **Accepteren & navigeren** | Navigatie-app opent; post ziet "Hulp is onderweg" met naam en belknop; coördinator krijgt een kopie |
-| 21 | EHBO › **Ik ben ter plaatse** › **Incident afronden** | Post ziet "EHBO is er" en daarna "Klaar"; EHBO is weer vrij |
-| 22 | Nieuwe melding, EHBO reageert niet | Na 30 s gaat de oproep naar alle vrije eenheden, na 60 s krijgt de coördinator een alarm |
-| 23 | Post: vliegtuigmodus aan, **EHBO** › versturen | Scherm "Bel de EHBO direct" met belknoppen; vliegtuigmodus uit: de melding gaat vanzelf weg en de EHBO krijgt de oproep |
-| 24 | Post › **Water** › **Bijna op**; coördinator › **Meldingen** › **Oppakken** › **Afgehandeld** | Post ziet plek in de wachtrij, daarna "wordt geregeld" en "afgehandeld", elk met een melding |
-| 25 | Beheer › **Rapport en testmodus** › Testmodus aan; proefoproep doen | Op elk scherm de balk "Testmodus"; meldingen beginnen met "Test"; de proefoproep staat niet in het rapport || 26 | Rapport › **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en alle incidenten; CSV opent met kolommen en goede tekens |
-| 26 | Rapport › **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en alle incidenten; CSV opent met kolommen en goede tekens |
-| 27 | Beheer › **Info & voorwaarden** › tekst aanpassen en opslaan; op een ander toestel Info openen | De nieuwe tekst, met de naam van het evenement en het contact ingevuld |
-
-Lukt stap 7 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
+Volg [docs/testprocedure.md](docs/testprocedure.md): wat je nodig hebt (toestellen, mensen, nummers), de voorbereiding in beheer, en per blok welke stap op welk toestel, met wat je moet zien. Doe het met minstens twee iPhones en twee Android-toestellen, in de testmodus.
 
 **Testen zonder installatie (alleen voor beheer, op een computer):** open `/?browser=1`; dat blijft gelden tot je het tabblad sluit.
 

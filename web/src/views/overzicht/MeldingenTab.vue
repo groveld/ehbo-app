@@ -45,13 +45,14 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
 
     <div class="stack gap-10">
       <span class="section-title">Open oproepen en verzoeken</span>
+      <!-- EHBO-oproepen in dezelfde kaart als de aanvragen, met een eigen label; open oproepen met een rode rand. -->
       <RouterLink v-for="i in live.openIncidents" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="card incident open">
-        <span class="badge alert"><Icon name="cross" :size="20" /></span>
-        <span class="stack grow text">
-          <span class="name">{{ store.postById.get(i.postId)?.name ?? 'Post' }}</span>
-          <span class="sub">{{ clock(i.reportedAt) }} · {{ incidentSummary(i) }}{{ i.aed ? ' · AED' : '' }}</span>
-        </span>
-        <span class="state" :class="i.status">{{ STATUS[i.status] }}<template v-if="who(i.unitId)"><br>{{ who(i.unitId) }}</template></span>
+        <div class="request-top">
+          <span class="kind ehbo">EHBO</span>
+          <span class="picked grow state" :class="i.status">{{ STATUS[i.status] }}<template v-if="who(i.unitId)"> · {{ who(i.unitId) }}</template></span>
+          <span class="mono at">{{ clock(i.reportedAt) }}</span>
+        </div>
+        <span class="request-line">{{ store.postById.get(i.postId)?.name ?? 'Post' }} · {{ incidentSummary(i) }}{{ i.aed ? ' · AED' : '' }}</span>
       </RouterLink>
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div v-for="r in openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'opgepakt' && r.pickedBy?.phone === session.me?.phone }">
@@ -72,16 +73,14 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
 
       <template v-if="closed.length || doneRequests.length">
         <span class="section-title later">Afgerond</span>
-        <div v-if="closed.length" class="list">
-          <RouterLink v-for="i in closed" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="list-row">
+        <RouterLink v-for="i in closed" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="card incident">
+          <div class="request-top">
+            <span class="kind ehbo">EHBO</span>
+            <span class="picked grow">{{ STATUS[i.status] }}<template v-if="who(i.unitId)"> · {{ who(i.unitId) }}</template></span>
             <span class="mono at">{{ clock(i.reportedAt) }}</span>
-            <span class="main">
-              <span class="title-line">{{ store.postById.get(i.postId)?.name }}</span>
-              <span class="sub">{{ incidentSummary(i) }}<template v-if="who(i.unitId)"> · {{ who(i.unitId) }}</template></span>
-            </span>
-            <span class="small">{{ STATUS[i.status] }}</span>
-          </RouterLink>
-        </div>
+          </div>
+          <span class="request-line">{{ store.postById.get(i.postId)?.name }} · {{ incidentSummary(i) }}</span>
+        </RouterLink>
         <div v-for="r in doneRequests" :key="r.id" class="card request">
           <div class="request-top">
             <span class="kind" :style="{ background: KIND_STYLE[r.kind][0], color: KIND_STYLE[r.kind][1] }">{{ REQUEST_KINDS[r.kind].label }}</span>
@@ -96,19 +95,16 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
 </template>
 
 <style scoped>
-.incident { display: flex; align-items: center; gap: 12px; padding: 12px; color: var(--ink); text-decoration: none; }
+.incident { display: flex; flex-direction: column; gap: 10px; color: var(--ink); text-decoration: none; }
 .incident.open { border: 2px solid var(--danger); }
-.alert { width: 40px; height: 40px; background: var(--danger); color: #FFFFFF; }
-.text { gap: 2px; min-width: 0; }
-.name { font-size: 15px; font-weight: 600; }
-.sub { font-size: 13px; color: var(--muted); }
-.state { font-size: 12px; font-weight: 700; text-align: right; color: var(--danger); }
+.state { font-weight: 700; color: var(--danger); }
 .state.geaccepteerd, .state.ter_plaatse { color: var(--ok-text); }
 .later { margin-top: 8px; }
 .request { display: flex; flex-direction: column; gap: 10px; }
 .request.mine { border: 2px solid var(--ink); }
 .request-top { display: flex; align-items: center; gap: 8px; }
 .kind { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+.kind.ehbo { background: #FBE3E1; color: #8A1A14; }
 .picked { font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .request-line { font-size: 15px; font-weight: 600; }
 .request-actions { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; }

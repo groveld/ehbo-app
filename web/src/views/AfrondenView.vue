@@ -26,10 +26,10 @@ const outcome = ref<Outcome | null>(null);
 const note = ref('');
 const stayHere = ref(true);
 
-async function finish() {
+async function finish(pause = false) {
   if (!incident.value || !outcome.value) return;
   const ok = await run(() => live.close(incident.value!.id, {
-    outcome: outcome.value!, persons: incident.value!.persons, note: note.value.trim() || null, stayHere: Boolean(canStay.value && stayHere.value),
+    outcome: outcome.value!, persons: incident.value!.persons, note: note.value.trim() || null, stayHere: Boolean(canStay.value && stayHere.value), pause,
   }));
   if (ok) router.replace({ name: 'stand-by' });
 }
@@ -76,7 +76,8 @@ async function finish() {
     <div class="grow" />
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <p v-else-if="!outcome" class="small center">Kies de afloop om af te ronden.</p>
-    <button class="btn go footer" :disabled="busy || !outcome" @click="finish">Afronden &amp; weer beschikbaar</button>
+    <button class="btn go footer" :disabled="busy || !outcome" @click="finish()">Afronden &amp; weer beschikbaar</button>
+    <button class="btn pause" :disabled="busy || !outcome" @click="finish(true)">Afronden &amp; even pauze</button>
   </main>
 </template>
 
@@ -90,4 +91,5 @@ async function finish() {
 .where[aria-pressed="true"] .radio { border: 6px solid var(--ink); }
 .center { text-align: center; }
 .footer { margin-top: 8px; }
+.pause { margin-top: 8px; }
 </style>
