@@ -28,6 +28,9 @@ const here = computed(() => (store.pkg && post.value ? unitsAt(store.pkg, post.v
 const nearest = computed(() => (store.pkg && post.value && !here.value.length ? nearestUnit(store.pkg, post.value) : null));
 const ROLE = { verantwoordelijke: 'verantwoordelijke', lid: 'lid', reserve: 'reserve' } as const;
 const isOpen = computed(() => (post.value ? live.postOpen(post.value.id, post.value.isOpen) : false));
+/** Zoals op de kaart van het overzicht: open oproepen rood, dichte posten grijs. */
+const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
+const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id) ?? []);
 /** Zoals de server: de postverantwoordelijke van deze post, of een beheerder. */
 const canToggle = computed(() => session.me?.isAdmin
   || session.me?.assignments.some((a) => a.kind === 'post' && a.postId === post.value?.id && a.role === 'verantwoordelijke'));
@@ -76,7 +79,11 @@ async function copyLocation() {
       </div>
 
       <div v-if="post.lat !== null" class="map">
-        <EventMap :pkg="store.pkg" :focus-post-id="post.id" />
+        <!-- Net als op het overzicht: tik op een andere post om die te openen. -->
+        <EventMap
+          :pkg="store.pkg" :focus-post-id="post.id" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
+          @select="(id) => id !== post!.id && router.push({ name: 'post', params: { id } })"
+        />
       </div>
 
       <div class="card stack post-facts">
