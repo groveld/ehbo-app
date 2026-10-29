@@ -123,7 +123,7 @@ test('logo en app-icoon uploaden, tonen en verwijderen', async () => {
 });
 
 test('loop toevoegen, GPX uploaden en verwijderen', async () => {
-  let state = (await call('POST', '/api/admin/runs', { name: 'Marathon', distanceKm: 42.2, discipline: 'lopen', date: '2026-12-31', startTime: '10:00' })).json() as AdminState;
+  let state = (await call('POST', '/api/admin/runs', { name: 'Marathon', distanceKm: 42.2, discipline: 'hardlopen', date: '2026-12-31', startTime: '10:00' })).json() as AdminState;
   const run = state.runs.at(-1)!;
   assert.equal(run.name, 'Marathon');
   assert.equal(run.gpx, null);

@@ -230,6 +230,10 @@ const MIGRATIONS = [
   ALTER TABLE incidents ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE requests ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0;
   `,
+  // 8: "lopen" heet voortaan "hardlopen"; lopen en wandelen zijn in gewone taal hetzelfde.
+  `
+  UPDATE runs SET discipline = 'hard' || discipline WHERE discipline LIKE 'lopen%';
+  `,
 ];
 
 export interface EventRow {

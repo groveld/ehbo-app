@@ -70,9 +70,9 @@ async function onFile(event: Event) {
       <div class="form-field">
         <span class="section-label">Soort</span>
         <div class="choice-grid">
-          <button v-for="d in ['lopen', 'wandelen', 'lopen + wandelen']" :key="d" class="option" :aria-pressed="form.discipline === d" @click="form.discipline = d">{{ d }}</button>
+          <button v-for="d in ['hardlopen', 'wandelen', 'hardlopen + wandelen']" :key="d" class="option" :aria-pressed="form.discipline === d" @click="form.discipline = d">{{ d }}</button>
         </div>
-        <span class="small">Lopen en wandelen op dezelfde route zijn één loop; een afwijkende route wordt een eigen loop.</span>
+        <span class="small">Hardlopen en wandelen op dezelfde route zijn één loop; een afwijkende route wordt een eigen loop.</span>
       </div>
       <div class="form-field">
         <label for="loop-datum">Datum</label>

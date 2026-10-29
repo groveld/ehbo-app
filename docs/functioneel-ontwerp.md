@@ -6,7 +6,7 @@ Bijbehorend: het schermontwerp in [`design/`](design/index.html) (origineel: [ar
 
 ## Doel en uitgangspunten
 
-De app brengt bij een hulpvraag op een post binnen enkele seconden de dichtstbijzijnde EHBO'er in actie, en geeft iedere medewerker het volledige overzicht om elkaar te bellen of naar elkaar toe te rijden. Eerste inzet: de Silvesterloop Poppenwier op donderdag 31 december 2026, met een Kidsrun en 5, 10 en 21 km lopen en wandelen, start bij Eetcafé De Trilker en honderden deelnemers (ca. 15 posten, 20 medewerkers, 2–3 EHBO-eenheden). De opzet is modulair, zodat dezelfde app ook een groot evenement aankan.
+De app brengt bij een hulpvraag op een post binnen enkele seconden de dichtstbijzijnde EHBO'er in actie, en geeft iedere medewerker het volledige overzicht om elkaar te bellen of naar elkaar toe te rijden. Eerste inzet: de Silvesterloop Poppenwier op donderdag 31 december 2026, met een Kidsrun en 5, 10 en 21 km hardlopen en wandelen, start bij Eetcafé De Trilker en honderden deelnemers (ca. 15 posten, 20 medewerkers, 2–3 EHBO-eenheden). De opzet is modulair, zodat dezelfde app ook een groot evenement aankan.
 
 - **Tijdelijk en ondersteunend.** De app vervangt 112 niet. Bij levensgevaar bel je eerst 112; die knop staat op elk scherm.
 - **Simpel.** Geen accounts of wachtwoorden. Medewerkers melden zich aan met hun eigen telefoonnummer.
@@ -56,7 +56,7 @@ Medewerkers ontstaan vanzelf: wie je als contact bij een post of functie zet, ka
 
 | Onderdeel | Velden |
 | --- | --- |
-| Evenement (eigen instellingenpagina) | Naam; begin- en einddatum van het evenement; lopen, elk met naam, afstand, datum, starttijd en eigen GPX (een evenement kan over meerdere dagen lopen; lopen en wandelen op dezelfde route zijn één loop, een afwijkende route wordt een eigen loop); EHBO-escalatietijd (standaard 30 s); info-tekst; stijl (groot logo, vierkant logo als app-icoon, kleuren) |
+| Evenement (eigen instellingenpagina) | Naam; begin- en einddatum van het evenement; lopen, elk met naam, afstand, datum, starttijd en eigen GPX (een evenement kan over meerdere dagen lopen; hardlopen en wandelen op dezelfde route zijn één loop, een afwijkende route wordt een eigen loop); EHBO-escalatietijd (standaard 30 s); info-tekst; stijl (groot logo, vierkant logo als app-icoon, kleuren) |
 | Post / locatie | Soort, naam, nummer, km-punt, GPS (vastgelegd ter plaatse of geprikt op de kaart, met nauwkeurigheid), adres (optioneel), aanrijroute / bijzonderheden, geplande tijden, status open/dicht, contactpersonen |
 | Soort post | Start/finish, waterpost, stempelpost, verkeersregelaar, EHBO-post, anders. Lijst is uitbreidbaar met eigen soorten (kleur + letter) |
 | Contactpersoon | Naam, telefoonnummer, rol bij de post (postverantwoordelijke, lid, reserve), tijden |
@@ -306,7 +306,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 
 | Punt | Besluit |
 | --- | --- |
-| Evenement | Silvesterloop Poppenwier, 31 december 2026; starttijd 12:00 voor alle lopen (later zelf aan te passen); lopen en wandelen zijn één loop met één GPX; begin- en einddatum |
+| Evenement | Silvesterloop Poppenwier, 31 december 2026; starttijd 12:00 voor alle lopen (later zelf aan te passen); hardlopen en wandelen zijn één loop met één GPX; begin- en einddatum |
 | Verzoeken | Gelijkwaardige tegels: EHBO, water, verkeer, vrijwilliger, Anders (belt de evenementcoördinator); een post mag meerdere verzoeken tegelijk open hebben |
 | EHBO-verzoek | Tweede pagina om aan te vullen, alles optioneel; keuzes: onwel, gevallen/letsel, kramp/blessure, weet ik niet |
 | Afronden | Afloop: ter plaatse geholpen, gestopt/naar finish, ambulance, doorverwezen, hulp geweigerd, loos alarm |
@@ -370,6 +370,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Info-pagina in het beheer (28 okt) | Beheer › Info & voorwaarden: de onderdelen (kop en tekst) aanpassen, toevoegen, verschuiven of verwijderen, en invullen waar het verwijderplan staat en wie je bij vragen benadert. {evenement}, {beleid} en {contact} vult de app in. Zonder eigen tekst geldt de standaardtekst; terugzetten kan altijd. Wie de info al bevestigde, hoeft dat na een wijziging niet opnieuw |
 | Post open/dicht door de beheerder (28 okt) | In het postdetail (3.5) staat voor iedereen of de post open is; de postverantwoordelijke en elke beheerder kunnen hem daar ook open of dicht zetten |
 | Volgorde contacten (29 okt) | In Overzicht › Contacten staan de noodnummers bovenaan (112 eerst), dan Organisatie (het kernteam), EHBO en de posten. De status in de kop toont alleen "Offline klaar"; locatie is al afgedwongen bij het instellen |
+| Hardlopen (29 okt) | De soort van een loop is hardlopen, wandelen of hardlopen + wandelen. "Lopen" als soort verviel: in gewone taal is dat hetzelfde als wandelen. Bestaande lopen zijn omgezet |
 
 **Nog open**
 

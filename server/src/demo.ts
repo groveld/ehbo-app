@@ -47,9 +47,9 @@ export function seedDemo(db: EventDb) {
     sql.prepare('INSERT INTO ehbo_unit_members (unit_id, phone) VALUES (?, ?)').run(mobile, DEMO.mobileEhbo);
 
     const run = sql.prepare('INSERT INTO runs (name, distance_km, discipline, date, start_time, sort) VALUES (?, ?, ?, ?, ?, ?)');
-    run.run('Kidsrun', 1, 'lopen', '2026-12-31', '12:00', 0);
-    run.run('5 km', 5, 'lopen + wandelen', '2026-12-31', '12:00', 1);
-    run.run('10 km', 10, 'lopen + wandelen', '2026-12-31', '12:00', 2);
-    run.run('21 km', 21.1, 'lopen + wandelen', '2026-12-31', '12:00', 3);
+    run.run('Kidsrun', 1, 'hardlopen', '2026-12-31', '12:00', 0);
+    run.run('5 km', 5, 'hardlopen + wandelen', '2026-12-31', '12:00', 1);
+    run.run('10 km', 10, 'hardlopen + wandelen', '2026-12-31', '12:00', 2);
+    run.run('21 km', 21.1, 'hardlopen + wandelen', '2026-12-31', '12:00', 3);
   });
 }
