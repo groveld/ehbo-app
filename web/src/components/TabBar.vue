@@ -26,8 +26,11 @@ const tabs = computed<Tab[]>(() => {
   const me = session.me!;
   const home = homeRoute();
   const tabs: Tab[] = [];
+  // Ook wie lid of reserve is bij een post (en dus op de kaart begint) heeft een tab voor die post: de gekozen plek, anders de eerste.
+  const post = me.assignments.find((a) => a.kind === 'post' && (session.place?.kind !== 'post' || a.postId === session.place.postId));
+  const postTo = home.name === 'post-home' ? home : post && { name: 'post-home', params: { id: post.postId } };
   if (home.name === 'stand-by') tabs.push({ to: home, label: 'Stand-by', icon: 'cross', routes: EHBO, dot: live.invitations.length > 0 || live.myActive !== null });
-  else if (home.name === 'post-home') tabs.push({ to: home, label: 'Mijn post', icon: 'pin', routes: POST, dot: live.openIncidents.some((i) => live.myPostIds.includes(i.postId)) });
+  else if (postTo) tabs.push({ to: postTo, label: 'Mijn post', icon: 'pin', routes: POST, dot: live.openIncidents.some((i) => live.myPostIds.includes(i.postId)) });
   tabs.push({ to: { name: 'kaart' }, label: 'Kaart', icon: 'map', routes: ['kaart', 'post'] });
   if (me.isAdmin || coordinatorOf(pkg.pkg)?.phone === me.phone) tabs.push({ to: { name: 'verzoeken' }, label: 'Verzoeken', icon: 'bell', routes: ['verzoeken'], count: live.requests.filter((r) => r.status === 'aangevraagd').length });
   tabs.push({ to: { name: 'contacten' }, label: 'Contacten', icon: 'people', routes: ['contacten'] });
