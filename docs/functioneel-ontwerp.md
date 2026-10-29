@@ -62,7 +62,7 @@ Medewerkers ontstaan vanzelf: wie je als contact bij een post of functie zet, ka
 | Contactpersoon | Naam, telefoonnummer, rol bij de post (postverantwoordelijke, lid, reserve), tijden |
 | EHBO-eenheid | Naam (bijv. Team 3), *soort vast (eigen EHBO-post) of mobiel (te voet, fiets, auto, anders), standplaats bij een bestaande post (optioneel, alleen mobiel*), leden (1 of meer telefoonnummers), AED aanwezig ja/nee, status (vrij / bezet / uit dienst), huidige positie |
 | Kernteam | Functie, naam, telefoonnummer. Staat bovenaan het overzicht |
-| Noodnummers (in de instellingen) | 112 (vast), SEH + ziekenhuis, huisartsenpost, dokter in de buurt, aan te vullen |
+| Noodnummers (in de instellingen) | Standaard: 112 (vast), Spoedeisende Hulp en Huisartsenpost; aan te vullen |
 | Beheerders | Lijst telefoonnummers |
 | Gebruikersvoorkeur | Navigatie-app: standaard die van de telefoon, eventueel Google Maps, Waze of Apple Kaarten |
 

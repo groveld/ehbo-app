@@ -36,7 +36,7 @@ const numbersDraft = ref<EmergencyNumber[] | null>(null);
 const editNumbers = () => {
   numbersDraft.value = admin.state!.emergencyNumbers.length
     ? admin.state!.emergencyNumbers.map((n) => ({ ...n, number: formatPhone(n.number) }))
-    : [{ label: 'SEH', number: '' }, { label: 'Huisartsenpost', number: '' }];
+    : [{ label: 'Spoedeisende Hulp', number: '' }, { label: 'Huisartsenpost', number: '' }];
 };
 async function saveNumbers() {
   const entries = numbersDraft.value!.filter((n) => n.label.trim() && n.number.trim());
@@ -150,7 +150,7 @@ async function saveNumbers() {
         </div>
         <template v-else>
           <div v-for="(n, i) in numbersDraft" :key="i" class="draft-head">
-            <input v-model="n.label" class="input" aria-label="Omschrijving" placeholder="SEH · ziekenhuis">
+            <input v-model="n.label" class="input" aria-label="Omschrijving" placeholder="Bijv. Spoedeisende Hulp">
             <input v-model="n.number" class="input number" type="tel" inputmode="tel" aria-label="Nummer" placeholder="Nummer">
             <button class="icon-btn" aria-label="Nummer verwijderen" @click="numbersDraft.splice(i, 1)"><Icon name="trash" :size="20" /></button>
           </div>
