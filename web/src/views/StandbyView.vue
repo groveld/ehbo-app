@@ -33,7 +33,7 @@ const label = computed(() => {
 
 const block = computed(() => {
   if (active.value) return { tone: 'red' as const, title: 'Bezig met een oproep', sub: store.postById.get(active.value.postId)?.name ?? '' };
-  if (availability.value === 'vrij') return { tone: 'green' as const, title: 'Beschikbaar', sub: 'Je krijgt oproepen uit de buurt. Houd de telefoon bij je.' };
+  if (availability.value === 'vrij') return { tone: 'green' as const, title: 'Beschikbaar', sub: 'Je krijgt oproepen uit de buurt.' };
   if (availability.value === 'pauze') return { tone: 'red' as const, title: 'Niet beschikbaar', sub: 'Je krijgt geen oproepen.' };
   return { tone: 'dark' as const, title: 'Uit dienst', sub: 'Je krijgt geen oproepen.' };
 });
