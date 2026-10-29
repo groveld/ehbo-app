@@ -59,8 +59,8 @@ const banner = computed(() => {
           <input v-model="query" class="input" type="search" placeholder="Zoek post of km" aria-label="Zoek een post">
         </label>
         <select v-model="filter" class="input type" aria-label="Soort post">
-          <option :value="null">Alle ({{ store.pkg.posts.length }})</option>
-          <option v-for="c in chips" :key="c.id" :value="c.id">{{ c.label }} ({{ c.count }})</option>
+          <option :value="null">Alle</option>
+          <option v-for="c in chips" :key="c.id" :value="c.id">{{ c.label }}</option>
         </select>
       </div>
 
