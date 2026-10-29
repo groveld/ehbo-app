@@ -167,3 +167,55 @@ test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ 
   await admin.getByRole('button', { name: 'Terug naar de standaardtekst' }).click();
   await expect(admin.getByText('Opgeslagen.')).toBeVisible();
 });
+
+test('terug en vooruit: één stap omhoog naar het hoofdscherm, vooruit doet niets', async ({ browser }) => {
+  const post = await staffPhone(browser, PHONE.postLead);
+  await expect(post.getByRole('heading', { name: 'Waterpost 3 · brug' })).toBeVisible();
+  const home = new URL(post.url()).pathname;
+  // Een gebaar dat niets doet, zet de router zelf terug; even wachten, zoals een vinger ook doet.
+  const back = async (path: string) => {
+    await post.evaluate(() => history.back());
+    await post.waitForTimeout(300);
+    await expect(post, `terug naar ${path}`).toHaveURL((url) => url.pathname === path);
+  };
+
+  // Kaart → postdetail: terug naar de kaart, dan naar het startscherm; daar en vooruit gebeurt niets meer.
+  await post.getByRole('link', { name: 'Kaart' }).click();
+  await post.locator('.post-row .main').first().click();
+  await expect(post).toHaveURL(/\/post\/\d+$/);
+  await back('/overzicht/kaart');
+  await back(home);
+  await back(home);
+  await post.evaluate(() => history.forward());
+  await post.waitForTimeout(300);
+  await expect(post).toHaveURL((url) => url.pathname === home);
+
+  // Elke tab vervangt de vorige: vanaf Menu › Info terug naar Menu, dan naar het startscherm.
+  await post.getByRole('link', { name: 'Contacten' }).click();
+  await expect(post).toHaveURL(/\/overzicht\/contacten$/);
+  await post.getByRole('link', { name: 'Menu' }).click();
+  await expect(post).toHaveURL(/\/menu$/);
+  await post.getByRole('link', { name: /Info/ }).click();
+  await expect(post).toHaveURL(/\/info$/);
+  await back('/menu');
+  await back(home);
+
+  // Beheer: elke stap terug is het scherm erboven.
+  const admin = await staffPhone(browser, PHONE.admin);
+  await expect(admin).not.toHaveURL(/\/(toestemmingen|start)$/);
+  const adminHome = new URL(admin.url()).pathname;
+  await admin.getByRole('link', { name: 'Menu' }).click();
+  await expect(admin).toHaveURL(/\/menu$/);
+  await admin.getByRole('link', { name: 'Beheer' }).click();
+  await expect(admin).toHaveURL(/\/beheer$/);
+  await admin.getByRole('link', { name: /Posten/ }).first().click();
+  await expect(admin).toHaveURL(/\/beheer\/posten$/);
+  await admin.locator('a[href^="/beheer/posten/"]').first().click();
+  await expect(admin).toHaveURL(/\/beheer\/posten\/\w+$/);
+  await expect(admin.getByRole('heading').first()).toBeVisible();
+  for (const path of ['/beheer/posten', '/beheer', '/menu', adminHome]) {
+    await admin.evaluate(() => history.back());
+    await expect(admin, `terug naar ${path}`).toHaveURL((url) => url.pathname === path);
+    await admin.waitForTimeout(300);
+  }
+});

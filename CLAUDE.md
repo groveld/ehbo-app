@@ -104,6 +104,7 @@ Where the main pieces live:
 - **AED rule:** when the person is not responsive, the call goes to the nearest free unit and the nearest free AED unit at once.
 - **Statuses:** reported → sent → accepted → on site (one tap) → closed, or withdrawn. Every step is timestamped.
 - **No signal:** maps, contacts, calling and navigating all work offline. The help button falls back to calling the nearest EHBO unit and the coordinator directly.
+- **Back and forward** (`web/src/navigation.ts`): for logged-in staff the browser history is always [start screen, current screen]. Taps replace the top entry; back goes one step up (`upOf`: post detail → map, admin page → its parent, a tab → the start screen); back on the start screen and forward do nothing. Opened on another screen (e.g. from a notification), the start screen is put underneath. Login and the participant page behave like a normal website.
 - **Home or away:** a mobile unit within 50 m of its standplaats is home (`isAway`/`awayPostIds` in `shared/src/incident.ts`). Away, staff see the ambulance; everyone, participants too, sees the cross at the standplaats grey. Participants poll the public `GET /api/ehbo-status`, which returns only those post ids, never positions.
 - **Privacy:** no casualty names or medical details are stored. Positions are not stored: a mobile unit's last GPS fix lives only in server memory and is shown live to staff on the map (as an ambulance) while it is fresh (3 min).
 
