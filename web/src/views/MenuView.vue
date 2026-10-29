@@ -11,6 +11,10 @@ const router = useRouter();
 const me = computed(() => session.me!);
 const navApp = ref<NavApp>(getNavApp());
 
+// Belangrijkste functie bovenaan: beheer, dan kernteam, dan EHBO en posten.
+const RANK = { beheerder: 0, kernteam: 1, ehbo: 2, post: 3 } as const;
+const functions = computed(() => [...me.value.assignments].sort((a, b) => RANK[a.kind] - RANK[b.kind]));
+
 // Rollen kunnen intussen gewijzigd zijn (bijv. door het beheer).
 onMounted(() => session.refresh());
 
@@ -26,13 +30,8 @@ async function logout() {
 </script>
 
 <template>
-  <main v-if="session.me" class="screen">
-    <div class="stack gap-6 top">
-      <span class="eyebrow">{{ session.event?.name }}</span>
-      <h1 class="title">Menu</h1>
-    </div>
-
-    <div v-for="a in me.assignments" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`" class="card place">
+  <main v-if="session.me" class="screen tabbed">
+    <div v-for="a in functions" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`" class="card place">
       <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
       <span class="stack text">
         <span class="name">{{ a.title }}</span>
@@ -42,10 +41,10 @@ async function logout() {
     </div>
 
     <nav class="stack gap-10 menu">
-      <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn"><Icon name="settings" :size="20" />Beheer</RouterLink>
-      <RouterLink :to="{ name: 'toestemmingen' }" class="btn"><Icon name="bell" :size="18" />Meldingen en locatie</RouterLink>
-      <RouterLink :to="{ name: 'info' }" class="btn"><Icon name="info" :size="18" />Info &amp; voorwaarden</RouterLink>
-      <RouterLink :to="{ name: 'controle' }" class="btn">Controle van installatie</RouterLink>
+      <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn item"><Icon name="settings" :size="20" />Beheer</RouterLink>
+      <RouterLink :to="{ name: 'toestemmingen' }" class="btn item"><Icon name="bell" :size="20" />Meldingen en locatie</RouterLink>
+      <RouterLink :to="{ name: 'info' }" class="btn item"><Icon name="info" :size="20" />Info &amp; voorwaarden</RouterLink>
+      <RouterLink :to="{ name: 'controle' }" class="btn item"><Icon name="check" :size="20" />Controle van installatie</RouterLink>
     </nav>
 
     <div class="form-field nav-app">
@@ -55,13 +54,16 @@ async function logout() {
       </select>
     </div>
 
-    <button class="btn link" @click="logout">Afmelden</button>
+    <button class="btn link logout" @click="logout">Afmelden</button>
   </main>
 </template>
 
 <style scoped>
-.top { padding-top: max(20px, env(safe-area-inset-top)); }
-.place { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+.place { display: flex; align-items: center; gap: 14px; }
+.place + .place { margin-top: 10px; }
+/* Icoon links, tekst ernaast, alles links uitgelijnd. */
+.item { justify-content: flex-start; gap: 12px; padding: 0 16px; text-align: left; }
+.logout { color: var(--danger); font-weight: 700; }
 .letter { width: 48px; height: 48px; color: #FFFFFF; font-size: 17px; }
 .text { gap: 2px; flex-grow: 1; }
 .name { font-size: 16px; font-weight: 700; }

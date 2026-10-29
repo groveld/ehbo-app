@@ -153,10 +153,7 @@ async function remove() {
             <input v-model="coordsText" class="input" inputmode="decimal" aria-label="Coördinaten" placeholder="53.14066, 5.81012">
             <button class="btn apply" @click="applyCoords">Gebruiken</button>
           </div>
-        </div>
-
-        <div class="form-field">
-          <label for="adres">Adres of plek (optioneel)</label>
+          <label for="adres" class="address-label">Herkenbare plek of adres (optioneel)</label>
           <input id="adres" v-model="form.address" class="input" placeholder="Bijv. Hoofdstraat 12 of bij de brug">
         </div>
 
@@ -210,6 +207,7 @@ async function remove() {
 .location { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .location .tag { margin-left: 0; }
 .paste { display: flex; gap: 8px; }
+.address-label { margin-top: 10px; }
 .alternatives { display: flex; flex-wrap: wrap; column-gap: 18px; }
 .pick-map { height: clamp(240px, 40dvh, 440px); }
 .apply { width: auto; padding: 0 16px; height: 44px; flex-shrink: 0; }

@@ -4,7 +4,6 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
-import OverviewHeader from '../../components/OverviewHeader.vue';
 import PostRow from '../../components/PostRow.vue';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
@@ -41,8 +40,7 @@ const banner = computed(() => {
 </script>
 
 <template>
-  <main class="screen tight">
-    <OverviewHeader title="Kaart" />
+  <main class="screen tight tabbed">
     <template v-if="store.pkg">
       <div class="map">
         <EventMap

@@ -30,10 +30,12 @@ h1, h2, p { margin: 0; }
 
 /* Eén scherm: kolom over de volle hoogte, 112 of de hoofdknop onderaan. */
 .screen {
-  display: flex; flex-direction: column; min-height: calc(100dvh - var(--tabbar, 0px)); max-width: 480px; margin: 0 auto;
+  display: flex; flex-direction: column; min-height: calc(100dvh - var(--tabbar, 0px)); max-width: 720px; margin: 0 auto;
   padding: env(safe-area-inset-top) 24px max(26px, env(safe-area-inset-bottom));
 }
 .screen.tight { padding-left: 16px; padding-right: 16px; }
+/* Tabschermen hebben geen titel: de tabbalk zegt al waar je bent. */
+.screen.tabbed { padding-top: max(16px, env(safe-area-inset-top)); }
 /* Met de tabbalk onderaan (TabBar.vue): ruimte vrijhouden; de tabbalk vangt de onderrand van de iPhone al op. */
 .with-tabs { --tabbar: calc(60px + max(8px, env(safe-area-inset-bottom))); padding-bottom: var(--tabbar); }
 .with-tabs .screen { padding-bottom: 26px; }

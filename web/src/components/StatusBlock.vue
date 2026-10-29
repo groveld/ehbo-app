@@ -26,10 +26,9 @@ defineProps<{ tone: 'red' | 'orange' | 'green' | 'dark' | 'blue'; label: string;
 h1 { font-size: 26px; font-weight: 700; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sub { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .red { background: var(--danger); color: #FFFFFF; }
-.orange { background: var(--warn-line); color: var(--ink); }
+.orange { background: #F59A3C; color: var(--ink); }
 .green { background: var(--ok); color: #FFFFFF; }
 .dark { background: var(--primary); color: #FFFFFF; }
 .blue { background: var(--info-icon); color: #FFFFFF; }
-.dark .label { color: #8FD1AE; }
 .dark .sub { color: var(--soft-text); }
 </style>

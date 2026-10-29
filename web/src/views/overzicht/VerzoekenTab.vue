@@ -1,9 +1,8 @@
 <script setup lang="ts">
-// Verzoeken: open EHBO-oproepen rood bovenaan, dan de wachtrij met aanvragen (5.2: water, verkeer, vrijwilliger), dan wat is afgerond.
-import { computed, ref } from 'vue';
+// Verzoeken: alles wat open is (EHBO-oproepen rood bovenaan, dan de wachtrij 5.2: water, verkeer, vrijwilliger), daarna wat is afgerond.
+import { computed } from 'vue';
 import { REQUEST_KINDS, requestDetailLabel, telHref, type LiveRequest } from '@ehbo/shared';
 import Icon from '../../components/Icon.vue';
-import OverviewHeader from '../../components/OverviewHeader.vue';
 import { clock, incidentSummary, unitOf } from '../../incidents.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { kmLabel, primaryContact } from '../../posts.ts';
@@ -22,7 +21,6 @@ const handles = computed(() => {
   const me = session.me;
   return Boolean(me && (me.isAdmin || me.assignments.some((a) => a.kind === 'kernteam')));
 });
-const showDone = ref(false);
 const openRequests = computed(() => live.requests.filter((r) => r.status === 'aangevraagd' || r.status === 'opgepakt').slice().reverse());
 const doneRequests = computed(() => live.requests.filter((r) => r.status === 'afgehandeld' || r.status === 'ingetrokken'));
 const KIND_STYLE = { water: ['#E4EEF7', '#124A78'], verkeer: ['#FBE6D2', '#7A3F06'], vrijwilliger: ['#EDE4F7', '#4E2A82'] } as const;
@@ -43,11 +41,10 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
 </script>
 
 <template>
-  <main class="screen tight">
-    <OverviewHeader title="Verzoeken" />
+  <main class="screen tight tabbed">
 
     <div class="stack gap-10">
-      <span class="section-title">Open EHBO-oproepen</span>
+      <span class="section-title">Open oproepen en verzoeken</span>
       <RouterLink v-for="i in live.openIncidents" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="card incident open">
         <span class="badge alert"><Icon name="cross" :size="20" /></span>
         <span class="stack grow text">
@@ -56,12 +53,26 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
         </span>
         <span class="state" :class="i.status">{{ STATUS[i.status] }}<template v-if="who(i.unitId)"><br>{{ who(i.unitId) }}</template></span>
       </RouterLink>
-      <p v-if="!live.openIncidents.length" class="note ok">Geen open oproepen.</p>
+      <p v-if="error" class="error-text" role="alert">{{ error }}</p>
+      <div v-for="r in openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'opgepakt' && r.pickedBy?.phone === session.me?.phone }">
+        <div class="request-top">
+          <span class="kind" :style="{ background: KIND_STYLE[r.kind][0], color: KIND_STYLE[r.kind][1] }">{{ REQUEST_KINDS[r.kind].label }}</span>
+          <span class="picked grow">{{ pickedText(r) }}</span>
+          <span class="mono at">{{ clock(r.createdAt) }}</span>
+        </div>
+        <span class="request-line">{{ line(r) }}</span>
+        <div v-if="handles" class="request-actions">
+          <a v-if="postPhone(r)" :href="telHref(postPhone(r)!)" class="btn call" :aria-label="`Bel ${store.postById.get(r.postId)?.name}`"><Icon name="phone" :size="20" /></a>
+          <button v-if="r.status === 'aangevraagd'" class="btn primary-ish" :disabled="busy" @click="run(() => live.pickRequest(r.id))">Oppakken</button>
+          <button v-else class="btn done" :disabled="busy" @click="run(() => live.finishRequest(r.id))">Afgehandeld</button>
+        </div>
+      </div>
+      <p v-if="!live.openIncidents.length && !openRequests.length" class="note ok">Niets open.</p>
       <p v-if="!live.connected" class="small">Geen live verbinding; dit is de laatst bekende stand.</p>
 
-      <template v-if="closed.length">
-        <span class="section-title later">Afgerond en ingetrokken</span>
-        <div class="list">
+      <template v-if="closed.length || doneRequests.length">
+        <span class="section-title later">Afgerond</span>
+        <div v-if="closed.length" class="list">
           <RouterLink v-for="i in closed" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="list-row">
             <span class="mono at">{{ clock(i.reportedAt) }}</span>
             <span class="main">
@@ -71,28 +82,15 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
             <span class="small">{{ STATUS[i.status] }}</span>
           </RouterLink>
         </div>
+        <div v-for="r in doneRequests" :key="r.id" class="card request">
+          <div class="request-top">
+            <span class="kind" :style="{ background: KIND_STYLE[r.kind][0], color: KIND_STYLE[r.kind][1] }">{{ REQUEST_KINDS[r.kind].label }}</span>
+            <span class="picked grow">{{ pickedText(r) }}</span>
+            <span class="mono at">{{ clock(r.createdAt) }}</span>
+          </div>
+          <span class="request-line">{{ line(r) }}</span>
+        </div>
       </template>
-
-      <span class="section-title later">Aanvragen</span>
-      <div class="chips" role="group" aria-label="Aanvragen">
-        <button class="chip-btn" :aria-pressed="!showDone" @click="showDone = false">Open {{ openRequests.length }}</button>
-        <button class="chip-btn" :aria-pressed="showDone" @click="showDone = true">Afgehandeld {{ doneRequests.length }}</button>
-      </div>
-      <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-      <div v-for="r in showDone ? doneRequests : openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'opgepakt' && r.pickedBy?.phone === session.me?.phone }">
-        <div class="request-top">
-          <span class="kind" :style="{ background: KIND_STYLE[r.kind][0], color: KIND_STYLE[r.kind][1] }">{{ REQUEST_KINDS[r.kind].label }}</span>
-          <span class="picked grow">{{ pickedText(r) }}</span>
-          <span class="mono at">{{ clock(r.createdAt) }}</span>
-        </div>
-        <span class="request-line">{{ line(r) }}</span>
-        <div v-if="handles && !showDone" class="request-actions">
-          <a v-if="postPhone(r)" :href="telHref(postPhone(r)!)" class="btn call" :aria-label="`Bel ${store.postById.get(r.postId)?.name}`"><Icon name="phone" :size="20" /></a>
-          <button v-if="r.status === 'aangevraagd'" class="btn primary-ish" :disabled="busy" @click="run(() => live.pickRequest(r.id))">Oppakken</button>
-          <button v-else class="btn done" :disabled="busy" @click="run(() => live.finishRequest(r.id))">Afgehandeld</button>
-        </div>
-      </div>
-      <p v-if="!(showDone ? doneRequests : openRequests).length" class="small">{{ showDone ? 'Nog niets afgehandeld.' : 'Geen open aanvragen.' }}</p>
     </div>
   </main>
 </template>
@@ -107,9 +105,6 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
 .state { font-size: 12px; font-weight: 700; text-align: right; color: var(--danger); }
 .state.geaccepteerd, .state.ter_plaatse { color: var(--ok-text); }
 .later { margin-top: 8px; }
-.chips { display: flex; gap: 8px; }
-.chip-btn { height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid #D4D1C7; background: var(--card); font: 500 13px var(--sans); color: var(--ink); cursor: pointer; }
-.chip-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #FFFFFF; font-weight: 600; }
 .request { display: flex; flex-direction: column; gap: 10px; }
 .request.mine { border: 2px solid var(--ink); }
 .request-top { display: flex; align-items: center; gap: 8px; }

@@ -3,7 +3,6 @@
 import { computed } from 'vue';
 import { formatPhone, telHref } from '@ehbo/shared';
 import Icon from '../../components/Icon.vue';
-import OverviewHeader from '../../components/OverviewHeader.vue';
 import { usePackageStore } from '../../stores/package.ts';
 
 const store = usePackageStore();
@@ -12,8 +11,7 @@ const ROLE = { verantwoordelijke: 'verantwoordelijke', lid: 'lid', reserve: 'res
 </script>
 
 <template>
-  <main class="screen tight">
-    <OverviewHeader title="Contacten" />
+  <main class="screen tight tabbed">
     <div v-if="store.pkg" class="stack gap-14">
       <section class="stack gap-8">
         <h2 class="section-title">Noodnummers</h2>
