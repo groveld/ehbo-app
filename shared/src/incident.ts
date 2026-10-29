@@ -141,3 +141,5 @@ export interface LiveState {
 export const LIVE_HEARTBEAT_MS = 30_000;
 /** Een mobiele eenheid deelt elke minuut haar positie; ouder dan dit telt niet meer. */
 export const POSITION_MAX_AGE_MS = 3 * 60_000;
+/** Zo vaak deelt een mobiele eenheid in dienst haar positie; bij een statuswissel meteen. */
+export const POSITION_SHARE_MS = 60_000;
