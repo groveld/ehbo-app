@@ -24,10 +24,12 @@ onMounted(async () => {
   <main class="screen tight">
     <header class="page-header">
       <RouterLink :to="back" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
-      <div>
+      <div class="titles">
         <span v-if="eyebrow" class="eyebrow">{{ eyebrow }}</span>
         <h1>{{ title }}</h1>
       </div>
+      <!-- Rechtsboven, bijv. "Wijzigen". -->
+      <slot name="action" />
     </header>
 
     <p v-if="error" class="note warn" role="alert">{{ error }}</p>
@@ -45,4 +47,5 @@ onMounted(async () => {
 
 <style scoped>
 .body { padding-top: 8px; }
+.titles { flex-grow: 1; min-width: 0; }
 </style>
