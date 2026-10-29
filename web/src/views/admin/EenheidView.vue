@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { formatPhone, type UnitData, type UnitMobility } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
+import { useDirty } from '../../composables/useDirty.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 
@@ -21,6 +22,9 @@ const MOBILITY: { value: UnitMobility; label: string }[] = [
 
 const form = reactive<UnitData>({ name: '', kind: 'vast', mobility: null, postId: null, hasAed: false, members: [] });
 const loaded = ref(false);
+// Een nieuwe post, eenheid of loop is nog niet opgeslagen; een bestaande alleen als er iets gewijzigd is.
+const { dirty, markClean } = useDirty(() => form);
+const canSave = computed(() => isNew.value || dirty.value);
 watchEffect(() => {
   if (loaded.value || !admin.state) return;
   if (unit.value) {
@@ -29,6 +33,7 @@ watchEffect(() => {
     form.name = `Team ${admin.state.units.length + 1}`;
     form.members = [{ name: '', phone: '' }];
   }
+  markClean();
   loaded.value = true;
 });
 
@@ -121,7 +126,7 @@ async function remove() {
 
     <template #footer>
       <p v-if="save.error.value" class="error-text" role="alert">{{ save.error.value }}</p>
-      <button class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !unit)" @click="submit">Opslaan</button>
+      <button v-if="canSave" class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !unit)" @click="submit">Opslaan</button>
       <button v-if="!isNew && unit" class="btn link danger-link" @click="remove">Eenheid verwijderen</button>
     </template>
   </AdminPage>

@@ -4,17 +4,20 @@ import { ref } from 'vue';
 import { formatPhone, type EmergencyNumber } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
+import { useDirty } from '../../composables/useDirty.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 
 const admin = useAdminStore();
 const save = useSave();
+const { dirty, markClean } = useDirty(() => draft.value);
 const draft = ref<EmergencyNumber[] | null>(null);
 
 const edit = () => {
   draft.value = admin.state!.emergencyNumbers.length
     ? admin.state!.emergencyNumbers.map((n) => ({ ...n, number: formatPhone(n.number) }))
     : [{ label: 'Spoedeisende Hulp', number: '' }, { label: 'Huisartsenpost', number: '' }];
+  markClean();
 };
 async function submit() {
   const entries = draft.value!.filter((n) => n.label.trim() && n.number.trim());
@@ -48,9 +51,10 @@ async function submit() {
 
     <template v-if="draft" #footer>
       <p v-if="save.error.value" class="error-text" role="alert">{{ save.error.value }}</p>
-      <div class="row-2">
-        <button class="btn" @click="draft = null">Annuleren</button>
-        <button class="btn primary short" :disabled="save.busy.value" @click="submit">Opslaan</button>
+      <!-- Opslaan alleen als er iets gewijzigd is; anders alleen terug. -->
+      <div :class="{ 'row-2': dirty }">
+        <button class="btn" @click="draft = null">{{ dirty ? 'Annuleren' : 'Klaar' }}</button>
+        <button v-if="dirty" class="btn primary short" :disabled="save.busy.value" @click="submit">Opslaan</button>
       </div>
     </template>
   </AdminPage>

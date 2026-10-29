@@ -4,6 +4,7 @@ import { computed, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import type { RunData } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
+import { useDirty } from '../../composables/useDirty.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 
@@ -15,10 +16,14 @@ const run = computed(() => admin.state?.runs.find((r) => r.id === Number(props.i
 
 const form = reactive<RunData & { distanceText: string }>({ name: '', distanceKm: null, distanceText: '', discipline: 'lopen + wandelen', date: null, startTime: null });
 const loaded = ref(false);
+// Een nieuwe post, eenheid of loop is nog niet opgeslagen; een bestaande alleen als er iets gewijzigd is.
+const { dirty, markClean } = useDirty(() => form);
+const canSave = computed(() => isNew.value || dirty.value);
 watchEffect(() => {
   if (loaded.value || !admin.state) return;
   if (run.value) Object.assign(form, run.value, { distanceText: run.value.distanceKm?.toLocaleString('nl-NL') ?? '' });
   else form.date = admin.state.event.startDate;
+  markClean();
   loaded.value = true;
 });
 
@@ -102,7 +107,7 @@ async function onFile(event: Event) {
 
     <template #footer>
       <p v-if="save.error.value" class="error-text" role="alert">{{ save.error.value }}</p>
-      <button class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !run)" @click="submit">Opslaan</button>
+      <button v-if="canSave" class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !run)" @click="submit">Opslaan</button>
       <button v-if="!isNew && run" class="btn link danger-link" @click="remove">Loop verwijderen</button>
     </template>
   </AdminPage>

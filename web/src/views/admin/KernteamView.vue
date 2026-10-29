@@ -4,14 +4,19 @@ import { ref } from 'vue';
 import { formatPhone, type CoreTeamEntry } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
+import { useDirty } from '../../composables/useDirty.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 
 const admin = useAdminStore();
 const save = useSave();
+const { dirty, markClean } = useDirty(() => draft.value);
 const draft = ref<CoreTeamEntry[] | null>(null);
 
-const edit = () => { draft.value = admin.state!.coreTeam.map((c) => ({ ...c, phone: c.phone ? formatPhone(c.phone) : '' })); };
+const edit = () => {
+  draft.value = admin.state!.coreTeam.map((c) => ({ ...c, phone: c.phone ? formatPhone(c.phone) : '' }));
+  markClean();
+};
 async function submit() {
   const entries = draft.value!.filter((c) => c.function.trim()).map((c) => ({ ...c, phone: c.phone?.trim() || null }));
   if (await save.run(() => admin.saveCoreTeam(entries))) draft.value = null;
@@ -52,9 +57,10 @@ async function submit() {
 
     <template v-if="draft" #footer>
       <p v-if="save.error.value" class="error-text" role="alert">{{ save.error.value }}</p>
-      <div class="row-2">
-        <button class="btn" @click="draft = null">Annuleren</button>
-        <button class="btn primary short" :disabled="save.busy.value" @click="submit">Opslaan</button>
+      <!-- Opslaan alleen als er iets gewijzigd is; anders alleen terug. -->
+      <div :class="{ 'row-2': dirty }">
+        <button class="btn" @click="draft = null">{{ dirty ? 'Annuleren' : 'Klaar' }}</button>
+        <button v-if="dirty" class="btn primary short" :disabled="save.busy.value" @click="submit">Opslaan</button>
       </div>
     </template>
   </AdminPage>

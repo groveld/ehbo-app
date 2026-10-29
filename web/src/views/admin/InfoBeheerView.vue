@@ -4,6 +4,7 @@ import { reactive, ref, watchEffect } from 'vue';
 import { DEFAULT_INFO, INFO_SECTIONS_MAX, type InfoSection } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
+import { useDirty } from '../../composables/useDirty.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 
@@ -12,6 +13,7 @@ const form = reactive<{ sections: InfoSection[]; policy: string; contact: string
 const loaded = ref(false);
 const saved = ref(false);
 const { busy, error, run } = useSave();
+const { dirty, markClean } = useDirty(() => form);
 
 watchEffect(() => {
   if (loaded.value || !admin.state) return;
@@ -19,6 +21,7 @@ watchEffect(() => {
   form.sections = (info.sections ?? DEFAULT_INFO).map((s) => ({ ...s }));
   form.policy = info.policy ?? '';
   form.contact = info.contact ?? '';
+  markClean();
   loaded.value = true;
 });
 
@@ -32,11 +35,13 @@ const move = (i: number, delta: number) => {
 async function save() {
   saved.value = false;
   saved.value = await run(() => admin.saveInfo({ sections: form.sections, policy: form.policy || null, contact: form.contact || null }));
+  if (saved.value) markClean();
 }
 async function reset() {
   if (!confirm('Terug naar de standaardtekst? Je eigen teksten gaan verloren.')) return;
   if (await run(() => admin.saveInfo({ sections: null, policy: form.policy || null, contact: form.contact || null }))) {
     form.sections = DEFAULT_INFO.map((s) => ({ ...s }));
+    markClean();
     saved.value = true;
   }
 }
@@ -77,10 +82,11 @@ async function reset() {
       <RouterLink :to="{ name: 'info' }" class="add-link">Bekijk de info-pagina</RouterLink>
     </template>
 
-    <template #footer>
+    <!-- Opslaan alleen als er iets gewijzigd is. -->
+    <template v-if="dirty || error || saved" #footer>
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-      <p v-else-if="saved" class="small" role="status">Opgeslagen.</p>
-      <button class="btn primary" :disabled="busy" @click="save">Opslaan</button>
+      <p v-else-if="saved && !dirty" class="small" role="status">Opgeslagen.</p>
+      <button v-if="dirty" class="btn primary" :disabled="busy" @click="save">Opslaan</button>
     </template>
   </AdminPage>
 </template>
