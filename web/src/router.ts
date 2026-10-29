@@ -37,9 +37,7 @@ export const router = createRouter({
     { path: '/start', name: 'start', component: () => import('./views/MenuView.vue'), meta: { staff: true } },
     { path: '/menu', name: 'menu', component: () => import('./views/MenuView.vue'), meta: { staff: true } },
     // Overzicht: de tabs van de tabbalk. De postenlijst staat onder de kaart.
-    { path: '/overzicht', redirect: { name: 'kaart' } },
     { path: '/overzicht/kaart', name: 'kaart', component: () => import('./views/overzicht/KaartView.vue'), meta: { staff: true } },
-    { path: '/overzicht/posten', redirect: { name: 'kaart' } },
     { path: '/overzicht/verzoeken', name: 'verzoeken', component: () => import('./views/overzicht/VerzoekenTab.vue'), meta: { staff: true } },
     { path: '/overzicht/contacten', name: 'contacten', component: () => import('./views/overzicht/ContactenTab.vue'), meta: { staff: true } },
     { path: '/post/:id', name: 'post', component: () => import('./views/PostDetailView.vue'), props: true, meta: { staff: true } },
