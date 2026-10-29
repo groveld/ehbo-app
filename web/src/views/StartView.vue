@@ -2,7 +2,6 @@
 // Menu: naar je eigen startscherm (stand-by of post), het overzicht, beheer, meldingen, navigatie-app en afmelden.
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import Call112 from '../components/Call112.vue';
 import Icon from '../components/Icon.vue';
 import { getNavApp, NAV_APPS, setNavApp, type NavApp } from '../navigate.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -72,9 +71,6 @@ async function logout() {
     </div>
 
     <button class="btn link" @click="logout">Afmelden</button>
-
-    <div class="grow" />
-    <Call112 />
   </main>
 </template>
 

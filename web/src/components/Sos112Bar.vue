@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Donkere balk met 112, zoals op het poststartscherm en bij het EHBO-verzoek. De app vervangt 112 nooit.
+// Donkere balk met 112, bij het EHBO-verzoek. De app vervangt 112 nooit.
 withDefaults(defineProps<{ text?: string }>(), { text: 'Levensgevaar? Bel eerst 112' });
 </script>
 

@@ -4,7 +4,7 @@ Context for Claude (and humans) working in this repo. Read this first, then `doc
 
 ## What this is
 
-A PWA for first-aid (EHBO) coordination at events. First use: **Silvesterloop Poppenwier, Thursday 31 December 2026** (Kidsrun + 5/10/21 km run/walk, start at Eetcafé De Trilker, ~15 posts, ~20 staff, 2–3 EHBO units).
+A PWA for coordinating events: logistics (posts, requests, contacts) and first aid (EHBO), possibly security later. First use: **Silvesterloop Poppenwier, Thursday 31 December 2026** (Kidsrun + 5/10/21 km run/walk, start at Eetcafé De Trilker, ~15 posts, ~20 staff, 2–3 EHBO units).
 
 - Staff install the app on their home screen and log in with their phone number. Participants open it without installing and only see route, posts and start times.
 - Everyone on staff sees all posts and contacts and can call or navigate to them.
@@ -75,7 +75,7 @@ Where the main pieces live:
   - Secondary: 48 px.
   - Icon button: 44 × 44.
   - Two buttons side by side are always the same height.
-- **112** is always at the bottom of the screen, in the same place. The app never replaces 112.
+- **112** is only shown where it matters: the EHBO screens (request, follow-up, stand-by, call, no signal), Overzicht › Contacten and the participant screen. Where it is shown it sits at the bottom, in the same place. The app never replaces 112.
 - The request tiles on the post home screen are deliberately large; this is the one exception to the button sizes.
 - **"Post sluiten"** is a small, subtle red button at the top right, so it can't be confused with closing the screen.
 - Phone frame 390 × 844. Check every new screen against `docs/design/screens/`.

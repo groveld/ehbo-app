@@ -8,7 +8,7 @@ Bijbehorend: het schermontwerp in [`design/`](design/index.html) (origineel: [ar
 
 De app brengt bij een hulpvraag op een post binnen enkele seconden de dichtstbijzijnde EHBO'er in actie, en geeft iedere medewerker het volledige overzicht om elkaar te bellen of naar elkaar toe te rijden. Eerste inzet: de Silvesterloop Poppenwier op donderdag 31 december 2026, met een Kidsrun en 5, 10 en 21 km hardlopen en wandelen, start bij Eetcafé De Trilker en honderden deelnemers (ca. 15 posten, 20 medewerkers, 2–3 EHBO-eenheden). De opzet is modulair, zodat dezelfde app ook een groot evenement aankan.
 
-- **Tijdelijk en ondersteunend.** De app vervangt 112 niet. Bij levensgevaar bel je eerst 112; die knop staat op elk scherm.
+- **Tijdelijk en ondersteunend.** De app vervangt 112 niet. Bij levensgevaar bel je eerst 112; die knop staat op de EHBO-schermen, bij de contacten en op het deelnemerscherm.
 - **Simpel.** Geen accounts of wachtwoorden. Medewerkers melden zich aan met hun eigen telefoonnummer.
 - **Altijd bruikbaar.** Er is overal 4G/5G. De app praat met een eigen server, maar kaart, contacten, bellen en navigeren werken ook zonder bereik.
 - **Als een echte app.** Een webapp (PWA) op een eigen subdomein, die verplicht op het beginscherm wordt gezet. Geen app store nodig.
@@ -68,7 +68,7 @@ Medewerkers ontstaan vanzelf: wie je als contact bij een post of functie zet, ka
 
 Een persoon is één telefoonnummer en kan bij meerdere posten of functies staan.
 
-**Post open of dicht.** De postverantwoordelijke zet zijn post open bij aankomst en dicht bij vertrek, met één knop. Een beheerder kan dit voor elke post doen, voor wie minder technisch is. Een dichte post staat grijs op de kaart, kan geen verzoek doen, en een dichte EHBO-post telt niet mee als beschikbaar. Zo ziet de evenementcoördinator in één oogopslag welke posten bemand zijn. Bij een vaste EHBO-eenheid zijn post open/dicht en in dienst/uit dienst hetzelfde: één knop. Rechtsboven op het poststartscherm staat een kleine knop Sluiten, zodat 112 altijd op dezelfde plek onderaan blijft.
+**Post open of dicht.** De postverantwoordelijke zet zijn post open bij aankomst en dicht bij vertrek, met één knop. Een beheerder kan dit voor elke post doen, voor wie minder technisch is. Een dichte post staat grijs op de kaart, kan geen verzoek doen, en een dichte EHBO-post telt niet mee als beschikbaar. Zo ziet de evenementcoördinator in één oogopslag welke posten bemand zijn. Bij een vaste EHBO-eenheid zijn post open/dicht en in dienst/uit dienst hetzelfde: één knop. Rechtsboven op het poststartscherm staat een kleine knop Sluiten, zodat hij niet te verwarren is met het scherm sluiten.
 
 **EHBO-eenheden aanmaken: vast of mobiel.** De beheerder maakt in *EHBO-eenheden* zoveel eenheden aan als nodig; een eenheid van één persoon kan ook.
 
@@ -210,7 +210,7 @@ Alleen de oproep loopt via de server en de push-diensten; kaart en contacten sta
 
 - Gekleurd kopblok bovenaan (oproep, verstuurd, onderweg, stand-by, geen bereik): altijd 140 px hoog, tekst bovenaan uitgelijnd zoals op alle andere schermen, titel 26 px.
 - Hoofdknop: 56 px hoog, 16 px vet. Tweede knop: 48 px. Icoonknop (bellen, terug): 44 × 44 px. Twee knoppen naast elkaar zijn altijd even hoog.
-- 112 staat altijd onderaan het scherm, op dezelfde plek.
+- 112 staat alleen waar het ertoe doet (EHBO-schermen, contacten, deelnemer), en daar altijd onderaan op dezelfde plek.
 - Uitzondering: de verzoek-tegels op het poststartscherm zijn bewust groot.
 - Post sluiten is een kleine, subtiel rode knop rechtsboven, zodat hij niet verward wordt met "scherm sluiten".
 
@@ -371,6 +371,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Post open/dicht door de beheerder (28 okt) | In het postdetail (3.5) staat voor iedereen of de post open is; de postverantwoordelijke en elke beheerder kunnen hem daar ook open of dicht zetten |
 | Volgorde contacten (29 okt) | In Overzicht › Contacten staan de noodnummers bovenaan (112 eerst), dan Organisatie (het kernteam), EHBO en de posten. De status in de kop toont alleen "Offline klaar"; locatie is al afgedwongen bij het instellen |
 | Hardlopen (29 okt) | De soort van een loop is hardlopen, wandelen of hardlopen + wandelen. "Lopen" als soort verviel: in gewone taal is dat hetzelfde als wandelen. Bestaande lopen zijn omgezet |
+| 112 alleen waar relevant (29 okt) | De app is een coördinatie-app voor logistiek en EHBO geworden. 112 staat daarom alleen bij EHBO: het EHBO-verzoek, de melding en terugmelding, stand-by, de oproep en geen bereik; verder in Overzicht › Contacten en op het deelnemerscherm. Welkom, installeren, het menu en het poststartscherm hebben geen 112-knop meer; het EHBO-verzoek vanaf de post zegt nog steeds "bij levensgevaar eerst 112" |
 
 **Nog open**
 
