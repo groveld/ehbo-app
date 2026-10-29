@@ -8,6 +8,7 @@ import { layers, namedFlavor } from '@protomaps/basemaps';
 // MapLibre laadt zijn worker als los bestand; Vite ziet dat adres niet vanzelf, dus geven we het mee.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { Bbox, EventPackage, LngLat, PackagePost } from '@ehbo/shared';
+import { iconSvg, postTypeIcon } from '../icons.ts';
 import type { Ambulance } from '../posts.ts';
 import { assetUrl, tileUrl } from '../stores/package.ts';
 
@@ -79,12 +80,18 @@ function markerElement(post: PackagePost) {
   el.type = 'button';
   const alert = props.alertPostIds.includes(post.id);
   el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${post.id === props.focusPostId ? ' focus' : ''}${alert ? ' alert' : ''}`;
-  el.style.background = alert ? '#C8261E' : props.closedPostIds.includes(post.id) ? '#A8A59C' : (type?.color ?? '#6B7079');
+  // Altijd de kleur van de soort post; een dichte post is half doorzichtig, een post met een open oproep rood.
+  el.style.background = alert ? '#C8261E' : (type?.color ?? '#6B7079');
+  if (!alert && props.closedPostIds.includes(post.id)) el.classList.add('closed');
+  const icon = postTypeIcon(type?.key);
   el.setAttribute('aria-label', post.name);
   if (type?.key === 'ehbo') el.innerHTML = CROSS;
   else {
-    el.textContent = type?.letter ?? '';
-    if ((type?.letter.length ?? 0) > 1) el.classList.add('small');
+    if (icon) el.innerHTML = iconSvg(icon, 16, 2.4);
+    else {
+      el.textContent = type?.letter ?? '';
+      if ((type?.letter.length ?? 0) > 1) el.classList.add('small');
+    }
     // Een EHBO-eenheid heeft hier haar standplaats: klein groen kruisje op de rand.
     if (props.pkg.units.some((u) => u.postId === post.id)) el.insertAdjacentHTML('beforeend', `<span class="ehbo-dot">${CROSS}</span>`);
   }
@@ -219,6 +226,7 @@ onBeforeUnmount(() => {
 }
 .event-map :deep(.post-marker.small) { font-size: 9px; letter-spacing: -0.02em; }
 .event-map :deep(.post-marker.ehbo) { border-radius: 8px; }
+.event-map :deep(.post-marker.closed) { opacity: .55; }
 .event-map :deep(.post-marker) { position: relative; }
 .event-map :deep(.ehbo-dot) {
   position: absolute; right: -6px; bottom: -6px; width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid #FFFFFF;
