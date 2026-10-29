@@ -50,17 +50,17 @@ const banner = computed(() => {
         <RouterLink v-if="banner" :to="{ name: 'meldingen' }" class="banner"><Icon name="bell" :size="16" />{{ banner }}</RouterLink>
       </div>
 
-      <div class="chips" role="group" aria-label="Filter op soort post">
-        <button class="chip-btn" :aria-pressed="filter === null" @click="filter = null">Alle {{ store.pkg.posts.length }}</button>
-        <button v-for="c in chips" :key="c.id" class="chip-btn" :aria-pressed="filter === c.id" @click="filter = filter === c.id ? null : c.id">
-          {{ c.label }} {{ c.count }}
-        </button>
+      <!-- Zoeken en filteren op één regel: het zoekveld, en rechts de soort post. -->
+      <div v-if="store.pkg.posts.length" class="find">
+        <label class="search">
+          <Icon name="search" :size="18" />
+          <input v-model="query" class="input" type="search" placeholder="Zoek post of km" aria-label="Zoek een post">
+        </label>
+        <select v-model="filter" class="input type" aria-label="Soort post">
+          <option :value="null">Alle ({{ store.pkg.posts.length }})</option>
+          <option v-for="c in chips" :key="c.id" :value="c.id">{{ c.label }} ({{ c.count }})</option>
+        </select>
       </div>
-
-      <label v-if="store.pkg.posts.length" class="search">
-        <Icon name="search" :size="18" />
-        <input v-model="query" class="input" type="search" placeholder="Zoek op naam of km-punt" aria-label="Zoek een post">
-      </label>
 
       <div class="stack gap-10">
         <PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" />
@@ -78,14 +78,9 @@ const banner = computed(() => {
   position: absolute; left: 12px; top: 12px; right: 12px; z-index: 2; display: flex; align-items: center; gap: 8px; width: fit-content; max-width: calc(100% - 24px);
   padding: 8px 12px; border-radius: 12px; background: var(--danger); color: #FFFFFF; font-size: 13px; font-weight: 600; text-decoration: none;
 }
-.chips { display: flex; gap: 8px; overflow-x: auto; padding: 14px 16px; margin: 0 -16px; scrollbar-width: none; }
-.chips::-webkit-scrollbar { display: none; }
-.chip-btn {
-  flex-shrink: 0; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);
-  font: 600 14px var(--sans); color: var(--ink); cursor: pointer; white-space: nowrap;
-}
-.search { position: relative; display: block; margin-bottom: 12px; color: var(--muted); }
+.find { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin: 12px 0; }
+.search { position: relative; display: block; color: var(--muted); }
 .search svg { position: absolute; left: 12px; top: 13px; }
 .search .input { padding-left: 38px; }
-.chip-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #FFFFFF; }
+.type { width: auto; max-width: 130px; padding: 0 8px 0 12px; appearance: auto; font-size: 14px; font-weight: 600; }
 </style>
