@@ -6,6 +6,7 @@ import { useLiveStore } from './stores/live.ts';
 import { usePackageStore } from './stores/package.ts';
 import { usePushStore } from './stores/push.ts';
 import { useSessionStore } from './stores/session.ts';
+import IntroSplash from './components/IntroSplash.vue';
 import TabBar from './components/TabBar.vue';
 import { applyTheme } from './theme.ts';
 
@@ -20,6 +21,9 @@ const router = useRouter();
 // en niet op de afdrukpagina van het rapport.
 const NO_TABS = ['herkend', 'toestemmingen', 'beheer-rapport-afdrukken'];
 const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info') && !NO_TABS.includes(String(route.name)));
+
+// Intro bij elk openen zonder aanmelding (deelnemers, en medewerkers voor het aanmelden); niet als je al aangemeld bent.
+const intro = ref(!session.me);
 
 // Kleuren en naam van het evenement; zonder bereik uit de bewaarde gegevens.
 watch(() => session.event, applyTheme, { immediate: true });
@@ -67,6 +71,7 @@ onMounted(() => {
   <div v-if="live.state?.testMode && route.name !== 'beheer-rapport-afdrukken'" class="test-banner" role="status">Testmodus · oproepen zijn proef</div>
   <div :class="{ 'with-tabs': tabs }"><RouterView /></div>
   <TabBar v-if="tabs" />
+  <IntroSplash v-if="intro" @done="intro = false" />
 </template>
 
 <style scoped>

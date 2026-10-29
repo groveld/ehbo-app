@@ -3,10 +3,12 @@
 import {
   INCIDENT_WHAT,
   POSITION_MAX_AGE_MS,
+  awayPostIds,
   distanceKm,
   formatKm,
   type CloseIncident,
   type Dispatch,
+  type EhboStatus,
   type DispatchReason,
   type IncidentDetails,
   type IncidentEvent,
@@ -201,6 +203,19 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     };
   }
 
+  function liveUnits(): LiveUnit[] {
+    const busy = busyUnits();
+    return units().map((u) => {
+      const fix = u.kind === 'mobiel' ? positions.get(u.id) : undefined;
+      return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null };
+    });
+  }
+
+  /** Voor deelnemers: welke standplaatsen nu leeg zijn. Zonder de oproepen, dus licht genoeg om vaak op te vragen. */
+  function ehboStatus(): EhboStatus {
+    return { awayPostIds: awayPostIds(units(), liveUnits(), [...posts().values()], now().getTime()) };
+  }
+
   function state(): LiveState {
     const eventsById = new Map<number, IncidentEvent[]>();
     for (const e of all('SELECT incident_id, at, type, unit_id, text FROM incident_events ORDER BY id')) {
@@ -208,15 +223,11 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       list.push({ at: e.at as string, type: e.type as IncidentEventType, unitId: e.unit_id as number | null, text: e.text as string });
       eventsById.set(e.incident_id as number, list);
     }
-    const busy = busyUnits();
     return {
       version,
       serverTime: iso(),
       incidents: all('SELECT * FROM incidents ORDER BY id DESC').map((row) => toLive(row, eventsById)),
-      units: units().map((u): LiveUnit => {
-        const fix = u.kind === 'mobiel' ? positions.get(u.id) : undefined;
-        return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null };
-      }),
+      units: liveUnits(),
       posts: [...posts().values()].map((p) => ({ id: p.id, isOpen: p.isOpen })),
       requests: requests(),
       testMode: db.testMode(),
@@ -621,6 +632,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   return {
     state,
+    ehboStatus,
     subscribe(listener: (state: LiveState) => void) {
       listeners.add(listener);
       return () => { listeners.delete(listener); };

@@ -58,9 +58,8 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await ehbo.getByLabel('Korte notitie').fill('Gekoeld en drinken gegeven');
   await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
-  // De oproepen van vandaag staan ingeklapt.
-  await ehbo.getByText(/^Vandaag · \d+ oproep/).click();
-  await expect(ehbo.locator('.today').filter({ hasText: 'Waterpost 3 · brug' }).filter({ hasText: 'Onwel' }).first()).toBeVisible();
+  await ehbo.getByRole('link', { name: /Mijn inzetten/ }).click();
+  await expect(ehbo.locator('.deployment').filter({ hasText: 'Waterpost 3 · brug' }).filter({ hasText: 'Onwel' }).first()).toBeVisible();
 
   await expect(post.getByRole('heading', { name: 'Klaar' })).toBeVisible({ timeout: 10_000 });
   await expect(post.getByText('Ter plaatse geholpen')).toBeVisible();

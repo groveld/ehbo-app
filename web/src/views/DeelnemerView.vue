@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // 2.8 · Deelnemer, en het beginscherm van de app zonder aanmelding: naam van het evenement, route, starttijden met favoriete loop
 // vooraan, de posten langs de route, Bel EHBO en rechtsboven Aanmelden voor medewerkers.
-import { computed, onMounted, ref } from 'vue';
-import { formatKm, telHref } from '@ehbo/shared';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { formatKm, telHref, type EhboStatus } from '@ehbo/shared';
+import { api } from '../api.ts';
 import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
@@ -12,9 +13,30 @@ import { usePackageStore } from '../stores/package.ts';
 
 const store = usePackageStore();
 const favorite = ref<number | null>(load('ehbo.favoriteRun'));
+/** Standplaatsen waar de mobiele EHBO nu niet is: grijs kruisje. Zonder bereik blijft de laatste stand staan. */
+const awayPostIds = ref<number[]>([]);
 // Medewerkers zetten de app eerst op het beginscherm; in de browser kan aanmelden alleen met ?browser=1.
 const staffRoute = canUseAsStaff ? { name: 'aanmelden' } : { name: 'installeren' };
-onMounted(() => store.refresh());
+// Elke halve minuut, zolang de pagina in beeld is; mobiele eenheden delen hun positie elke minuut.
+async function refreshEhbo() {
+  if (document.visibilityState !== 'visible') return;
+  try {
+    awayPostIds.value = (await api<EhboStatus>('/api/ehbo-status')).awayPostIds;
+  } catch {
+    // Geen bereik.
+  }
+}
+let timer: ReturnType<typeof setInterval> | undefined;
+onMounted(() => {
+  store.refresh();
+  void refreshEhbo();
+  timer = setInterval(refreshEhbo, 30_000);
+  document.addEventListener('visibilitychange', refreshEhbo);
+});
+onBeforeUnmount(() => {
+  clearInterval(timer);
+  document.removeEventListener('visibilitychange', refreshEhbo);
+});
 
 function toggleFavorite(id: number) {
   favorite.value = favorite.value === id ? null : id;
@@ -42,7 +64,7 @@ const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (
 
     <template v-if="store.pkg">
       <div class="map">
-        <EventMap :pkg="store.pkg" :highlight-run-id="favorite" />
+        <EventMap :pkg="store.pkg" :highlight-run-id="favorite" :away-post-ids="awayPostIds" />
       </div>
 
       <section v-if="runs.length" class="stack gap-8 section">

@@ -1,4 +1,6 @@
 // EHBO-oproepen: van verzoek tot afronden, en de live stand die alle medewerkers zien.
+import type { UnitKind } from './event.ts';
+import { distanceKm } from './geo.ts';
 import type { LiveRequest } from './request.ts';
 
 /** Gemeld (op de telefoon) → verstuurd → geaccepteerd → ter plaatse → afgerond, of ingetrokken. */
@@ -141,5 +143,31 @@ export interface LiveState {
 export const LIVE_HEARTBEAT_MS = 30_000;
 /** Een mobiele eenheid deelt elke minuut haar positie; ouder dan dit telt niet meer. */
 export const POSITION_MAX_AGE_MS = 3 * 60_000;
+/** Binnen deze afstand van haar standplaats is een mobiele eenheid thuis. */
+export const HOME_RADIUS_KM = 0.05;
+
+/**
+ * Onderweg: een mobiele eenheid in dienst met een recente GPS-positie, verder dan 50 m van haar standplaats (of zonder standplaats).
+ * Zonder recente positie telt ze als thuis. Een vaste eenheid is altijd op haar post.
+ */
+export function isAway(unit: { kind: UnitKind }, live: LiveUnit | undefined, base: { lat: number | null; lng: number | null } | undefined, now: number) {
+  if (unit.kind !== 'mobiel' || !live?.position || live.availability === 'uit_dienst') return false;
+  if (now - new Date(live.position.at).getTime() > POSITION_MAX_AGE_MS) return false;
+  return !(base?.lat != null && base.lng != null && distanceKm([live.position.lng, live.position.lat], [base.lng, base.lat]) <= HOME_RADIUS_KM);
+}
+
+/** Posten waar EHBO hoort maar nu niemand is: elke eenheid met die post als standplaats is onderweg. Voor een grijs kruisje. */
+export function awayPostIds(
+  units: { id: number; kind: UnitKind; postId: number | null }[], live: LiveUnit[], posts: { id: number; lat: number | null; lng: number | null }[], now: number,
+): number[] {
+  const away = new Set(units.filter((u) => isAway(u, live.find((l) => l.id === u.id), posts.find((p) => p.id === u.postId), now)).map((u) => u.id));
+  const postIds = new Set(units.flatMap((u) => (u.postId !== null ? [u.postId] : [])));
+  return [...postIds].filter((id) => units.filter((u) => u.postId === id).every((u) => away.has(u.id)));
+}
+
+/** GET /api/ehbo-status: voor iedereen, ook deelnemers. Alleen welke posten nu zonder EHBO zijn; geen posities of namen. */
+export interface EhboStatus {
+  awayPostIds: number[];
+}
 /** Zo vaak deelt een mobiele eenheid in dienst haar positie; bij een statuswissel meteen. */
 export const POSITION_SHARE_MS = 60_000;

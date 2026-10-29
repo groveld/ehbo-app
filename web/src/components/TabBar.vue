@@ -27,7 +27,7 @@ const COLORS = { ehbo: '#C8261E', kaart: '#0E7C86', meldingen: '#A16207', contac
 /** Het kruis van Stand-by in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
 const STATUS = { vrij: '#0A7D4F', pauze: '#C8261E', uit_dienst: 'var(--ink)' } as const;
 
-const EHBO = ['stand-by', 'oproep', 'afronden'];
+const EHBO = ['stand-by', 'inzetten', 'oproep', 'afronden'];
 const MENU = ['menu', 'info', 'controle'];
 
 /** Bij welke post het huidige scherm hoort (startscherm, verzoek, melding, aanvraag of geen bereik), of null. */
@@ -53,7 +53,7 @@ const tabs = computed<Tab[]>(() => {
   const name = String(route.name ?? '');
   const tabs: Tab[] = [];
   if (me.assignments.some((a) => a.kind === 'ehbo')) {
-    tabs.push({ key: 'ehbo', to: { name: 'stand-by' }, label: 'Stand-by', icon: 'ehbo', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
+    tabs.push({ key: 'ehbo', to: { name: 'stand-by' }, label: 'Stand-by', icon: 'ehboFilled', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
   }
   const posts = me.assignments.filter((a) => a.kind === 'post');
   for (const a of posts) {

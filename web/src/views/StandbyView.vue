@@ -5,9 +5,9 @@ import { UNIT_AVAILABILITY, formatPhone, telHref, type UnitAvailability } from '
 import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentSummary, unitOf } from '../incidents.ts';
+import { incidentSummary, myDeployments, unitOf } from '../incidents.ts';
 import { coordinatorOf, coreTeamMember, kmLabel } from '../posts.ts';
-import { isOpen, useLiveStore } from '../stores/live.ts';
+import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
 
@@ -53,7 +53,7 @@ const othersFree = computed(() => {
   const others = (live.state?.units ?? []).filter((u) => u.id !== unitId.value);
   return { free: others.filter((u) => u.availability === 'vrij' && u.incidentId === null).length, total: others.length };
 });
-const today = computed(() => live.incidents.filter((i) => !isOpen(i) && i.dispatches.some((d) => d.unitId === unitId.value && d.acceptedAt)));
+const today = computed(() => (unitId.value !== null ? myDeployments(live.incidents, unitId.value) : []));
 const ehboCoordinator = computed(() => coreTeamMember(store.pkg, 'EHBO-coördinator'));
 const coordinator = computed(() => coordinatorOf(store.pkg));
 /** De volgende in de lijn: de EHBO-coördinator, of de evenementcoördinator als je zelf EHBO-coördinator bent. */
@@ -97,20 +97,14 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
         <div class="list-row"><span class="grow">Andere eenheden beschikbaar</span><strong>{{ othersFree.free }} van {{ othersFree.total }}</strong></div>
       </div>
 
-      <!-- De oproepen van vandaag ingeklapt, zodat de status en de belknoppen in beeld blijven. -->
-      <details v-if="today.length" class="history gap-top">
-        <summary class="section-title">Vandaag · {{ today.length }} {{ today.length === 1 ? 'oproep' : 'oproepen' }}<Icon name="forward" :size="16" class="chevron" /></summary>
-        <div class="list">
-          <RouterLink v-for="i in today" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="list-row today">
-            <span class="main">
-              <span class="title-line">{{ store.postById.get(i.postId)?.name }}</span>
-              <span class="sub">{{ clock(i.reportedAt) }} · {{ incidentSummary(i) }}</span>
-            </span>
-            <span class="tag" :class="{ ok: i.status === 'afgerond' }">{{ i.status === 'afgerond' ? 'afgerond' : 'ingetrokken' }}</span>
-            <Icon name="forward" :size="16" />
-          </RouterLink>
-        </div>
-      </details>
+      <!-- De oproepen van vandaag op een eigen scherm, zodat de status en de belknoppen in beeld blijven. -->
+      <div class="list history">
+        <RouterLink :to="{ name: 'inzetten' }" class="list-row">
+          <span class="grow">Mijn inzetten</span>
+          <strong>{{ today.length || 'nog geen' }}</strong>
+          <Icon name="forward" :size="16" />
+        </RouterLink>
+      </div>
 
       <div class="grow" />
       <!-- De belknoppen blijven onderaan in beeld, ook als de pagina scrolt. -->
@@ -131,10 +125,8 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 .option.uit_dienst[aria-pressed="true"] { border-color: var(--ink); background: #E8E8EA; color: var(--ink); }
 .facts-list { margin-top: 14px; }
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
-.history summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; list-style: none; cursor: pointer; }
-.history summary::-webkit-details-marker { display: none; }
-.chevron { transition: transform .15s; }
-.history[open] .chevron { transform: rotate(90deg); }
-.today { min-height: 56px; color: var(--ink); text-decoration: none; }
-.form-footer { margin-top: 14px; }
+.history { margin-top: 10px; }
+.history .list-row { gap: 8px; min-height: 50px; font-size: 14px; color: var(--ink); text-decoration: none; }
+/* De onderrand van het scherm telt al; anders staan de knoppen dubbel zo ver van de tabbalk. */
+.form-footer { margin: 14px 0 -16px; }
 </style>

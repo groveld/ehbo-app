@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { LiveIncident, LiveState, NewIncident, PushPayload } from '@ehbo/shared';
+import type { EventPackage, LiveIncident, LiveState, NewIncident, PushPayload } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import type { Schedule } from '../src/calls.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
@@ -337,4 +337,29 @@ test('live stand via SSE: direct de stand, en elke wijziging', async () => {
   assert.equal(second.posts.find((p) => p.id === WATER())?.isOpen, true);
   assert.ok(second.version > first.version);
   await reader.cancel();
+});
+
+test('deelnemers zien welke standplaats leeg is, zonder posities of namen', async () => {
+  const KRUISING = () => idOf('posts', 'Kruising 4');
+  const status = async () => {
+    const res = await app.inject({ url: '/api/ehbo-status' });
+    assert.equal(res.statusCode, 200, 'ook zonder aanmelding');
+    return res.json();
+  };
+  await onDuty();
+  assert.deepEqual(await status(), { awayPostIds: [] }, 'zonder GPS-positie telt de standplaats');
+
+  // 20 m van Kruising 4 (53.1488, 5.8279) is thuis; 1 km verderop is onderweg.
+  await call(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/position`, { lat: 53.14898, lng: 5.8279 });
+  assert.deepEqual(await status(), { awayPostIds: [] });
+  await call(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/position`, { lat: 53.1578, lng: 5.8279 });
+  assert.deepEqual(await status(), { awayPostIds: [KRUISING()] });
+
+  // Een positie ouder dan 3 minuten telt niet meer.
+  clock = new Date(clock.getTime() + 4 * 60_000);
+  assert.deepEqual(await status(), { awayPostIds: [] });
+
+  const pkg = (await app.inject({ url: '/api/package' })).json() as EventPackage;
+  const team2 = pkg.units.find((u) => u.id === TEAM2())!;
+  assert.deepEqual([team2.postId, team2.name, team2.members], [KRUISING(), '', []], 'wel de standplaats, niet wie');
 });
