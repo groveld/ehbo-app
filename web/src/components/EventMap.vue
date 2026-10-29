@@ -225,9 +225,9 @@ onBeforeUnmount(() => {
   color: #FFFFFF; font: 700 12px var(--sans); display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 .event-map :deep(.post-marker.small) { font-size: 9px; letter-spacing: -0.02em; }
+/* Geen position op de markers zelf: MapLibre zet ze absoluut; relatief maken laat ze verschuiven. */
 .event-map :deep(.post-marker.ehbo) { border-radius: 8px; }
 .event-map :deep(.post-marker.closed) { opacity: .55; }
-.event-map :deep(.post-marker) { position: relative; }
 .event-map :deep(.ehbo-dot) {
   position: absolute; right: -6px; bottom: -6px; width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid #FFFFFF;
   background: #0A7D4F; display: flex; align-items: center; justify-content: center;
