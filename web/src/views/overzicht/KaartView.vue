@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
+import { ambulances } from '../../posts.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 
@@ -45,6 +46,7 @@ const banner = computed(() => {
       <div class="map">
         <EventMap
           :pkg="store.pkg" :posts="posts" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
+          :ambulances="ambulances(store.pkg, live.state?.units ?? [], live.serverNow)"
           @select="(id) => router.push({ name: 'post', params: { id } })"
         />
         <RouterLink v-if="banner" :to="{ name: 'meldingen' }" class="banner"><Icon name="bell" :size="16" />{{ banner }}</RouterLink>

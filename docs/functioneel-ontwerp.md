@@ -382,6 +382,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Afronden met pauze (29 okt) | Naast "Afronden & weer beschikbaar" staat "Afronden & pauze" (lunch, wc): de eenheid gaat in dezelfde stap op pauze, zodat er tussendoor geen oproep binnenkomt. Een tik op een pushmelding opent direct de bijbehorende oproep, melding of aanvraag, ook als de app al open is |
 | Beschikbaar en pauze (29 okt) | De knoppen voor de status van een EHBO-eenheid heten Beschikbaar, Pauze en Uit dienst (was Vrij en Even pauze); bij pauze staat in de kop Niet beschikbaar, en overal in de app is het "beschikbare eenheden". De waarden in de code blijven vrij, pauze en uit_dienst |
 | Actief tabblad (29 okt) | De iconen in de tabbalk blijven grijs; het actieve tabblad krijgt een zachte pil in de accentkleur van het evenement. Een post-tab gebruikt de kleur van de soort post, net als de badges op de kaart. Geen vaste kleur per icoon: rood blijft voor alarm (112, oproepen, tellers) |
+| Ambulance op de kaart (29 okt) | Mobiele EHBO-eenheden in dienst staan op de kaart als ambulance op hun laatste GPS-positie, groen als ze beschikbaar zijn en rood als ze met een oproep bezig zijn. Een positie ouder dan 3 minuten wordt niet getoond. De positie staat alleen in het geheugen van de server, nooit in de database. Een post waar een EHBO-eenheid staat (vaste post of standplaats) krijgt op de kaart en in de lijst een klein groen kruisje |
 
 **Nog open**
 

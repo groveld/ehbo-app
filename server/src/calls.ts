@@ -213,7 +213,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       version,
       serverTime: iso(),
       incidents: all('SELECT * FROM incidents ORDER BY id DESC').map((row) => toLive(row, eventsById)),
-      units: units().map((u): LiveUnit => ({ id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId })),
+      units: units().map((u): LiveUnit => {
+        const fix = u.kind === 'mobiel' ? positions.get(u.id) : undefined;
+        return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null };
+      }),
       posts: [...posts().values()].map((p) => ({ id: p.id, isOpen: p.isOpen })),
       requests: requests(),
       testMode: db.testMode(),
@@ -579,6 +582,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const unit = requireUnitMember(me, unitId);
     if (unit.kind !== 'mobiel') return;
     positions.set(unit.id, { lat: position.lat, lng: position.lng, at: now().getTime() });
+    // Iedereen ziet de mobiele eenheid op de kaart meebewegen.
+    changed();
   }
 
   function setPostOpen(me: Me, postId: number, open: boolean) {

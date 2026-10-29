@@ -1,5 +1,5 @@
 // Posten in het evenementpakket: contactpersoon, eenheden, dichtstbijzijnde EHBO.
-import { distanceKm, formatKm, type EventPackage, type LngLat, type PackagePost, type PackageUnit, sameFunction } from '@ehbo/shared';
+import { distanceKm, formatKm, type EventPackage, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, POSITION_MAX_AGE_MS, sameFunction } from '@ehbo/shared';
 
 export const kmLabel = (km: number | null) => (km === null ? null : `km ${formatKm(km)}`);
 export const lngLat = (p: PackagePost): LngLat | null => (p.lat !== null && p.lng !== null ? [p.lng, p.lat] : null);
@@ -10,13 +10,6 @@ export const primaryContact = (post: PackagePost) =>
 
 /** EHBO-eenheden die bij deze post horen: vast op deze post, of mobiel met deze post als standplaats. */
 export const unitsAt = (pkg: EventPackage, postId: number) => pkg.units.filter((u) => u.postId === postId);
-
-/** Tweede regel onder de naam van een post, zoals in het overzicht. */
-export function postSubtitle(pkg: EventPackage, post: PackagePost) {
-  const units = unitsAt(pkg, post.id).map((u) => u.name);
-  const who = units.length ? units.join(', ') : primaryContact(post)?.name;
-  return [kmLabel(post.km), who].filter(Boolean).join(' · ');
-}
 
 export interface UnitDistance {
   unit: PackageUnit;
@@ -44,3 +37,15 @@ export const nearestUnit = (pkg: EventPackage, post: PackagePost) => unitsByDist
 export const coordinatorOf = (pkg: EventPackage | null) => pkg?.coreTeam.find((c) => c.isCoordinator) ?? null;
 /** Kernteamlid met deze functie, bijv. "EHBO-coördinator". */
 export const coreTeamMember = (pkg: EventPackage | null, fn: string) => pkg?.coreTeam.find((c) => sameFunction(c.function, fn)) ?? null;
+
+export interface Ambulance { id: number; name: string; lng: number; lat: number; busy: boolean }
+
+/** Mobiele EHBO-eenheden in dienst met een recente GPS-positie, voor de kaart. */
+export function ambulances(pkg: EventPackage | null, units: LiveUnit[], now: number): Ambulance[] {
+  return units.flatMap((u) => {
+    const unit = pkg?.units.find((x) => x.id === u.id);
+    if (!unit || unit.kind !== 'mobiel' || !u.position || u.availability === 'uit_dienst') return [];
+    if (now - new Date(u.position.at).getTime() > POSITION_MAX_AGE_MS) return [];
+    return [{ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy: u.incidentId !== null }];
+  });
+}
