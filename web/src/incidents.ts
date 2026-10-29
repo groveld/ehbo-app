@@ -1,5 +1,5 @@
 // Weergave van oproepen: korte omschrijving, tijden, reistijd.
-import { INCIDENT_WHAT, type EventPackage, type IncidentDetails, type IncidentPersons, type PackageUnit, type UnitMobility } from '@ehbo/shared';
+import { INCIDENT_WHAT, type EventPackage, type IncidentDetails, type IncidentPersons, type LiveIncident, type PackageUnit, type UnitMobility } from '@ehbo/shared';
 
 const PERSONS: Record<IncidentPersons, string> = { '1': '1 persoon', '2': '2 personen', '3+': '3 of meer personen' };
 
@@ -20,3 +20,7 @@ export function travelMinutes(km: number | null, unit: PackageUnit | undefined) 
 }
 
 export const unitOf = (pkg: EventPackage | null, id: number | null) => (id === null ? undefined : pkg?.units.find((u) => u.id === id));
+
+/** De inzetten van een eenheid: afgeronde of ingetrokken oproepen die ze had aangenomen, nieuwste eerst. */
+export const myDeployments = (incidents: LiveIncident[], unitId: number) =>
+  incidents.filter((i) => (i.status === 'afgerond' || i.status === 'ingetrokken') && i.dispatches.some((d) => d.unitId === unitId && d.acceptedAt));

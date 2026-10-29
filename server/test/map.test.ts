@@ -112,7 +112,9 @@ test('evenementpakket: deelnemers zonder namen en nummers, medewerkers met', asy
   assert.equal(pub.staff, false);
   assert.ok(pub.posts.length > 0);
   assert.doesNotMatch(JSON.stringify({ ...pub, ehboPhone: null }), /\+316|Wim Water|accessRoute/, 'geen persoonsgegevens, alleen het EHBO-nummer');
-  assert.deepEqual([pub.units, pub.coreTeam, pub.emergencyNumbers], [[], [], []]);
+  assert.deepEqual([pub.coreTeam, pub.emergencyNumbers], [[], []]);
+  // Eenheden alleen met hun soort en post (het kruisje op de kaart), zonder naam of leden.
+  assert.ok(pub.units.length > 0 && pub.units.every((u) => u.name === '' && u.members.length === 0 && u.postId !== undefined));
   assert.equal(pub.ehboPhone, DEMO.coordinator, 'zonder EHBO-coördinator met nummer: de evenementcoördinator');
 
   const staff = (await app.inject({ url: '/api/package', headers: { cookie: staffCookie } })).json() as EventPackage;

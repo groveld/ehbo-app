@@ -1,9 +1,13 @@
 // Evenementpakket (GET /api/package): alles voor gebruik zonder bereik, in één antwoord met een versie.
 import type { FastifyInstance } from 'fastify';
-import { sameFunction, type EventPackage, type LngLat, type PackageMap } from '@ehbo/shared';
+import { sameFunction, type EhboStatus, type EventPackage, type LngLat, type PackageMap } from '@ehbo/shared';
 import { adminDb } from '../admin-db.ts';
+import type { Calls } from '../calls.ts';
 import type { EventDb } from '../event-db.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
+
+/** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
+const PACKAGE_FORMAT = 2;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
@@ -21,7 +25,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   };
 
   return {
-    version: `${eventVersion}.${map?.version ?? 0}.${staff ? 's' : 'p'}`,
+    version: `${eventVersion}.${map?.version ?? 0}.${staff ? 's' : 'p'}${PACKAGE_FORMAT}`,
     staff,
     event: { name: state.event.name, startDate: state.event.startDate, endDate: state.event.endDate, startLocation: state.event.startLocation },
     postTypes: state.postTypes,
@@ -31,7 +35,8 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
       ...(staff ? { address: p.address, accessRoute: p.accessRoute, contacts: p.contacts.map(({ name, phone, role }) => ({ name, phone, role })) } : {}),
     })),
     runs: state.runs.map((r) => ({ id: r.id, name: r.name, distanceKm: r.distanceKm, discipline: r.discipline, date: r.date, startTime: r.startTime, line: lines.get(r.id) ?? null })),
-    units: staff ? state.units.map(({ availability: _, ...u }) => u) : [],
+    // Deelnemers zien waar EHBO staat (het kruisje op de kaart), maar niet wie.
+    units: state.units.map(({ availability: _, ...u }) => (staff ? u : { ...u, name: '', mobility: null, hasAed: false, members: [] })),
     coreTeam: staff ? state.coreTeam.filter((c) => c.phone).map((c) => ({ ...c, phone: c.phone! })) : [],
     emergencyNumbers: staff ? state.emergencyNumbers : [],
     ehboPhone: (state.coreTeam.find((c) => c.phone && sameFunction(c.function, 'EHBO-coördinator')) ?? state.coreTeam.find((c) => c.phone && c.isCoordinator))?.phone ?? null,
@@ -39,7 +44,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   };
 }
 
-export async function packageRoutes(app: FastifyInstance, { db }: { db: EventDb }) {
+export async function packageRoutes(app: FastifyInstance, { db, calls }: { db: EventDb; calls: Calls }) {
   app.get('/api/package', async (request, reply) => {
     const pkg = buildPackage(db, request.me !== null);
     const etag = `"${pkg.version}"`;
@@ -47,5 +52,11 @@ export async function packageRoutes(app: FastifyInstance, { db }: { db: EventDb 
     // De app stuurt de versie die hij al heeft; dan hoeft er niets over de lijn.
     if (request.headers['if-none-match'] === etag) return reply.code(304).send();
     return pkg satisfies EventPackage;
+  });
+
+  // Voor iedereen, ook zonder aanmelding: welke standplaatsen nu zonder EHBO zijn (grijs kruisje). Geen posities of namen.
+  app.get<{ Reply: EhboStatus }>('/api/ehbo-status', async (_request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return calls.ehboStatus();
   });
 }

@@ -49,8 +49,9 @@ export const router = createRouter({
     { path: '/aanvraag/:id', name: 'aanvraag', component: () => import('./views/AanvraagView.vue'), props: true, meta: { staff: true } },
     { path: '/geen-bereik/:clientId', name: 'geen-bereik', component: () => import('./views/GeenBereikView.vue'), props: true, meta: { staff: true } },
     { path: '/melding/:incidentId/aanvullen', name: 'aanvullen', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
-    // EHBO: stand-by (3.3), oproep (4.3–4.7) en afronden (4.8).
+    // EHBO: stand-by (3.3) met je inzetten, oproep (4.3–4.7) en afronden (4.8).
     { path: '/stand-by', name: 'stand-by', component: () => import('./views/StandbyView.vue'), meta: { staff: true } },
+    { path: '/stand-by/inzetten', name: 'inzetten', component: () => import('./views/InzettenView.vue'), meta: { staff: true } },
     { path: '/oproep/:id', name: 'oproep', component: () => import('./views/OproepView.vue'), props: true, meta: { staff: true } },
     { path: '/oproep/:id/afronden', name: 'afronden', component: () => import('./views/AfrondenView.vue'), props: true, meta: { staff: true } },
     { path: '/controle', name: 'controle', component: () => import('./views/ControleView.vue'), meta: { staff: true } },
