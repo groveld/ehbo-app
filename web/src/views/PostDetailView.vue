@@ -41,9 +41,16 @@ const subtitle = computed(() => {
 
 const back = () => (router.options.history.state.back ? router.back() : router.push({ name: 'kaart' }));
 
-async function copyGps() {
-  if (!post.value) return;
-  await navigator.clipboard.writeText(`${post.value.lat}, ${post.value.lng}`);
+/** Wat je doorgeeft als iemand vraagt waar de post is: het adres als dat is ingevuld, anders de GPS-positie. */
+const location = computed(() => {
+  const p = post.value;
+  if (p?.address) return p.address;
+  return p && p.lat !== null && p.lng !== null ? `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}` : null;
+});
+
+async function copyLocation() {
+  if (!location.value) return;
+  await navigator.clipboard.writeText(location.value);
   copied.value = true;
   setTimeout(() => (copied.value = false), 2000);
 }
@@ -72,16 +79,15 @@ async function copyGps() {
         <EventMap :pkg="store.pkg" :focus-post-id="post.id" />
       </div>
 
-      <div class="card stack facts">
-        <div v-if="post.lat !== null" class="fact gps">
+      <div class="card stack post-facts">
+        <div v-if="location" class="fact location">
           <span class="stack">
-            <span class="label">GPS</span>
-            <span class="mono coords">{{ post.lat.toFixed(5) }}, {{ post.lng?.toFixed(5) }}</span>
+            <span class="label">Locatie</span>
+            <span :class="post.address ? 'address' : 'mono coords'">{{ location }}</span>
           </span>
-          <button class="copy" @click="copyGps">{{ copied ? 'Gekopieerd' : 'Kopieer' }}</button>
+          <button class="copy" @click="copyLocation">{{ copied ? 'Gekopieerd' : 'Kopieer' }}</button>
         </div>
-        <div v-else class="fact"><span class="label">GPS</span><span>Nog geen locatie vastgelegd</span></div>
-        <div v-if="post.address" class="fact"><span class="label">Adres</span><span>{{ post.address }}</span></div>
+        <div v-else class="fact"><span class="label">Locatie</span><span>Nog geen locatie vastgelegd</span></div>
         <div v-if="post.accessRoute" class="fact"><span class="label">Aanrijroute hulpverlening</span><span>{{ post.accessRoute }}</span></div>
       </div>
 
@@ -128,7 +134,7 @@ async function copyGps() {
 </template>
 
 <style scoped>
-.open-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.open-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .open-row .dot { width: 10px; height: 10px; border-radius: 50%; background: #A8A59C; }
 .open-row .dot.on { background: var(--ok); }
 .top { display: flex; align-items: center; gap: 4px; padding: max(14px, env(safe-area-inset-top)) 0 6px; margin-left: -12px; }
@@ -138,13 +144,14 @@ async function copyGps() {
 .type { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .map { height: 140px; margin-bottom: 12px; }
-.facts { gap: 0; margin-bottom: 12px; }
-.fact { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; font-size: 14px; border-top: 1px solid var(--divider); }
+.post-facts { gap: 0; margin-bottom: 12px; }
+.fact { border-radius: 0; padding: 10px 0; font-size: 14px; border-top: 1px solid var(--divider); }
 .fact:first-child { border-top: none; padding-top: 0; }
-.fact.gps { flex-direction: row; align-items: center; justify-content: space-between; }
+.fact.location { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
 .label { font-size: 12px; color: var(--muted); }
-.coords { font-size: 16px; }
-.copy { height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: #FFFFFF; font: 600 13px var(--sans); color: var(--ink); cursor: pointer; }
+.coords { font-size: 16px; white-space: nowrap; }
+.address { font-size: 16px; font-weight: 600; }
+.copy { flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: #FFFFFF; font: 600 13px var(--sans); color: var(--ink); cursor: pointer; }
 .role { font-weight: 400; }
 .round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--ink); }
 .nearest { margin-top: 12px; align-items: center; }
