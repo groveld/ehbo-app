@@ -10,13 +10,16 @@ import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
 import Icon, { type IconName } from './Icon.vue';
 
-/** color: eigen kleur van het actieve tabblad (de soort post); anders de accentkleur van het evenement. */
+/** color: eigen kleur van het actieve tabblad (icoon en gloed); bij een post de kleur van de soort post, anders de accentkleur. */
 interface Tab { key: string; to: RouteLocationRaw; label: string; icon: IconName; active: boolean; count?: number; color?: string }
 
 const route = useRoute();
 const session = useSessionStore();
 const pkg = usePackageStore();
 const live = useLiveStore();
+
+/** Vaste kleuren van de tabbladen als ze actief zijn; Stand-by in het groen van de EHBO-post. Geen rood: dat blijft voor alarm. */
+const COLORS = { ehbo: '#0A7D4F', kaart: '#0E7C86', meldingen: '#A16207', contacten: '#3F51B5', menu: '#3E434B' };
 
 const EHBO = ['stand-by', 'oproep', 'afronden'];
 const MENU = ['menu', 'herkend', 'toestemmingen', 'info', 'controle'];
@@ -39,7 +42,7 @@ const tabs = computed<Tab[]>(() => {
   const name = String(route.name ?? '');
   const tabs: Tab[] = [];
   if (me.assignments.some((a) => a.kind === 'ehbo')) {
-    tabs.push({ key: 'ehbo', to: { name: 'stand-by' }, label: 'Stand-by', icon: 'ehbo', active: EHBO.includes(name), count: live.invitations.length + (live.myActive ? 1 : 0) });
+    tabs.push({ key: 'ehbo', to: { name: 'stand-by' }, label: 'Stand-by', icon: 'ehbo', active: EHBO.includes(name), color: COLORS.ehbo, count: live.invitations.length + (live.myActive ? 1 : 0) });
   }
   const posts = me.assignments.filter((a) => a.kind === 'post');
   for (const a of posts) {
@@ -52,12 +55,12 @@ const tabs = computed<Tab[]>(() => {
       count: live.openIncidents.filter((i) => i.postId === postId).length,
     });
   }
-  tabs.push({ key: 'kaart', to: { name: 'kaart' }, label: 'Kaart', icon: 'map', active: name === 'kaart' || name === 'post' });
+  tabs.push({ key: 'kaart', to: { name: 'kaart' }, label: 'Kaart', icon: 'map', active: name === 'kaart' || name === 'post', color: COLORS.kaart });
   if (me.isAdmin || coordinatorOf(pkg.pkg)?.phone === me.phone) {
-    tabs.push({ key: 'meldingen', to: { name: 'meldingen' }, label: 'Meldingen', icon: 'bell', active: name === 'meldingen', count: live.requests.filter((r) => r.status === 'aangevraagd').length });
+    tabs.push({ key: 'meldingen', to: { name: 'meldingen' }, label: 'Meldingen', icon: 'bell', active: name === 'meldingen', color: COLORS.meldingen, count: live.requests.filter((r) => r.status === 'aangevraagd').length });
   }
-  tabs.push({ key: 'contacten', to: { name: 'contacten' }, label: 'Contacten', icon: 'people', active: name === 'contacten' });
-  tabs.push({ key: 'menu', to: { name: 'menu' }, label: 'Menu', icon: 'menu', active: MENU.includes(name) || name.startsWith('beheer') });
+  tabs.push({ key: 'contacten', to: { name: 'contacten' }, label: 'Contacten', icon: 'people', active: name === 'contacten', color: COLORS.contacten });
+  tabs.push({ key: 'menu', to: { name: 'menu' }, label: 'Menu', icon: 'menu', active: MENU.includes(name) || name.startsWith('beheer'), color: COLORS.menu });
   return tabs;
 });
 </script>
@@ -65,7 +68,7 @@ const tabs = computed<Tab[]>(() => {
 <template>
   <nav class="tabbar" aria-label="Hoofdmenu">
     <RouterLink
-      v-for="tab in tabs" :key="tab.key" :to="tab.to" class="tab" :class="{ active: tab.active, own: tab.color }"
+      v-for="tab in tabs" :key="tab.key" :to="tab.to" class="tab" :class="{ active: tab.active }"
       :style="tab.color ? { '--tab-color': tab.color } : undefined" :aria-current="tab.active ? 'page' : undefined"
     >
       <span class="icon">
@@ -90,9 +93,9 @@ const tabs = computed<Tab[]>(() => {
 .tab:focus:not(:focus-visible) { outline: none; }
 .label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .icon { position: relative; display: flex; }
-/* Waar je bent: een zachte ronde gloed onder het hele item, in de accentkleur, of bij een post in de kleur van de soort post. */
-.tab.active { background: radial-gradient(closest-side, color-mix(in srgb, var(--tab-color, var(--accent)) 40%, transparent), transparent); }
-.tab.active.own .icon { color: var(--tab-color); }
+/* Waar je bent: het icoon in de eigen kleur van het tabblad, met een zachte ronde gloed in dezelfde kleur onder het hele item. */
+.tab.active { background: radial-gradient(closest-side, color-mix(in srgb, var(--tab-color, var(--accent)) 25%, transparent), transparent); }
+.tab.active .icon { color: var(--tab-color, var(--ink)); }
 .count { position: absolute; top: -4px; right: -10px; background: var(--danger); color: #FFFFFF; border: 2px solid var(--card); border-radius: 999px; }
 .count { min-width: 20px; height: 20px; padding: 0 5px; font: 700 11px/16px var(--mono); text-align: center; }
 </style>
