@@ -195,7 +195,7 @@ const toStandby = () => router.replace({ name: 'stand-by' });
         <div v-if="incident.acceptedAt" class="list-row"><span class="grow muted">Aangenomen</span><span class="mono">{{ clock(incident.acceptedAt) }}</span></div>
         <div v-if="myUnitId !== null" class="list-row">
           <span class="grow muted">Jouw status</span>
-          <strong class="free">{{ live.unitState(myUnitId)?.availability === 'vrij' ? 'Weer beschikbaar' : live.unitState(myUnitId)?.availability === 'pauze' ? 'Pauze' : 'Uit dienst' }}</strong>
+          <strong class="free">{{ live.unitState(myUnitId)?.availability === 'vrij' ? 'Weer beschikbaar' : live.unitState(myUnitId)?.availability === 'pauze' ? 'Niet beschikbaar (pauze)' : 'Uit dienst' }}</strong>
         </div>
       </div>
       <div class="grow" />
