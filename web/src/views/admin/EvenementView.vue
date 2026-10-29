@@ -5,6 +5,7 @@ import { DEFAULT_STYLE, ESCALATION_MAX_SECONDS, ESCALATION_MIN_SECONDS, SHORT_NA
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 import MapSection from './MapSection.vue';
+import { useDirty } from '../../composables/useDirty.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { IMAGE_ACCEPT } from '../../images.ts';
 import { useAdminStore } from '../../stores/admin.ts';
@@ -18,11 +19,13 @@ const loaded = ref(false);
 const saved = ref(false);
 const { busy, error, run } = useSave();
 const logoUpload = useSave();
+const { dirty, markClean } = useDirty(() => form);
 
 // Formulier vullen zodra de gegevens er zijn (ook als ze nog geladen moesten worden).
 watchEffect(() => {
   if (loaded.value || !admin.state) return;
   Object.assign(form, { ...admin.state.event, style: { ...admin.state.event.style } });
+  markClean();
   loaded.value = true;
 });
 
@@ -54,6 +57,7 @@ const step = (delta: number) => {
 async function save() {
   saved.value = false;
   saved.value = await run(() => admin.saveEvent({ ...form, startDate: form.startDate || null, endDate: form.endDate || null }));
+  if (saved.value) markClean();
 }
 
 const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDigits: 1 });
@@ -138,10 +142,11 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
       </div>
     </template>
 
-    <template #footer>
+    <!-- Opslaan alleen als er iets gewijzigd is. -->
+    <template v-if="dirty || error || saved" #footer>
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-      <p v-else-if="saved" class="small" role="status">Opgeslagen.</p>
-      <button class="btn primary" :disabled="busy || !form.name.trim() || colorProblem !== null" @click="save">Opslaan</button>
+      <p v-else-if="saved && !dirty" class="small" role="status">Opgeslagen.</p>
+      <button v-if="dirty" class="btn primary" :disabled="busy || !form.name.trim() || colorProblem !== null" @click="save">Opslaan</button>
     </template>
   </AdminPage>
 </template>
