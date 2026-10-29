@@ -172,6 +172,8 @@ onMounted(() => {
 
 watch(() => [props.posts, props.pkg, props.focusPostId, props.alertPostIds, props.closedPostIds], drawPosts);
 watch(() => props.picked, drawPicked);
+// Naar een andere post (bijv. vanaf de postpagina): de kaart gaat mee.
+watch(() => props.focusPostId, frame);
 watch(() => [props.highlightRunId, props.pkg], () => (map?.getSource('lopen') as GeoJSONSource | undefined)?.setData(runFeatures()));
 
 onBeforeUnmount(() => {
