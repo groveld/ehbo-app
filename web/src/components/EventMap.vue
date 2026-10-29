@@ -4,7 +4,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { layers, namedFlavor } from '@protomaps/basemaps';
+import { LIGHT, layers, type Flavor } from '@protomaps/basemaps';
 // MapLibre laadt zijn worker als los bestand; Vite ziet dat adres niet vanzelf, dus geven we het mee.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { Bbox, EventPackage, LngLat, PackagePost } from '@ehbo/shared';
@@ -49,11 +49,30 @@ let watchId: number | null = null;
 
 const GREY = '#9A9CA3';
 const CROSS = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></svg>';
-const AMBULANCE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 10H6"/><path d="M8 8v4"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.3a1 1 0 0 0-.7-.9l-1.9-.7a1 1 0 0 1-.6-.5l-1.5-3a1 1 0 0 0-.9-.6H14"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
+const AMBULANCE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 10H6"/><path d="M8 8v4"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.3a1 1 0 0 0-.7-.9l-1.9-.7a1 1 0 0 1-.6-.5l-1.5-3a1 1 0 0 0-.9-.6H14"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
+
+/**
+ * Rustige kaart: grijs met zachte pastels (water lichtblauw, groen salie), op de warme achtergrond van de app.
+ * Geen iconen van winkels en horeca; het parcours en de gekleurde posten moeten opvallen.
+ */
+const MAP_FLAVOR: Flavor = {
+  ...LIGHT,
+  background: '#E9E7E1', earth: '#EFEDE8',
+  park_a: '#DDE6D7', park_b: '#CFDDC9', wood_a: '#DAE4D3', wood_b: '#CCDAC6', scrub_a: '#DEE6D8', scrub_b: '#D2DECD',
+  water: '#BCD3DF', buildings: '#E2DFD9', sand: '#ECE9DF', beach: '#EEEBE1',
+  hospital: '#EDE6E4', school: '#ECE8E1', industrial: '#E6E6E3', pedestrian: '#ECEAE3', aerodrome: '#E8E7E3', zoo: '#E2E8DD',
+  railway: '#C8C8C4', boundaries: '#BDBDB9',
+  city_label: '#62666D', subplace_label: '#8A8D93', roads_label_minor: '#9A9CA1', roads_label_major: '#8A8D93',
+  landcover: {
+    grassland: '#DFE7D8', barren: '#EFECE3', urban_area: '#EAE8E3', farmland: '#E3EADC',
+    glacier: '#FFFFFF', scrub: '#E1E7D9', forest: '#D3DFCD',
+  },
+  pois: undefined,
+};
 
 function style(): StyleSpecification {
   const m = props.pkg.map;
-  const background = { id: 'achtergrond', type: 'background', paint: { 'background-color': '#ECE9E1' } } as const;
+  const background = { id: 'achtergrond', type: 'background', paint: { 'background-color': MAP_FLAVOR.background } } as const;
   if (!m) return { version: 8, sources: {}, layers: [background] };
   return {
     version: 8,
@@ -62,7 +81,7 @@ function style(): StyleSpecification {
     sources: {
       protomaps: { type: 'vector', tiles: [tileUrl(m)], maxzoom: m.maxZoom, bounds: m.bbox, attribution: '© OpenStreetMap · Protomaps' },
     },
-    layers: layers('protomaps', namedFlavor('light'), { lang: 'nl' }),
+    layers: layers('protomaps', MAP_FLAVOR, { lang: 'nl' }),
   };
 }
 
@@ -187,7 +206,8 @@ onMounted(() => {
       id: 'lopen',
       type: 'line',
       source: 'lopen',
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      // De gekozen loop bovenop, zodat hij nergens onder een andere loop verdwijnt.
+      layout: { 'line-cap': 'round', 'line-join': 'round', 'line-sort-key': ['case', ['get', 'highlight'], 1, 0] },
       paint: {
         'line-color': ['case', ['get', 'highlight'], '#16181D', '#9A9CA3'],
         'line-width': ['case', ['get', 'highlight'], 4, 3],
@@ -226,7 +246,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* Geen position op de markers zelf: MapLibre zet ze absoluut; relatief maken laat ze verschuiven. */
-.event-map { width: 100%; height: 100%; border-radius: 18px; overflow: hidden; background: #ECE9E1; }
+.event-map { width: 100%; height: 100%; border-radius: 18px; overflow: hidden; background: #E9E7E1; }
 .event-map.picking :deep(.maplibregl-canvas) { cursor: crosshair; }
 .event-map :deep(.post-marker) {
   width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 2px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
@@ -242,7 +262,7 @@ onBeforeUnmount(() => {
 .event-map :deep(.ehbo-dot.away) { background: #9A9CA3; }
 .event-map :deep(.ehbo-dot svg) { width: 10px; height: 10px; }
 .event-map :deep(.unit-marker) {
-  width: 32px; height: 32px; border-radius: 50%; background: #FFFFFF; border: 2.5px solid #0A7D4F; color: #0A7D4F;
+  width: 28px; height: 28px; border-radius: 50%; background: #FFFFFF; border: 2px solid #0A7D4F; color: #0A7D4F;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
 }
 .event-map :deep(.unit-marker.unavailable) { border-color: #C8261E; color: #C8261E; }
