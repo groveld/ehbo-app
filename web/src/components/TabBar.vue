@@ -81,6 +81,8 @@ const tabs = computed<Tab[]>(() => {
 }
 .tab { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; justify-content: center; font-size: 12px; color: var(--muted); text-decoration: none; }
 .tab.active { color: var(--ink); font-weight: 700; }
+/* Geen kader na een tik of klik; met het toetsenbord blijft de focus zichtbaar. */
+.tab:focus:not(:focus-visible) { outline: none; }
 .label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .icon { position: relative; display: flex; }
 .count { position: absolute; top: -4px; right: -10px; background: var(--danger); color: #FFFFFF; border: 2px solid var(--card); border-radius: 999px; }
