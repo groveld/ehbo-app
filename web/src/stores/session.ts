@@ -11,17 +11,13 @@ export const useSessionStore = defineStore('session', () => {
   // Bewaard door een oudere versie van de app: zonder stijl en logo's.
   const event = ref<PublicEvent | null>(stored && { style: DEFAULT_STYLE, brand: { logo: null, icon: null }, ...stored });
   const me = ref<Me | null>(load('ehbo.me'));
-  /** Gekozen plek als iemand op meer plekken staat (index in me.assignments). Wisselen kan later via het menu. */
-  const placeIndex = ref<number>(load('ehbo.place') ?? 0);
   /** Laatste aanmelding met een onbekend nummer, voor het scherm "nummer niet bekend". */
   const unknown = ref<LoginUnknown | null>(null);
 
   watch(event, (value) => save('ehbo.event', value));
   watch(me, (value) => save('ehbo.me', value));
-  watch(placeIndex, (value) => save('ehbo.place', value));
 
   const firstName = computed(() => me.value?.name.split(' ')[0] ?? '');
-  const place = computed(() => me.value?.assignments[placeIndex.value] ?? me.value?.assignments[0] ?? null);
 
   async function loadEvent() {
     try {
@@ -47,7 +43,6 @@ export const useSessionStore = defineStore('session', () => {
   async function login(phone: string): Promise<'ok' | 'unknown'> {
     try {
       me.value = await api<Me>('/api/session', { method: 'POST', body: { phone } });
-      placeIndex.value = 0;
       unknown.value = null;
       // Medewerkers krijgen het pakket met namen en nummers.
       void usePackageStore().refresh();
@@ -64,7 +59,6 @@ export const useSessionStore = defineStore('session', () => {
   async function logout() {
     await api('/api/session', { method: 'DELETE' }).catch(() => {});
     me.value = null;
-    placeIndex.value = 0;
     usePackageStore().clearStaffData();
     void usePackageStore().refresh();
   }
@@ -74,5 +68,5 @@ export const useSessionStore = defineStore('session', () => {
     if (me.value) me.value = { ...me.value, infoAccepted: true };
   }
 
-  return { event, me, placeIndex, unknown, firstName, place, loadEvent, refresh, login, logout, acceptInfo };
+  return { event, me, unknown, firstName, loadEvent, refresh, login, logout, acceptInfo };
 });

@@ -8,7 +8,7 @@ export function homeRoute() {
   const me = session.me!;
   if (me.home === 'ehbo') return { name: 'stand-by' };
   if (me.home === 'post') {
-    const post = session.place?.kind === 'post' ? session.place : me.assignments.find((a) => a.kind === 'post' && a.role === 'verantwoordelijke');
+    const post = me.assignments.find((a) => a.kind === 'post' && a.role === 'verantwoordelijke');
     if (post?.postId) return { name: 'post-home', params: { id: post.postId } };
   }
   return { name: 'kaart' };

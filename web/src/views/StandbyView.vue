@@ -17,7 +17,7 @@ const session = useSessionStore();
 const { busy, error, run } = useSave();
 
 /** De gekozen plek als die een eenheid is, anders de eerste eenheid van deze medewerker. */
-const unitId = computed(() => (session.place?.kind === 'ehbo' ? session.place.unitId : live.myUnitIds[0]) ?? null);
+const unitId = computed(() => live.myUnitIds[0] ?? null);
 const unit = computed(() => unitOf(store.pkg, unitId.value));
 const state = computed(() => (unitId.value !== null ? live.unitState(unitId.value) : null));
 const availability = computed<UnitAvailability>(() => state.value?.availability ?? 'uit_dienst');

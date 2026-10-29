@@ -13,7 +13,7 @@ const location = useLocationStore();
 const showQuietHelp = ref(false);
 const testSent = ref(false);
 
-const who = computed(() => [session.firstName, session.place?.title].filter(Boolean).join(', '));
+const who = computed(() => [session.firstName, session.me?.assignments[0]?.title].filter(Boolean).join(', '));
 
 const notifications = computed(() => {
   if (push.subscribed) return { state: 'Aan', tone: 'ok' } as const;
