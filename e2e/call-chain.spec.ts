@@ -159,7 +159,7 @@ test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ 
   await expect(admin.getByText('Over Silvesterloop 2026')).toBeVisible();
   await expect(admin.getByText(/Bea, beheer@example\.org/)).toBeVisible();
 
-  await admin.goto('/overzicht/posten');
+  await admin.goto('/overzicht/kaart');
   await admin.getByRole('link', { name: /Kruising 4/ }).first().click();
   await expect(admin.getByText('Post is dicht')).toBeVisible();
   await admin.getByRole('switch', { name: 'Post open' }).click();
