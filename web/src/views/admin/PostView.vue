@@ -7,6 +7,7 @@ import AdminPage from '../../components/AdminPage.vue';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
 import { useGpsFix } from '../../composables/useGpsFix.ts';
+import { useDirty } from '../../composables/useDirty.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 import { usePackageStore } from '../../stores/package.ts';
@@ -34,6 +35,9 @@ const form = reactive<Omit<PostData, 'km'> & { kmText: string }>({
 const coordsText = ref('');
 const showCoords = ref(false);
 const loaded = ref(false);
+// Een nieuwe post, eenheid of loop is nog niet opgeslagen; een bestaande alleen als er iets gewijzigd is.
+const { dirty, markClean } = useDirty(() => form);
+const canSave = computed(() => isNew.value || dirty.value);
 
 const emptyContact = (): ContactData => ({ name: '', phone: '', role: form.contacts.length ? 'lid' : 'verantwoordelijke', timeFrom: null, timeTo: null });
 
@@ -49,6 +53,7 @@ watchEffect(() => {
     form.typeId = admin.state.postTypes[0]?.id ?? 0;
     form.contacts = [emptyContact()];
   }
+  markClean();
   loaded.value = true;
 });
 
@@ -195,7 +200,7 @@ async function remove() {
 
     <template #footer>
       <p v-if="save.error.value" class="error-text" role="alert">{{ save.error.value }}</p>
-      <button class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !post)" @click="submit">Post opslaan</button>
+      <button v-if="canSave" class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !post)" @click="submit">Post opslaan</button>
       <button v-if="!isNew && post" class="btn link danger-link" @click="remove">Post verwijderen</button>
     </template>
   </AdminPage>

@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { INCIDENT_PERSONS, INCIDENT_WHAT, NOTE_MAX, RESPONSIVE, type IncidentDetails } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import Sos112Bar from '../components/Sos112Bar.vue';
+import { useDirty } from '../composables/useDirty.ts';
 import { kmLabel } from '../posts.ts';
 import { OfflineError, useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -24,6 +25,9 @@ const form = reactive<IncidentDetails>({
 });
 const busy = ref(false);
 const error = ref('');
+// Een nieuw verzoek kan altijd meteen weg; een aanvulling pas als er iets veranderd is.
+const { dirty, markClean } = useDirty(() => form);
+markClean();
 
 /** Nog eens tikken op een gekozen antwoord haalt het weg; alles blijft optioneel. */
 const toggle = <K extends keyof IncidentDetails>(key: K, value: IncidentDetails[K]) => {
@@ -95,7 +99,7 @@ async function send() {
     <div class="grow" />
     <div class="stack gap-6 footer">
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-      <button class="btn danger" :disabled="busy" @click="send">
+      <button v-if="!existing || dirty" class="btn danger" :disabled="busy" @click="send">
         <Icon name="bell" :size="20" />{{ busy ? 'Versturen…' : existing ? 'Aanvulling versturen' : 'EHBO-verzoek versturen' }}
       </button>
       <span v-if="!existing" class="small center">Alles is optioneel: versturen kan meteen</span>
