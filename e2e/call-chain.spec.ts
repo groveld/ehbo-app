@@ -168,64 +168,41 @@ test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ 
   await expect(admin.getByText('Opgeslagen.')).toBeVisible();
 });
 
-test('terug en vooruit: één stap omhoog naar het hoofdscherm, vooruit doet niets', async ({ browser }) => {
+test('geen vorige pagina om naar te vegen; terug in de app gaat één stap omhoog', async ({ browser }) => {
   const post = await staffPhone(browser, PHONE.postLead);
   await expect(post.getByRole('heading', { name: 'Waterpost 3 · brug' })).toBeVisible();
   const home = new URL(post.url()).pathname;
-  // Een gebaar, en elk beeld daarna bijhouden welk scherm er staat (het data-v-kenmerk van het scherm).
-  // Nooit een ander scherm tussendoor: alleen waar je was en waar je uitkomt.
-  const gesture = async (direction: 'back' | 'forward', path: string) => {
-    const shown = await post.evaluate(async (dir) => {
-      const screen = () => [...(document.querySelector('#app main')?.attributes ?? [])].find((a) => a.name.startsWith('data-v-'))?.name ?? '';
-      const seen = [screen()];
-      if (dir === 'back') history.back(); else history.forward();
-      const end = performance.now() + 700;
-      while (performance.now() < end) {
-        await new Promise(requestAnimationFrame);
-        if (screen() !== seen.at(-1)) seen.push(screen());
-      }
-      return seen;
-    }, direction);
-    expect(shown.length, `${direction} naar ${path}: schermen ${shown.join(' → ')}`).toBeLessThanOrEqual(2);
-    await expect(post, `${direction} naar ${path}`).toHaveURL((url) => url.pathname === path);
-  };
-  const back = (path: string) => gesture('back', path);
+  const length = await post.evaluate(() => history.length);
+  const terug = () => post.getByRole('button', { name: 'Terug' }).or(post.getByRole('link', { name: 'Terug' })).first().click();
 
-  // Kaart → postdetail: terug naar de kaart, dan naar het startscherm; daar en vooruit gebeurt niets meer.
+  // Kaart → postdetail → terug: de kaart.
   await post.getByRole('link', { name: 'Kaart' }).click();
   await post.locator('.post-row .main').first().click();
   await expect(post).toHaveURL(/\/post\/\d+$/);
-  await back('/overzicht/kaart');
-  await back(home);
-  await back(home);
-  await gesture('forward', home);
+  await terug();
+  await expect(post).toHaveURL(/\/overzicht\/kaart$/);
 
-  // Elke tab vervangt de vorige: vanaf Menu › Info terug naar Menu, dan naar het startscherm.
-  await post.getByRole('link', { name: 'Contacten' }).click();
-  await expect(post).toHaveURL(/\/overzicht\/contacten$/);
+  // Menu › Info → terug: het menu.
   await post.getByRole('link', { name: 'Menu' }).click();
-  await expect(post).toHaveURL(/\/menu$/);
   await post.getByRole('link', { name: /Info/ }).click();
   await expect(post).toHaveURL(/\/info$/);
-  await back('/menu');
-  await back(home);
+  await terug();
+  await expect(post).toHaveURL(/\/menu$/);
+  await post.locator(`.tabbar a[href="${home}"]`).click();
+  await expect(post).toHaveURL((url) => url.pathname === home);
 
-  // Beheer: elke stap terug is het scherm erboven.
+  // Elke stap vervangt de vorige: de geschiedenis groeit niet, dus vegen heeft niets om te tonen.
+  expect(await post.evaluate(() => history.length)).toBe(length);
+
+  // Beheer: de terugpijl gaat steeds naar het scherm erboven.
   const admin = await staffPhone(browser, PHONE.admin);
-  await expect(admin).not.toHaveURL(/\/(toestemmingen|start)$/);
-  const adminHome = new URL(admin.url()).pathname;
   await admin.getByRole('link', { name: 'Menu' }).click();
-  await expect(admin).toHaveURL(/\/menu$/);
   await admin.getByRole('link', { name: 'Beheer' }).click();
-  await expect(admin).toHaveURL(/\/beheer$/);
   await admin.getByRole('link', { name: /Posten/ }).first().click();
-  await expect(admin).toHaveURL(/\/beheer\/posten$/);
   await admin.locator('a[href^="/beheer/posten/"]').first().click();
   await expect(admin).toHaveURL(/\/beheer\/posten\/\w+$/);
-  await expect(admin.getByRole('heading').first()).toBeVisible();
-  for (const path of ['/beheer/posten', '/beheer', '/menu', adminHome]) {
-    await admin.evaluate(() => history.back());
-    await expect(admin, `terug naar ${path}`).toHaveURL((url) => url.pathname === path);
-    await admin.waitForTimeout(300);
+  for (const path of [/\/beheer\/posten$/, /\/beheer$/, /\/menu$/]) {
+    await admin.getByRole('link', { name: 'Terug' }).click();
+    await expect(admin).toHaveURL(path);
   }
 });

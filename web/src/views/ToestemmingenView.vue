@@ -90,7 +90,7 @@ onMounted(() => {
     </div>
 
     <div class="grow" />
-    <RouterLink :to="{ name: 'start' }" replace class="btn primary">Klaar, naar mijn startscherm</RouterLink>
+    <RouterLink :to="{ name: 'start' }" class="btn primary">Klaar, naar mijn startscherm</RouterLink>
   </main>
 </template>
 
