@@ -67,7 +67,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 2.1 | A–E | Menu › **Pushmeldingen, locatie en controle** | Alles groen: geïnstalleerd, service worker actief, meldingen en locatie toegestaan, server bereikbaar | |
 | 2.2 | A–E | **Over 10 s** en meteen het scherm vergrendelen | Melding op het vergrendelscherm, met geluid of trilling | |
 | 2.3 | A–E | Buiten: **Test GPS** | Positie en nauwkeurigheid; groen bij 15 m of beter | |
-| 2.4 | E | Stand-by › **Vrij**, dan 2.1 opnieuw | "Positie delen (mobiele EHBO): actief" | |
+| 2.4 | E | Stand-by › **Beschikbaar**, dan 2.1 opnieuw | "Positie delen (mobiele EHBO): actief" | |
 | 2.5 | A–E | App volledig afsluiten en opnieuw openen | Nog steeds aangemeld, op hetzelfde startscherm | |
 
 ## Blok 3 · Zonder bereik (alle telefoons behalve F)
@@ -83,7 +83,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 
 | # | Toestel | Stap | Verwacht | ✓ |
 | --- | --- | --- | --- | --- |
-| 4.1 | D, E | Stand-by › **Vrij** | Groen blok "Beschikbaar" | |
+| 4.1 | D, E | Stand-by › **Beschikbaar** | Groen blok "Beschikbaar" | |
 | 4.2 | E | Scherm vergrendelen, telefoon wegleggen | — | |
 | 4.3 | B | **Post openen** › tegel **EHBO** › *Onwel / flauw* › aanspreekbaar **ja** › **EHBO-verzoek versturen** | "We zoeken een EHBO'er" met aftellen | |
 | 4.4 | E | — | Binnen 5 s een oproep met alarm, ook met scherm uit. Tik op de melding: de oproep opent direct | |
@@ -92,26 +92,26 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 4.7 | E | **Accepteren & navigeren** | Navigatie-app opent naar Post 1 | |
 | 4.8 | B | — | "Hulp is onderweg" met naam en belknop van E | |
 | 4.9 | E | Terug naar de app › **Ik ben ter plaatse** | B ziet dat de EHBO er is | |
-| 4.10 | E | **Incident afronden** › afloop kiezen › **Afronden & weer beschikbaar** | E staat op Vrij; de oproep staat onder *Vandaag* | |
+| 4.10 | E | **Incident afronden** › afloop kiezen › **Afronden & weer beschikbaar** | E staat op Beschikbaar; de oproep staat onder *Vandaag* | |
 | 4.11 | A | Meldingen | De oproep staat onder *Afgerond* | |
 
 ## Blok 5 · Escalatie en "kan niet" (B, D, E, A)
 
 | # | Toestel | Stap | Verwacht | ✓ |
 | --- | --- | --- | --- | --- |
-| 5.1 | D, E | Beide op **Vrij** | — | |
-| 5.2 | B | Nieuw EHBO-verzoek (aanspreekbaar **ja**) | Oproep naar de dichtstbijzijnde vrije eenheid (volgens V2: Team 2, E) | |
-| 5.3 | E | Niet reageren | Na **30 s** gaat de oproep naar alle vrije eenheden: ook D krijgt het alarm | |
+| 5.1 | D, E | Beide op **Beschikbaar** | — | |
+| 5.2 | B | Nieuw EHBO-verzoek (aanspreekbaar **ja**) | Oproep naar de dichtstbijzijnde beschikbare eenheid (volgens V2: Team 2, E) | |
+| 5.3 | E | Niet reageren | Na **30 s** gaat de oproep naar alle beschikbare eenheden: ook D krijgt het alarm | |
 | 5.4 | D, E | Niet reageren | Na **60 s** krijgt A een alarm: "Nog niemand heeft de oproep aangenomen" | |
 | 5.5 | D | **Accepteren** | E krijgt "Oproep is al aangenomen"; de rest gaat als in blok 4 | |
-| 5.6 | B, E | Nieuw verzoek; E tikt **Kan niet** | De oproep gaat direct naar alle vrije eenheden (zonder 30 s te wachten) | |
+| 5.6 | B, E | Nieuw verzoek; E tikt **Kan niet** | De oproep gaat direct naar alle beschikbare eenheden (zonder 30 s te wachten) | |
 | 5.7 | B | Bij een lopende oproep: **Melding intrekken** | D en E krijgen "Melding ingetrokken" | |
 
 ## Blok 6 · AED-regel (B, D, E)
 
 | # | Toestel | Stap | Verwacht | ✓ |
 | --- | --- | --- | --- | --- |
-| 6.1 | D, E | Beide op **Vrij** | — | |
+| 6.1 | D, E | Beide op **Beschikbaar** | — | |
 | 6.2 | B | EHBO-verzoek met aanspreekbaar **nee** | B ziet "Bel ook 112". **D en E krijgen tegelijk** een oproep: de dichtstbijzijnde (E) én de dichtstbijzijnde met AED (D), met "AED meenemen" | |
 | 6.3 | D | Accepteren, afronden | — | |
 
@@ -121,9 +121,9 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | --- | --- | --- | --- | --- |
 | 7.1 | B | Vliegtuigmodus aan › **EHBO** › versturen | Scherm "Bel de EHBO direct" met belknoppen naar de dichtstbijzijnde eenheid en de coördinator | |
 | 7.2 | B | Vliegtuigmodus uit | De melding gaat vanzelf weg en E krijgt de oproep | |
-| 7.3 | E | Afronden met **Afronden & even pauze** | E staat op **Even pauze** (oranje); geen nieuwe oproepen | |
+| 7.3 | E | Afronden met **Afronden & pauze** | E staat op **Pauze** (oranje); geen nieuwe oproepen | |
 | 7.4 | B | Nieuw EHBO-verzoek | Gaat **niet** naar E (pauze), wel naar D | |
-| 7.5 | D, E | D handelt af; E zet zichzelf weer op **Vrij** | — | |
+| 7.5 | D, E | D handelt af; E zet zichzelf weer op **Beschikbaar** | — | |
 
 ## Blok 8 · Post open en dicht (B, C, A)
 

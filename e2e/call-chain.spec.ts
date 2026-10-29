@@ -22,7 +22,7 @@ async function staffPhone(browser: Browser, phone: string): Promise<Page> {
 test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter plaatse → afronden', async ({ browser }) => {
   const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
   await expect(ehbo.getByRole('heading', { name: /Uit dienst|Beschikbaar/ })).toBeVisible();
-  await ehbo.getByRole('button', { name: 'Vrij', exact: true }).click();
+  await ehbo.getByRole('button', { name: 'Beschikbaar', exact: true }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
 
   const post = await staffPhone(browser, PHONE.postLead);

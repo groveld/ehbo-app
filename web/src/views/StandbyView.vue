@@ -34,7 +34,7 @@ const label = computed(() => {
 const block = computed(() => {
   if (active.value) return { tone: 'red' as const, title: 'Bezig met een oproep', sub: store.postById.get(active.value.postId)?.name ?? '' };
   if (availability.value === 'vrij') return { tone: 'green' as const, title: 'Beschikbaar', sub: 'Je krijgt oproepen uit de buurt. Houd de telefoon bij je.' };
-  if (availability.value === 'pauze') return { tone: 'orange' as const, title: 'Even pauze', sub: 'Je krijgt geen oproepen. Zet je weer op vrij als je klaar bent.' };
+  if (availability.value === 'pauze') return { tone: 'orange' as const, title: 'Pauze', sub: 'Je krijgt geen oproepen. Zet je weer op beschikbaar als je klaar bent.' };
   return { tone: 'red' as const, title: 'Uit dienst', sub: 'Je krijgt geen oproepen.' };
 });
 
@@ -94,7 +94,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
       <div class="list facts-list">
         <div class="list-row"><span class="grow">Positie</span><strong>{{ position }}</strong></div>
         <div class="list-row"><span class="grow">Teamleden</span><strong>{{ teammates.map((m) => m.name || formatPhone(m.phone)).join(', ') || 'alleen jij' }}</strong></div>
-        <div class="list-row"><span class="grow">Andere eenheden vrij</span><strong>{{ othersFree.free }} van {{ othersFree.total }}</strong></div>
+        <div class="list-row"><span class="grow">Andere eenheden beschikbaar</span><strong>{{ othersFree.free }} van {{ othersFree.total }}</strong></div>
       </div>
 
       <div v-if="today.length" class="stack gap-6 gap-top">

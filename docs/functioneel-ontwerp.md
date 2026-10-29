@@ -87,14 +87,14 @@ Positie bij een oproep: een vaste eenheid zit op haar post (of waar ze bij afron
 
 ## Hulpoproep en escalatie
 
-De post tikt op de tegel *EHBO* en verstuurt het verzoek; het gaat eerst naar de dichtstbijzijnde vrije EHBO-eenheid, met een kopie naar de evenementcoördinator. Accepteert die niet binnen 30 seconden, dan gaat het tegelijk naar alle vrije eenheden: wie het eerst accepteert, gaat.
+De post tikt op de tegel *EHBO* en verstuurt het verzoek; het gaat eerst naar de dichtstbijzijnde beschikbare EHBO-eenheid, met een kopie naar de evenementcoördinator. Accepteert die niet binnen 30 seconden, dan gaat het tegelijk naar alle beschikbare eenheden: wie het eerst accepteert, gaat.
 
 ```mermaid
 sequenceDiagram
     participant P as Post
     participant S as Server
-    participant E1 as Dichtstbijzijnde vrije eenheid
-    participant EA as Alle vrije eenheden
+    participant E1 as Dichtstbijzijnde beschikbare eenheid
+    participant EA as Alle beschikbare eenheden
     participant C as Evenementcoördinator
     P->>S: EHBO-verzoek
     S->>E1: Oproep (alarm, ring 30 s)
@@ -103,7 +103,7 @@ sequenceDiagram
         E1->>S: Accepteren
         S->>P: Hulp is onderweg (naam + belknop)
     else Geen reactie of "Kan niet"
-        S->>EA: Oproep naar alle vrije eenheden
+        S->>EA: Oproep naar alle beschikbare eenheden
         S->>C: Opnieuw melding
         EA->>S: Eerste die accepteert
         S->>EA: Overigen: al aangenomen
@@ -121,11 +121,11 @@ De evenementcoördinator krijgt bij elke oproep een kopie; na 30 s zonder antwoo
 - Positie: vast = de eigen EHBO-post (of de post van het laatste incident bij *blijf hier*); mobiel = laatste GPS-positie, anders de standplaats. Een mobiele eenheid zonder GPS en zonder standplaats doet pas mee in de oproep aan alle eenheden.
 - Afstand = hemelsbreed. Dat werkt offline en is voorspelbaar. Omdat na 30 s toch iedereen gealarmeerd wordt, hoeft de eerste keuze niet perfect te zijn. Rijafstand is een mogelijke uitbreiding.
 
-**AED-voorrang.** Geeft de post bij het verzoek aan dat de persoon *niet aanspreekbaar* is, dan gaat de oproep meteen naar twee eenheden: de dichtstbijzijnde vrije eenheid en de dichtstbijzijnde vrije eenheid met AED (als dat een andere is). De oproep toont dan *AED meenemen*, en de post krijgt het advies om ook 112 te bellen. Na 30 s zonder acceptatie gaat de oproep zoals altijd naar alle eenheden.
+**AED-voorrang.** Geeft de post bij het verzoek aan dat de persoon *niet aanspreekbaar* is, dan gaat de oproep meteen naar twee eenheden: de dichtstbijzijnde beschikbare eenheid en de dichtstbijzijnde beschikbare eenheid met AED (als dat een andere is). De oproep toont dan *AED meenemen*, en de post krijgt het advies om ook 112 te bellen. Na 30 s zonder acceptatie gaat de oproep zoals altijd naar alle eenheden.
 
 **Ontvangen (EHBO).** Luid alarm + trillen, ook op het vergrendelscherm. Het scherm toont post, wat er is, afstand, een kaartje en een ring die 30 seconden aftelt. Knoppen: *Accepteren & navigeren*, *Bel de post*, *Kan niet* (= meteen naar alle eenheden).
 
-**Escalatie.** Geen reactie binnen 30 s, of *Kan niet* → de oproep gaat tegelijk naar alle vrije eenheden en opnieuw naar de evenementcoördinator. De eerste die accepteert krijgt de oproep; de anderen krijgen direct *Oproep is al aangenomen door Team 3, je hoeft niet te komen*. Accepteert binnen 60 s nog niemand, dan blijft het alarm herhalen bij alle eenheden en belt de app de evenementcoördinator. De evenementcoördinator kan een oproep ook altijd handmatig toewijzen.
+**Escalatie.** Geen reactie binnen 30 s, of *Kan niet* → de oproep gaat tegelijk naar alle beschikbare eenheden en opnieuw naar de evenementcoördinator. De eerste die accepteert krijgt de oproep; de anderen krijgen direct *Oproep is al aangenomen door Team 3, je hoeft niet te komen*. Accepteert binnen 60 s nog niemand, dan blijft het alarm herhalen bij alle eenheden en belt de app de evenementcoördinator. De evenementcoördinator kan een oproep ook altijd handmatig toewijzen.
 
 **Terugmelding (post).** Zodra een EHBO'er accepteert, ziet de post *Hulp is onderweg*, met naam en belknop van die EHBO'er. Daaronder staan de escalatieknoppen: 112, SEH, huisartsenpost en de evenementcoördinator. De post kan de melding intrekken als hulp niet meer nodig is.
 
@@ -236,7 +236,7 @@ Hulpvragen komen in twee soorten. Eén mechanisme, twee afhandelingen; een nieuw
 |  | Spoedoproep | Eenvoudige aanvraag |
 | --- | --- | --- |
 | Voorbeeld | EHBO | Water bijvullen, verkeershulp, aflossing of uitval van een vrijwilliger |
-| Gaat naar | Dichtstbijzijnde vrije eenheid, na 30 s alle eenheden | Wachtrij van de evenementcoördinator (of een andere ingestelde rol) |
+| Gaat naar | Dichtstbijzijnde beschikbare eenheid, na 30 s alle eenheden | Wachtrij van de evenementcoördinator (of een andere ingestelde rol) |
 | Stappen | Gemeld → geaccepteerd → ter plaatse → afgerond | Aangevraagd → opgepakt → afgehandeld |
 | Melding | Alarm met geluid, herhaalt tot reactie | Gewone melding, geen alarm |
 | Melder ziet | Wie komt, met belknop en escalatieknoppen | Plek in de wachtrij en de status |
@@ -311,7 +311,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Afronden | Afloop: ter plaatse geholpen, gestopt/naar finish, ambulance, doorverwezen, hulp geweigerd, loos alarm |
 | Overige verzoeken | Eenvoudige aanvraag in de wachtrij van de evenementcoördinator |
 | Aanspreekpunten | Evenementcoördinator is centraal in de app; op het EHBO-scherm staat de EHBO-coördinator bovenaan, de evenementcoördinator eronder |
-| Escalatie | Eerst dichtstbijzijnde vrije eenheid, na 30 s alle vrije eenheden; eerste die accepteert |
+| Escalatie | Eerst dichtstbijzijnde beschikbare eenheid, na 30 s alle beschikbare eenheden; eerste die accepteert |
 | AED | Per eenheid ja/nee; bij niet aanspreekbaar gaat de dichtstbijzijnde AED-eenheid direct mee |
 | EHBO-eenheden | Vast (eigen EHBO-post) of mobiel, mobiel optioneel met standplaats; mobiele eenheden delen elke minuut hun positie (powerbank-advies in de handleiding) |
 | Ter plaatse | Blijft, één tik |
@@ -352,7 +352,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Post open/dicht naar fase 3 (28 okt) | Zonder open post geen verzoek en telt een EHBO-post niet mee; daarom komt open/dicht al in fase 3 (API in 3a, scherm 3.1 in 3b) in plaats van fase 4. Open/dicht is live (via de live stand), niet in het evenementpakket |
 | Beschikbaarheid eenheid (28 okt) | Vrij, even pauze of uit dienst, zoals op scherm 3.3; "bezet" volgt uit een lopende oproep. Wie een oproep accepteert, staat daarmee in dienst |
 | AED bij niet aanspreekbaar (28 okt) | De AED-eenheid blijft opgeroepen tot er een eenheid met AED heeft geaccepteerd, ook als een eenheid zonder AED al onderweg is. Daardoor kunnen twee eenheden dezelfde oproep aannemen; de eerste is de hoofdeenheid. Wordt de persoon later niet aanspreekbaar (aanvullen), dan gaat de oproep alsnog naar de dichtstbijzijnde AED-eenheid |
-| Herhalen en de coördinator (28 okt) | Na de escalatie herhaalt het alarm elke escalatietijd (hoogstens 10 keer) bij alle vrije eenheden, ook wie inmiddels vrij is gekomen. Bij de eerste herhaling (na twee keer de escalatietijd, standaard 60 s) krijgt de coördinator een alarm om de eenheden te bellen; de app kan niet zelf bellen |
+| Herhalen en de coördinator (28 okt) | Na de escalatie herhaalt het alarm elke escalatietijd (hoogstens 10 keer) bij alle beschikbare eenheden, ook wie inmiddels vrij is gekomen. Bij de eerste herhaling (na twee keer de escalatietijd, standaard 60 s) krijgt de coördinator een alarm om de eenheden te bellen; de app kan niet zelf bellen |
 | Handmatig toewijzen (28 okt) | De coördinator wijst een eenheid toe nadat die telefonisch akkoord is; dat telt als aangenomen. Kan ook als er al een eenheid onderweg is (extra hulp) |
 | Posities (28 okt) | De laatste GPS-positie van een mobiele eenheid staat alleen in het geheugen van de server en telt 3 minuten; daarna de standplaats. Na een herstart is hij weg, tot de volgende positie (elke minuut) |
 | Tegels water, verkeer, vrijwilliger (28 okt) | Tot de wachtrij er is (fase 4) bellen deze tegels de evenementcoördinator, net als "Anders" |
@@ -379,7 +379,8 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Stand-by en startscherm (29 okt) | De drie statussen hebben dezelfde opbouw in hun eigen kleur: vrij groen, pauze oranje (#FFA500), uit dienst rood; de gekozen statusknop is in dezelfde kleur getint. Na het instellen kom je op je functie uit: stand-by als je EHBO'er bent, anders je post, ook als beheerder of kernteamlid. Pushmeldingen, locatie (met een GPS-test) en de controle van de installatie staan op één scherm in het menu |
 | Info & voorwaarden (29 okt) | Niet meer in de aanmeldstappen en niet meer te bevestigen: na "Klopt, start" volgen direct meldingen en locatie. De info-pagina staat in het menu |
 | Tab Meldingen (29 okt) | Het tabblad met EHBO-oproepen en aanvragen heet Meldingen (was Verzoeken): een post doet een melding. Om verwarring te voorkomen heet het menu-item voor de telefoonmeldingen Pushmeldingen, locatie en controle. "Meldkamer" blijft vrij voor een latere desktopversie |
-| Afronden met pauze (29 okt) | Naast "Afronden & weer beschikbaar" staat "Afronden & even pauze" (lunch, wc): de eenheid gaat in dezelfde stap op pauze, zodat er tussendoor geen oproep binnenkomt. Een tik op een pushmelding opent direct de bijbehorende oproep, melding of aanvraag, ook als de app al open is |
+| Afronden met pauze (29 okt) | Naast "Afronden & weer beschikbaar" staat "Afronden & pauze" (lunch, wc): de eenheid gaat in dezelfde stap op pauze, zodat er tussendoor geen oproep binnenkomt. Een tik op een pushmelding opent direct de bijbehorende oproep, melding of aanvraag, ook als de app al open is |
+| Beschikbaar en pauze (29 okt) | De statussen van een EHBO-eenheid heten Beschikbaar, Pauze en Uit dienst (was Vrij en Even pauze), en overal in de app is het "beschikbare eenheden". De waarden in de code blijven vrij, pauze en uit_dienst |
 
 **Nog open**
 

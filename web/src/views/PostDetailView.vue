@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 3.5 · Postdetail: waar is de post, hoe kom je er, wie bel je, en waar is de dichtstbijzijnde EHBO.
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatKm, formatPhone, telHref } from '@ehbo/shared';
 import EventMap from '../components/EventMap.vue';
@@ -18,7 +18,6 @@ const store = usePackageStore();
 const live = useLiveStore();
 const session = useSessionStore();
 const router = useRouter();
-const copied = ref(false);
 const toggle = useSave();
 
 const post = computed(() => store.postById.get(Number(props.id)) ?? null);
@@ -48,12 +47,8 @@ const location = computed(() => {
   return p && p.lat !== null && p.lng !== null ? `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}` : null;
 });
 
-async function copyLocation() {
-  if (!location.value) return;
-  await navigator.clipboard.writeText(location.value);
-  copied.value = true;
-  setTimeout(() => (copied.value = false), 2000);
-}
+/** Welke EHBO-eenheid hier hoort: een vaste eenheid op haar eigen EHBO-post, of een mobiele eenheid met hier haar standplaats. */
+const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EHBO ${u.name} staat op deze post` : `Standplaats van EHBO ${u.name} (mobiel)`);
 </script>
 
 <template>
@@ -85,7 +80,6 @@ async function copyLocation() {
             <span class="label">Locatie</span>
             <span :class="post.address ? 'address' : 'mono coords'">{{ location }}</span>
           </span>
-          <button class="copy" @click="copyLocation">{{ copied ? 'Gekopieerd' : 'Kopieer' }}</button>
         </div>
         <div v-else class="fact"><span class="label">Locatie</span><span>Nog geen locatie vastgelegd</span></div>
         <div v-if="post.accessRoute" class="fact"><span class="label">Aanrijroute hulpverlening</span><span>{{ post.accessRoute }}</span></div>
@@ -114,11 +108,11 @@ async function copyLocation() {
 
       <p v-if="here.length" class="note ok nearest">
         <PostBadge :type="store.pkg.postTypes.find((t) => t.key === 'ehbo')" :size="22" />
-        <span>EHBO hier: <strong>{{ here.map((u) => u.name).join(', ') }}</strong></span>
+        <strong>{{ here.map(hereText).join(' · ') }}</strong>
       </p>
       <p v-else-if="nearest" class="note ok nearest">
         <PostBadge :type="store.pkg.postTypes.find((t) => t.key === 'ehbo')" :size="22" />
-        <span>Dichtstbij: <strong>{{ nearest.post.name }} · {{ nearest.unit.name }}</strong> · {{ formatKm(nearest.km) }} km</span>
+        <span>Dichtstbijzijnde EHBO: <strong>{{ nearest.unit.name }}</strong> bij {{ nearest.post.name }} · {{ formatKm(nearest.km) }} km</span>
       </p>
 
       <div class="grow" />
@@ -147,11 +141,9 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .post-facts { gap: 0; margin-bottom: 12px; }
 .fact { border-radius: 0; padding: 10px 0; font-size: 14px; border-top: 1px solid var(--divider); }
 .fact:first-child { border-top: none; padding-top: 0; }
-.fact.location { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
 .label { font-size: 12px; color: var(--muted); }
 .coords { font-size: 16px; white-space: nowrap; }
 .address { font-size: 16px; font-weight: 600; }
-.copy { flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: #FFFFFF; font: 600 13px var(--sans); color: var(--ink); cursor: pointer; }
 .role { font-weight: 400; }
 .round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--ink); }
 .nearest { margin-top: 12px; align-items: center; }

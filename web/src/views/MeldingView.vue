@@ -78,11 +78,11 @@ const back = () => (router.options.history.state.back ? router.back() : router.p
             <span class="mark busy" /><span class="grow"><strong>{{ unitName(d.unitId) }}</strong> ({{ d.reason === 'aed' ? 'AED' : 'dichtstbij' }}) wordt opgeroepen</span>
             <span v-if="left !== null" class="mono countdown">nog {{ left }} s</span>
           </div>
-          <div class="step later"><span class="mark" /><span class="grow">Daarna alle vrije eenheden tegelijk</span></div>
+          <div class="step later"><span class="mark" /><span class="grow">Daarna alle beschikbare eenheden tegelijk</span></div>
         </template>
         <div v-else class="step">
           <span class="mark busy" />
-          <span class="grow">{{ pending.length ? `Alle vrije eenheden worden opgeroepen (${pending.length})` : 'Geen vrije eenheid gevonden; de coördinator is gewaarschuwd' }}</span>
+          <span class="grow">{{ pending.length ? `Alle beschikbare eenheden worden opgeroepen (${pending.length})` : 'Geen beschikbare eenheid gevonden; de coördinator is gewaarschuwd' }}</span>
         </div>
         <div class="step" :class="{ later: incident.stage === 'dichtstbij' }"><span class="mark" :class="{ done: incident.stage === 'alle' }" /><span class="grow">Evenementcoördinator heeft een kopie</span></div>
       </div>
@@ -156,7 +156,7 @@ const back = () => (router.options.history.state.back ? router.back() : router.p
           <span class="main">
             <span class="title-line">{{ u.name }}</span>
             <span class="sub">
-              {{ live.unitState(u.id)?.availability === 'vrij' ? 'vrij' : live.unitState(u.id)?.availability === 'pauze' ? 'even pauze' : 'uit dienst' }}<template
+              {{ live.unitState(u.id)?.availability === 'vrij' ? 'beschikbaar' : live.unitState(u.id)?.availability === 'pauze' ? 'pauze' : 'uit dienst' }}<template
                 v-if="incident.dispatches.find((d) => d.unitId === u.id)?.distanceKm != null"
               > · {{ formatKm(incident.dispatches.find((d) => d.unitId === u.id)!.distanceKm!) }} km</template>
             </span>

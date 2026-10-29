@@ -139,7 +139,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     return post?.lat != null && post.lng != null ? [post.lng, post.lat] : null;
   }
 
-  /** Vrije eenheden met hun afstand tot de post (null als die onbekend is). */
+  /** Beschikbare eenheden met hun afstand tot de post (null als die onbekend is). */
   function freeUnits(post: Post) {
     const busy = busyUnits();
     const postMap = posts();
@@ -295,14 +295,14 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     db.transaction(() => {
       run("UPDATE incidents SET stage = 'alle', escalates_at = NULL WHERE id = ?", id);
       for (const { unit, km } of freeUnits(post)) addDispatch(id, unit.id, 'alle', km);
-      log(id, 'geescaleerd', `${reason} → naar alle vrije eenheden`);
+      log(id, 'geescaleerd', `${reason} → naar alle beschikbare eenheden`);
     });
     const updated = incidentRow(id);
     const targets = invited(id);
     alarmUnits(updated, targets, 'EHBO-oproep · alle eenheden');
     copyToCoordinator(updated, targets.length
-      ? `${reason}. Nu naar alle vrije eenheden (${targets.length}).`
-      : 'Geen vrije EHBO-eenheid. Bel zelf een eenheid of 112.', targets.length === 0);
+      ? `${reason}. Nu naar alle beschikbare eenheden (${targets.length}).`
+      : 'Geen beschikbare EHBO-eenheid. Bel zelf een eenheid of 112.', targets.length === 0);
     setTimer(id, escalationMs(), () => repeat(id, 1));
     changed();
   }
@@ -390,8 +390,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       setTimer(id, escalationMs(), () => escalate(id, `Geen reactie binnen ${escalationMs() / 1000} s`));
       changed();
     } else {
-      // Geen vrije eenheid met bekende positie: meteen naar iedereen die vrij is.
-      escalate(id, 'Geen vrije eenheid in de buurt bekend');
+      // Geen beschikbare eenheid met bekende positie: meteen naar iedereen die vrij is.
+      escalate(id, 'Geen beschikbare eenheid in de buurt bekend');
     }
     return state().incidents.find((i) => i.id === id)!;
   }
@@ -407,7 +407,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       log(id, 'aangevuld', `Aangevuld: ${summary(incidentRow(id))}${becameAed ? ', niet aanspreekbaar' : ''}`);
     });
     const updated = incidentRow(id);
-    // Niet aanspreekbaar geworden: de dichtstbijzijnde vrije AED-eenheid alsnog oproepen, als er nog geen AED komt.
+    // Niet aanspreekbaar geworden: de dichtstbijzijnde beschikbare AED-eenheid alsnog oproepen, als er nog geen AED komt.
     if (becameAed) {
       const comingWithAed = dispatchesOf(id).some((d) => !d.declinedAt && unitById(d.unitId)?.hasAed);
       const aedUnit = comingWithAed ? undefined : nearest(freeUnits(posts().get(updated.post_id as number)!).filter((c) => c.unit.hasAed));
@@ -532,7 +532,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       run('UPDATE ehbo_units SET stay_post_id = ? WHERE id = ?', stay, unitId);
       // In dezelfde stap op pauze, zodat er tussendoor geen oproep binnenkomt.
       if (body.pause) run("UPDATE ehbo_units SET availability = 'pauze' WHERE id = ?", unitId);
-      log(id, 'afgerond', `Afgerond door ${unit.name}${body.pause ? ', daarna even pauze' : ''}`, unitId);
+      log(id, 'afgerond', `Afgerond door ${unit.name}${body.pause ? ', daarna pauze' : ''}`, unitId);
     });
     copyToCoordinator(incidentRow(id), `Afgerond door ${unit.name}.`);
     changed();
