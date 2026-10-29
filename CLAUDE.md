@@ -68,7 +68,7 @@ Where the main pieces live:
 
 - **Theme:** neutral event theme. Anthracite `#16181D` with yellow accent `#F2C230`, background `#F6F5F1`, font IBM Plex Sans (Plex Mono for numbers).
   - The theme can be configured per event: large logo, square logo used as app icon, and colors.
-- **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and letter.
+- **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and icon (`web/src/icons.ts`: flag, drop, stamp, cone, cross, more); a custom type without an icon shows its letter.
 - **Colored header blocks** (call, sent, en route, stand-by, no signal): always 140 px tall, text top-aligned, title 26 px.
 - **No page titles on tab screens** (map, requests, contacts, menu): the tab bar already says where you are. Screens reached from a tab (post detail, admin) keep their header.
 - **Buttons:**
@@ -103,7 +103,7 @@ Where the main pieces live:
 - **AED rule:** when the person is not responsive, the call goes to the nearest free unit and the nearest free AED unit at once.
 - **Statuses:** reported → sent → accepted → on site (one tap) → closed, or withdrawn. Every step is timestamped.
 - **No signal:** maps, contacts, calling and navigating all work offline. The help button falls back to calling the nearest EHBO unit and the coordinator directly.
-- **Privacy:** no casualty names or medical details are stored. Positions are not stored.
+- **Privacy:** no casualty names or medical details are stored. Positions are not stored: a mobile unit's last GPS fix lives only in server memory and is shown live to staff on the map (as an ambulance) while it is fresh (3 min).
 
 ## Commands
 

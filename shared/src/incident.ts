@@ -119,6 +119,8 @@ export interface LiveUnit {
   incidentId: number | null;
   /** Vaste eenheid die na afronden bij een andere post bleef. */
   stayPostId: number | null;
+  /** Mobiele eenheid: laatste GPS-positie (alleen in het geheugen van de server, nooit opgeslagen). */
+  position: { lat: number; lng: number; at: string } | null;
 }
 
 /** GET /api/live/state, en elk bericht op GET /api/live (SSE). Iedere medewerker ziet hetzelfde. */

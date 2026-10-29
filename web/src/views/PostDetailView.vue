@@ -8,7 +8,7 @@ import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { navigationUrl } from '../navigate.ts';
 import { useSave } from '../composables/useSave.ts';
-import { kmLabel, nearestUnit, primaryContact, unitsAt } from '../posts.ts';
+import { ambulances, kmLabel, nearestUnit, primaryContact, unitsAt } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -77,6 +77,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
         <!-- Net als op het overzicht: tik op een andere post om die te openen. Die vervangt deze pagina, zodat Terug in één stap teruggaat naar waar je vandaan kwam. -->
         <EventMap
           :pkg="store.pkg" :focus-post-id="post.id" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
+          :ambulances="ambulances(store.pkg, live.state?.units ?? [], live.serverNow)"
           @select="(id) => id !== post!.id && router.replace({ name: 'post', params: { id } })"
         />
       </div>
