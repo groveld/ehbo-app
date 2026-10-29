@@ -6,7 +6,7 @@ App voor de EHBO-coördinatie bij evenementen. Wat er werkt:
 2. **Aanmelden** met je telefoonnummer: de app zoekt zelf je functie en post op. Daarna meldingen en locatie aanzetten met een testmelding; info & voorwaarden staan in het menu.
 3. **Beheer** (alleen beheerders): evenement en lopen met GPX, info & voorwaarden, stijl (groot logo, vierkant logo als app-icoon, kleuren, korte naam), posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
 4. **Overzicht** voor medewerkers: kaart met alle posten, filter per soort, lijsten met bel- en navigeerknop, alle contacten, en per post de aanrijroute en de dichtstbijzijnde EHBO. Open oproepen staan rood bovenaan.
-5. **EHBO-oproepen**: de post zet zijn post open en vraagt EHBO aan; de dichtstbijzijnde vrije eenheid krijgt een alarm, na 30 s alle vrije eenheden. Accepteren, ter plaatse, afronden; de evenementcoördinator kijkt mee en kan zelf een eenheid inzetten.
+5. **EHBO-oproepen**: de post zet zijn post open en vraagt EHBO aan; de dichtstbijzijnde beschikbare eenheid krijgt een alarm, na 30 s alle beschikbare eenheden. Accepteren, ter plaatse, afronden; de evenementcoördinator kijkt mee en kan zelf een eenheid inzetten.
 6. **Aanvragen** voor water, verkeer en vrijwilligers: in de wachtrij van de evenementcoördinator, die ze oppakt en afhandelt.
 7. **Deelnemers**: route, starttijden (favoriete loop vooraan) en de posten langs de route, zonder namen of nummers.
 8. **Zonder bereik**: alle vaste gegevens en de kaart staan op de telefoon. Een EHBO-verzoek zonder bereik toont wie je kunt bellen en gaat vanzelf weg zodra er weer bereik is.
@@ -167,7 +167,7 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | POST | `/api/incidents/:id/on-site`, `/close` | EHBO-eenheid | Ter plaatse; afronden `{ outcome, persons, note, stayHere }` |
 | POST | `/api/incidents/:id/withdraw` | post | Melding intrekken |
 | POST | `/api/incidents/:id/assign` | coördinator | Oproep toewijzen aan een eenheid `{ unitId }` |
-| PUT | `/api/units/:id/availability` | EHBO-eenheid | Vrij, even pauze of uit dienst |
+| PUT | `/api/units/:id/availability` | EHBO-eenheid | Beschikbaar, pauze of uit dienst |
 | PUT | `/api/units/:id/position` | EHBO-eenheid | Positie van een mobiele eenheid (alleen in het geheugen van de server) |
 | PUT | `/api/posts/:id/open` | postverantwoordelijke | Post open of dicht `{ open }` |
 | POST | `/api/requests` | post | Aanvraag water, verkeer of vrijwilliger `{ postId, kind, detail, clientId }` |

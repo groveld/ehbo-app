@@ -121,7 +121,7 @@ test('vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde', async
   assert.equal((await call(DEMO.ehbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'vrij' })).statusCode, 403, 'niet je eigen eenheid');
 });
 
-test('oproep naar de dichtstbijzijnde vrije eenheid, kopie naar de coördinator, accepteren', async () => {
+test('oproep naar de dichtstbijzijnde beschikbare eenheid, kopie naar de coördinator, accepteren', async () => {
   await onDuty();
   const created = await call(DEMO.postLead, 'POST', '/api/incidents', request());
   assert.equal(created.statusCode, 201, created.body);
@@ -153,7 +153,7 @@ test('oproep naar de dichtstbijzijnde vrije eenheid, kopie naar de coördinator,
   assert.match(late.json().error, /al aangenomen door Team 2/);
 });
 
-test('geen reactie binnen de escalatietijd: naar alle vrije eenheden; de eerste die accepteert gaat', async () => {
+test('geen reactie binnen de escalatietijd: naar alle beschikbare eenheden; de eerste die accepteert gaat', async () => {
   await onDuty();
   const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   runNextTimer();
@@ -263,14 +263,14 @@ test('dezelfde melding twee keer versturen (zonder bereik bewaard) telt één ke
   assert.equal((await ok(DEMO.coordinator, 'GET', '/api/live/state')).incidents.length, 1);
 });
 
-test('geen vrije eenheid: meteen alle eenheden, de coördinator krijgt een alarm; daarna blijft het herhalen', async () => {
+test('geen beschikbare eenheid: meteen alle eenheden, de coördinator krijgt een alarm; daarna blijft het herhalen', async () => {
   await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: true });
   const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   assert.equal(inc.stage, 'alle');
   assert.equal(inc.dispatches.length, 0);
   const alarm = pushesTo(DEMO.coordinator).at(-1)!.payload;
   assert.equal(alarm.urgent, true);
-  assert.match(alarm.body, /Geen vrije EHBO-eenheid/);
+  assert.match(alarm.body, /Geen beschikbare EHBO-eenheid/);
 
   // Team 2 komt in dienst en krijgt bij de herhaling alsnog de oproep.
   await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'vrij' });

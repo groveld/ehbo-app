@@ -77,7 +77,7 @@ async function finish(pause = false) {
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <p v-else-if="!outcome" class="small center">Kies de afloop om af te ronden.</p>
     <button class="btn go footer" :disabled="busy || !outcome" @click="finish()">Afronden &amp; weer beschikbaar</button>
-    <button class="btn pause" :disabled="busy || !outcome" @click="finish(true)">Afronden &amp; even pauze</button>
+    <button class="btn pause" :disabled="busy || !outcome" @click="finish(true)">Afronden &amp; pauze</button>
   </main>
 </template>
 

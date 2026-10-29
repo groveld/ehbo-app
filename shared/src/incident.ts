@@ -3,7 +3,7 @@ import type { LiveRequest } from './request.ts';
 
 /** Gemeld (op de telefoon) → verstuurd → geaccepteerd → ter plaatse → afgerond, of ingetrokken. */
 export type IncidentStatus = 'verstuurd' | 'geaccepteerd' | 'ter_plaatse' | 'afgerond' | 'ingetrokken';
-/** Eerst de dichtstbijzijnde vrije eenheid (en bij niet aanspreekbaar ook de dichtstbijzijnde met AED), daarna alle vrije eenheden. */
+/** Eerst de dichtstbijzijnde beschikbare eenheid (en bij niet aanspreekbaar ook de dichtstbijzijnde met AED), daarna alle beschikbare eenheden. */
 export type IncidentStage = 'dichtstbij' | 'alle';
 
 export const INCIDENT_WHAT = {
@@ -32,7 +32,7 @@ export type Outcome = keyof typeof OUTCOMES;
 
 /** Wat de eenheid zelf instelt. "Bezet" volgt uit een lopende oproep. */
 export type UnitAvailability = 'vrij' | 'pauze' | 'uit_dienst';
-export const UNIT_AVAILABILITY = { vrij: 'Vrij', pauze: 'Even pauze', uit_dienst: 'Uit dienst' } as const;
+export const UNIT_AVAILABILITY = { vrij: 'Beschikbaar', pauze: 'Pauze', uit_dienst: 'Uit dienst' } as const;
 
 export const NOTE_MAX = 500;
 
@@ -59,7 +59,7 @@ export interface CloseIncident {
   note: string | null;
   /** Vaste eenheid: "ik blijf hier even", dan telt deze post als haar plek tot ze terug is. */
   stayHere: boolean;
-  /** Daarna even pauze (lunch, wc) in plaats van weer vrij. */
+  /** Daarna pauze (lunch, wc) in plaats van weer beschikbaar. */
   pause?: boolean;
 }
 

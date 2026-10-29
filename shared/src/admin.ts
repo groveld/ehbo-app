@@ -14,7 +14,7 @@ export interface EventSettings {
   startLocation: string | null;
   startDate: string | null;
   endDate: string | null;
-  /** Na zoveel seconden zonder acceptatie gaat een EHBO-oproep naar alle vrije eenheden. */
+  /** Na zoveel seconden zonder acceptatie gaat een EHBO-oproep naar alle beschikbare eenheden. */
   escalationSeconds: number;
   style: EventStyle;
 }

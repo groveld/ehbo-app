@@ -185,7 +185,7 @@ const toStandby = () => router.replace({ name: 'stand-by' });
         }}</h1>
         <p class="lead">
           <template v-if="mode === 'withdrawn'">{{ post.name }} heeft geen hulp meer nodig.</template>
-          <template v-else-if="mode === 'declined'">De oproep is naar alle vrije eenheden gegaan.</template>
+          <template v-else-if="mode === 'declined'">De oproep is naar alle beschikbare eenheden gegaan.</template>
           <template v-else-if="mode === 'watching'">Je eenheid is nu niet opgeroepen.</template>
           <template v-else-if="mode === 'closed'">{{ takenBy?.name }} heeft de oproep afgerond.</template>
           <template v-else><strong>{{ takenBy?.name }}</strong> gaat naar {{ post.name }}.<br>Je hoeft niet te komen.</template>
@@ -195,7 +195,7 @@ const toStandby = () => router.replace({ name: 'stand-by' });
         <div v-if="incident.acceptedAt" class="list-row"><span class="grow muted">Aangenomen</span><span class="mono">{{ clock(incident.acceptedAt) }}</span></div>
         <div v-if="myUnitId !== null" class="list-row">
           <span class="grow muted">Jouw status</span>
-          <strong class="free">{{ live.unitState(myUnitId)?.availability === 'vrij' ? 'Weer vrij' : live.unitState(myUnitId)?.availability === 'pauze' ? 'Even pauze' : 'Uit dienst' }}</strong>
+          <strong class="free">{{ live.unitState(myUnitId)?.availability === 'vrij' ? 'Weer beschikbaar' : live.unitState(myUnitId)?.availability === 'pauze' ? 'Pauze' : 'Uit dienst' }}</strong>
         </div>
       </div>
       <div class="grow" />
