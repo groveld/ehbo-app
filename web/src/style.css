@@ -86,7 +86,7 @@ h1, h2, p { margin: 0; }
 }
 textarea.input { height: auto; min-height: 72px; padding: 10px 12px; line-height: 1.4; resize: vertical; }
 .input:focus { outline: 2px solid var(--ink); outline-offset: -1px; }
-.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .choice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .choice-grid.two { grid-template-columns: 1fr 1fr; }
 .choice-grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
