@@ -34,8 +34,8 @@ const label = computed(() => {
 const block = computed(() => {
   if (active.value) return { tone: 'red' as const, title: 'Bezig met een oproep', sub: store.postById.get(active.value.postId)?.name ?? '' };
   if (availability.value === 'vrij') return { tone: 'green' as const, title: 'Beschikbaar', sub: 'Je krijgt oproepen uit de buurt. Houd de telefoon bij je.' };
-  if (availability.value === 'pauze') return { tone: 'orange' as const, title: 'Pauze', sub: 'Je krijgt geen oproepen. Zet je weer op beschikbaar als je klaar bent.' };
-  return { tone: 'red' as const, title: 'Uit dienst', sub: 'Je krijgt geen oproepen.' };
+  if (availability.value === 'pauze') return { tone: 'red' as const, title: 'Niet beschikbaar', sub: 'Pauze: je krijgt geen oproepen.' };
+  return { tone: 'dark' as const, title: 'Uit dienst', sub: 'Je krijgt geen oproepen.' };
 });
 
 /** Waar de eenheid voor "dichtstbij" telt. */
@@ -123,8 +123,8 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 .gap-top { margin-top: 14px; }
 .option[aria-pressed="true"] { font-weight: 700; }
 .option.vrij[aria-pressed="true"] { border-color: var(--ok); background: var(--ok-bg); color: #0A4D33; }
-.option.pauze[aria-pressed="true"] { border-color: #FFA500; background: #FFF1D6; color: #6B4300; }
-.option.uit_dienst[aria-pressed="true"] { border-color: var(--danger); background: #FBE3E1; color: #8A1A14; }
+.option.pauze[aria-pressed="true"] { border-color: var(--danger); background: #FBE3E1; color: #8A1A14; }
+.option.uit_dienst[aria-pressed="true"] { border-color: var(--ink); background: #E8E8EA; color: var(--ink); }
 .facts-list { margin-top: 14px; }
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
 .today { min-height: 56px; color: var(--ink); text-decoration: none; }

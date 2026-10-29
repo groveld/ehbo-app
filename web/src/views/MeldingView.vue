@@ -156,7 +156,7 @@ const back = () => (router.options.history.state.back ? router.back() : router.p
           <span class="main">
             <span class="title-line">{{ u.name }}</span>
             <span class="sub">
-              {{ live.unitState(u.id)?.availability === 'vrij' ? 'beschikbaar' : live.unitState(u.id)?.availability === 'pauze' ? 'pauze' : 'uit dienst' }}<template
+              {{ live.unitState(u.id)?.availability === 'vrij' ? 'beschikbaar' : live.unitState(u.id)?.availability === 'pauze' ? 'niet beschikbaar' : 'uit dienst' }}<template
                 v-if="incident.dispatches.find((d) => d.unitId === u.id)?.distanceKm != null"
               > · {{ formatKm(incident.dispatches.find((d) => d.unitId === u.id)!.distanceKm!) }} km</template>
             </span>

@@ -10,7 +10,8 @@ import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
 import Icon, { type IconName } from './Icon.vue';
 
-interface Tab { key: string; to: RouteLocationRaw; label: string; icon: IconName; active: boolean; count?: number }
+/** color: eigen kleur van het actieve tabblad (de soort post); anders de accentkleur van het evenement. */
+interface Tab { key: string; to: RouteLocationRaw; label: string; icon: IconName; active: boolean; count?: number; color?: string }
 
 const route = useRoute();
 const session = useSessionStore();
@@ -47,6 +48,7 @@ const tabs = computed<Tab[]>(() => {
       key: `post-${postId}`, to: { name: 'post-home', params: { id: postId } }, icon: 'pin',
       label: posts.length > 1 ? (pkg.postById.get(postId)?.name.split(' · ')[0] ?? 'Post') : 'Mijn post',
       active: routePostId.value === postId,
+      color: pkg.typeById.get(pkg.postById.get(postId)?.typeId ?? -1)?.color,
       count: live.openIncidents.filter((i) => i.postId === postId).length,
     });
   }
@@ -62,7 +64,10 @@ const tabs = computed<Tab[]>(() => {
 
 <template>
   <nav class="tabbar" aria-label="Hoofdmenu">
-    <RouterLink v-for="tab in tabs" :key="tab.key" :to="tab.to" class="tab" :class="{ active: tab.active }" :aria-current="tab.active ? 'page' : undefined">
+    <RouterLink
+      v-for="tab in tabs" :key="tab.key" :to="tab.to" class="tab" :class="{ active: tab.active, own: tab.color }"
+      :style="tab.color ? { '--tab-color': tab.color } : undefined" :aria-current="tab.active ? 'page' : undefined"
+    >
       <span class="icon">
         <Icon :name="tab.icon" :size="22" />
         <span v-if="tab.count" class="count" :aria-label="`${tab.count} nieuw`">{{ tab.count }}</span>
@@ -84,7 +89,10 @@ const tabs = computed<Tab[]>(() => {
 /* Geen kader na een tik of klik; met het toetsenbord blijft de focus zichtbaar. */
 .tab:focus:not(:focus-visible) { outline: none; }
 .label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.icon { position: relative; display: flex; }
-.count { position: absolute; top: -4px; right: -10px; background: var(--danger); color: #FFFFFF; border: 2px solid var(--card); border-radius: 999px; }
+.icon { position: relative; display: flex; padding: 3px 16px; border-radius: 999px; }
+/* Waar je bent: een zachte pil achter het icoon, in de accentkleur, of bij een post in de kleur van de soort post. */
+.tab.active .icon { background: color-mix(in srgb, var(--tab-color, var(--accent)) 28%, transparent); }
+.tab.active.own .icon { color: var(--tab-color); }
+.count { position: absolute; top: -6px; right: 2px; background: var(--danger); color: #FFFFFF; border: 2px solid var(--card); border-radius: 999px; }
 .count { min-width: 20px; height: 20px; padding: 0 5px; font: 700 11px/16px var(--mono); text-align: center; }
 </style>

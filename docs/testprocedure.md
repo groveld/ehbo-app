@@ -121,7 +121,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | --- | --- | --- | --- | --- |
 | 7.1 | B | Vliegtuigmodus aan › **EHBO** › versturen | Scherm "Bel de EHBO direct" met belknoppen naar de dichtstbijzijnde eenheid en de coördinator | |
 | 7.2 | B | Vliegtuigmodus uit | De melding gaat vanzelf weg en E krijgt de oproep | |
-| 7.3 | E | Afronden met **Afronden & pauze** | E staat op **Pauze** (oranje); geen nieuwe oproepen | |
+| 7.3 | E | Afronden met **Afronden & pauze** | E staat op Pauze: rode kop *Niet beschikbaar*; geen nieuwe oproepen | |
 | 7.4 | B | Nieuw EHBO-verzoek | Gaat **niet** naar E (pauze), wel naar D | |
 | 7.5 | D, E | D handelt af; E zet zichzelf weer op **Beschikbaar** | — | |
 
