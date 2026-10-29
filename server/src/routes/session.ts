@@ -76,11 +76,6 @@ export async function sessionRoutes(app: FastifyInstance, { db }: { db: EventDb 
 
   app.get('/api/me', { preHandler: requireMe }, async (request) => request.me!);
 
-  app.post('/api/me/info-accepted', { preHandler: requireMe }, async (request, reply) => {
-    db.acceptInfo(request.me!.phone);
-    return reply.code(204).send();
-  });
-
   app.delete('/api/session', async (request, reply) => {
     if (request.sessionHash) db.deleteSession(request.sessionHash);
     reply.clearCookie(SESSION_COOKIE, { path: '/' });

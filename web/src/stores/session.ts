@@ -63,10 +63,5 @@ export const useSessionStore = defineStore('session', () => {
     void usePackageStore().refresh();
   }
 
-  async function acceptInfo() {
-    await api('/api/me/info-accepted', { method: 'POST' });
-    if (me.value) me.value = { ...me.value, infoAccepted: true };
-  }
-
-  return { event, me, unknown, firstName, loadEvent, refresh, login, logout, acceptInfo };
+  return { event, me, unknown, firstName, loadEvent, refresh, login, logout };
 });

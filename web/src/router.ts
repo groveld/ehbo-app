@@ -2,13 +2,13 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { canUseAsStaff } from './platform.ts';
 import { useSessionStore } from './stores/session.ts';
 
-/** EHBO'ers naar stand-by, postverantwoordelijken naar hun post (de gekozen plek als dat een post is), de rest naar het overzicht. */
+/** EHBO'ers naar stand-by, wie bij een post staat naar die post (als verantwoordelijke eerst), de rest naar de kaart. */
 export function homeRoute() {
   const session = useSessionStore();
   const me = session.me!;
   if (me.home === 'ehbo') return { name: 'stand-by' };
   if (me.home === 'post') {
-    const post = me.assignments.find((a) => a.kind === 'post' && a.role === 'verantwoordelijke');
+    const post = me.assignments.find((a) => a.kind === 'post' && a.role === 'verantwoordelijke') ?? me.assignments.find((a) => a.kind === 'post');
     if (post?.postId) return { name: 'post-home', params: { id: post.postId } };
   }
   return { name: 'kaart' };

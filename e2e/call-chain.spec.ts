@@ -16,12 +16,7 @@ async function staffPhone(browser: Browser, phone: string): Promise<Page> {
   await page.getByRole('button', { name: 'Verder' }).click();
   await expect(page.getByText('Nummer herkend')).toBeVisible();
   await page.getByRole('button', { name: 'Klopt, start' }).click();
-  // Info & voorwaarden alleen de eerste keer.
-  const info = page.getByRole('button', { name: 'Gelezen, verder' });
-  const done = page.getByRole('link', { name: 'Klaar, naar mijn startscherm' });
-  await expect(info.or(done)).toBeVisible();
-  if (await info.isVisible()) await info.click();
-  await done.click();
+  await page.getByRole('link', { name: 'Klaar, naar mijn startscherm' }).click();
   return page;
 }
 
@@ -64,7 +59,7 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await ehbo.getByLabel('Korte notitie').fill('Gekoeld en drinken gegeven');
   await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
-  await expect(ehbo.getByText(/Waterpost 3 · brug · Onwel/).first()).toBeVisible();
+  await expect(ehbo.locator('.today').filter({ hasText: 'Waterpost 3 · brug' }).filter({ hasText: 'Onwel' }).first()).toBeVisible();
 
   await expect(post.getByRole('heading', { name: 'Klaar' })).toBeVisible({ timeout: 10_000 });
   await expect(post.getByText('Ter plaatse geholpen')).toBeVisible();

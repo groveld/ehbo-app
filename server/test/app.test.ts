@@ -160,9 +160,9 @@ test('aanmelden met een bekend nummer: rollen, startscherm en cookie', async () 
   assert.equal(second?.letter, 'W');
 
   assert.equal((await login(DEMO.ehbo)).me.home, 'ehbo');
-  assert.equal((await login(DEMO.postMember)).me.home, 'overzicht');
+  assert.equal((await login(DEMO.postMember)).me.home, 'post', 'ook een lid van een post begint bij de post');
   const coordinator = (await login(DEMO.coordinator)).me;
-  assert.equal(coordinator.home, 'overzicht');
+  assert.equal(coordinator.home, 'post', 'kernteam met een post begint bij de post');
   assert.equal(coordinator.assignments[0]?.title, 'Evenementcoördinator');
   const admin = (await login(DEMO.admin)).me;
   assert.equal(admin.isAdmin, true);
@@ -214,13 +214,6 @@ test('wie nergens meer is ingepland, is direct afgemeld', async () => {
   const { cookie } = await login('+31600000099');
   db.raw.prepare('DELETE FROM post_contacts WHERE phone = ?').run('+31600000099');
   assert.equal((await api('/api/me', 'GET', undefined, cookie)).statusCode, 401);
-});
-
-test('info en voorwaarden eenmalig bevestigen', async () => {
-  const { me, cookie } = await login(DEMO.ehbo);
-  assert.equal(me.infoAccepted, false);
-  assert.equal((await api('/api/me/info-accepted', 'POST', undefined, cookie)).statusCode, 204);
-  assert.equal((await api('/api/me', 'GET', undefined, cookie)).json().infoAccepted, true);
 });
 
 test('sessie loopt tot de dag na het evenement, zonder einddatum 60 dagen', () => {

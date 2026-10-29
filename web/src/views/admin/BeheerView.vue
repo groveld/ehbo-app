@@ -11,7 +11,8 @@ import { useSessionStore } from '../../stores/session.ts';
 const admin = useAdminStore();
 const session = useSessionStore();
 
-// Beheerders
+// Beheerders: net als kernteam en noodnummers eerst de lijst; verwijderen en toevoegen na "Wijzigen".
+const adminsEditing = ref(false);
 const newAdmin = ref('');
 const admins = useSave();
 async function addAdmin() {
@@ -45,7 +46,7 @@ async function saveNumbers() {
 </script>
 
 <template>
-  <AdminPage title="Beheer" eyebrow="Alleen zichtbaar voor beheerders" :back="{ name: 'menu' }">
+  <AdminPage title="Beheer" :back="{ name: 'menu' }">
     <template #default="{ state }">
       <nav class="list">
         <RouterLink :to="{ name: 'beheer-evenement' }" class="list-row">
@@ -82,23 +83,29 @@ async function saveNumbers() {
       </nav>
 
       <section class="stack gap-8">
-        <h2 class="section-title">Beheerders</h2>
+        <div class="section-head">
+          <h2 class="section-title">Beheerders</h2>
+          <button v-if="!adminsEditing" class="add-link" @click="adminsEditing = true">Wijzigen</button>
+        </div>
         <div class="list">
           <div v-for="a in state.admins" :key="a.phone" class="list-row">
             <span class="main">
               <span class="title-line">{{ a.name || 'Naam onbekend' }}<span v-if="a.phone === session.me?.phone" class="tag">jij</span></span>
               <span class="sub mono">{{ formatPhone(a.phone) }}</span>
             </span>
-            <button v-if="a.phone !== session.me?.phone" class="icon-btn" aria-label="Beheerder verwijderen" @click="removeAdmin(a.phone, a.name)">
+            <button v-if="adminsEditing && a.phone !== session.me?.phone" class="icon-btn" aria-label="Beheerder verwijderen" @click="removeAdmin(a.phone, a.name)">
               <Icon name="trash" :size="20" />
             </button>
           </div>
         </div>
-        <form class="add-row" @submit.prevent="addAdmin">
-          <input v-model="newAdmin" class="input" type="tel" inputmode="tel" aria-label="Telefoonnummer nieuwe beheerder" placeholder="+31 6 … toevoegen">
-          <button class="btn add-btn" :disabled="admins.busy.value || !newAdmin.trim()">Toevoegen</button>
-        </form>
-        <p v-if="admins.error.value" class="error-text" role="alert">{{ admins.error.value }}</p>
+        <template v-if="adminsEditing">
+          <form class="add-row" @submit.prevent="addAdmin">
+            <input v-model="newAdmin" class="input" type="tel" inputmode="tel" aria-label="Telefoonnummer nieuwe beheerder" placeholder="+31 6 …">
+            <button class="btn add-btn" :disabled="admins.busy.value || !newAdmin.trim()">Toevoegen</button>
+          </form>
+          <p v-if="admins.error.value" class="error-text" role="alert">{{ admins.error.value }}</p>
+          <button class="btn" @click="adminsEditing = false; newAdmin = ''">Klaar</button>
+        </template>
       </section>
 
       <section class="stack gap-8">

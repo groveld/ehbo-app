@@ -81,9 +81,22 @@ export function contrastRatio(a: string, b: string) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/** Waarom deze kleuren niet leesbaar zijn, of null als ze goed zijn. */
+/** Lijkt deze kleur op een signaalkleur: rood (noodgeval, 112) of groen (in orde)? Dan mag hij geen hoofdkleur zijn. */
+export function looksLikeSignal(hex: string) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === 0 || (max - min) / max < 0.35) return false;
+  const d = max - min;
+  const hue = max === r ? (60 * ((g - b) / d) + 360) % 360 : max === g ? 60 * ((b - r) / d) + 120 : 60 * ((r - g) / d) + 240;
+  const near = (target: number) => Math.min(Math.abs(hue - target), 360 - Math.abs(hue - target)) < 25;
+  return near(3) || near(156);
+}
+
+/** Waarom deze kleuren niet bruikbaar zijn, of null als ze goed zijn. */
 export function styleProblem(style: Pick<EventStyle, 'primaryColor' | 'accentColor'>) {
   if (contrastRatio(style.primaryColor, '#FFFFFF') < MIN_CONTRAST) return 'De hoofdkleur is te licht: witte tekst erop is slecht leesbaar';
+  if (looksLikeSignal(style.primaryColor)) return 'De hoofdkleur lijkt op rood of groen; die zijn voor noodgeval en in orde. Kies een andere kleur';
   if (contrastRatio(style.accentColor, INK) < MIN_CONTRAST) return 'De accentkleur is te donker: donkere tekst erop is slecht leesbaar';
   return null;
 }
@@ -134,8 +147,6 @@ export interface Me {
   isAdmin: boolean;
   assignments: Assignment[];
   home: HomeScreen;
-  /** Info & voorwaarden eenmalig bevestigd. */
-  infoAccepted: boolean;
 }
 
 /** POST /api/session */

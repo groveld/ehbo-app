@@ -39,13 +39,10 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
 
   if (assignments.length === 0) return undefined;
 
-  // Het startscherm volgt de belangrijkste rol (functioneel ontwerp, "Installatie en aanmelden").
+  // Het startscherm is je functie: stand-by als je EHBO'er bent, anders je post; alleen wie geen van beide heeft, begint op de kaart.
   let home: HomeScreen = 'overzicht';
-  if (!isAdmin && !assignments.some((a) => a.kind === 'kernteam')) {
-    if (assignments.some((a) => a.kind === 'ehbo')) home = 'ehbo';
-    else if (assignments.some((a) => a.role === 'verantwoordelijke')) home = 'post';
-  }
+  if (assignments.some((a) => a.kind === 'ehbo')) home = 'ehbo';
+  else if (assignments.some((a) => a.kind === 'post')) home = 'post';
 
-  const person = db.getPerson(phone);
-  return { phone, name: person?.name ?? '', isAdmin, assignments, home, infoAccepted: Boolean(person?.info_accepted_at) };
+  return { phone, name: db.getPerson(phone)?.name ?? '', isAdmin, assignments, home };
 }

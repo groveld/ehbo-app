@@ -24,11 +24,11 @@ defineProps<{ tone: 'red' | 'orange' | 'green' | 'dark' | 'blue'; label: string;
 .texts { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-width: 0; }
 .label { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
 h1 { font-size: 26px; font-weight: 700; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sub { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.label { opacity: .8; }
+.sub { opacity: .85; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .red { background: var(--danger); color: #FFFFFF; }
-.orange { background: #F59A3C; color: var(--ink); }
+.orange { background: #FFA500; color: var(--ink); }
 .green { background: var(--ok); color: #FFFFFF; }
 .dark { background: var(--primary); color: #FFFFFF; }
 .blue { background: var(--info-icon); color: #FFFFFF; }
-.dark .sub { color: var(--soft-text); }
 </style>

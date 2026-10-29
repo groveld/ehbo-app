@@ -39,14 +39,13 @@ Elk evenement krijgt een eigen adres (bijv. silvesterloop.groveld.com). Deelneme
 5. **Telefoonnummer invullen** (06 of +31 wordt gelijk getrokken).
    - Bekend nummer → naam, functie(s), post(en) en tijden ter bevestiging. Meerdere functies → elke functie krijgt een eigen tab; kiezen of wisselen hoeft niet.
    - Onbekend nummer → opnieuw proberen, de evenementcoördinator bellen, of door als gast.
-6. **Eerste keer:** info & voorwaarden bevestigen, daarna toestemming voor meldingen en locatie.
-7. **Ingelogd.** Het beginscherm volgt de belangrijkste rol van het nummer:
-   - beheerder of kernteam → overzicht met kaart en open oproepen (de evenementcoördinator ook de wachtrij met verzoeken);
+6. **Eerste keer:** toestemming voor meldingen en locatie. Info & voorwaarden staan in het menu; bevestigen hoeft niet.
+7. **Ingelogd.** Het beginscherm is je functie:
    - EHBO'er → stand-by met oproepen;
-   - postverantwoordelijke → de eigen post: eerst post openen, daarna de verzoek-tegels;
-   - overige medewerkers → overzicht.
+   - bij een post (verantwoordelijke, lid of reserve) → de eigen post; alleen de verantwoordelijke zet hem open;
+   - geen van beide (bijv. alleen beheer of kernteam) → de kaart.
 
-   Via het menu kan iedereen altijd naar het overzicht. Aangemeld blijven tot het einde van het evenement.
+   Dat geldt ook voor beheerders en kernteamleden met een functie. Via de tabbalk kan iedereen altijd naar de kaart. Aangemeld blijven tot het einde van het evenement.
 
 **Beveiliging, nu en later.** In de eerste versie is het nummer een identificatie, geen beveiliging: wie het nummer van een collega kent, kan zich zo aanmelden. Elke aanmelding komt wel in het logboek (tijd, toestel). Later komt er een verificatie met een sms-code bij de eerste aanmelding op een toestel. De aanmeldstap is daar al op voorbereid: de code wordt een extra stap tussen *nummer invullen* en *bevestigen*, zonder dat de rest verandert.
 
@@ -161,7 +160,7 @@ Elke oproep wordt een incident met tijdlijn; na afloop maakt een beheerder er me
 
 De app verwerkt zo weinig mogelijk: naam, telefoonnummer en functie van medewerkers, en per incident alleen tijd, plaats en afloop. Slachtoffers worden niet geregistreerd.
 
-**Info-pagina** (voor iedereen bereikbaar; medewerkers bevestigen hem eenmalig bij de eerste aanmelding):
+**Info-pagina** (voor iedereen bereikbaar; medewerkers vinden hem in het menu):
 
 1. Waarvoor de app is, en dat hij 112 niet vervangt.
 2. Welke gegevens erin staan.
@@ -373,9 +372,12 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Hardlopen (29 okt) | De soort van een loop is hardlopen, wandelen of hardlopen + wandelen. "Lopen" als soort verviel: in gewone taal is dat hetzelfde als wandelen. Bestaande lopen zijn omgezet |
 | 112 alleen waar relevant (29 okt) | De app is een coördinatie-app voor logistiek en EHBO geworden. 112 staat daarom alleen bij EHBO: het EHBO-verzoek, de melding en terugmelding, stand-by, de oproep en geen bereik; verder in Overzicht › Contacten en op het deelnemerscherm. Welkom, installeren, het menu en het poststartscherm hebben geen 112-knop meer; het EHBO-verzoek vanaf de post zegt nog steeds "bij levensgevaar eerst 112" |
 | Telefoonnummers (29 okt) | Elk nummer staat internationaal opgeslagen (+31612345678), ook de noodnummers; alleen korte nummers (112, 144) en 0800/0900-nummers blijven zoals ze zijn. Getoond altijd met landcode en zonder (0): +31 6 12 34 56 78, +31 58 286 66 66, +32 470 12 34 56. Zo werkt een nummer op elk toestel, ook met een buitenlandse simkaart of via WhatsApp, en valt een fout noodnummer al bij het opslaan op. Invoeren mag in elke gangbare vorm; zonder landcode is het Nederlands |
-| Eén tabbalk (29 okt) | Vervangt het overzicht met vier tabbladen en het losse menu. Op elke pagina van een aangemelde medewerker, ook tijdens een oproep. Eerst een tab per functie: Stand-by als je EHBO'er bent, en een tab voor elke post waar je staat (verantwoordelijke, lid of reserve; bij één post heet hij Mijn post, bij meer de naam van de post). Wie meerdere functies heeft, hoeft tijdens het evenement nooit te wisselen. Daarna Kaart, Verzoeken (alleen evenementcoördinator en beheerders), Contacten en Menu. Alleen de postverantwoordelijke (en een beheerder) zet een post open of dicht. De postenlijst met zoeken op naam of km staat onder de kaart. Het menu toont al je functies en de rest: beheer, meldingen en locatie, info, controle, navigatie-app en afmelden. Knoppen onderaan een scherm staan boven de tabbalk. Een rode stip op je eigen plek bij een lopende oproep (EHBO: oproep of eigen inzet; post: open melding), en een teller op Verzoeken voor aanvragen die nog niet zijn opgepakt |
+| Eén tabbalk (29 okt) | Vervangt het overzicht met vier tabbladen en het losse menu. Op elke pagina van een aangemelde medewerker, ook tijdens een oproep. Eerst een tab per functie: Stand-by als je EHBO'er bent, en een tab voor elke post waar je staat (verantwoordelijke, lid of reserve; bij één post heet hij Mijn post, bij meer de naam van de post). Wie meerdere functies heeft, hoeft tijdens het evenement nooit te wisselen. Daarna Kaart, Verzoeken (alleen evenementcoördinator en beheerders), Contacten en Menu. Alleen de postverantwoordelijke (en een beheerder) zet een post open of dicht. De postenlijst met zoeken op naam of km staat onder de kaart. Het menu toont al je functies en de rest: beheer, info, meldingen, locatie en controle (één scherm, met een GPS-test), navigatie-app en afmelden. Knoppen onderaan een scherm staan boven de tabbalk. Een rode stip op je eigen plek bij een lopende oproep (EHBO: oproep of eigen inzet; post: open melding), en een teller op Verzoeken voor aanvragen die nog niet zijn opgepakt |
 | Locatie van een post (29 okt) | De plek van een post is altijd de GPS-positie (exact; kaart, afstand en navigatie gebruiken die). Optioneel vult de beheerder een adres of plek in ("Hoofdstraat 12", "bij de brug"), puur om bij een melding mondeling door te geven. Op de postpagina staat onder Locatie het adres als dat is ingevuld, anders de GPS-positie, met een knop om te kopiëren |
 | Opmaak na de tabbalk (29 okt) | Tabschermen hebben geen titel; de tabbalk zegt al waar je bent (de naam van het evenement komt later misschien op een andere plek terug). Verzoeken toont alles wat open is in één lijst (EHBO-oproepen rood bovenaan, dan water, verkeer en vrijwilligers) en daaronder wat is afgerond. In het menu staan je functies op volgorde: beheer, kernteam, EHBO en posten. Stand-by heeft één belknop voor de volgende in de lijn: de EHBO-coördinator, of de evenementcoördinator als je zelf EHBO-coördinator bent. Pauze is warm oranje, uit dienst donker met witte tekst. De inhoud is één kolom tot 720 px breed |
+| Signaalkleuren en hoofdkleur (29 okt) | Rood (noodgeval, 112) en groen (in orde) zijn gereserveerd. Een hoofdkleur die daarop lijkt, wordt bij het opslaan geweigerd; een eerder opgeslagen rode of groene hoofdkleur toont de app als antraciet, zodat een gewone knop nooit op 112 lijkt |
+| Stand-by en startscherm (29 okt) | De drie statussen hebben dezelfde opbouw in hun eigen kleur: vrij groen, pauze oranje (#FFA500), uit dienst donker; de gekozen statusknop is in dezelfde kleur getint. Na het instellen kom je op je functie uit: stand-by als je EHBO'er bent, anders je post, ook als beheerder of kernteamlid. Meldingen, locatie (met een GPS-test) en de controle van de installatie staan op één scherm in het menu |
+| Info & voorwaarden (29 okt) | Niet meer in de aanmeldstappen en niet meer te bevestigen: na "Klopt, start" volgen direct meldingen en locatie. De info-pagina staat in het menu |
 
 **Nog open**
 
