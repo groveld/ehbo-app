@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 2.4 · Nummer herkend → rol bevestigen. Sta je op meer plekken, dan kies je waar je nu bent.
+// 2.4 · Nummer herkend → rol bevestigen. Elke functie krijgt straks een eigen tab; kiezen of wisselen hoeft niet.
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatPhone } from '@ehbo/shared';
@@ -9,7 +9,6 @@ import { useSessionStore } from '../stores/session.ts';
 const session = useSessionStore();
 const router = useRouter();
 const me = computed(() => session.me!);
-const choosable = computed(() => me.value.assignments.length > 1);
 
 const preview = computed(() => {
   switch (me.value.home) {
@@ -39,21 +38,15 @@ async function notMe() {
 
     <div class="stack gap-10 places">
       <span class="label">Jij staat ingepland als</span>
-      <component
-        :is="choosable ? 'button' : 'div'"
-        v-for="(a, i) in me.assignments" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`"
-        class="card place" :class="choosable && i === session.placeIndex ? 'selected' : 'outlined'"
-        :aria-pressed="choosable ? i === session.placeIndex : undefined"
-        @click="choosable && (session.placeIndex = i)"
-      >
+      <div v-for="a in me.assignments" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`" class="card place outlined">
         <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
         <span class="stack text">
           <span class="name">{{ a.title }}</span>
           <span v-if="a.detail" class="detail">{{ a.detail }}</span>
           <span v-if="a.times" class="small">{{ a.times }}</span>
         </span>
-      </component>
-      <span v-if="choosable" class="small">Sta je op meer plekken? Kies waar je nu bent. Wisselen kan later via het menu.</span>
+      </div>
+      <span v-if="me.assignments.filter((a) => a.kind === 'post' || a.kind === 'ehbo').length > 1" class="small">Elke functie krijgt onderaan een eigen tab, zodat je niet hoeft te wisselen.</span>
     </div>
 
     <div class="note ok stack gap-6 preview">
@@ -74,7 +67,6 @@ async function notMe() {
 .places { margin-top: 28px; }
 .label { font-size: 14px; font-weight: 600; }
 .place { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; font: inherit; color: inherit; cursor: default; }
-button.place { cursor: pointer; }
 .letter { width: 48px; height: 48px; color: #FFFFFF; font-size: 17px; }
 .text { gap: 2px; flex-grow: 1; }
 .name { font-size: 16px; font-weight: 700; }

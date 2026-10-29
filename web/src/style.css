@@ -64,6 +64,8 @@ h1, h2, p { margin: 0; }
   display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
   height: 48px; border: none; border-radius: 14px; background: var(--soft); color: var(--ink);
   font: 600 14px var(--sans); text-decoration: none; cursor: pointer;
+  /* Smalle schermen: lange woorden afbreken in plaats van buiten de knop te lopen. */
+  min-width: 0; padding: 0 12px; text-align: center; line-height: 1.2; hyphens: auto; overflow-wrap: anywhere;
 }
 .btn.primary { height: 56px; border-radius: 16px; background: var(--primary); color: #FFFFFF; font-weight: 700; font-size: 16px; }
 .btn.danger { height: 56px; border-radius: 16px; background: var(--danger); color: #FFFFFF; font-weight: 700; font-size: 16px; }

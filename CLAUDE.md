@@ -78,7 +78,7 @@ Where the main pieces live:
 - **112** is only shown where it matters: the EHBO screens (request, follow-up, stand-by, call, no signal), Overzicht › Contacten and the participant screen. Where it is shown it sits at the bottom, in the same place. The app never replaces 112.
 - The request tiles on the post home screen are deliberately large; this is the one exception to the button sizes.
 - **"Post sluiten"** is a small, subtle red button at the top right, so it can't be confused with closing the screen.
-- Phone frame 390 × 844. Check every new screen against `docs/design/screens/`.
+- **Mobile-first, but dynamic:** design for a 390 × 844 phone and check every new screen against `docs/design/screens/`, but nothing may depend on that exact size. Content is one column of at most 480 px (also the tab bar), text in buttons may wrap, and maps use `clamp(…, dvh, …)` heights. Check 320 px wide and a tablet. No desktop layout (yet).
 
 ## Key behaviour (details in the design doc)
 

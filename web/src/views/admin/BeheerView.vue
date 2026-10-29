@@ -103,7 +103,7 @@ async function saveNumbers() {
 
       <section class="stack gap-8">
         <div class="section-head">
-          <h2 class="section-title">Kernteam <span class="small">(bovenaan voor iedereen)</span></h2>
+          <h2 class="section-title">Kernteam</h2>
           <button v-if="!teamDraft" class="add-link" @click="editTeam">Wijzigen</button>
         </div>
         <div v-if="!teamDraft" class="list">
