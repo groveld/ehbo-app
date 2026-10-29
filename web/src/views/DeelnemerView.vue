@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 2.8 · Deelnemer: route, starttijden met favoriete loop vooraan, en de posten langs de route. Zonder namen of nummers.
+// 2.8 · Deelnemer: naam van het evenement, route, starttijden met favoriete loop vooraan, de posten langs de route en Bel EHBO.
 import { computed, onMounted, ref } from 'vue';
 import { formatKm, telHref } from '@ehbo/shared';
 import Call112 from '../components/Call112.vue';
@@ -31,12 +31,10 @@ const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (
 
 <template>
   <main class="screen tight">
+    <!-- Deelnemers blijven hier; Sluiten gaat naar het welkomscherm, waar je ook als medewerker kunt aanmelden. -->
     <header class="top">
-      <RouterLink :to="{ name: 'welkom' }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
-      <div>
-        <span class="eyebrow">{{ store.pkg?.event.name }}</span>
-        <h1>Route &amp; tijden</h1>
-      </div>
+      <h1>{{ store.pkg?.event.name }}</h1>
+      <RouterLink :to="{ name: 'welkom' }" class="close"><Icon name="close" :size="14" />Sluiten</RouterLink>
     </header>
 
     <template v-if="store.pkg">
@@ -79,8 +77,12 @@ const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (
 </template>
 
 <style scoped>
-.top { display: flex; align-items: center; gap: 4px; padding: max(14px, env(safe-area-inset-top)) 0 8px; margin-left: -12px; }
-h1 { font-size: 22px; font-weight: 700; }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: max(18px, env(safe-area-inset-top)) 0 10px; }
+h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.close {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: 13px; font-weight: 600; text-decoration: none;
+}
 .map { height: clamp(200px, 35dvh, 420px); }
 .section { margin-top: 16px; }
 .runs { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
