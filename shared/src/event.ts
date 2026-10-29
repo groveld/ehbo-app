@@ -81,6 +81,12 @@ export function contrastRatio(a: string, b: string) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/** Zelfde functienaam, ongeacht hoofdletters, spaties of streepjes: "EHBO coördinator" = "EHBO-Coördinator". */
+export const sameFunction = (a: string, b: string) => {
+  const letters = (text: string) => text.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+  return letters(a) === letters(b);
+};
+
 /** Lijkt deze kleur op een signaalkleur: rood (noodgeval, 112) of groen (in orde)? Dan mag hij geen hoofdkleur zijn. */
 export function looksLikeSignal(hex: string) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];

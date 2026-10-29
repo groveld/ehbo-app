@@ -1,6 +1,6 @@
 // Evenementpakket (GET /api/package): alles voor gebruik zonder bereik, in één antwoord met een versie.
 import type { FastifyInstance } from 'fastify';
-import type { EventPackage, LngLat, PackageMap } from '@ehbo/shared';
+import { sameFunction, type EventPackage, type LngLat, type PackageMap } from '@ehbo/shared';
 import { adminDb } from '../admin-db.ts';
 import type { EventDb } from '../event-db.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
@@ -34,6 +34,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
     units: staff ? state.units.map(({ availability: _, ...u }) => u) : [],
     coreTeam: staff ? state.coreTeam.filter((c) => c.phone).map((c) => ({ ...c, phone: c.phone! })) : [],
     emergencyNumbers: staff ? state.emergencyNumbers : [],
+    ehboPhone: (state.coreTeam.find((c) => c.phone && sameFunction(c.function, 'EHBO-coördinator')) ?? state.coreTeam.find((c) => c.phone && c.isCoordinator))?.phone ?? null,
     map,
   };
 }

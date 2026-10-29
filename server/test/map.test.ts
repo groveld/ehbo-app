@@ -111,8 +111,9 @@ test('evenementpakket: deelnemers zonder namen en nummers, medewerkers met', asy
   const pub = (await app.inject({ url: '/api/package' })).json() as EventPackage;
   assert.equal(pub.staff, false);
   assert.ok(pub.posts.length > 0);
-  assert.doesNotMatch(JSON.stringify(pub), /\+316|Wim Water|accessRoute/, 'geen persoonsgegevens');
+  assert.doesNotMatch(JSON.stringify({ ...pub, ehboPhone: null }), /\+316|Wim Water|accessRoute/, 'geen persoonsgegevens, alleen het EHBO-nummer');
   assert.deepEqual([pub.units, pub.coreTeam, pub.emergencyNumbers], [[], [], []]);
+  assert.equal(pub.ehboPhone, DEMO.coordinator, 'zonder EHBO-coördinator met nummer: de evenementcoördinator');
 
   const staff = (await app.inject({ url: '/api/package', headers: { cookie: staffCookie } })).json() as EventPackage;
   assert.equal(staff.staff, true);

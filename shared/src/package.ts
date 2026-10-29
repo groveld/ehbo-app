@@ -72,6 +72,8 @@ export interface EventPackage {
   units: PackageUnit[];
   coreTeam: { function: string; name: string; phone: string; isCoordinator: boolean }[];
   emergencyNumbers: { label: string; number: string }[];
+  /** Voor iedereen, ook deelnemers: "Bel EHBO" belt de EHBO-coördinator, anders de evenementcoördinator. Alleen het nummer. */
+  ehboPhone: string | null;
   map: PackageMap | null;
 }
 

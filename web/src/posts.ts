@@ -1,5 +1,5 @@
 // Posten in het evenementpakket: contactpersoon, eenheden, dichtstbijzijnde EHBO.
-import { distanceKm, formatKm, type EventPackage, type LngLat, type PackagePost, type PackageUnit } from '@ehbo/shared';
+import { distanceKm, formatKm, type EventPackage, type LngLat, type PackagePost, type PackageUnit, sameFunction } from '@ehbo/shared';
 
 export const kmLabel = (km: number | null) => (km === null ? null : `km ${formatKm(km)}`);
 export const lngLat = (p: PackagePost): LngLat | null => (p.lat !== null && p.lng !== null ? [p.lng, p.lat] : null);
@@ -43,6 +43,4 @@ export const nearestUnit = (pkg: EventPackage, post: PackagePost) => unitsByDist
 /** De evenementcoördinator uit het kernteam (alleen in het pakket van medewerkers). */
 export const coordinatorOf = (pkg: EventPackage | null) => pkg?.coreTeam.find((c) => c.isCoordinator) ?? null;
 /** Kernteamlid met deze functie, bijv. "EHBO-coördinator". */
-/** Alleen letters vergelijken, zodat "EHBO coördinator" en "EHBO-Coördinator" ook gevonden worden. */
-const letters = (text: string) => text.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
-export const coreTeamMember = (pkg: EventPackage | null, fn: string) => pkg?.coreTeam.find((c) => letters(c.function) === letters(fn)) ?? null;
+export const coreTeamMember = (pkg: EventPackage | null, fn: string) => pkg?.coreTeam.find((c) => sameFunction(c.function, fn)) ?? null;

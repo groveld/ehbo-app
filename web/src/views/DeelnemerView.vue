@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 2.8 · Deelnemer: route, starttijden met favoriete loop vooraan, en de posten langs de route. Zonder namen of nummers.
 import { computed, onMounted, ref } from 'vue';
-import { formatKm } from '@ehbo/shared';
+import { formatKm, telHref } from '@ehbo/shared';
 import Call112 from '../components/Call112.vue';
 import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
@@ -72,7 +72,9 @@ const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (
     <p v-else class="note">Geen bereik. Open deze pagina één keer met internet; daarna werkt hij ook zonder.</p>
 
     <div class="grow" />
-    <Call112 />
+    <!-- Bel EHBO: de EHBO-coördinator (of de evenementcoördinator) stuurt hulp. Zonder nummer blijft 112 staan. -->
+    <a v-if="store.pkg?.ehboPhone" :href="telHref(store.pkg.ehboPhone)" class="btn danger"><Icon name="phone" :size="20" />Bel EHBO</a>
+    <Call112 v-else />
   </main>
 </template>
 
