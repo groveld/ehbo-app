@@ -80,7 +80,7 @@ export function createRequests(db: EventDb, { notify: send, changed, now = () =>
                            VALUES (?, ?, ?, ?, 'aangevraagd', ?, ?, ?)`, body.clientId, body.postId, body.kind, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);
     const coordinator = db.coordinatorPhone();
     if (coordinator) {
-      notify([coordinator], { title: `${REQUEST_KINDS[body.kind].label} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/overzicht/verzoeken' });
+      notify([coordinator], { title: `${REQUEST_KINDS[body.kind].label} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/overzicht/meldingen' });
     }
     changed();
     return list().find((r) => r.id === id)!;

@@ -37,8 +37,8 @@ h1, h2, p { margin: 0; }
 /* Tabschermen hebben geen titel: de tabbalk zegt al waar je bent. */
 .screen.tabbed { padding-top: max(16px, env(safe-area-inset-top)); }
 /* Met de tabbalk onderaan (TabBar.vue): ruimte vrijhouden; de tabbalk vangt de onderrand van de iPhone al op. */
-.with-tabs { --tabbar: calc(60px + max(8px, env(safe-area-inset-bottom))); padding-bottom: var(--tabbar); }
-.with-tabs .screen { padding-bottom: 26px; }
+.with-tabs { --tabbar: calc(58px + max(6px, calc(env(safe-area-inset-bottom) - 18px))); padding-bottom: var(--tabbar); }
+.with-tabs .screen { padding-bottom: 16px; }
 .with-tabs .form-footer { padding-bottom: 16px; }
 .grow { flex-grow: 1; }
 .stack { display: flex; flex-direction: column; }

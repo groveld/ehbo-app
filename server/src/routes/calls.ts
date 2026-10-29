@@ -100,7 +100,7 @@ export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls
       body: {
         type: 'object',
         required: ['outcome', 'persons', 'note', 'stayHere'],
-        properties: { outcome: { enum: Object.keys(OUTCOMES) }, persons: details.persons, note, stayHere: { type: 'boolean' } },
+        properties: { outcome: { enum: Object.keys(OUTCOMES) }, persons: details.persons, note, stayHere: { type: 'boolean' }, pause: { type: 'boolean' } },
       },
     },
   }, async (request) => calls.close(request.me!, request.params.id, request.body));

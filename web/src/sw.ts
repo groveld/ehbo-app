@@ -92,7 +92,8 @@ self.addEventListener('notificationclick', (event) => {
     for (const client of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) {
       if ('focus' in client) {
         await client.focus();
-        if ('navigate' in client) await client.navigate(target).catch(() => {});
+        // De app opent de pagina zelf (App.vue); dat werkt ook als deze service worker de pagina nog niet beheert.
+        client.postMessage({ type: 'open', url: new URL(target).pathname });
         return;
       }
     }

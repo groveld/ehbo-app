@@ -45,6 +45,10 @@ watch(() => live.invitations.length > 0 && visible.value, (ringing) => (ringing 
 
 onMounted(() => {
   push.registerWorker();
+  // Tik op een pushmelding terwijl de app al open is: direct naar die oproep, melding of aanvraag.
+  navigator.serviceWorker?.addEventListener('message', (e: MessageEvent) => {
+    if (e.data?.type === 'open' && typeof e.data.url === 'string' && e.data.url !== route.fullPath) void router.push(e.data.url);
+  });
   session.loadEvent();
   if (session.me) session.refresh();
   // Vaste gegevens en kaart bijwerken bij openen, bij terugkeren naar de app, en elke vijf minuten.
