@@ -36,7 +36,7 @@ async function notMe() {
 
     <div class="stack gap-10 places">
       <span class="label">Jij staat ingepland als</span>
-      <div v-for="a in me.assignments" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`" class="card place outlined">
+      <div v-for="a in session.functions" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`" class="card place outlined">
         <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
         <span class="stack text">
           <span class="name">{{ a.title }}</span>

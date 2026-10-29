@@ -12,10 +12,6 @@ const router = useRouter();
 const me = computed(() => session.me!);
 const navApp = ref<NavApp>(getNavApp());
 
-// Belangrijkste functie bovenaan: beheer, dan kernteam, dan EHBO en posten.
-const RANK = { beheerder: 0, kernteam: 1, ehbo: 2, post: 3 } as const;
-const functions = computed(() => [...me.value.assignments].sort((a, b) => RANK[a.kind] - RANK[b.kind]));
-
 // Rollen kunnen intussen gewijzigd zijn (bijv. door het beheer).
 onMounted(() => session.refresh());
 
@@ -26,7 +22,7 @@ function chooseNavApp(app: NavApp) {
 
 async function logout() {
   await session.logout();
-  router.replace({ name: 'welkom' });
+  router.replace({ name: 'deelnemer' });
 }
 </script>
 
@@ -38,7 +34,7 @@ async function logout() {
       <span v-if="me.name" class="mono small">{{ formatPhone(me.phone) }}</span>
     </div>
 
-    <div v-for="a in functions" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`" class="card place">
+    <div v-for="a in session.functions" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`" class="card place">
       <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
       <span class="stack text">
         <span class="name">{{ a.title }}</span>

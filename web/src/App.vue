@@ -16,15 +16,17 @@ const live = useLiveStore();
 const route = useRoute();
 const router = useRouter();
 
-// Eén tabbalk op elke pagina van een aangemelde medewerker, behalve de afdrukpagina van het rapport.
-const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info') && route.name !== 'beheer-rapport-afdrukken');
+// Eén tabbalk op elke pagina van een aangemelde medewerker. Niet tijdens het aanmelden (tot "Klaar, naar mijn startscherm")
+// en niet op de afdrukpagina van het rapport.
+const NO_TABS = ['herkend', 'toestemmingen', 'beheer-rapport-afdrukken'];
+const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info') && !NO_TABS.includes(String(route.name)));
 
 // Kleuren en naam van het evenement; zonder bereik uit de bewaarde gegevens.
 watch(() => session.event, applyTheme, { immediate: true });
 
 // Sessie verlopen of nummer niet meer ingepland: terug naar het begin.
 watch(() => session.me, (me) => {
-  if (!me && route.meta.staff) router.replace({ name: 'welkom' });
+  if (!me && route.meta.staff) router.replace({ name: 'deelnemer' });
 });
 
 // Nieuwe oproep voor mijn eenheid terwijl de app open is: meteen naar het oproepscherm.

@@ -31,9 +31,11 @@ const props = withDefaults(defineProps<{
   alertPostIds?: number[];
   /** Dichte posten: grijs. */
   closedPostIds?: number[];
-  /** Mobiele EHBO-eenheden in dienst, op hun laatste GPS-positie. */
+  /** Mobiele EHBO-eenheden onderweg, op hun laatste GPS-positie. */
   ambulances?: Ambulance[];
-}>(), { posts: undefined, focusPostId: null, highlightRunId: null, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], closedPostIds: () => [], ambulances: () => [] });
+  /** Standplaatsen waar de mobiele EHBO nu niet is: het kruisje grijs. */
+  awayPostIds?: number[];
+}>(), { posts: undefined, focusPostId: null, highlightRunId: null, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], closedPostIds: () => [], ambulances: () => [], awayPostIds: () => [] });
 
 const emit = defineEmits<{ select: [postId: number]; pick: [lngLat: LngLat] }>();
 
@@ -45,6 +47,7 @@ let userMarker: maplibregl.Marker | null = null;
 let pickedMarker: maplibregl.Marker | null = null;
 let watchId: number | null = null;
 
+const GREY = '#9A9CA3';
 const CROSS = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></svg>';
 const AMBULANCE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 10H6"/><path d="M8 8v4"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.3a1 1 0 0 0-.7-.9l-1.9-.7a1 1 0 0 1-.6-.5l-1.5-3a1 1 0 0 0-.9-.6H14"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
 
@@ -79,12 +82,14 @@ function markerElement(post: PackagePost) {
   const el = document.createElement('button');
   el.type = 'button';
   const alert = props.alertPostIds.includes(post.id);
+  const away = props.awayPostIds.includes(post.id);
   el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${post.id === props.focusPostId ? ' focus' : ''}${alert ? ' alert' : ''}`;
   // Altijd de kleur van de soort post; een dichte post is half doorzichtig, een post met een open oproep rood.
-  el.style.background = alert ? '#C8261E' : (type?.color ?? '#6B7079');
+  // Een EHBO-post waar de mobiele eenheid niet is: grijs.
+  el.style.background = alert ? '#C8261E' : type?.key === 'ehbo' && away ? GREY : (type?.color ?? '#6B7079');
   if (!alert && props.closedPostIds.includes(post.id)) el.classList.add('closed');
   const icon = postTypeIcon(type?.key);
-  el.setAttribute('aria-label', post.name);
+  el.setAttribute('aria-label', away ? `${post.name}, EHBO onderweg` : post.name);
   if (type?.key === 'ehbo') el.innerHTML = CROSS;
   else {
     if (icon) el.innerHTML = iconSvg(icon, 16, 2.4);
@@ -92,8 +97,8 @@ function markerElement(post: PackagePost) {
       el.textContent = type?.letter ?? '';
       if ((type?.letter.length ?? 0) > 1) el.classList.add('small');
     }
-    // Een EHBO-eenheid heeft hier haar standplaats: klein groen kruisje op de rand.
-    if (props.pkg.units.some((u) => u.postId === post.id)) el.insertAdjacentHTML('beforeend', `<span class="ehbo-dot">${CROSS}</span>`);
+    // Een EHBO-eenheid heeft hier haar standplaats: klein groen kruisje op de rand, grijs als ze onderweg is.
+    if (props.pkg.units.some((u) => u.postId === post.id)) el.insertAdjacentHTML('beforeend', `<span class="ehbo-dot${away ? ' away' : ''}">${CROSS}</span>`);
   }
   el.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -200,6 +205,8 @@ onMounted(() => {
 });
 
 watch(() => [props.posts, props.pkg, props.focusPostId, props.alertPostIds, props.closedPostIds], drawPosts);
+// Wordt elke tel opnieuw berekend; alleen opnieuw tekenen als er echt iets verandert.
+watch(() => props.awayPostIds.join(), drawPosts);
 watch(() => props.picked, drawPicked);
 watch(() => props.ambulances, drawAmbulances);
 // Naar een andere post (bijv. vanaf de postpagina): de kaart gaat mee.
@@ -218,6 +225,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* Geen position op de markers zelf: MapLibre zet ze absoluut; relatief maken laat ze verschuiven. */
 .event-map { width: 100%; height: 100%; border-radius: 18px; overflow: hidden; background: #ECE9E1; }
 .event-map.picking :deep(.maplibregl-canvas) { cursor: crosshair; }
 .event-map :deep(.post-marker) {
@@ -227,11 +235,11 @@ onBeforeUnmount(() => {
 .event-map :deep(.post-marker.small) { font-size: 9px; letter-spacing: -0.02em; }
 .event-map :deep(.post-marker.ehbo) { border-radius: 8px; }
 .event-map :deep(.post-marker.closed) { opacity: .55; }
-.event-map :deep(.post-marker) { position: relative; }
 .event-map :deep(.ehbo-dot) {
   position: absolute; right: -6px; bottom: -6px; width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid #FFFFFF;
   background: #0A7D4F; display: flex; align-items: center; justify-content: center;
 }
+.event-map :deep(.ehbo-dot.away) { background: #9A9CA3; }
 .event-map :deep(.ehbo-dot svg) { width: 10px; height: 10px; }
 .event-map :deep(.unit-marker) {
   width: 32px; height: 32px; border-radius: 50%; background: #FFFFFF; border: 2.5px solid #0A7D4F; color: #0A7D4F;

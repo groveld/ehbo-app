@@ -1,16 +1,19 @@
 <script setup lang="ts">
-// 2.8 · Deelnemer: naam van het evenement, route, starttijden met favoriete loop vooraan, de posten langs de route en Bel EHBO.
+// 2.8 · Deelnemer, en het beginscherm van de app zonder aanmelding: naam van het evenement, route, starttijden met favoriete loop
+// vooraan, de posten langs de route, Bel EHBO en rechtsboven Aanmelden voor medewerkers.
 import { computed, onMounted, ref } from 'vue';
 import { formatKm, telHref } from '@ehbo/shared';
-import Call112 from '../components/Call112.vue';
 import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
+import { canUseAsStaff } from '../platform.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from '../stores/package.ts';
 
 const store = usePackageStore();
 const favorite = ref<number | null>(load('ehbo.favoriteRun'));
+// Medewerkers zetten de app eerst op het beginscherm; in de browser kan aanmelden alleen met ?browser=1.
+const staffRoute = canUseAsStaff ? { name: 'aanmelden' } : { name: 'installeren' };
 onMounted(() => store.refresh());
 
 function toggleFavorite(id: number) {
@@ -31,10 +34,10 @@ const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (
 
 <template>
   <main class="screen tight">
-    <!-- Deelnemers blijven hier; Sluiten gaat naar het welkomscherm, waar je ook als medewerker kunt aanmelden. -->
+    <!-- Deelnemers blijven hier; medewerkers melden zich rechtsboven aan. -->
     <header class="top">
       <h1>{{ store.pkg?.event.name }}</h1>
-      <RouterLink :to="{ name: 'welkom' }" class="close"><Icon name="close" :size="14" />Sluiten</RouterLink>
+      <RouterLink :to="staffRoute" class="login"><Icon name="people" :size="14" />Aanmelden</RouterLink>
     </header>
 
     <template v-if="store.pkg">
@@ -69,17 +72,17 @@ const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (
     </template>
     <p v-else class="note">Geen bereik. Open deze pagina één keer met internet; daarna werkt hij ook zonder.</p>
 
-    <div class="grow" />
-    <!-- Bel EHBO: de EHBO-coördinator (of de evenementcoördinator) stuurt hulp. Zonder nummer blijft 112 staan. -->
-    <a v-if="store.pkg?.ehboPhone" :href="telHref(store.pkg.ehboPhone)" class="btn danger"><Icon name="phone" :size="20" />Bel EHBO</a>
-    <Call112 v-else />
+    <!-- Bel EHBO als ronde knop rechtsonder: de EHBO-coördinator (of de evenementcoördinator) stuurt hulp. Zonder nummer belt hij 112. -->
+    <a :href="store.pkg?.ehboPhone ? telHref(store.pkg.ehboPhone) : 'tel:112'" class="call-ehbo" :aria-label="store.pkg?.ehboPhone ? 'Bel EHBO' : 'Noodgeval: bel 112'">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" /></svg>
+    </a>
   </main>
 </template>
 
 <style scoped>
 .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: max(18px, env(safe-area-inset-top)) 0 10px; }
 h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
-.close {
+.login {
   flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 999px;
   border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: 13px; font-weight: 600; text-decoration: none;
 }
@@ -98,4 +101,11 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .km { width: 56px; flex-shrink: 0; font-size: 13px; color: var(--ink-2); }
 .post-name { font-size: 15px; }
 .list-row { gap: 12px; min-height: 48px; }
+/* Ruimte onderaan, zodat de ronde knop de laatste post niet bedekt. */
+.screen { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+.call-ehbo {
+  position: fixed; z-index: 10; right: max(16px, calc((100% - 720px) / 2 + 16px)); bottom: max(20px, env(safe-area-inset-bottom));
+  width: 64px; height: 64px; border-radius: 50%; background: var(--danger); box-shadow: 0 4px 12px rgba(0, 0, 0, .3);
+  display: flex; align-items: center; justify-content: center; -webkit-touch-callout: none;
+}
 </style>

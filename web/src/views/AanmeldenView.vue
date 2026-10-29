@@ -35,7 +35,7 @@ async function submit() {
 <template>
   <main class="screen">
     <div class="stack gap-18 top">
-      <RouterLink :to="{ name: 'welkom' }" aria-label="Terug" class="icon-btn back"><Icon name="back" /></RouterLink>
+      <RouterLink :to="{ name: 'deelnemer' }" aria-label="Terug" class="icon-btn back"><Icon name="back" /></RouterLink>
       <div class="stack gap-6 intro">
         <span class="eyebrow">Medewerker / vrijwilliger</span>
         <h1 class="title">Aanmelden</h1>

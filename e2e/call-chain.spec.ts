@@ -11,7 +11,7 @@ async function staffPhone(browser: Browser, phone: string): Promise<Page> {
   await context.route('https://www.google.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Kaarten</title>' }));
   const page = await context.newPage();
   await page.goto('/?browser=1');
-  await page.getByRole('link', { name: /Medewerker \/ vrijwilliger/ }).click();
+  await page.getByRole('link', { name: 'Aanmelden' }).click();
   await page.getByLabel('Je mobiele nummer').fill(phone);
   await page.getByRole('button', { name: 'Verder' }).click();
   await page.getByRole('button', { name: 'Klopt, start' }).click();
@@ -58,6 +58,8 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await ehbo.getByLabel('Korte notitie').fill('Gekoeld en drinken gegeven');
   await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
+  // De oproepen van vandaag staan ingeklapt.
+  await ehbo.getByText(/^Vandaag · \d+ oproep/).click();
   await expect(ehbo.locator('.today').filter({ hasText: 'Waterpost 3 · brug' }).filter({ hasText: 'Onwel' }).first()).toBeVisible();
 
   await expect(post.getByRole('heading', { name: 'Klaar' })).toBeVisible({ timeout: 10_000 });

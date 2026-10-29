@@ -26,7 +26,8 @@ declare module 'vue-router' {
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'welkom', component: () => import('./views/WelkomView.vue') },
+    // Zonder aanmelding opent de app op de deelnemerspagina; daar kun je je als medewerker aanmelden.
+    { path: '/', name: 'deelnemer', component: () => import('./views/DeelnemerView.vue') },
     { path: '/installeren', name: 'installeren', component: () => import('./views/InstallerenView.vue') },
     { path: '/aanmelden', name: 'aanmelden', component: () => import('./views/AanmeldenView.vue') },
     { path: '/onbekend', name: 'onbekend', component: () => import('./views/OnbekendView.vue') },
@@ -53,7 +54,6 @@ export const router = createRouter({
     { path: '/oproep/:id', name: 'oproep', component: () => import('./views/OproepView.vue'), props: true, meta: { staff: true } },
     { path: '/oproep/:id/afronden', name: 'afronden', component: () => import('./views/AfrondenView.vue'), props: true, meta: { staff: true } },
     { path: '/controle', name: 'controle', component: () => import('./views/ControleView.vue'), meta: { staff: true } },
-    { path: '/deelnemer', name: 'deelnemer', component: () => import('./views/DeelnemerView.vue') },
     { path: '/beheer', name: 'beheer', component: () => import('./views/admin/BeheerView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/evenement', name: 'beheer-evenement', component: () => import('./views/admin/EvenementView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/info', name: 'beheer-info', component: () => import('./views/admin/InfoBeheerView.vue'), meta: { staff: true, admin: true } },
@@ -74,10 +74,10 @@ export const router = createRouter({
 
 router.beforeEach((to) => {
   const session = useSessionStore();
-  if (to.meta.staff && !session.me) return { name: 'welkom' };
+  if (to.meta.staff && !session.me) return { name: 'deelnemer' };
   if (to.meta.admin && !session.me?.isAdmin) return { name: 'start' };
-  // Aangemeld: het startscherm in plaats van de keuze medewerker of deelnemer.
-  if (to.name === 'welkom' && session.me) return { name: 'start' };
+  // Aangemeld: het startscherm in plaats van de deelnemerspagina.
+  if (to.name === 'deelnemer' && session.me) return { name: 'start' };
   // Startscherm volgens de belangrijkste rol: stand-by, de eigen post, of het overzicht.
   if (to.name === 'start' && session.me) return homeRoute();
   // Medewerkers zetten de app eerst op het beginscherm.

@@ -41,13 +41,30 @@ export const coreTeamMember = (pkg: EventPackage | null, fn: string) => pkg?.cor
 /** available: beschikbaar (groen); anders pauze of bezig met een oproep (rood). */
 export interface Ambulance { id: number; name: string; lng: number; lat: number; available: boolean; busy: boolean }
 
-/** Mobiele EHBO-eenheden in dienst met een recente GPS-positie, voor de kaart. */
-export function ambulances(pkg: EventPackage | null, units: LiveUnit[], now: number): Ambulance[] {
-  return units.flatMap((u) => {
+/** Binnen deze afstand van haar standplaats is een mobiele eenheid thuis. */
+export const HOME_RADIUS_KM = 0.05;
+
+/**
+ * Mobiele EHBO-eenheden op de kaart. Een eenheid in dienst met een recente GPS-positie verder dan 50 m van haar standplaats
+ * is onderweg: een ambulance. Dichterbij is ze thuis en staat ze er niet op; het kruisje bij de post zegt dan genoeg.
+ * awayPostIds: standplaatsen waar nu geen eenheid is (elke eenheid die daar hoort is onderweg), voor een grijs kruisje.
+ */
+export function mobileUnits(pkg: EventPackage | null, units: LiveUnit[], now: number): { ambulances: Ambulance[]; awayPostIds: number[] } {
+  const ambulances: Ambulance[] = [];
+  const awayUnitIds = new Set<number>();
+  const basePostIds = new Set<number>();
+  for (const u of units) {
     const unit = pkg?.units.find((x) => x.id === u.id);
-    if (!unit || unit.kind !== 'mobiel' || !u.position || u.availability === 'uit_dienst') return [];
-    if (now - new Date(u.position.at).getTime() > POSITION_MAX_AGE_MS) return [];
+    if (!unit || unit.kind !== 'mobiel' || !u.position || u.availability === 'uit_dienst') continue;
+    if (now - new Date(u.position.at).getTime() > POSITION_MAX_AGE_MS) continue;
+    const base = unit.postId !== null ? pkg!.posts.find((p) => p.id === unit.postId) : undefined;
+    const home = base && lngLat(base);
+    if (home && distanceKm([u.position.lng, u.position.lat], home) <= HOME_RADIUS_KM) continue;
+    awayUnitIds.add(u.id);
+    if (base) basePostIds.add(base.id);
     const busy = u.incidentId !== null;
-    return [{ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'vrij' }];
-  });
+    ambulances.push({ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'vrij' });
+  }
+  const awayPostIds = [...basePostIds].filter((id) => unitsAt(pkg!, id).every((u) => awayUnitIds.has(u.id)));
+  return { ambulances, awayPostIds };
 }
