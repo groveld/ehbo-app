@@ -76,7 +76,8 @@ Where the main pieces live:
   - Secondary: 48 px.
   - Icon button: 44 × 44.
   - Two buttons side by side are always the same height.
-- **112** is only shown where it matters: the EHBO screens (request, follow-up, stand-by, call, no signal), Overzicht › Contacten. The participant screen has "Bel EHBO" instead (falls back to 112 when no number is set). Where it is shown it sits at the bottom, in the same place. The app never replaces 112.
+- **112** is only shown where it matters: the EHBO screens (request, follow-up, stand-by, call, no signal), Overzicht › Contacten. Where it is shown it sits at the bottom, in the same place. The participant screen has "Bel EHBO" instead: a round red button with a white cross, bottom right (falls back to 112 when no number is set). The app never replaces 112.
+- **Start screen:** without a session the app opens on the participant page (`/`), with "Aanmelden" at the top right. There is no staff/participant choice screen. The tab bar is hidden during login (Herkend, Toestemmingen) until "Klaar, naar mijn startscherm".
 - The request tiles on the post home screen are deliberately large; this is the one exception to the button sizes.
 - **"Post sluiten"** is a small, subtle red button at the top right, so it can't be confused with closing the screen.
 - **Mobile-first, but dynamic:** design for a 390 × 844 phone and check every new screen against `docs/design/screens/`, but nothing may depend on that exact size. Content is one column of at most 720 px (also the tab bar), text in buttons may wrap, and maps use `clamp(…, dvh, …)` heights. Check 320 px wide and a tablet. No desktop layout (yet).

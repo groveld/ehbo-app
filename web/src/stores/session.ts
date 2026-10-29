@@ -6,6 +6,8 @@ import { api, ApiRequestError } from '../api.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
 
+const RANK = { beheerder: 0, kernteam: 1, ehbo: 2, post: 3 } as const;
+
 export const useSessionStore = defineStore('session', () => {
   const stored = load<Omit<PublicEvent, 'style' | 'brand'> & Partial<PublicEvent>>('ehbo.event');
   // Bewaard door een oudere versie van de app: zonder stijl en logo's.
@@ -18,6 +20,8 @@ export const useSessionStore = defineStore('session', () => {
   watch(me, (value) => save('ehbo.me', value));
 
   const firstName = computed(() => me.value?.name.split(' ')[0] ?? '');
+  /** Je functies, belangrijkste bovenaan: beheer, dan kernteam, dan EHBO en posten. Zo in het menu en na het aanmelden. */
+  const functions = computed(() => [...(me.value?.assignments ?? [])].sort((a, b) => RANK[a.kind] - RANK[b.kind]));
 
   async function loadEvent() {
     try {
@@ -63,5 +67,5 @@ export const useSessionStore = defineStore('session', () => {
     void usePackageStore().refresh();
   }
 
-  return { event, me, unknown, firstName, loadEvent, refresh, login, logout };
+  return { event, me, unknown, firstName, functions, loadEvent, refresh, login, logout };
 });

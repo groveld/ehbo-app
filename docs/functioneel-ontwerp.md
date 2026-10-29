@@ -33,13 +33,13 @@ Eén persoon kan meerdere rollen hebben (bijv. beheerder én EHBO'er). De rol vo
 Elk evenement krijgt een eigen adres (bijv. silvesterloop.groveld.com). Deelnemers en gasten kijken direct mee; medewerkers zetten de app eerst op hun beginscherm en melden zich aan met hun telefoonnummer.
 
 1. **Link of QR-code openen** op het adres van het evenement.
-2. **Keuzescherm:** *Medewerker / vrijwilliger* of *Deelnemer / gast*.
-3. **Deelnemer / gast** gaat direct door naar route, posten en tijden. Geen installatie, geen aanmelding, geen persoonsgegevens.
+2. **Deelnemerspagina:** zonder aanmelding opent de app direct op route, posten en tijden. Geen keuzescherm, geen installatie, geen aanmelding, geen persoonsgegevens. Rechtsonder een ronde rode knop met een wit kruis: Bel EHBO.
+3. **Aanmelden** rechtsboven op de deelnemerspagina is voor medewerkers.
 4. **Medewerker** zet eerst de app op het beginscherm (verplicht, nodig voor meldingen). De app herkent het toestel: iPhone krijgt stap-voor-stap uitleg, Android één knop *Installeren*.
 5. **Telefoonnummer invullen** (06 of +31 wordt gelijk getrokken).
    - Bekend nummer → naam, functie(s), post(en) en tijden ter bevestiging. Meerdere functies → elke functie krijgt een eigen tab; kiezen of wisselen hoeft niet.
    - Onbekend nummer → opnieuw proberen, de evenementcoördinator bellen, of door als gast.
-6. **Eerste keer:** toestemming voor meldingen en locatie. Info & voorwaarden staan in het menu; bevestigen hoeft niet.
+6. **Eerste keer:** toestemming voor meldingen en locatie. Info & voorwaarden staan in het menu; bevestigen hoeft niet. Tijdens deze stappen staat de tabbalk er nog niet; die verschijnt na *Klaar, naar mijn startscherm*.
 7. **Ingelogd.** Het beginscherm is je functie:
    - EHBO'er → stand-by met oproepen;
    - bij een post (verantwoordelijke, lid of reserve) → de eigen post; alleen de verantwoordelijke zet hem open;
@@ -209,7 +209,7 @@ Alleen de oproep loopt via de server en de push-diensten; kaart en contacten sta
 
 - Gekleurd kopblok bovenaan (oproep, verstuurd, onderweg, stand-by, geen bereik): altijd 140 px hoog, tekst bovenaan uitgelijnd zoals op alle andere schermen, titel 26 px.
 - Hoofdknop: 56 px hoog, 16 px vet. Tweede knop: 48 px. Icoonknop (bellen, terug): 44 × 44 px. Twee knoppen naast elkaar zijn altijd even hoog.
-- 112 staat alleen waar het ertoe doet (EHBO-schermen, contacten, deelnemer), en daar altijd onderaan op dezelfde plek.
+- 112 staat alleen waar het ertoe doet (EHBO-schermen, contacten), en daar altijd onderaan op dezelfde plek. De deelnemer heeft Bel EHBO als ronde knop rechtsonder.
 - Uitzondering: de verzoek-tegels op het poststartscherm zijn bewust groot.
 - Post sluiten is een kleine, subtiel rode knop rechtsboven, zodat hij niet verward wordt met "scherm sluiten".
 
@@ -385,6 +385,8 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Ambulance op de kaart (29 okt) | Mobiele EHBO-eenheden in dienst staan op de kaart als ambulance op hun laatste GPS-positie, groen als ze beschikbaar zijn, rood bij pauze of tijdens een oproep; uit dienst staan ze er niet op. Een statuswissel is meteen op ieders kaart te zien, en de telefoon stuurt dan direct zijn positie; daarna elke minuut. Een positie ouder dan 3 minuten wordt niet getoond. De positie staat alleen in het geheugen van de server, nooit in de database. Een post waar een EHBO-eenheid staat (vaste post of standplaats) krijgt op de kaart en in de lijst een klein groen kruisje |
 | Iconen voor posten (29 okt) | Op de kaart en in de lijsten heeft elke soort post een icoon in zijn eigen kleur: start/finish een vlag, water een druppel, stempel een stempel, verkeer een pylon, EHBO het kruis, anders drie puntjes. Een eigen soort zonder icoon houdt zijn letter. Een dichte post blijft in zijn kleur maar half doorzichtig (was grijs) |
 | Beheer als lijst (29 okt) | Beheer is één lijst op één niveau: Evenement, Posten, EHBO-eenheden, Kernteam, Noodnummers, Beheerders, Info & voorwaarden, Rapport en testmodus. Elk onderdeel heeft een eigen pagina met rechtsboven Wijzigen; de lijst toont per onderdeel de stand. Zo kunnen later per pagina rechten voor de coördinator worden opengezet (zie #50) |
+| Deelnemerspagina als begin (29 okt) | Het keuzescherm medewerker of deelnemer verviel. Zonder aanmelding opent de app op de deelnemerspagina; rechtsboven staat Aanmelden (was Sluiten). Bel EHBO is daar een ronde rode knop rechtsonder met een wit kruis, met dezelfde werking: de EHBO-coördinator, anders de evenementcoördinator, zonder nummer 112 |
+| Aanmelden zonder tabbalk (29 okt) | Tijdens het aanmelden (bevestigen en meldingen en locatie) staat de tabbalk er niet; pas na "Klaar, naar mijn startscherm" ben je in de app. Na het aanmelden staan je functies in dezelfde volgorde als in het menu: beheer, kernteam, EHBO en posten |
 
 **Nog open**
 

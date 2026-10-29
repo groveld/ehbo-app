@@ -11,7 +11,7 @@ async function staffPhone(browser: Browser, phone: string): Promise<Page> {
   await context.route('https://www.google.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Kaarten</title>' }));
   const page = await context.newPage();
   await page.goto('/?browser=1');
-  await page.getByRole('link', { name: /Medewerker \/ vrijwilliger/ }).click();
+  await page.getByRole('link', { name: 'Aanmelden' }).click();
   await page.getByLabel('Je mobiele nummer').fill(phone);
   await page.getByRole('button', { name: 'Verder' }).click();
   await page.getByRole('button', { name: 'Klopt, start' }).click();

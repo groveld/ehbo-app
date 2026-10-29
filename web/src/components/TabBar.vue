@@ -22,7 +22,7 @@ const live = useLiveStore();
 const COLORS = { ehbo: '#C8261E', kaart: '#0E7C86', meldingen: '#A16207', contacten: '#3F51B5', menu: '#3E434B' };
 
 const EHBO = ['stand-by', 'oproep', 'afronden'];
-const MENU = ['menu', 'herkend', 'toestemmingen', 'info', 'controle'];
+const MENU = ['menu', 'info', 'controle'];
 
 /** Bij welke post het huidige scherm hoort (startscherm, verzoek, melding, aanvraag of geen bereik), of null. */
 const routePostId = computed(() => {
