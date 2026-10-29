@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Iedereen bereikbaar: kernteam bovenaan, dan de EHBO-eenheden, de posten en de noodnummers.
+// Iedereen bereikbaar: noodnummers bovenaan, dan de organisatie (kernteam), EHBO en de posten.
 import { computed } from 'vue';
 import { formatPhone, telHref } from '@ehbo/shared';
 import Icon from '../../components/Icon.vue';
@@ -15,8 +15,22 @@ const ROLE = { verantwoordelijke: 'verantwoordelijke', lid: 'lid', reserve: 'res
   <main class="screen tight">
     <OverviewHeader title="Contacten" />
     <div v-if="store.pkg" class="stack gap-14">
+      <section class="stack gap-8">
+        <h2 class="section-title">Noodnummers</h2>
+        <div class="list">
+          <div class="list-row">
+            <span class="main"><span class="title-line">112</span><span class="sub">Bij levensgevaar altijd eerst</span></span>
+            <a href="tel:112" class="round urgent" aria-label="Bel 112"><Icon name="phone" :size="20" /></a>
+          </div>
+          <div v-for="n in store.pkg.emergencyNumbers" :key="n.label" class="list-row">
+            <span class="main"><span class="title-line">{{ n.label }}</span><span class="sub mono">{{ n.number }}</span></span>
+            <a :href="`tel:${n.number.replace(/[^\d+]/g, '')}`" class="round" :aria-label="`Bel ${n.label}`"><Icon name="phone" :size="20" /></a>
+          </div>
+        </div>
+      </section>
+
       <section v-if="store.pkg.coreTeam.length" class="stack gap-8">
-        <h2 class="section-title">Kernteam</h2>
+        <h2 class="section-title">Organisatie</h2>
         <div class="list">
           <div v-for="c in store.pkg.coreTeam" :key="c.function" class="list-row">
             <span class="main">
@@ -29,7 +43,7 @@ const ROLE = { verantwoordelijke: 'verantwoordelijke', lid: 'lid', reserve: 'res
       </section>
 
       <section v-if="store.pkg.units.length" class="stack gap-8">
-        <h2 class="section-title">EHBO-eenheden</h2>
+        <h2 class="section-title">EHBO</h2>
         <div class="list">
           <template v-for="u in store.pkg.units" :key="u.id">
             <div v-for="m in u.members" :key="`${u.id}-${m.phone}`" class="list-row">
@@ -55,20 +69,6 @@ const ROLE = { verantwoordelijke: 'verantwoordelijke', lid: 'lid', reserve: 'res
               <a :href="telHref(c.phone)" class="round" :aria-label="`Bel ${c.name || p.name}`"><Icon name="phone" :size="20" /></a>
             </div>
           </template>
-        </div>
-      </section>
-
-      <section class="stack gap-8">
-        <h2 class="section-title">Noodnummers</h2>
-        <div class="list">
-          <div class="list-row">
-            <span class="main"><span class="title-line">112</span><span class="sub">Bij levensgevaar altijd eerst</span></span>
-            <a href="tel:112" class="round urgent" aria-label="Bel 112"><Icon name="phone" :size="20" /></a>
-          </div>
-          <div v-for="n in store.pkg.emergencyNumbers" :key="n.label" class="list-row">
-            <span class="main"><span class="title-line">{{ n.label }}</span><span class="sub mono">{{ n.number }}</span></span>
-            <a :href="`tel:${n.number.replace(/[^\d+]/g, '')}`" class="round" :aria-label="`Bel ${n.label}`"><Icon name="phone" :size="20" /></a>
-          </div>
         </div>
       </section>
     </div>

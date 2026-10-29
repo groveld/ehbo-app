@@ -369,6 +369,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Rapport (28 okt) | Op het scherm de kerncijfers en de incidenten; als PDF via een afdrukpagina (A4 liggend, met het grote logo; "Opslaan als PDF" in het afdrukvenster); als CSV met puntkomma's en een BOM, zodat Excel in het Nederlands hem direct goed opent. Tijden in Nederlandse tijd. Reactietijd = melding tot geaccepteerd, aanrijtijd = geaccepteerd tot ter plaatse. Medewerkers = iedereen die bij een post, een eenheid of in het kernteam staat |
 | Info-pagina in het beheer (28 okt) | Beheer › Info & voorwaarden: de onderdelen (kop en tekst) aanpassen, toevoegen, verschuiven of verwijderen, en invullen waar het verwijderplan staat en wie je bij vragen benadert. {evenement}, {beleid} en {contact} vult de app in. Zonder eigen tekst geldt de standaardtekst; terugzetten kan altijd. Wie de info al bevestigde, hoeft dat na een wijziging niet opnieuw |
 | Post open/dicht door de beheerder (28 okt) | In het postdetail (3.5) staat voor iedereen of de post open is; de postverantwoordelijke en elke beheerder kunnen hem daar ook open of dicht zetten |
+| Volgorde contacten (29 okt) | In Overzicht › Contacten staan de noodnummers bovenaan (112 eerst), dan Organisatie (het kernteam), EHBO en de posten. De status in de kop toont alleen "Offline klaar"; locatie is al afgedwongen bij het instellen |
 
 **Nog open**
 

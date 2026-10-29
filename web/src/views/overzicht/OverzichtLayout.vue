@@ -28,7 +28,8 @@ const TABS = [
 </template>
 
 <style scoped>
-.overview { min-height: 100dvh; padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+.overview { --tabbar: calc(72px + env(safe-area-inset-bottom)); min-height: 100dvh; padding-bottom: var(--tabbar); }
+.overview :deep(.screen) { min-height: calc(100dvh - var(--tabbar)); }
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: grid; grid-template-columns: repeat(4, 1fr);
   padding: 8px 8px max(8px, env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--divider);

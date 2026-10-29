@@ -1,14 +1,11 @@
 <script setup lang="ts">
 // Kop van de overzichtsschermen: evenement, titel, of de app klaar is voor gebruik zonder bereik, en het menu.
-import { computed, onMounted } from 'vue';
-import { useLocationStore } from '../stores/location.ts';
+import { computed } from 'vue';
 import { usePackageStore } from '../stores/package.ts';
 import Icon from './Icon.vue';
 
 defineProps<{ title: string }>();
 const pkg = usePackageStore();
-const location = useLocationStore();
-onMounted(() => location.check());
 
 const eyebrow = computed(() => {
   const event = pkg.pkg?.event;
@@ -22,7 +19,7 @@ const status = computed(() => {
   if (pkg.mapProgress) return { text: `Kaart laden ${Math.round((pkg.mapProgress.done / pkg.mapProgress.total) * 100)}%`, tone: 'busy' };
   if (!pkg.pkg) return { text: 'Laden…', tone: 'busy' };
   if (!pkg.pkg.map) return { text: 'Nog geen kaart', tone: 'idle' };
-  if (pkg.offlineReady) return { text: location.permission === 'granted' ? 'Offline klaar · GPS' : 'Offline klaar', tone: 'ok' };
+  if (pkg.offlineReady) return { text: 'Offline klaar', tone: 'ok' };
   return { text: 'Kaart nog niet opgeslagen', tone: 'idle' };
 });
 </script>
