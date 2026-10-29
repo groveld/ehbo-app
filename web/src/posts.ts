@@ -38,7 +38,8 @@ export const coordinatorOf = (pkg: EventPackage | null) => pkg?.coreTeam.find((c
 /** Kernteamlid met deze functie, bijv. "EHBO-coördinator". */
 export const coreTeamMember = (pkg: EventPackage | null, fn: string) => pkg?.coreTeam.find((c) => sameFunction(c.function, fn)) ?? null;
 
-export interface Ambulance { id: number; name: string; lng: number; lat: number; busy: boolean }
+/** available: beschikbaar (groen); anders pauze of bezig met een oproep (rood). */
+export interface Ambulance { id: number; name: string; lng: number; lat: number; available: boolean; busy: boolean }
 
 /** Mobiele EHBO-eenheden in dienst met een recente GPS-positie, voor de kaart. */
 export function ambulances(pkg: EventPackage | null, units: LiveUnit[], now: number): Ambulance[] {
@@ -46,6 +47,7 @@ export function ambulances(pkg: EventPackage | null, units: LiveUnit[], now: num
     const unit = pkg?.units.find((x) => x.id === u.id);
     if (!unit || unit.kind !== 'mobiel' || !u.position || u.availability === 'uit_dienst') return [];
     if (now - new Date(u.position.at).getTime() > POSITION_MAX_AGE_MS) return [];
-    return [{ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy: u.incidentId !== null }];
+    const busy = u.incidentId !== null;
+    return [{ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'vrij' }];
   });
 }

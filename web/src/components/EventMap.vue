@@ -31,7 +31,7 @@ const props = withDefaults(defineProps<{
   alertPostIds?: number[];
   /** Dichte posten: grijs. */
   closedPostIds?: number[];
-  /** Mobiele EHBO-eenheden in dienst, op hun laatste GPS-positie; busy = bezig met een oproep. */
+  /** Mobiele EHBO-eenheden in dienst, op hun laatste GPS-positie. */
   ambulances?: Ambulance[];
 }>(), { posts: undefined, focusPostId: null, highlightRunId: null, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], closedPostIds: () => [], ambulances: () => [] });
 
@@ -109,15 +109,15 @@ function drawPosts() {
   markers = posts.map((p) => new maplibregl.Marker({ element: markerElement(p) }).setLngLat([p.lng!, p.lat!]).addTo(map!));
 }
 
-/** Mobiele EHBO als ambulance: groen in dienst, rood als ze met een oproep bezig is. */
+/** Mobiele EHBO als ambulance: groen als ze beschikbaar is, rood bij pauze of tijdens een oproep. */
 function drawAmbulances() {
   if (!map) return;
   for (const m of ambulanceMarkers) m.remove();
   ambulanceMarkers = props.ambulances.map((a) => {
     const el = document.createElement('div');
-    el.className = `unit-marker${a.busy ? ' busy' : ''}`;
+    el.className = `unit-marker${a.available ? '' : ' unavailable'}`;
     el.setAttribute('role', 'img');
-    el.setAttribute('aria-label', `EHBO ${a.name}${a.busy ? ', bezig met een oproep' : ''}`);
+    el.setAttribute('aria-label', `EHBO ${a.name}, ${a.busy ? 'bezig met een oproep' : a.available ? 'beschikbaar' : 'niet beschikbaar'}`);
     el.innerHTML = AMBULANCE;
     return new maplibregl.Marker({ element: el }).setLngLat([a.lng, a.lat]).addTo(map!);
   });
@@ -237,7 +237,7 @@ onBeforeUnmount(() => {
   width: 32px; height: 32px; border-radius: 50%; background: #FFFFFF; border: 2.5px solid #0A7D4F; color: #0A7D4F;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
 }
-.event-map :deep(.unit-marker.busy) { border-color: #C8261E; color: #C8261E; }
+.event-map :deep(.unit-marker.unavailable) { border-color: #C8261E; color: #C8261E; }
 .event-map :deep(.post-marker.alert) { width: 32px; height: 32px; box-shadow: 0 0 0 10px rgba(200, 38, 30, .2); z-index: 1; }
 .event-map :deep(.post-marker.focus) { width: 36px; height: 36px; box-shadow: 0 0 0 8px rgba(31, 111, 178, .25); }
 .event-map :deep(.user-dot) {

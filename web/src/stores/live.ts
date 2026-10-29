@@ -12,6 +12,7 @@ import type {
   RequestKind,
   UnitAvailability,
 } from '@ehbo/shared';
+import { POSITION_SHARE_MS } from '@ehbo/shared';
 import { api, ApiRequestError } from '../api.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
@@ -139,26 +140,35 @@ export const useLiveStore = defineStore('live', () => {
   /** Oproep waar een eenheid van mij mee bezig is. */
   const myActive = computed(() => openIncidents.value.find((i) => i.dispatches.some((d) => myUnitIds.value.includes(d.unitId) && d.acceptedAt)) ?? null);
 
-  // Mobiele eenheid in dienst: elke minuut de positie naar de server, alleen om de dichtstbijzijnde te bepalen.
+  // Mobiele eenheid in dienst: elke minuut de positie naar de server (dichtstbijzijnde bepalen, ambulance op de kaart);
+  // bij een statuswissel meteen, zodat de kaart van iedereen direct klopt.
   // Een webapp krijgt geen positie zolang hij op de achtergrond staat; dan telt na 3 minuten weer de standplaats.
   const sharingUnit = computed(() => myUnitIds.value.find((id) =>
     pkg.pkg?.units.find((u) => u.id === id)?.kind === 'mobiel' && (unitState(id)?.availability ?? 'uit_dienst') !== 'uit_dienst') ?? null);
   let geoWatch: number | null = null;
   let lastSent = 0;
+  const sendPosition = (unitId: number, coords: GeolocationCoordinates) => {
+    lastSent = Date.now();
+    fetch(`/api/units/${unitId}/position`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat: coords.latitude, lng: coords.longitude }),
+    }).catch(() => {});
+  };
   watch(sharingUnit, (unitId) => {
     if (geoWatch !== null) navigator.geolocation.clearWatch(geoWatch);
     geoWatch = null;
     if (unitId === null || !('geolocation' in navigator)) return;
     geoWatch = navigator.geolocation.watchPosition(({ coords }) => {
-      if (Date.now() - lastSent < 60_000) return;
-      lastSent = Date.now();
-      fetch(`/api/units/${unitId}/position`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: coords.latitude, lng: coords.longitude }),
-      }).catch(() => {});
+      if (Date.now() - lastSent >= POSITION_SHARE_MS) sendPosition(unitId, coords);
     }, () => {}, { enableHighAccuracy: true, maximumAge: 30_000 });
   }, { immediate: true });
+  // Status gewijzigd (bijv. van pauze naar beschikbaar): de positie meteen sturen, niet pas na een minuut.
+  watch(() => (sharingUnit.value !== null ? unitState(sharingUnit.value)?.availability : null), (availability, before) => {
+    const unitId = sharingUnit.value;
+    if (unitId === null || !availability || availability === before || !('geolocation' in navigator)) return;
+    navigator.geolocation.getCurrentPosition(({ coords }) => sendPosition(unitId, coords), () => {}, { enableHighAccuracy: true, maximumAge: 15_000, timeout: 15_000 });
+  });
 
   const secondsLeft = (incident: LiveIncident) =>
     incident.escalatesAt ? Math.max(0, Math.ceil((new Date(incident.escalatesAt).getTime() - serverNow.value) / 1000)) : null;
