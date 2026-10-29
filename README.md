@@ -58,7 +58,7 @@ Docker › **Add Container**, met deze instellingen:
 | Variabele | Verplicht | Waarde |
 | --- | --- | --- |
 | `VAPID_SUBJECT` | ja | Contactadres voor de push-diensten, bijv. `mailto:beheer@jouwdomein.nl`. Zonder geldig adres weigert Apple meldingen |
-| `ADMIN_PHONE` | ja | Telefoonnummer van de eerste beheerder, bijv. `0612345678`. Alleen gebruikt zolang het evenement nog geen beheerder heeft; daarna beheer je beheerders in de app |
+| `ADMIN_PHONE` | ja | Telefoonnummer van de eerste beheerder, bijv. `+31612345678` (`0612345678` mag ook). Alleen gebruikt zolang het evenement nog geen beheerder heeft; daarna beheer je beheerders in de app |
 | `TZ` | nee | `Europe/Amsterdam` |
 | `EVENT` | nee | Naam van het evenementbestand in `appdata/events/` (standaard `silvesterloop`) |
 
@@ -78,7 +78,7 @@ services:
     environment:
       TZ: Europe/Amsterdam
       VAPID_SUBJECT: "mailto:beheer@jouwdomein.nl"
-      ADMIN_PHONE: "0612345678"
+      ADMIN_PHONE: "+31612345678"
     volumes:
       - /mnt/user/appdata/ehbo-app:/data
 ```

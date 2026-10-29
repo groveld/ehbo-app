@@ -372,6 +372,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Volgorde contacten (29 okt) | In Overzicht › Contacten staan de noodnummers bovenaan (112 eerst), dan Organisatie (het kernteam), EHBO en de posten. De status in de kop toont alleen "Offline klaar"; locatie is al afgedwongen bij het instellen |
 | Hardlopen (29 okt) | De soort van een loop is hardlopen, wandelen of hardlopen + wandelen. "Lopen" als soort verviel: in gewone taal is dat hetzelfde als wandelen. Bestaande lopen zijn omgezet |
 | 112 alleen waar relevant (29 okt) | De app is een coördinatie-app voor logistiek en EHBO geworden. 112 staat daarom alleen bij EHBO: het EHBO-verzoek, de melding en terugmelding, stand-by, de oproep en geen bereik; verder in Overzicht › Contacten en op het deelnemerscherm. Welkom, installeren, het menu en het poststartscherm hebben geen 112-knop meer; het EHBO-verzoek vanaf de post zegt nog steeds "bij levensgevaar eerst 112" |
+| Telefoonnummers (29 okt) | Elk nummer staat internationaal opgeslagen (+31612345678), ook de noodnummers; alleen korte nummers (112, 144) en 0800/0900-nummers blijven zoals ze zijn. Getoond altijd met landcode en zonder (0): +31 6 12 34 56 78, +31 58 286 66 66, +32 470 12 34 56. Zo werkt een nummer op elk toestel, ook met een buitenlandse simkaart of via WhatsApp, en valt een fout noodnummer al bij het opslaan op. Invoeren mag in elke gangbare vorm; zonder landcode is het Nederlands |
 
 **Nog open**
 

@@ -176,7 +176,7 @@ async function remove() {
           <div v-for="(c, i) in form.contacts" :key="i" class="card stack gap-8">
             <div class="row-2">
               <input v-model="c.name" class="input" aria-label="Naam contactpersoon" placeholder="Naam">
-              <input v-model="c.phone" class="input" type="tel" inputmode="tel" aria-label="Telefoon contactpersoon" placeholder="06-…">
+              <input v-model="c.phone" class="input" type="tel" inputmode="tel" aria-label="Telefoon contactpersoon" placeholder="+31 6 …">
             </div>
             <div class="contact-role">
               <select v-model="c.role" class="input" aria-label="Rol bij de post">

@@ -104,7 +104,7 @@ async function remove() {
           <span class="section-label">Leden</span>
           <div v-for="(m, i) in form.members" :key="i" class="member">
             <input v-model="m.name" class="input" aria-label="Naam lid" placeholder="Naam">
-            <input v-model="m.phone" class="input" type="tel" inputmode="tel" aria-label="Telefoon lid" placeholder="06-…">
+            <input v-model="m.phone" class="input" type="tel" inputmode="tel" aria-label="Telefoon lid" placeholder="+31 6 …">
             <button class="icon-btn" aria-label="Lid verwijderen" @click="form.members.splice(i, 1)"><Icon name="trash" :size="20" /></button>
           </div>
           <button class="add-link" @click="form.members.push({ name: '', phone: '' })">+ Lid toevoegen</button>

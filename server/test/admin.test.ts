@@ -206,7 +206,7 @@ test('kernteam en noodnummers', async () => {
   assert.equal((await call('PUT', '/api/admin/core-team', team.map((t) => ({ ...t, isCoordinator: true })))).statusCode, 400);
 
   const numbers = [{ label: 'SEH Heerenveen', number: '0513-685 685' }, { label: 'Huisartsenpost', number: '0900 1122' }];
-  assert.deepEqual((await call('PUT', '/api/admin/emergency-numbers', numbers)).json().emergencyNumbers, numbers);
+  assert.deepEqual((await call('PUT', '/api/admin/emergency-numbers', numbers)).json().emergencyNumbers, [{ label: 'SEH Heerenveen', number: '+31513685685' }, { label: 'Huisartsenpost', number: '09001122' }]);
   assert.equal((await call('PUT', '/api/admin/emergency-numbers', [{ label: 'X', number: 'bel mij' }])).statusCode, 400);
 });
 

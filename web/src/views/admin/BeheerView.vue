@@ -35,7 +35,7 @@ const numbers = useSave();
 const numbersDraft = ref<EmergencyNumber[] | null>(null);
 const editNumbers = () => {
   numbersDraft.value = admin.state!.emergencyNumbers.length
-    ? admin.state!.emergencyNumbers.map((n) => ({ ...n }))
+    ? admin.state!.emergencyNumbers.map((n) => ({ ...n, number: formatPhone(n.number) }))
     : [{ label: 'SEH', number: '' }, { label: 'Huisartsenpost', number: '' }];
 };
 async function saveNumbers() {
@@ -95,7 +95,7 @@ async function saveNumbers() {
           </div>
         </div>
         <form class="add-row" @submit.prevent="addAdmin">
-          <input v-model="newAdmin" class="input" type="tel" inputmode="tel" aria-label="Telefoonnummer nieuwe beheerder" placeholder="06-… toevoegen">
+          <input v-model="newAdmin" class="input" type="tel" inputmode="tel" aria-label="Telefoonnummer nieuwe beheerder" placeholder="+31 6 … toevoegen">
           <button class="btn add-btn" :disabled="admins.busy.value || !newAdmin.trim()">Toevoegen</button>
         </form>
         <p v-if="admins.error.value" class="error-text" role="alert">{{ admins.error.value }}</p>
@@ -123,7 +123,7 @@ async function saveNumbers() {
             </div>
             <div class="row-2">
               <input v-model="c.name" class="input" aria-label="Naam" placeholder="Naam">
-              <input v-model="c.phone" class="input" type="tel" inputmode="tel" aria-label="Telefoonnummer" placeholder="06-…">
+              <input v-model="c.phone" class="input" type="tel" inputmode="tel" aria-label="Telefoonnummer" placeholder="+31 6 …">
             </div>
             <span v-if="c.isCoordinator" class="small">Centraal aanspreekpunt: ontvangt alle verzoeken en een kopie van elke EHBO-oproep.</span>
           </div>
@@ -145,7 +145,7 @@ async function saveNumbers() {
           <div class="list-row"><span class="main"><span class="title-line">112</span></span><span class="sub">vast</span></div>
           <div v-for="n in state.emergencyNumbers" :key="n.label" class="list-row">
             <span class="main"><span class="title-line">{{ n.label }}</span></span>
-            <span class="sub mono">{{ n.number }}</span>
+            <span class="sub mono">{{ formatPhone(n.number) }}</span>
           </div>
         </div>
         <template v-else>
