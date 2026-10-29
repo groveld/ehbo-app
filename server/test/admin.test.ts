@@ -185,7 +185,7 @@ test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
 
   const me = (await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0687654321' } })).json();
   assert.equal(me.home, 'ehbo');
-  assert.match(me.assignments[0].detail, /Mobiel, fiets · standplaats Kruising 4/);
+  assert.match(me.assignments[0].detail, /Mobiel, fiets · Standplaats Kruising 4/);
 
   assert.equal((await call('POST', '/api/admin/units', { ...unit, kind: 'vast', postId: null })).statusCode, 400);
   const fixed = await call('PUT', `/api/admin/units/${saved.id}`, { ...unit, kind: 'vast', mobility: 'fiets' });

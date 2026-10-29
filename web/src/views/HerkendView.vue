@@ -1,9 +1,8 @@
 <script setup lang="ts">
-// 2.4 · Nummer herkend → rol bevestigen. Elke functie krijgt straks een eigen tab; kiezen of wisselen hoeft niet.
+// 2.4 · Bekend nummer → rol bevestigen. Elke functie krijgt straks een eigen tab; kiezen of wisselen hoeft niet.
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatPhone } from '@ehbo/shared';
-import Icon from '../components/Icon.vue';
 import { useSessionStore } from '../stores/session.ts';
 
 const session = useSessionStore();
@@ -31,7 +30,6 @@ async function notMe() {
 <template>
   <main v-if="session.me" class="screen">
     <div class="stack gap-6 top">
-      <span class="recognised"><Icon name="check" :size="18" />Nummer herkend</span>
       <h1 class="title">Hoi{{ session.firstName ? ` ${session.firstName}` : '' }}</h1>
       <span class="mono phone">{{ formatPhone(me.phone) }}</span>
     </div>
@@ -62,7 +60,6 @@ async function notMe() {
 
 <style scoped>
 .top { padding-top: 72px; }
-.recognised { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ok-text); }
 .phone { font-size: 15px; color: var(--muted); }
 .places { margin-top: 28px; }
 .label { font-size: 14px; font-weight: 600; }

@@ -35,7 +35,7 @@ const block = computed(() => {
   if (active.value) return { tone: 'red' as const, title: 'Bezig met een oproep', sub: store.postById.get(active.value.postId)?.name ?? '' };
   if (availability.value === 'vrij') return { tone: 'green' as const, title: 'Beschikbaar', sub: 'Je krijgt oproepen uit de buurt. Houd de telefoon bij je.' };
   if (availability.value === 'pauze') return { tone: 'orange' as const, title: 'Even pauze', sub: 'Je krijgt geen oproepen. Zet je weer op vrij als je klaar bent.' };
-  return { tone: 'dark' as const, title: 'Uit dienst', sub: 'Je krijgt geen oproepen.' };
+  return { tone: 'red' as const, title: 'Uit dienst', sub: 'Je krijgt geen oproepen.' };
 });
 
 /** Waar de eenheid voor "dichtstbij" telt. */
@@ -45,7 +45,7 @@ const position = computed(() => {
   const stay = state.value?.stayPostId != null ? store.postById.get(state.value.stayPostId) : null;
   if (stay) return `${stay.name} (gebleven)`;
   const base = u.postId !== null ? store.postById.get(u.postId) : null;
-  if (u.kind === 'mobiel') return availability.value === 'uit_dienst' ? (base ? `standplaats ${base.name}` : '–') : `GPS${base ? `, anders ${base.name}` : ''}`;
+  if (u.kind === 'mobiel') return availability.value === 'uit_dienst' ? (base ? `Standplaats ${base.name}` : '–') : `GPS${base ? `, anders ${base.name}` : ''}`;
   return base ? [base.name, kmLabel(base.km)].filter(Boolean).join(' · ') : '–';
 });
 const teammates = computed(() => unit.value?.members.filter((m) => m.phone !== session.me?.phone) ?? []);
@@ -124,7 +124,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 .option[aria-pressed="true"] { font-weight: 700; }
 .option.vrij[aria-pressed="true"] { border-color: var(--ok); background: var(--ok-bg); color: #0A4D33; }
 .option.pauze[aria-pressed="true"] { border-color: #FFA500; background: #FFF1D6; color: #6B4300; }
-.option.uit_dienst[aria-pressed="true"] { border-color: var(--ink); background: #E8E8EA; color: var(--ink); }
+.option.uit_dienst[aria-pressed="true"] { border-color: var(--danger); background: #FBE3E1; color: #8A1A14; }
 .facts-list { margin-top: 14px; }
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
 .today { min-height: 56px; color: var(--ink); text-decoration: none; }
