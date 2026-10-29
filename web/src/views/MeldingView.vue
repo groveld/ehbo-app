@@ -59,7 +59,8 @@ async function withdraw() {
   if (!incident.value || !confirm('Melding intrekken? De EHBO hoeft dan niet meer te komen.')) return;
   if (await run(() => live.withdraw(incident.value!.id))) router.back();
 }
-const back = () => (router.options.history.state.back ? router.back() : router.push({ name: 'start' }));
+// Eén stap omhoog: je post, Meldingen of stand-by (navigation.ts).
+const back = () => router.back();
 </script>
 
 <template>

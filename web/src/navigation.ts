@@ -1,10 +1,8 @@
-// Terug en vooruit met de gebaren van de telefoon. Terug gaat één stap omhoog, naar het hoofdscherm van wat je bekijkt
-// (postdetail → kaart, beheer › post → beheer › posten, een tab → je startscherm); vooruit doet niets.
-// Een gebaar afbreken kan niet zonder dat je de verkeerde pagina even ziet. Daarom ligt de geschiedenis altijd al goed:
-// onder elk scherm ligt het scherm erboven ([startscherm, …, ouder, scherm]) en er is niets om vooruit naar te gaan.
-// Dat regelen we bij elke navigatie stil, terwijl de router even niet luistert: het scherm blijft gewoon staan.
-// Alleen voor aangemelde medewerkers; aanmelden en de deelnemerspagina gedragen zich als een gewone website.
-import type { NavigationFailure, RouteLocation, RouteLocationRaw, Router } from 'vue-router';
+// Terug en vooruit. Vegen (terug of vooruit) doet niets: elke navigatie vervangt het huidige scherm, dus de telefoon heeft
+// nooit een vorige of volgende pagina om naar te vegen of als voorbeeld te tonen. Op Android sluit de terugknop van het
+// toestel daardoor de app. Terug in de app (de pijl linksboven) gaat één stap omhoog, naar het hoofdscherm van wat je bekijkt:
+// postdetail → kaart, beheer › post → beheer › posten, een tab → je startscherm.
+import type { RouteLocation, RouteLocationRaw, Router } from 'vue-router';
 import { coordinatorOf } from './posts.ts';
 import { homeRoute } from './router.ts';
 import { useLiveStore } from './stores/live.ts';
@@ -20,7 +18,7 @@ const PARENT: Record<string, string> = {
   'beheer-loop': 'beheer-evenement', 'beheer-app-icoon': 'beheer-evenement', 'beheer-rapport-afdrukken': 'beheer-rapport',
 };
 
-/** Tijdens het aanmelden nog niet: daar mag je gewoon terug. */
+/** Tijdens het aanmelden geldt de lijn nog niet: terug gaat dan naar je startscherm. */
 const ONBOARDING = ['herkend', 'toestemmingen'];
 
 function active(route: RouteLocation) {
@@ -62,132 +60,12 @@ export function upOf(route: RouteLocation): RouteLocationRaw | null {
 }
 
 export function installNavigation(router: Router) {
-  const history = router.options.history;
-  const basePush = router.push.bind(router);
-  const baseReplace = router.replace.bind(router);
-  const historyState = () => window.history.state as { position?: number; back?: string | null; dup?: boolean } | null;
-  const positionNow = () => historyState()?.position ?? 0;
-
-  /** Plek van het startscherm in de geschiedenis; daarboven één stap per niveau. */
-  let homePosition: number | null = null;
-  let lastPosition = positionNow();
-  /** Een eigen navigatie of opruimactie: dan is een lagere plek geen terug-gebaar. */
-  let arranging = false;
-
-  /** Door de geschiedenis zonder iets te tonen: de router luistert even niet. */
-  function silentGo(delta: number) {
-    if (!delta) return Promise.resolve();
-    return new Promise<void>((resolve) => {
-      const done = () => {
-        clearTimeout(timer);
-        window.removeEventListener('popstate', done);
-        router.listening = true;
-        resolve();
-      };
-      const timer = setTimeout(done, 600);
-      router.listening = false;
-      window.addEventListener('popstate', done);
-      window.history.go(delta);
-    });
-  }
-  /** Een stap erbij zonder te navigeren; een kopie van het startscherm heeft dup, zodat terug daar eerst niets doet. */
-  const silentPush = (path: string, dup = false) => history.push(path, dup ? { dup: true } : undefined);
-
-  /** [startscherm, …, ouder, scherm] als paden. */
-  function lineage(route: RouteLocation): string[] {
-    const paths = [route.fullPath];
-    let current = route;
-    for (let i = 0; i < 8; i++) {
-      const up = upOf(current);
-      if (!up) break;
-      current = router.resolve(up);
-      paths.unshift(current.fullPath);
-    }
-    return paths;
-  }
-
-  async function arrange<T>(work: () => Promise<T>): Promise<T> {
-    arranging = true;
-    try {
-      return await work();
-    } finally {
-      arranging = false;
-      lastPosition = positionNow();
-    }
-  }
-
-  // Naar een scherm: eerst stil terug naar het gedeelde deel van de lijn, ontbrekende ouders erbij, dan het scherm zelf.
-  // Zo ligt eronder altijd de ouder (die je bij terug te zien krijgt) en verdwijnt wat er vooruit lag.
-  function navigate(to: RouteLocationRaw, replace: boolean): Promise<NavigationFailure | void | undefined> {
-    const from = router.currentRoute.value;
-    let target = router.resolve(to);
-    if (target.name === 'start' && active(from)) target = router.resolve(homeRoute());
-    const plain = () => (replace ? baseReplace(to) : basePush(to));
-    if (!active(from) || !active(target) || homePosition === null) return plain();
-    if (target.fullPath === from.fullPath) return Promise.resolve();
-    const want = lineage(target);
-    const have = lineage(from);
-    if (want[0] !== have[0]) return plain();
-
-    if (want.length === 1) {
-      // Naar het startscherm: stil erheen, tonen, en er een kopie op leggen zodat er niets meer vooruit ligt.
-      const delta = homePosition - positionNow();
-      if (delta > 0) return plain();
-      return arrange(async () => {
-        await silentGo(delta);
-        const result = await baseReplace(target.fullPath);
-        silentPush(target.fullPath, true);
-        return result;
-      });
-    }
-    let shared = 1;
-    while (shared < want.length - 1 && shared < have.length && want[shared] === have[shared]) shared++;
-    const delta = homePosition + shared - 1 - positionNow();
-    if (delta > 0) return plain();
-    return arrange(async () => {
-      await silentGo(delta);
-      for (const path of want.slice(shared, -1)) silentPush(path);
-      return basePush(target.fullPath);
-    });
-  }
-  router.push = (to) => navigate(to, false);
-  router.replace = (to) => navigate(to, true);
-
-  /** Na een terug-gebaar: wat er vooruit ligt weghalen. Het scherm eronder blijft de ouder. */
-  function clearForward(to: RouteLocation) {
-    return arrange(async () => {
-      if (isHome(to)) {
-        silentPush(to.fullPath, true);
-        return;
-      }
-      await silentGo(-1);
-      silentPush(to.fullPath);
-    });
-  }
-
-  router.afterEach((to, from, failure) => {
-    if (failure) return;
-    const position = positionNow();
-    const back = !arranging && position < lastPosition && active(to) && to.fullPath !== from.fullPath;
-    lastPosition = position;
-    if (active(to) && isHome(to) && !historyState()?.dup) homePosition = position;
-    if (back) void clearForward(to);
-    // Net aangemeld: een kopie van het startscherm, zodat terug niet meteen naar de aanmeldschermen gaat.
-    else if (!arranging && active(to) && isHome(to) && !active(from) && from.matched.length) void arrange(async () => silentPush(to.fullPath, true));
-  });
-
-  // Geopend op een ander scherm (bijv. via een melding): de lijn eronder leggen, zodat terug bij de ouder en het startscherm uitkomt.
-  // Na herladen staat de geschiedenis er al (er is een vorige pagina); dan alleen bepalen waar het startscherm ligt.
-  void router.isReady().then(() => {
+  const replace = router.replace.bind(router);
+  router.push = (to) => replace(to);
+  // Er is geen vorige pagina: terug in de app is één stap omhoog.
+  router.back = () => {
     const route = router.currentRoute.value;
-    lastPosition = positionNow();
-    if (!active(route) || isHome(route)) return;
-    const paths = lineage(route);
-    if (!historyState()?.back) {
-      history.replace(paths[0]!);
-      for (const path of paths.slice(1)) history.push(path);
-    }
-    homePosition = positionNow() - (paths.length - 1);
-    lastPosition = positionNow();
-  });
+    const up = active(route) ? upOf(route) : null;
+    void replace(up ?? (useSessionStore().me ? homeRoute() : { name: 'deelnemer' }));
+  };
 }

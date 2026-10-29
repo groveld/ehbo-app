@@ -23,8 +23,7 @@ async function submit() {
   busy.value = true;
   try {
     const result = await session.login(phone);
-    // Bekend: de aanmeldstappen vervangen elkaar, zodat terug na het aanmelden niet door de stappen loopt.
-    await (result === 'ok' ? router.replace({ name: 'herkend' }) : router.push({ name: 'onbekend' }));
+    await router.push({ name: result === 'ok' ? 'herkend' : 'onbekend' });
   } catch (err) {
     error.value = navigator.onLine ? (err as Error).message : 'Geen bereik. Aanmelden lukt alleen met internet; probeer het zo opnieuw.';
   } finally {

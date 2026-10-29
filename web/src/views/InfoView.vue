@@ -7,8 +7,8 @@ import { useSessionStore } from '../stores/session.ts';
 const session = useSessionStore();
 const router = useRouter();
 
-// Direct geopend (bijv. via een link): er is geen vorige pagina.
-const back = () => (router.options.history.state.back ? router.back() : router.push('/'));
+// Eén stap omhoog: het menu, of zonder aanmelding de deelnemerspagina (navigation.ts).
+const back = () => router.back();
 </script>
 
 <template>

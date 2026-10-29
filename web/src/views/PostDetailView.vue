@@ -42,7 +42,8 @@ const subtitle = computed(() => {
   return [kmLabel(p.km), open].filter(Boolean).join(' · ');
 });
 
-const back = () => (router.options.history.state.back ? router.back() : router.push({ name: 'kaart' }));
+// Eén stap omhoog: de kaart (navigation.ts).
+const back = () => router.back();
 
 /** Wat je doorgeeft als iemand vraagt waar de post is: het adres als dat is ingevuld, anders de GPS-positie. */
 const location = computed(() => {
