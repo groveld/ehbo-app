@@ -121,6 +121,8 @@ Requires Node ≥ 26. For browser testing without installing, open `/?browser=1`
 
 ## Conventions
 
+- **Still in development: no backwards compatibility.** When a route, screen or name changes, change it everywhere and remove the old one. No redirects from old URLs, aliases or shims.
+
 - GitHub Actions follow the owner's existing workflow style (pinned action versions, GHCR, cleanup keeping 5 untagged). Dependabot updates actions and the Docker base image weekly.
 - Keep `README.md` (Dutch, operator-facing: setup, Unraid, Cloudflare, phone test list) up to date when deployment changes.
 - When a decision changes, update the **Besluiten** table in `docs/functioneel-ontwerp.md` in the same commit.
