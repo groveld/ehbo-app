@@ -30,10 +30,14 @@ h1, h2, p { margin: 0; }
 
 /* Eén scherm: kolom over de volle hoogte, 112 of de hoofdknop onderaan. */
 .screen {
-  display: flex; flex-direction: column; min-height: 100dvh; max-width: 480px; margin: 0 auto;
+  display: flex; flex-direction: column; min-height: calc(100dvh - var(--tabbar, 0px)); max-width: 480px; margin: 0 auto;
   padding: env(safe-area-inset-top) 24px max(26px, env(safe-area-inset-bottom));
 }
 .screen.tight { padding-left: 16px; padding-right: 16px; }
+/* Met de tabbalk onderaan (TabBar.vue): ruimte vrijhouden; de tabbalk vangt de onderrand van de iPhone al op. */
+.with-tabs { --tabbar: calc(60px + max(8px, env(safe-area-inset-bottom))); padding-bottom: var(--tabbar); }
+.with-tabs .screen { padding-bottom: 26px; }
+.with-tabs .form-footer { padding-bottom: 16px; }
 .grow { flex-grow: 1; }
 .stack { display: flex; flex-direction: column; }
 .gap-6 { gap: 6px; } .gap-8 { gap: 8px; } .gap-10 { gap: 10px; } .gap-12 { gap: 12px; } .gap-14 { gap: 14px; } .gap-18 { gap: 18px; }
@@ -110,7 +114,7 @@ textarea.input { height: auto; min-height: 72px; padding: 10px 12px; line-height
 .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; transition: transform .15s; }
 .switch[aria-checked="true"] { background: var(--primary); }
 .switch[aria-checked="true"]::after { transform: translateX(20px); }
-.form-footer { position: sticky; bottom: 0; z-index: 5; padding: 12px 0 max(16px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 18px); display: flex; flex-direction: column; gap: 8px; }
+.form-footer { position: sticky; bottom: var(--tabbar, 0px); z-index: 5; padding: 12px 0 max(16px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 18px); display: flex; flex-direction: column; gap: 8px; }
 .error-text { font-size: 13px; font-weight: 600; color: var(--danger); }
 .danger-link { color: var(--danger); }
 

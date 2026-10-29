@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 3.4 · Overzicht & kaart: alle posten op de kaart, filter per soort, en de lijst met bel- en navigeerknoppen.
+// 3.4 · Overzicht & kaart: alle posten op de kaart, filter per soort, zoeken op naam of km, en de lijst met bel- en navigeerknoppen.
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import EventMap from '../../components/EventMap.vue';
@@ -13,6 +13,7 @@ const store = usePackageStore();
 const live = useLiveStore();
 const router = useRouter();
 const filter = ref<number | null>(null);
+const query = ref('');
 
 /** Per soort het aantal posten; soorten zonder posten laten we weg. */
 const chips = computed(() => {
@@ -25,7 +26,11 @@ const chips = computed(() => {
 /** Posten met een open oproep rood en bovenaan; dichte posten grijs op de kaart. */
 const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
 const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id) ?? []);
-const posts = computed(() => (store.pkg?.posts.filter((p) => filter.value === null || p.typeId === filter.value) ?? [])
+const matches = (p: { name: string; km: number | null }) => {
+  const q = query.value.trim().toLowerCase().replace(',', '.');
+  return !q || p.name.toLowerCase().includes(q) || (p.km !== null && String(p.km).startsWith(q.replace(/^km\s*/, '')));
+};
+const posts = computed(() => (store.pkg?.posts.filter((p) => (filter.value === null || p.typeId === filter.value) && matches(p)) ?? [])
   .slice().sort((a, b) => Number(alertIds.value.includes(b.id)) - Number(alertIds.value.includes(a.id))));
 const banner = computed(() => {
   const open = live.openIncidents;
@@ -54,9 +59,15 @@ const banner = computed(() => {
         </button>
       </div>
 
+      <label v-if="store.pkg.posts.length" class="search">
+        <Icon name="search" :size="18" />
+        <input v-model="query" class="input" type="search" placeholder="Zoek op naam of km-punt" aria-label="Zoek een post">
+      </label>
+
       <div class="stack gap-10">
         <PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" />
         <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen posten ingevoerd.</p>
+        <p v-else-if="!posts.length" class="note">Geen post gevonden.</p>
       </div>
     </template>
     <p v-else class="note">Geen bereik, en de gegevens van het evenement staan nog niet op deze telefoon. Probeer het opnieuw met internet.</p>
@@ -75,5 +86,8 @@ const banner = computed(() => {
   flex-shrink: 0; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);
   font: 600 14px var(--sans); color: var(--ink); cursor: pointer; white-space: nowrap;
 }
+.search { position: relative; display: block; margin-bottom: 12px; color: var(--muted); }
+.search svg { position: absolute; left: 12px; top: 13px; }
+.search .input { padding-left: 38px; }
 .chip-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #FFFFFF; }
 </style>

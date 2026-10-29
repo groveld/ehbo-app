@@ -64,9 +64,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
   <main class="screen tight">
     <p v-if="!unit" class="note warn top-gap">Je staat (nog) niet bij een EHBO-eenheid, of de gegevens van het evenement zijn nog niet geladen.</p>
     <template v-else>
-      <StatusBlock :tone="block.tone" :label="label" :title="block.title" :sub="block.sub">
-        <RouterLink :to="{ name: 'menu' }" class="icon-btn menu" aria-label="Menu"><Icon name="menu" /></RouterLink>
-      </StatusBlock>
+      <StatusBlock :tone="block.tone" :label="label" :title="block.title" :sub="block.sub" />
 
       <RouterLink v-if="active" :to="{ name: 'oproep', params: { id: active.id } }" class="btn danger gap-top">
         Naar de oproep · {{ incidentSummary(active) }}
@@ -117,7 +115,6 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 <style scoped>
 .top-gap { margin-top: 24px; }
 .gap-top { margin-top: 14px; }
-.menu { color: inherit; margin: -10px -12px 0 0; flex-shrink: 0; }
 .option.free[aria-pressed="true"] { border-color: var(--ok); background: var(--ok-bg); color: #0A4D33; font-weight: 700; }
 .facts-list { margin-top: 14px; }
 .facts-list .list-row { min-height: 50px; font-size: 14px; }

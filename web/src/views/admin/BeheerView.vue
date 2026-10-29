@@ -45,7 +45,7 @@ async function saveNumbers() {
 </script>
 
 <template>
-  <AdminPage title="Beheer" eyebrow="Alleen zichtbaar voor beheerders" :back="{ name: 'start' }">
+  <AdminPage title="Beheer" eyebrow="Alleen zichtbaar voor beheerders" :back="{ name: 'menu' }">
     <template #default="{ state }">
       <nav class="list">
         <RouterLink :to="{ name: 'beheer-evenement' }" class="list-row">

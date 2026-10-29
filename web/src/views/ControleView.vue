@@ -56,7 +56,7 @@ onMounted(() => push.init());
 <template>
   <main class="screen tight">
     <header class="header">
-      <RouterLink :to="{ name: 'start' }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
+      <RouterLink :to="{ name: 'menu' }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
       <h1 class="heading">Controle van installatie</h1>
     </header>
 

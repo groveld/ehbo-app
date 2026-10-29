@@ -73,7 +73,6 @@ async function setOpen(value: boolean) {
           <span v-else class="small">{{ planned }}</span>
         </div>
         <button v-if="open && canOpen" class="close-post" :disabled="busy" @click="setOpen(false)"><Icon name="close" :size="14" />Post sluiten</button>
-        <RouterLink :to="{ name: 'menu' }" class="icon-btn" aria-label="Menu"><Icon name="menu" /></RouterLink>
       </header>
 
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
