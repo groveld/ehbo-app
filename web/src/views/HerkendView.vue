@@ -18,7 +18,7 @@ const preview = computed(() => {
 });
 
 function start() {
-  router.push({ name: 'toestemmingen' });
+  router.replace({ name: 'toestemmingen' });
 }
 
 async function notMe() {

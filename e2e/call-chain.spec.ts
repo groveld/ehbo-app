@@ -172,12 +172,24 @@ test('terug en vooruit: één stap omhoog naar het hoofdscherm, vooruit doet nie
   const post = await staffPhone(browser, PHONE.postLead);
   await expect(post.getByRole('heading', { name: 'Waterpost 3 · brug' })).toBeVisible();
   const home = new URL(post.url()).pathname;
-  // Een gebaar dat niets doet, zet de router zelf terug; even wachten, zoals een vinger ook doet.
-  const back = async (path: string) => {
-    await post.evaluate(() => history.back());
-    await post.waitForTimeout(300);
-    await expect(post, `terug naar ${path}`).toHaveURL((url) => url.pathname === path);
+  // Een gebaar, en elk beeld daarna bijhouden welk scherm er staat (het data-v-kenmerk van het scherm).
+  // Nooit een ander scherm tussendoor: alleen waar je was en waar je uitkomt.
+  const gesture = async (direction: 'back' | 'forward', path: string) => {
+    const shown = await post.evaluate(async (dir) => {
+      const screen = () => [...(document.querySelector('#app main')?.attributes ?? [])].find((a) => a.name.startsWith('data-v-'))?.name ?? '';
+      const seen = [screen()];
+      if (dir === 'back') history.back(); else history.forward();
+      const end = performance.now() + 700;
+      while (performance.now() < end) {
+        await new Promise(requestAnimationFrame);
+        if (screen() !== seen.at(-1)) seen.push(screen());
+      }
+      return seen;
+    }, direction);
+    expect(shown.length, `${direction} naar ${path}: schermen ${shown.join(' → ')}`).toBeLessThanOrEqual(2);
+    await expect(post, `${direction} naar ${path}`).toHaveURL((url) => url.pathname === path);
   };
+  const back = (path: string) => gesture('back', path);
 
   // Kaart → postdetail: terug naar de kaart, dan naar het startscherm; daar en vooruit gebeurt niets meer.
   await post.getByRole('link', { name: 'Kaart' }).click();
@@ -186,9 +198,7 @@ test('terug en vooruit: één stap omhoog naar het hoofdscherm, vooruit doet nie
   await back('/overzicht/kaart');
   await back(home);
   await back(home);
-  await post.evaluate(() => history.forward());
-  await post.waitForTimeout(300);
-  await expect(post).toHaveURL((url) => url.pathname === home);
+  await gesture('forward', home);
 
   // Elke tab vervangt de vorige: vanaf Menu › Info terug naar Menu, dan naar het startscherm.
   await post.getByRole('link', { name: 'Contacten' }).click();
