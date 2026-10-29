@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Verzoeken: alles wat open is (EHBO-oproepen rood bovenaan, dan de wachtrij 5.2: water, verkeer, vrijwilliger), daarna wat is afgerond.
+// Meldingen: alles wat open is (EHBO-oproepen rood bovenaan, dan de wachtrij 5.2: water, verkeer, vrijwilliger), daarna wat is afgerond.
 import { computed } from 'vue';
 import { REQUEST_KINDS, requestDetailLabel, telHref, type LiveRequest } from '@ehbo/shared';
 import Icon from '../../components/Icon.vue';

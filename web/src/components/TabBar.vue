@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Eén tabbalk onderaan elke medewerkerspagina: een tab per functie (elke post waar je staat, stand-by als je EHBO'er bent),
-// kaart, verzoeken (coördinator en beheer), contacten en menu. Zo hoef je tijdens het evenement nooit te wisselen.
-// Een rode stip op een functie bij een lopende oproep; een teller op Verzoeken voor wat nog niet is opgepakt.
+// kaart, meldingen (coördinator en beheer), contacten en menu. Zo hoef je tijdens het evenement nooit te wisselen.
+// Een rode stip op een functie bij een lopende oproep; een teller op Meldingen voor aanvragen die nog niet zijn opgepakt.
 import { computed } from 'vue';
 import { useRoute, type RouteLocationRaw } from 'vue-router';
 import { coordinatorOf } from '../posts.ts';
@@ -52,7 +52,7 @@ const tabs = computed<Tab[]>(() => {
   }
   tabs.push({ key: 'kaart', to: { name: 'kaart' }, label: 'Kaart', icon: 'map', active: name === 'kaart' || name === 'post' });
   if (me.isAdmin || coordinatorOf(pkg.pkg)?.phone === me.phone) {
-    tabs.push({ key: 'verzoeken', to: { name: 'verzoeken' }, label: 'Verzoeken', icon: 'bell', active: name === 'verzoeken', count: live.requests.filter((r) => r.status === 'aangevraagd').length });
+    tabs.push({ key: 'meldingen', to: { name: 'meldingen' }, label: 'Meldingen', icon: 'bell', active: name === 'meldingen', count: live.requests.filter((r) => r.status === 'aangevraagd').length });
   }
   tabs.push({ key: 'contacten', to: { name: 'contacten' }, label: 'Contacten', icon: 'people', active: name === 'contacten' });
   tabs.push({ key: 'menu', to: { name: 'menu' }, label: 'Menu', icon: 'menu', active: MENU.includes(name) || name.startsWith('beheer') });

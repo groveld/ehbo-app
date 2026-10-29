@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 2.7 · Meldingen, locatie en testmelding bij de eerste installatie. Later via Menu › Meldingen, locatie en controle.
+// 2.7 · Meldingen, locatie en testmelding bij de eerste installatie. Later via Menu › Pushmeldingen, locatie en controle.
 import { computed, onMounted, ref } from 'vue';
 import Icon from '../components/Icon.vue';
 import { isIOS } from '../platform.ts';

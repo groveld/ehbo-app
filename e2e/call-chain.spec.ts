@@ -101,7 +101,7 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await expect(post.getByRole('button', { name: 'Bijna op' })).toHaveAttribute('aria-pressed', 'true');
 
   const coordinator = await staffPhone(browser, PHONE.coordinator);
-  await coordinator.getByRole('link', { name: 'Verzoeken' }).click();
+  await coordinator.getByRole('link', { name: 'Meldingen' }).click();
   const card = coordinator.locator('.request').filter({ hasText: 'Waterpost 3' });
   await expect(card).toContainText('bijna op');
   await card.getByRole('button', { name: 'Oppakken' }).click();

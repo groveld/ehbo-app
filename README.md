@@ -138,7 +138,7 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 21 | EHBO › **Ik ben ter plaatse** › **Incident afronden** | Post ziet "EHBO is er" en daarna "Klaar"; EHBO is weer vrij |
 | 22 | Nieuwe melding, EHBO reageert niet | Na 30 s gaat de oproep naar alle vrije eenheden, na 60 s krijgt de coördinator een alarm |
 | 23 | Post: vliegtuigmodus aan, **EHBO** › versturen | Scherm "Bel de EHBO direct" met belknoppen; vliegtuigmodus uit: de melding gaat vanzelf weg en de EHBO krijgt de oproep |
-| 24 | Post › **Water** › **Bijna op**; coördinator › Overzicht › **Verzoeken** › **Oppakken** › **Afgehandeld** | Post ziet plek in de wachtrij, daarna "wordt geregeld" en "afgehandeld", elk met een melding |
+| 24 | Post › **Water** › **Bijna op**; coördinator › **Meldingen** › **Oppakken** › **Afgehandeld** | Post ziet plek in de wachtrij, daarna "wordt geregeld" en "afgehandeld", elk met een melding |
 | 25 | Beheer › **Rapport en testmodus** › Testmodus aan; proefoproep doen | Op elk scherm de balk "Testmodus"; meldingen beginnen met "Test"; de proefoproep staat niet in het rapport || 26 | Rapport › **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en alle incidenten; CSV opent met kolommen en goede tekens |
 | 26 | Rapport › **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en alle incidenten; CSV opent met kolommen en goede tekens |
 | 27 | Beheer › **Info & voorwaarden** › tekst aanpassen en opslaan; op een ander toestel Info openen | De nieuwe tekst, met de naam van het evenement en het contact ingevuld |

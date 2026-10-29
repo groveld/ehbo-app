@@ -47,7 +47,7 @@ const banner = computed(() => {
           :pkg="store.pkg" :posts="posts" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
           @select="(id) => router.push({ name: 'post', params: { id } })"
         />
-        <RouterLink v-if="banner" :to="{ name: 'verzoeken' }" class="banner"><Icon name="bell" :size="16" />{{ banner }}</RouterLink>
+        <RouterLink v-if="banner" :to="{ name: 'meldingen' }" class="banner"><Icon name="bell" :size="16" />{{ banner }}</RouterLink>
       </div>
 
       <div class="chips" role="group" aria-label="Filter op soort post">
