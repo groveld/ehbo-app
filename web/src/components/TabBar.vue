@@ -10,8 +10,11 @@ import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
 import Icon, { type IconName } from './Icon.vue';
 
-/** color: eigen kleur van het actieve tabblad (icoon en gloed); bij een post de kleur van de soort post, anders de accentkleur. */
-interface Tab { key: string; to: RouteLocationRaw; label: string; icon: IconName; active: boolean; count?: number; color?: string }
+/**
+ * color: eigen kleur van het actieve tabblad (icoon en gloed); bij een post de kleur van de soort post, anders de accentkleur.
+ * iconColor: het icoon altijd in deze kleur, ook als het tabblad niet actief is (Stand-by: de eigen status).
+ */
+interface Tab { key: string; to: RouteLocationRaw; label: string; icon: IconName; active: boolean; count?: number; color?: string; iconColor?: string }
 
 const route = useRoute();
 const session = useSessionStore();
@@ -20,6 +23,9 @@ const live = useLiveStore();
 
 /** Vaste kleuren van de tabbladen als ze actief zijn; Stand-by in het rood van EHBO. */
 const COLORS = { ehbo: '#C8261E', kaart: '#0E7C86', meldingen: '#A16207', contacten: '#3F51B5', menu: '#3E434B' };
+
+/** Het kruis van Stand-by in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
+const STATUS = { vrij: '#0A7D4F', pauze: '#C8261E', uit_dienst: 'var(--ink)' } as const;
 
 const EHBO = ['stand-by', 'oproep', 'afronden'];
 const MENU = ['menu', 'info', 'controle'];
@@ -37,12 +43,17 @@ const routePostId = computed(() => {
   }
 });
 
+const ehboColor = computed(() => {
+  const state = live.myUnitIds[0] !== undefined ? live.unitState(live.myUnitIds[0]) : null;
+  return state?.incidentId || live.myActive ? STATUS.pauze : STATUS[state?.availability ?? 'uit_dienst'];
+});
+
 const tabs = computed<Tab[]>(() => {
   const me = session.me!;
   const name = String(route.name ?? '');
   const tabs: Tab[] = [];
   if (me.assignments.some((a) => a.kind === 'ehbo')) {
-    tabs.push({ key: 'ehbo', to: { name: 'stand-by' }, label: 'Stand-by', icon: 'ehbo', active: EHBO.includes(name), color: COLORS.ehbo, count: live.invitations.length + (live.myActive ? 1 : 0) });
+    tabs.push({ key: 'ehbo', to: { name: 'stand-by' }, label: 'Stand-by', icon: 'ehbo', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
   }
   const posts = me.assignments.filter((a) => a.kind === 'post');
   for (const a of posts) {
@@ -68,8 +79,8 @@ const tabs = computed<Tab[]>(() => {
 <template>
   <nav class="tabbar" aria-label="Hoofdmenu">
     <RouterLink
-      v-for="tab in tabs" :key="tab.key" :to="tab.to" class="tab" :class="{ active: tab.active }"
-      :style="tab.color ? { '--tab-color': tab.color } : undefined" :aria-current="tab.active ? 'page' : undefined"
+      v-for="tab in tabs" :key="tab.key" :to="tab.to" class="tab" :class="{ active: tab.active, status: tab.iconColor }"
+      :style="{ '--tab-color': tab.color, '--icon-color': tab.iconColor }" :aria-current="tab.active ? 'page' : undefined"
     >
       <span class="icon">
         <Icon :name="tab.icon" :size="22" />
@@ -96,6 +107,8 @@ const tabs = computed<Tab[]>(() => {
 /* Waar je bent: het icoon in de eigen kleur van het tabblad, met een zachte ronde gloed in dezelfde kleur onder het hele item. */
 .tab.active { background: radial-gradient(closest-side, color-mix(in srgb, var(--tab-color, var(--accent)) 25%, transparent), transparent); }
 .tab.active .icon { color: var(--tab-color, var(--ink)); }
+/* Stand-by: het kruis altijd in de kleur van de status; de gloed blijft rood. */
+.tab.status .icon { color: var(--icon-color); }
 .count { position: absolute; top: -4px; right: -10px; background: var(--danger); color: #FFFFFF; border: 2px solid var(--card); border-radius: 999px; }
 .count { min-width: 20px; height: 20px; padding: 0 5px; font: 700 11px/16px var(--mono); text-align: center; }
 </style>

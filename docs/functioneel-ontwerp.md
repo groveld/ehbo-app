@@ -387,6 +387,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Beheer als lijst (29 okt) | Beheer is één lijst op één niveau: Evenement, Posten, EHBO-eenheden, Kernteam, Noodnummers, Beheerders, Info & voorwaarden, Rapport en testmodus. Elk onderdeel heeft een eigen pagina met rechtsboven Wijzigen; de lijst toont per onderdeel de stand. Zo kunnen later per pagina rechten voor de coördinator worden opengezet (zie #50) |
 | Deelnemerspagina als begin (29 okt) | Het keuzescherm medewerker of deelnemer verviel. Zonder aanmelding opent de app op de deelnemerspagina; rechtsboven staat Aanmelden (was Sluiten). Bel EHBO is daar een ronde rode knop rechtsonder met een wit kruis, met dezelfde werking: de EHBO-coördinator, anders de evenementcoördinator, zonder nummer 112 |
 | Aanmelden zonder tabbalk (29 okt) | Tijdens het aanmelden (bevestigen en meldingen en locatie) staat de tabbalk er niet; pas na "Klaar, naar mijn startscherm" ben je in de app. Na het aanmelden staan je functies in dezelfde volgorde als in het menu: beheer, kernteam, EHBO en posten |
+| Stand-by-tab en -scherm (29 okt) | Het kruis van Stand-by in de tabbalk heeft altijd de kleur van je status: groen beschikbaar, rood niet beschikbaar (pauze of bezig met een oproep), donker uit dienst; de gloed van het actieve tabblad blijft rood. Op het stand-by-scherm blijven de belknoppen onderaan in beeld, en de oproepen van vandaag staan ingeklapt onder een eigen kopje |
 
 **Nog open**
 
