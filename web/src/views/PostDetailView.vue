@@ -74,10 +74,10 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       </div>
 
       <div v-if="post.lat !== null" class="map">
-        <!-- Net als op het overzicht: tik op een andere post om die te openen. -->
+        <!-- Net als op het overzicht: tik op een andere post om die te openen. Die vervangt deze pagina, zodat Terug in één stap teruggaat naar waar je vandaan kwam. -->
         <EventMap
           :pkg="store.pkg" :focus-post-id="post.id" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
-          @select="(id) => id !== post!.id && router.push({ name: 'post', params: { id } })"
+          @select="(id) => id !== post!.id && router.replace({ name: 'post', params: { id } })"
         />
       </div>
 
