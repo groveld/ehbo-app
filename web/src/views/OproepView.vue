@@ -215,7 +215,7 @@ const toStandby = () => router.replace({ name: 'stand-by' });
 .ring-text .mono { font-size: 22px; }
 .sec { font-size: 10px; margin-top: 2px; }
 .map { margin-top: 14px; height: 190px; border-radius: 16px; overflow: hidden; }
-.small-map { height: 170px; }
+.small-map { height: clamp(150px, 22dvh, 260px); }
 .route { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 14px; line-height: 1.45; }
 .others { padding: 0 14px; }
 .others-label { display: block; padding-top: 10px; }

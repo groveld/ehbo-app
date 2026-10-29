@@ -206,7 +206,7 @@ async function remove() {
 .location .tag { margin-left: 0; }
 .paste { display: flex; gap: 8px; }
 .alternatives { display: flex; flex-wrap: wrap; column-gap: 18px; }
-.pick-map { height: 280px; }
+.pick-map { height: clamp(240px, 40dvh, 440px); }
 .apply { width: auto; padding: 0 16px; height: 44px; flex-shrink: 0; }
 .contact-role { display: flex; gap: 8px; align-items: center; }
 select.input { appearance: auto; }
