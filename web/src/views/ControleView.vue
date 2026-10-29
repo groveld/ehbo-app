@@ -77,7 +77,7 @@ onMounted(() => {
   <main class="screen tight">
     <header class="header">
       <RouterLink :to="{ name: 'menu' }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
-      <h1 class="heading">Meldingen, locatie en controle</h1>
+      <h1 class="heading">Pushmeldingen, locatie en controle</h1>
     </header>
 
     <div class="stack gap-10">

@@ -50,7 +50,7 @@ async function logout() {
     <nav class="stack gap-10 menu">
       <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn item"><Icon name="settings" :size="20" />Beheer</RouterLink>
       <RouterLink :to="{ name: 'info' }" class="btn item"><Icon name="info" :size="20" />Info &amp; voorwaarden</RouterLink>
-      <RouterLink :to="{ name: 'controle' }" class="btn item"><Icon name="check" :size="20" />Meldingen, locatie en controle</RouterLink>
+      <RouterLink :to="{ name: 'controle' }" class="btn item"><Icon name="check" :size="20" />Pushmeldingen, locatie en controle</RouterLink>
     </nav>
 
     <div class="form-field nav-app">
