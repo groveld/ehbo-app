@@ -76,7 +76,8 @@ const tabs = computed<Tab[]>(() => {
 <style scoped>
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
-  padding: 8px 8px max(8px, env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--divider);
+  /* De tabs staan in dezelfde kolom als de inhoud (.screen, max. 480 px); de balk zelf loopt door tot de randen. */
+  padding: 8px max(8px, calc((100% - 480px) / 2)) max(8px, env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--divider);
 }
 .tab { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; justify-content: center; font-size: 12px; color: var(--muted); text-decoration: none; }
 .tab.active { color: var(--ink); font-weight: 700; }

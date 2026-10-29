@@ -79,7 +79,7 @@ const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (
 <style scoped>
 .top { display: flex; align-items: center; gap: 4px; padding: max(14px, env(safe-area-inset-top)) 0 8px; margin-left: -12px; }
 h1 { font-size: 22px; font-weight: 700; }
-.map { height: 250px; }
+.map { height: clamp(200px, 35dvh, 420px); }
 .section { margin-top: 16px; }
 .runs { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
 .run {

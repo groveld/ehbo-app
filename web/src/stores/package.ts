@@ -22,12 +22,10 @@ export const usePackageStore = defineStore('package', () => {
   const pkg = ref<EventPackage | null>(load('ehbo.package'));
   /** Versie van de kaart die volledig op de telefoon staat. */
   const cachedMapVersion = ref<number | null>(load('ehbo.mapCached'));
-  const mapProgress = ref<{ done: number; total: number } | null>(null);
   let downloading: Promise<void> | null = null;
 
   const typeById = computed(() => new Map<number, PostTypeInfo>(pkg.value?.postTypes.map((t) => [t.id, t]) ?? []));
   const postById = computed(() => new Map<number, PackagePost>(pkg.value?.posts.map((p) => [p.id, p]) ?? []));
-  const offlineReady = computed(() => pkg.value !== null && (pkg.value.map === null || cachedMapVersion.value === pkg.value.map.version));
 
   function setPackage(value: EventPackage | null) {
     pkg.value = value;
@@ -53,14 +51,11 @@ export const usePackageStore = defineStore('package', () => {
       try {
         const cache = await caches.open(`${MAP_CACHE_PREFIX}${map.version}`);
         const urls = mapUrls(map);
-        let done = 0;
         let next = 0;
-        mapProgress.value = { done, total: urls.length };
         await Promise.all(Array.from({ length: PARALLEL_DOWNLOADS }, async () => {
           while (next < urls.length) {
             const url = urls[next++]!;
             if (!(await cache.match(url))) await cache.add(url);
-            mapProgress.value = { done: ++done, total: urls.length };
           }
         }));
         cachedMapVersion.value = map.version;
@@ -71,7 +66,6 @@ export const usePackageStore = defineStore('package', () => {
       } catch {
         // Bereik weggevallen: bij de volgende keer openen gaat het verder waar het was.
       } finally {
-        mapProgress.value = null;
         downloading = null;
       }
     })();
@@ -83,5 +77,5 @@ export const usePackageStore = defineStore('package', () => {
     if (pkg.value?.staff) setPackage(null);
   }
 
-  return { pkg, cachedMapVersion, mapProgress, offlineReady, typeById, postById, refresh, cacheMap, clearStaffData };
+  return { pkg, cachedMapVersion, typeById, postById, refresh, cacheMap, clearStaffData };
 });

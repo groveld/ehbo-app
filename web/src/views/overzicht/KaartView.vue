@@ -75,7 +75,7 @@ const banner = computed(() => {
 </template>
 
 <style scoped>
-.map { position: relative; height: 300px; }
+.map { position: relative; height: clamp(240px, 40dvh, 480px); }
 .banner {
   position: absolute; left: 12px; top: 12px; right: 12px; z-index: 2; display: flex; align-items: center; gap: 8px; width: fit-content; max-width: calc(100% - 24px);
   padding: 8px 12px; border-radius: 12px; background: var(--danger); color: #FFFFFF; font-size: 13px; font-weight: 600; text-decoration: none;
