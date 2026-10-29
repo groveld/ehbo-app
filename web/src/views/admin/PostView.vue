@@ -155,6 +155,11 @@ async function remove() {
           </div>
         </div>
 
+        <div class="form-field">
+          <label for="adres">Adres of plek (optioneel)</label>
+          <input id="adres" v-model="form.address" class="input" placeholder="Bijv. Hoofdstraat 12 of bij de brug">
+        </div>
+
         <div class="row-2">
           <div class="form-field">
             <label for="van">Bemand vanaf</label>
