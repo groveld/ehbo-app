@@ -4,7 +4,7 @@ import { devices, expect, test, type Browser, type Page } from '@playwright/test
 const PHONE = { admin: '0600000001', postLead: '0600000004', mobileEhbo: '0600000006', coordinator: '0600000002' } as const;
 
 /** Nieuwe telefoon: aanmelden zoals een medewerker, tot het startscherm. */
-async function staffPhone(browser: Browser, phone: string, place?: RegExp): Promise<Page> {
+async function staffPhone(browser: Browser, phone: string): Promise<Page> {
   const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL', timezoneId: 'Europe/Amsterdam' });
   // Navigeren opent Google Maps; dat vangen we af, zodat de test bij de app blijft.
   await context.addInitScript(() => localStorage.setItem('ehbo.nav', JSON.stringify('google')));
@@ -15,7 +15,6 @@ async function staffPhone(browser: Browser, phone: string, place?: RegExp): Prom
   await page.getByLabel('Je mobiele nummer').fill(phone);
   await page.getByRole('button', { name: 'Verder' }).click();
   await expect(page.getByText('Nummer herkend')).toBeVisible();
-  if (place) await page.getByRole('button', { name: place }).click();
   await page.getByRole('button', { name: 'Klopt, start' }).click();
   // Info & voorwaarden alleen de eerste keer.
   const info = page.getByRole('button', { name: 'Gelezen, verder' });
@@ -32,7 +31,7 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await ehbo.getByRole('button', { name: 'Vrij', exact: true }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
 
-  const post = await staffPhone(browser, PHONE.postLead, /Waterpost 3/);
+  const post = await staffPhone(browser, PHONE.postLead);
   await expect(post.getByRole('heading', { name: 'Waterpost 3 · brug' })).toBeVisible();
   await expect(post.getByText('POST IS DICHT')).toBeVisible();
   await post.getByRole('button', { name: 'Post openen' }).click();
@@ -72,7 +71,7 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
 });
 
 test('zonder bereik: bellen, en de melding gaat vanzelf weg zodra er weer bereik is', async ({ browser }) => {
-  const post = await staffPhone(browser, PHONE.postLead, /Waterpost 3/);
+  const post = await staffPhone(browser, PHONE.postLead);
   // Na de vorige test staat de post nog open; anders openen.
   const open = post.getByRole('button', { name: 'Post openen' });
   if (await open.isVisible()) await open.click();
@@ -99,7 +98,7 @@ test('zonder bereik: bellen, en de melding gaat vanzelf weg zodra er weer bereik
 });
 
 test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', async ({ browser }) => {
-  const post = await staffPhone(browser, PHONE.postLead, /Waterpost 3/);
+  const post = await staffPhone(browser, PHONE.postLead);
   await post.getByRole('button', { name: 'Post openen' }).click();
   await post.getByRole('button', { name: /^Water/ }).click();
   await expect(post.getByRole('heading', { name: 'Water aangevraagd' })).toBeVisible();

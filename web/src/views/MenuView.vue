@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Menu (laatste tab): je plek, andere plekken als je er meer hebt, beheer, meldingen, info, navigatie-app en afmelden.
+// Menu (laatste tab): je functies, beheer, meldingen, info, navigatie-app en afmelden. Elke post- of EHBO-functie heeft een eigen tab.
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
@@ -10,11 +10,6 @@ const session = useSessionStore();
 const router = useRouter();
 const me = computed(() => session.me!);
 const navApp = ref<NavApp>(getNavApp());
-
-// De tabbalk heeft één knop voor je eigen plek; wie er meer heeft, vindt de andere hier.
-const several = computed(() => me.value.assignments.length > 1);
-const myPosts = computed(() => me.value.assignments.filter((a) => a.kind === 'post'));
-const isEhbo = computed(() => me.value.assignments.some((a) => a.kind === 'ehbo'));
 
 // Rollen kunnen intussen gewijzigd zijn (bijv. door het beheer).
 onMounted(() => session.refresh());
@@ -37,23 +32,16 @@ async function logout() {
       <h1 class="title">Menu</h1>
     </div>
 
-    <div v-if="session.place" class="card place">
-      <span class="badge letter" :style="{ background: session.place.color }">{{ session.place.letter }}</span>
+    <div v-for="a in me.assignments" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`" class="card place">
+      <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
       <span class="stack text">
-        <span class="name">{{ session.place.title }}</span>
-        <span v-if="session.place.detail" class="detail">{{ session.place.detail }}</span>
-        <span v-if="session.place.times" class="small">{{ session.place.times }}</span>
+        <span class="name">{{ a.title }}</span>
+        <span v-if="a.detail" class="detail">{{ a.detail }}</span>
+        <span v-if="a.times" class="small">{{ a.times }}</span>
       </span>
     </div>
 
     <nav class="stack gap-10 menu">
-      <template v-if="several">
-        <RouterLink v-if="isEhbo" :to="{ name: 'stand-by' }" class="btn"><Icon name="cross" :size="20" />Stand-by en oproepen</RouterLink>
-        <RouterLink v-for="p in myPosts" :key="p.postId" :to="{ name: 'post-home', params: { id: p.postId } }" class="btn">
-          <Icon name="pin" :size="20" />{{ myPosts.length > 1 ? (p.detail?.split(' · ')[0] ?? 'Mijn post') : 'Mijn post' }}
-        </RouterLink>
-        <RouterLink :to="{ name: 'herkend' }" class="btn">Andere plek kiezen</RouterLink>
-      </template>
       <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn"><Icon name="settings" :size="20" />Beheer</RouterLink>
       <RouterLink :to="{ name: 'toestemmingen' }" class="btn"><Icon name="bell" :size="18" />Meldingen en locatie</RouterLink>
       <RouterLink :to="{ name: 'info' }" class="btn"><Icon name="info" :size="18" />Info &amp; voorwaarden</RouterLink>
@@ -73,7 +61,7 @@ async function logout() {
 
 <style scoped>
 .top { padding-top: max(20px, env(safe-area-inset-top)); }
-.place { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.place { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
 .letter { width: 48px; height: 48px; color: #FFFFFF; font-size: 17px; }
 .text { gap: 2px; flex-grow: 1; }
 .name { font-size: 16px; font-weight: 700; }
