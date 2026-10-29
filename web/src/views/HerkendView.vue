@@ -19,7 +19,7 @@ const preview = computed(() => {
 });
 
 function start() {
-  router.push(me.value.infoAccepted ? { name: 'toestemmingen' } : { name: 'info', query: { verder: '1' } });
+  router.push({ name: 'toestemmingen' });
 }
 
 async function notMe() {

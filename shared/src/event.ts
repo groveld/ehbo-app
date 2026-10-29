@@ -147,8 +147,6 @@ export interface Me {
   isAdmin: boolean;
   assignments: Assignment[];
   home: HomeScreen;
-  /** Info & voorwaarden eenmalig bevestigd. */
-  infoAccepted: boolean;
 }
 
 /** POST /api/session */

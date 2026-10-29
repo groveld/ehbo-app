@@ -44,6 +44,5 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
   if (assignments.some((a) => a.kind === 'ehbo')) home = 'ehbo';
   else if (assignments.some((a) => a.kind === 'post')) home = 'post';
 
-  const person = db.getPerson(phone);
-  return { phone, name: person?.name ?? '', isAdmin, assignments, home, infoAccepted: Boolean(person?.info_accepted_at) };
+  return { phone, name: db.getPerson(phone)?.name ?? '', isAdmin, assignments, home };
 }

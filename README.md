@@ -3,7 +3,7 @@
 App voor de EHBO-coördinatie bij evenementen. Wat er werkt:
 
 1. **Installeren** als app op het beginscherm (iPhone en Android).
-2. **Aanmelden** met je telefoonnummer: de app zoekt zelf je functie en post op. Eenmalig info & voorwaarden, daarna meldingen en locatie aanzetten met een testmelding.
+2. **Aanmelden** met je telefoonnummer: de app zoekt zelf je functie en post op. Daarna meldingen en locatie aanzetten met een testmelding; info & voorwaarden staan in het menu.
 3. **Beheer** (alleen beheerders): evenement en lopen met GPX, info & voorwaarden, stijl (groot logo, vierkant logo als app-icoon, kleuren, korte naam), posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
 4. **Overzicht** voor medewerkers: kaart met alle posten, filter per soort, lijsten met bel- en navigeerknop, alle contacten, en per post de aanrijroute en de dichtstbijzijnde EHBO. Open oproepen staan rood bovenaan.
 5. **EHBO-oproepen**: de post zet zijn post open en vraagt EHBO aan; de dichtstbijzijnde vrije eenheid krijgt een alarm, na 30 s alle vrije eenheden. Accepteren, ter plaatse, afronden; de evenementcoördinator kijkt mee en kan zelf een eenheid inzetten.
@@ -120,7 +120,7 @@ Open het adres op de telefoon. Doe dit met minstens één iPhone en één Androi
 | 3 | App openen vanaf het beginscherm › **Medewerker / vrijwilliger** | Scherm "Aanmelden" |
 | 4 | Een onbekend nummer invullen | "Dit nummer staat niet in de lijst" |
 | 5 | Het nummer uit `ADMIN_PHONE` invullen | "Nummer herkend", met rol **Beheerder** |
-| 6 | **Klopt, start** › **Gelezen, verder** | Scherm "Zet meldingen en locatie aan" |
+| 6 | **Klopt, start** | Scherm "Zet meldingen en locatie aan" |
 | 7 | Meldingen en locatie **Aanzetten** | Toestemmingsvragen; daarna allebei **Aan** |
 | 8 | **Stuur testmelding** | Melding verschijnt, ook als de app open is |
 | 9 | **Klaar** › **Controle van installatie** › **Over 10 s** en meteen vergrendelen | Melding op het vergrendelscherm, met geluid of trilling |
@@ -188,7 +188,6 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | POST | `/api/session` | iedereen | Aanmelden `{ phone }`; zet de sessiecookie. 404 als het nummer onbekend is |
 | DELETE | `/api/session` | iedereen | Afmelden |
 | GET | `/api/me` | medewerker | Naam, rollen en startscherm |
-| POST | `/api/me/info-accepted` | medewerker | Info & voorwaarden bevestigd |
 | POST | `/api/subscriptions` | medewerker | Abonnement opslaan `{ subscription }` |
 | DELETE | `/api/subscriptions` | medewerker | Abonnement verwijderen `{ endpoint }` |
 | POST | `/api/test-push` | medewerker | Testmelding naar je eigen toestel `{ endpoint, delaySeconds }` |

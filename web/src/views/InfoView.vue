@@ -1,27 +1,14 @@
 <script setup lang="ts">
-// 2.6 · Info & voorwaarden. Voor iedereen te lezen; medewerkers bevestigen hem eenmalig bij de eerste aanmelding (?verder=1).
-import { computed, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+// 2.6 · Info & voorwaarden. Voor iedereen te lezen; medewerkers vinden hem in het menu.
+import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
 import { useSessionStore } from '../stores/session.ts';
 
 const session = useSessionStore();
-const route = useRoute();
 const router = useRouter();
-const onboarding = computed(() => route.query.verder === '1' && session.me !== null);
-const error = ref('');
 
 // Direct geopend (bijv. via een link): er is geen vorige pagina.
 const back = () => (router.options.history.state.back ? router.back() : router.push('/'));
-
-async function accept() {
-  try {
-    await session.acceptInfo();
-    router.push({ name: 'toestemmingen' });
-  } catch (err) {
-    error.value = (err as Error).message;
-  }
-}
 </script>
 
 <template>
@@ -37,13 +24,6 @@ async function accept() {
         <p class="section-body">{{ section.body }}</p>
       </section>
       <p v-if="!session.event" class="note">Geen bereik. De info-pagina verschijnt zodra de app één keer verbinding heeft gehad.</p>
-    </div>
-
-    <div class="grow" />
-    <div v-if="onboarding" class="stack gap-8 footer">
-      <p v-if="error" class="note warn" role="alert">{{ error }}</p>
-      <button class="btn primary" @click="accept">Gelezen, verder</button>
-      <span class="small center">Medewerkers zien dit eenmalig bij de eerste aanmelding</span>
     </div>
   </main>
 </template>

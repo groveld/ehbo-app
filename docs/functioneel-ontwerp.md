@@ -39,7 +39,7 @@ Elk evenement krijgt een eigen adres (bijv. silvesterloop.groveld.com). Deelneme
 5. **Telefoonnummer invullen** (06 of +31 wordt gelijk getrokken).
    - Bekend nummer → naam, functie(s), post(en) en tijden ter bevestiging. Meerdere functies → elke functie krijgt een eigen tab; kiezen of wisselen hoeft niet.
    - Onbekend nummer → opnieuw proberen, de evenementcoördinator bellen, of door als gast.
-6. **Eerste keer:** info & voorwaarden bevestigen, daarna toestemming voor meldingen en locatie.
+6. **Eerste keer:** toestemming voor meldingen en locatie. Info & voorwaarden staan in het menu; bevestigen hoeft niet.
 7. **Ingelogd.** Het beginscherm is je functie:
    - EHBO'er → stand-by met oproepen;
    - bij een post (verantwoordelijke, lid of reserve) → de eigen post; alleen de verantwoordelijke zet hem open;
@@ -160,7 +160,7 @@ Elke oproep wordt een incident met tijdlijn; na afloop maakt een beheerder er me
 
 De app verwerkt zo weinig mogelijk: naam, telefoonnummer en functie van medewerkers, en per incident alleen tijd, plaats en afloop. Slachtoffers worden niet geregistreerd.
 
-**Info-pagina** (voor iedereen bereikbaar; medewerkers bevestigen hem eenmalig bij de eerste aanmelding):
+**Info-pagina** (voor iedereen bereikbaar; medewerkers vinden hem in het menu):
 
 1. Waarvoor de app is, en dat hij 112 niet vervangt.
 2. Welke gegevens erin staan.
@@ -377,6 +377,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Opmaak na de tabbalk (29 okt) | Tabschermen hebben geen titel; de tabbalk zegt al waar je bent (de naam van het evenement komt later misschien op een andere plek terug). Verzoeken toont alles wat open is in één lijst (EHBO-oproepen rood bovenaan, dan water, verkeer en vrijwilligers) en daaronder wat is afgerond. In het menu staan je functies op volgorde: beheer, kernteam, EHBO en posten. Stand-by heeft één belknop voor de volgende in de lijn: de EHBO-coördinator, of de evenementcoördinator als je zelf EHBO-coördinator bent. Pauze is warm oranje, uit dienst donker met witte tekst. De inhoud is één kolom tot 720 px breed |
 | Signaalkleuren en hoofdkleur (29 okt) | Rood (noodgeval, 112) en groen (in orde) zijn gereserveerd. Een hoofdkleur die daarop lijkt, wordt bij het opslaan geweigerd; een eerder opgeslagen rode of groene hoofdkleur toont de app als antraciet, zodat een gewone knop nooit op 112 lijkt |
 | Stand-by en startscherm (29 okt) | De drie statussen hebben dezelfde opbouw in hun eigen kleur: vrij groen, pauze oranje (#FFA500), uit dienst donker; de gekozen statusknop is in dezelfde kleur getint. Na het instellen kom je op je functie uit: stand-by als je EHBO'er bent, anders je post, ook als beheerder of kernteamlid. Meldingen, locatie (met een GPS-test) en de controle van de installatie staan op één scherm in het menu |
+| Info & voorwaarden (29 okt) | Niet meer in de aanmeldstappen en niet meer te bevestigen: na "Klopt, start" volgen direct meldingen en locatie. De info-pagina staat in het menu |
 
 **Nog open**
 

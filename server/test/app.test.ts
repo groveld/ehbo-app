@@ -216,13 +216,6 @@ test('wie nergens meer is ingepland, is direct afgemeld', async () => {
   assert.equal((await api('/api/me', 'GET', undefined, cookie)).statusCode, 401);
 });
 
-test('info en voorwaarden eenmalig bevestigen', async () => {
-  const { me, cookie } = await login(DEMO.ehbo);
-  assert.equal(me.infoAccepted, false);
-  assert.equal((await api('/api/me/info-accepted', 'POST', undefined, cookie)).statusCode, 204);
-  assert.equal((await api('/api/me', 'GET', undefined, cookie)).json().infoAccepted, true);
-});
-
 test('sessie loopt tot de dag na het evenement, zonder einddatum 60 dagen', () => {
   const now = new Date('2026-10-28T12:00:00Z');
   assert.equal(sessionExpiry('2026-12-31', now).toISOString(), '2027-01-02T00:00:00.000Z');

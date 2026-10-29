@@ -243,6 +243,10 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
       if (number && number !== row.number) update.run(number, row.id);
     }
   },
+  // 10: info & voorwaarden hoeven niet meer bevestigd te worden.
+  `
+  ALTER TABLE people DROP COLUMN info_accepted_at;
+  `,
 ];
 
 export interface EventRow {
@@ -258,7 +262,6 @@ export interface EventRow {
 export interface PersonRow {
   phone: string;
   name: string;
-  info_accepted_at: string | null;
 }
 
 export interface PostAssignmentRow {
@@ -339,7 +342,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     ensurePerson: db.prepare('INSERT INTO people (phone) VALUES (?) ON CONFLICT(phone) DO NOTHING'),
     addAdmin: db.prepare('INSERT INTO admins (phone) VALUES (?) ON CONFLICT(phone) DO NOTHING'),
     getEvent: db.prepare('SELECT name, start_date, end_date, escalation_seconds, info_json, info_policy, info_contact FROM event WHERE id = 1'),
-    getPerson: db.prepare('SELECT phone, name, info_accepted_at FROM people WHERE phone = ?'),
+    getPerson: db.prepare('SELECT phone, name FROM people WHERE phone = ?'),
     isAdmin: db.prepare('SELECT 1 FROM admins WHERE phone = ?'),
     postAssignments: db.prepare(`
       SELECT p.id AS post_id, p.name AS post_name, p.km, c.role,
@@ -353,7 +356,6 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
       WHERE m.phone = ? ORDER BY u.sort, u.id`),
     coreTeamAssignments: db.prepare('SELECT function, is_coordinator FROM core_team WHERE phone = ? ORDER BY sort, id'),
     coordinatorPhone: db.prepare('SELECT phone FROM core_team WHERE is_coordinator = 1 AND phone IS NOT NULL ORDER BY sort, id LIMIT 1'),
-    acceptInfo: db.prepare("UPDATE people SET info_accepted_at = datetime('now') WHERE phone = ? AND info_accepted_at IS NULL"),
     createSession: db.prepare('INSERT INTO sessions (token_hash, phone, user_agent, expires_at) VALUES (?, ?, ?, ?)'),
     getSession: db.prepare("SELECT phone, expires_at FROM sessions WHERE token_hash = ? AND expires_at > datetime('now')"),
     touchSession: db.prepare("UPDATE sessions SET last_seen_at = datetime('now') WHERE token_hash = ?"),
@@ -393,7 +395,6 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     unitAssignments: (phone: string) => q.unitAssignments.all(phone) as unknown as UnitAssignmentRow[],
     coreTeamAssignments: (phone: string) => q.coreTeamAssignments.all(phone) as unknown as CoreTeamAssignmentRow[],
     coordinatorPhone: () => (q.coordinatorPhone.get() as { phone: string } | undefined)?.phone ?? null,
-    acceptInfo: (phone: string) => { q.acceptInfo.run(phone); },
 
     createSession: (tokenHash: string, phone: string, userAgent: string | undefined, expiresAt: string) => {
       q.createSession.run(tokenHash, phone, userAgent ?? null, expiresAt);

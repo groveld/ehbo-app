@@ -16,12 +16,7 @@ async function staffPhone(browser: Browser, phone: string): Promise<Page> {
   await page.getByRole('button', { name: 'Verder' }).click();
   await expect(page.getByText('Nummer herkend')).toBeVisible();
   await page.getByRole('button', { name: 'Klopt, start' }).click();
-  // Info & voorwaarden alleen de eerste keer.
-  const info = page.getByRole('button', { name: 'Gelezen, verder' });
-  const done = page.getByRole('link', { name: 'Klaar, naar mijn startscherm' });
-  await expect(info.or(done)).toBeVisible();
-  if (await info.isVisible()) await info.click();
-  await done.click();
+  await page.getByRole('link', { name: 'Klaar, naar mijn startscherm' }).click();
   return page;
 }
 
