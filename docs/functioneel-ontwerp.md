@@ -72,7 +72,7 @@ Een persoon is één telefoonnummer en kan bij meerdere posten of functies staan
 **EHBO-eenheden aanmaken: vast of mobiel.** De beheerder maakt in *EHBO-eenheden* zoveel eenheden aan als nodig; een eenheid van één persoon kan ook.
 
 - **Vast:** de eenheid hoort bij een eigen EHBO-post. Die post staat met een groen kruis op de kaart, en daar zit de eenheid ook echt.
-- **Mobiel met standplaats:** de standplaats is een bestaande post (bijv. een stempelpost), geen eigen locatie. Op de kaart staat een klein kruisje bij die post, met de tekst *mobiel, kan onderweg zijn*. Wie erheen gaat, treft misschien niemand, maar de post daar houdt een oogje in het zeil en kan direct een EHBO-verzoek doen.
+- **Mobiel met standplaats:** de standplaats is een bestaande post (bijv. een stempelpost), geen eigen locatie. Op de kaart staat een klein kruisje bij die post, met de tekst *mobiel, kan onderweg zijn*. Is de eenheid in dienst en verder dan 50 m van haar standplaats, dan is het kruisje grijs en staat ze als ambulance op haar GPS-positie; binnen 50 m is ze thuis en is het kruisje in kleur. Wie erheen gaat, treft misschien niemand, maar de post daar houdt een oogje in het zeil en kan direct een EHBO-verzoek doen.
 - **Mobiel zonder standplaats:** niet op de kaart, alleen in de lijst met eenheden en in het overzicht van de evenementcoördinator.
 
 Positie bij een oproep: een vaste eenheid zit op haar post (of waar ze bij afronden *blijf hier* koos). Een mobiele eenheid geeft haar GPS-positie door zolang ze in dienst is; zonder GPS telt de standplaats.
@@ -388,6 +388,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Deelnemerspagina als begin (29 okt) | Het keuzescherm medewerker of deelnemer verviel. Zonder aanmelding opent de app op de deelnemerspagina; rechtsboven staat Aanmelden (was Sluiten). Bel EHBO is daar een ronde rode knop rechtsonder met een wit kruis, met dezelfde werking: de EHBO-coördinator, anders de evenementcoördinator, zonder nummer 112 |
 | Aanmelden zonder tabbalk (29 okt) | Tijdens het aanmelden (bevestigen en meldingen en locatie) staat de tabbalk er niet; pas na "Klaar, naar mijn startscherm" ben je in de app. Na het aanmelden staan je functies in dezelfde volgorde als in het menu: beheer, kernteam, EHBO en posten |
 | Stand-by-tab en -scherm (29 okt) | Het kruis van Stand-by in de tabbalk heeft altijd de kleur van je status: groen beschikbaar, rood niet beschikbaar (pauze of bezig met een oproep), donker uit dienst; de gloed van het actieve tabblad blijft rood. Op het stand-by-scherm blijven de belknoppen onderaan in beeld, en de oproepen van vandaag staan ingeklapt onder een eigen kopje |
+| Mobiele EHBO thuis of onderweg (29 okt) | Binnen 50 m van haar standplaats is een mobiele eenheid thuis: geen ambulance op de kaart, het kruisje bij de post in kleur. Verder weg is ze onderweg: de ambulance staat op de kaart en het kruisje bij de standplaats is grijs (of de hele post, als dat een EHBO-post is), tenzij er nog een andere eenheid thuis is. Zonder recente GPS-positie blijft de standplaats in kleur |
 
 **Nog open**
 

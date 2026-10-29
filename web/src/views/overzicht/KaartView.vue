@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
-import { ambulances } from '../../posts.ts';
+import { mobileUnits } from '../../posts.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 
@@ -25,6 +25,8 @@ const chips = computed(() => {
 });
 /** Posten met een open oproep rood en bovenaan; dichte posten grijs op de kaart. */
 const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
+/** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
+const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
 const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id) ?? []);
 const matches = (p: { name: string; km: number | null }) => {
   const q = query.value.trim().toLowerCase().replace(',', '.');
@@ -46,7 +48,7 @@ const banner = computed(() => {
       <div class="map">
         <EventMap
           :pkg="store.pkg" :posts="posts" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
-          :ambulances="ambulances(store.pkg, live.state?.units ?? [], live.serverNow)"
+          :ambulances="mobile.ambulances" :away-post-ids="mobile.awayPostIds"
           @select="(id) => router.push({ name: 'post', params: { id } })"
         />
         <RouterLink v-if="banner" :to="{ name: 'meldingen' }" class="banner"><Icon name="bell" :size="16" />{{ banner }}</RouterLink>
