@@ -160,9 +160,9 @@ test('aanmelden met een bekend nummer: rollen, startscherm en cookie', async () 
   assert.equal(second?.letter, 'W');
 
   assert.equal((await login(DEMO.ehbo)).me.home, 'ehbo');
-  assert.equal((await login(DEMO.postMember)).me.home, 'overzicht');
+  assert.equal((await login(DEMO.postMember)).me.home, 'post', 'ook een lid van een post begint bij de post');
   const coordinator = (await login(DEMO.coordinator)).me;
-  assert.equal(coordinator.home, 'overzicht');
+  assert.equal(coordinator.home, 'post', 'kernteam met een post begint bij de post');
   assert.equal(coordinator.assignments[0]?.title, 'Evenementcoördinator');
   const admin = (await login(DEMO.admin)).me;
   assert.equal(admin.isAdmin, true);

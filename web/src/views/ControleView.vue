@@ -1,11 +1,26 @@
 <script setup lang="ts">
-// Controle van de installatie: service worker, meldingen en server, met een logboek. Via het menu.
+// Controle van de installatie: service worker, meldingen, locatie (met een GPS-test) en server, met een logboek. Via het menu.
 import { computed, onMounted } from 'vue';
 import Icon from '../components/Icon.vue';
+import { useGpsFix } from '../composables/useGpsFix.ts';
 import { isIOS, isStandalone } from '../platform.ts';
+import { useLiveStore } from '../stores/live.ts';
+import { useLocationStore } from '../stores/location.ts';
 import { usePushStore } from '../stores/push.ts';
 
 const push = usePushStore();
+const location = useLocationStore();
+const live = useLiveStore();
+const gps = useGpsFix();
+
+const LOCATION: Record<string, [string, Tone]> = {
+  granted: ['toegestaan', 'ok'], denied: ['geweigerd', 'bad'], unsupported: ['niet ondersteund', 'bad'], prompt: ['nog niet gevraagd', 'pending'],
+};
+
+async function testGps() {
+  const fix = await gps.start();
+  if (fix) void location.check();
+}
 
 type Tone = 'ok' | 'bad' | 'pending' | '';
 
@@ -26,6 +41,8 @@ const checks = computed((): { label: string; value: string; tone: Tone }[] => [
     tone: push.workerState === 'actief' ? 'ok' : push.workerState === 'onbekend' ? '' : 'bad',
   },
   { label: 'Meldingen', value: permissionCheck.value[0], tone: permissionCheck.value[1] },
+  { label: 'Locatie', value: LOCATION[location.permission]![0], tone: LOCATION[location.permission]![1] },
+  ...(live.myUnitIds.length ? [{ label: 'Positie delen (mobiele EHBO)', value: live.sharingUnit != null ? 'actief' : 'uit (alleen in dienst)', tone: (live.sharingUnit != null ? 'ok' : '') as Tone }] : []),
   {
     label: 'Aangemeld bij server',
     value: push.serverSubscription,
@@ -50,14 +67,17 @@ const help = computed(() => {
   return 'Zet meldingen aan en stuur jezelf een testmelding.';
 });
 
-onMounted(() => push.init());
+onMounted(() => {
+  push.init();
+  void location.check();
+});
 </script>
 
 <template>
   <main class="screen tight">
     <header class="header">
       <RouterLink :to="{ name: 'menu' }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
-      <h1 class="heading">Controle van installatie</h1>
+      <h1 class="heading">Meldingen, locatie en controle</h1>
     </header>
 
     <div class="stack gap-10">
@@ -82,6 +102,20 @@ onMounted(() => push.init());
         </div>
         <p class="small">Tip: tik op "Over 10 s" en vergrendel direct je telefoon. Zo test je een melding op het vergrendelscherm.</p>
         <button v-if="push.subscribed" class="btn link" @click="push.disable">Meldingen uitzetten</button>
+      </div>
+
+      <div class="card stack gap-10">
+        <h2 class="section-title">GPS</h2>
+        <p v-if="location.permission === 'denied'" class="small">{{ isIOS ? 'Locatie is geweigerd. Zet het aan via Instellingen › Privacy › Locatievoorzieningen.' : 'Locatie is geweigerd. Zet het aan via de app-instellingen van je telefoon (Locatie).' }}</p>
+        <button v-if="location.permission === 'prompt'" class="btn primary" @click="location.request">Locatie aanzetten</button>
+        <button class="btn" :disabled="gps.measuring.value" @click="testGps">
+          <Icon name="gps" :size="20" />{{ gps.measuring.value ? 'Meten…' : 'Test GPS' }}
+        </button>
+        <dl v-if="gps.best.value" class="checks">
+          <div><dt>Positie</dt><dd class="mono">{{ gps.best.value.lat.toFixed(5) }}, {{ gps.best.value.lng.toFixed(5) }}</dd></div>
+          <div><dt>Nauwkeurigheid</dt><dd :class="gps.best.value.accuracyM <= 15 ? 'ok' : gps.best.value.accuracyM <= 50 ? 'pending' : 'bad'">± {{ gps.best.value.accuracyM }} m</dd></div>
+        </dl>
+        <p v-if="gps.error.value" class="error-text" role="alert">{{ gps.error.value }}</p>
       </div>
 
       <div class="card stack gap-8">

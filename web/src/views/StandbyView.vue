@@ -84,7 +84,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
         <span class="section-title">Mijn status</span>
         <div class="choice-grid">
           <button
-            v-for="(text, key) in UNIT_AVAILABILITY" :key="key" class="option" :class="{ free: key === 'vrij' }"
+            v-for="(text, key) in UNIT_AVAILABILITY" :key="key" class="option" :class="key"
             :aria-pressed="availability === key" :disabled="busy" @click="setAvailability(key)"
           >{{ text }}</button>
         </div>
@@ -101,9 +101,12 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
         <span class="section-title">Vandaag</span>
         <div class="list">
           <RouterLink v-for="i in today" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="list-row today">
-            <span class="mono at">{{ clock(i.reportedAt) }}</span>
-            <span class="grow">{{ store.postById.get(i.postId)?.name }} · {{ incidentSummary(i) }}</span>
-            <span class="done">{{ i.status === 'afgerond' ? 'afgerond' : 'ingetrokken' }}</span>
+            <span class="main">
+              <span class="title-line">{{ store.postById.get(i.postId)?.name }}</span>
+              <span class="sub">{{ clock(i.reportedAt) }} · {{ incidentSummary(i) }}</span>
+            </span>
+            <span class="tag" :class="{ ok: i.status === 'afgerond' }">{{ i.status === 'afgerond' ? 'afgerond' : 'ingetrokken' }}</span>
+            <Icon name="forward" :size="16" />
           </RouterLink>
         </div>
       </div>
@@ -118,11 +121,12 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 <style scoped>
 .top-gap { margin-top: 24px; }
 .gap-top { margin-top: 14px; }
-.option.free[aria-pressed="true"] { border-color: var(--ok); background: var(--ok-bg); color: #0A4D33; font-weight: 700; }
+.option[aria-pressed="true"] { font-weight: 700; }
+.option.vrij[aria-pressed="true"] { border-color: var(--ok); background: var(--ok-bg); color: #0A4D33; }
+.option.pauze[aria-pressed="true"] { border-color: #FFA500; background: #FFF1D6; color: #6B4300; }
+.option.uit_dienst[aria-pressed="true"] { border-color: var(--ink); background: #E8E8EA; color: var(--ink); }
 .facts-list { margin-top: 14px; }
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
-.today { font-size: 14px; min-height: 48px; }
-.at { color: var(--muted); font-size: 13px; }
-.done { font-size: 12px; font-weight: 600; color: var(--ok-text); }
+.today { min-height: 56px; color: var(--ink); text-decoration: none; }
 .sos { margin-top: 10px; }
 </style>

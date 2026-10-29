@@ -247,7 +247,7 @@ export const useLiveStore = defineStore('live', () => {
   }
 
   return {
-    state, connected, serverNow, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
+    state, connected, serverNow, sharingUnit, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
     incidentById, unitState, postOpen, secondsLeft, needsAed, refresh, connect, report,
     outbox, delivered, refused, flush,
     update: (id: number, details: IncidentDetails) => act(`/api/incidents/${id}`, 'PUT', details),

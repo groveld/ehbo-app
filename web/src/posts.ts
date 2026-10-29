@@ -43,4 +43,6 @@ export const nearestUnit = (pkg: EventPackage, post: PackagePost) => unitsByDist
 /** De evenementcoördinator uit het kernteam (alleen in het pakket van medewerkers). */
 export const coordinatorOf = (pkg: EventPackage | null) => pkg?.coreTeam.find((c) => c.isCoordinator) ?? null;
 /** Kernteamlid met deze functie, bijv. "EHBO-coördinator". */
-export const coreTeamMember = (pkg: EventPackage | null, fn: string) => pkg?.coreTeam.find((c) => c.function.toLowerCase() === fn.toLowerCase()) ?? null;
+/** Alleen letters vergelijken, zodat "EHBO coördinator" en "EHBO-Coördinator" ook gevonden worden. */
+const letters = (text: string) => text.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+export const coreTeamMember = (pkg: EventPackage | null, fn: string) => pkg?.coreTeam.find((c) => letters(c.function) === letters(fn)) ?? null;
