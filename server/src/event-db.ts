@@ -3,10 +3,11 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import { DEFAULT_CORE_TEAM, DEFAULT_POST_TYPES, type PostContactRole, type PushSubscriptionData, type UnitKind, type UnitMobility } from '@ehbo/shared';
+import { DEFAULT_CORE_TEAM, DEFAULT_POST_TYPES, normalizeEmergencyNumber, type PostContactRole, type PushSubscriptionData, type UnitKind, type UnitMobility } from '@ehbo/shared';
 
 // Elke stap draait één keer; PRAGMA user_version onthoudt tot waar het bestand is bijgewerkt.
-const MIGRATIONS = [
+// Een stap is SQL, of een functie als de gegevens zelf omgezet moeten worden.
+const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   `
   CREATE TABLE event (
     id                 INTEGER PRIMARY KEY CHECK (id = 1),
@@ -230,6 +231,18 @@ const MIGRATIONS = [
   ALTER TABLE incidents ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE requests ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0;
   `,
+  // 8: "lopen" heet voortaan "hardlopen"; lopen en wandelen zijn in gewone taal hetzelfde.
+  `
+  UPDATE runs SET discipline = 'hard' || discipline WHERE discipline LIKE 'lopen%';
+  `,
+  // 9: noodnummers in dezelfde vorm als de andere nummers (+31…, of kort/0900). Wat niet lukt, blijft staan.
+  (db) => {
+    const update = db.prepare('UPDATE emergency_numbers SET number = ? WHERE id = ?');
+    for (const row of db.prepare('SELECT id, number FROM emergency_numbers').all() as { id: number; number: string }[]) {
+      const number = normalizeEmergencyNumber(row.number);
+      if (number && number !== row.number) update.run(number, row.id);
+    }
+  },
 ];
 
 export interface EventRow {
@@ -302,7 +315,9 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
   const version = (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
   for (let i = version; i < MIGRATIONS.length; i++) {
     transaction(() => {
-      db.exec(MIGRATIONS[i]!);
+      const step = MIGRATIONS[i]!;
+      if (typeof step === 'string') db.exec(step);
+      else step(db);
       db.exec(`PRAGMA user_version = ${i + 1}`);
     });
   }

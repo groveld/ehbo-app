@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // 2.1 · Startscherm: medewerker of deelnemer.
 import { computed } from 'vue';
-import Call112 from '../components/Call112.vue';
 import Icon from '../components/Icon.vue';
 import { formatDate } from '../format.ts';
 import { canUseAsStaff } from '../platform.ts';
@@ -43,9 +42,6 @@ const staffRoute = canUseAsStaff ? { name: 'aanmelden' } : { name: 'installeren'
         <Icon name="forward" :size="20" />
       </RouterLink>
     </nav>
-
-    <div class="grow" />
-    <Call112 />
   </main>
 </template>
 

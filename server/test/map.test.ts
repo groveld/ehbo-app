@@ -132,7 +132,7 @@ test('evenementpakket: 304 als de telefoon deze versie al heeft, nieuwe versie n
   await app.inject({ url: '/api/admin/emergency-numbers', method: 'PUT', headers: { cookie: adminCookie }, payload: [{ label: 'SEH', number: '0513 685 685' }] });
   const changed = await app.inject({ url: '/api/package', headers: { cookie: staffCookie, 'if-none-match': etag } });
   assert.equal(changed.statusCode, 200);
-  assert.deepEqual((changed.json() as EventPackage).emergencyNumbers, [{ label: 'SEH', number: '0513 685 685' }]);
+  assert.deepEqual((changed.json() as EventPackage).emergencyNumbers, [{ label: 'SEH', number: '+31513685685' }]);
 });
 
 test('standaardletters uit het schermontwerp', () => {

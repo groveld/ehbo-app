@@ -4,7 +4,6 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { POST_CONTACT_ROLE_LABEL, REQUEST_KINDS, formatKm, formatPhone, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
 import Icon, { type IconName } from '../components/Icon.vue';
-import Sos112Bar from '../components/Sos112Bar.vue';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentSummary } from '../incidents.ts';
 import { coordinatorOf, kmLabel, nearestUnit } from '../posts.ts';
@@ -148,9 +147,6 @@ async function setOpen(value: boolean) {
           <div v-else-if="!waiting.length && !openRequests.length" class="request"><span class="grow muted">Open verzoeken van deze post</span><strong>geen</strong></div>
         </div>
       </template>
-
-      <div class="grow" />
-      <Sos112Bar class="sos-gap" :text="open ? 'Levensgevaar? Bel eerst 112' : 'Levensgevaar? Bel 112'" />
     </template>
   </main>
 </template>
@@ -194,5 +190,4 @@ h1 { font-size: 24px; font-weight: 700; line-height: 1.2; }
 .state { font-weight: 700; color: var(--danger); }
 .state.blue { color: var(--info); }
 .muted { color: var(--ink-2); }
-.sos-gap { margin: 18px 0 0; }
 </style>

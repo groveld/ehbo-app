@@ -9,6 +9,7 @@ import {
   INFO_SECTIONS_MAX,
   SHORT_NAME_MAX,
   TIME_PATTERN,
+  normalizeEmergencyNumber,
   normalizePhone,
   styleProblem,
   type AddAdminRequest,
@@ -346,13 +347,17 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
         items: {
           type: 'object',
           required: ['label', 'number'],
-          // Noodnummers mogen ook kort of 0900 zijn; alleen cijfers, spaties, streepjes en +.
-          properties: { label: { type: 'string', minLength: 1, maxLength: 60 }, number: { type: 'string', minLength: 3, maxLength: 20, pattern: '^[0-9+][0-9 -]*$' } },
+          // Noodnummers mogen ook kort of 0800/0900 zijn; normalizeEmergencyNumber keurt ze verder.
+          properties: { label: { type: 'string', minLength: 1, maxLength: 60 }, number: { type: 'string', minLength: 3, maxLength: 24 } },
         },
       },
     },
   }, async (request) => {
-    admin.saveEmergencyNumbers(request.body);
+    admin.saveEmergencyNumbers(request.body.map(({ label, number }) => {
+      const normalized = normalizeEmergencyNumber(number);
+      if (!normalized) throw badRequest(`Ongeldig noodnummer bij ${label.trim()}: ${number}`);
+      return { label, number: normalized };
+    }));
     return admin.getState();
   });
 

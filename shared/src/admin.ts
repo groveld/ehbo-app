@@ -22,7 +22,7 @@ export interface EventSettings {
 export interface RunData {
   name: string;
   distanceKm: number | null;
-  /** Bijv. "lopen" of "lopen + wandelen". */
+  /** Bijv. "hardlopen" of "hardlopen + wandelen". */
   discipline: string | null;
   date: string | null;
   startTime: string | null;

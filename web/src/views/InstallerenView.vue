@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // 2.2 · Medewerker: op beginscherm zetten. Alleen zo krijg je meldingen en werkt de app zonder bereik.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import Call112 from '../components/Call112.vue';
 import Icon from '../components/Icon.vue';
 import { deviceLabel, iosTooOld, isAndroid, isIOS } from '../platform.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -83,7 +82,6 @@ onBeforeUnmount(() => {
 
     <div class="grow" />
     <a href="/aanmelden?browser=1" class="small test-link">Alleen testen in de browser (voor beheer)</a>
-    <Call112 />
   </main>
 </template>
 
