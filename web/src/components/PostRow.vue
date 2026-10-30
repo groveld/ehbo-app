@@ -7,8 +7,11 @@ import { kmLabel, primaryContact, unitsAt } from '../posts.ts';
 import Icon from './Icon.vue';
 import PostBadge from './PostBadge.vue';
 
-/** alert: er is een open oproep bij deze post (rode rand en badge). */
-const props = defineProps<{ pkg: EventPackage; post: PackagePost; alert?: boolean }>();
+/**
+ * alert: er is een open oproep bij deze post (rode rand en badge).
+ * open: open or closed, as a ring around the icon. late: it should be open by now.
+ */
+const props = defineProps<{ pkg: EventPackage; post: PackagePost; alert?: boolean; open: boolean; late?: boolean }>();
 const type = computed(() => props.pkg.postTypes.find((t) => t.id === props.post.typeId));
 const contact = computed(() => primaryContact(props.post));
 /** km-punt, dan de EHBO-eenheid die hier staat (met kruisje), anders de contactpersoon. */
@@ -20,9 +23,11 @@ const km = computed(() => kmLabel(props.post));
 <template>
   <div class="post-row list-row" :class="{ alert }">
     <RouterLink :to="{ name: 'post', params: { id: post.id } }" class="main">
-      <PostBadge :type="type" :size="40" />
+      <PostBadge :type="type" :size="40" class="status-ring" :class="{ on: open }" />
+      <span class="visually-hidden">{{ open ? 'Open' : 'Dicht' }}</span>
       <span class="text">
         <span class="name">{{ post.name }}</span>
+        <span v-if="late" class="late">Nog dicht</span>
         <span v-if="km || who" class="sub">
           {{ km }}<template v-if="km && who"> · </template>
           <span v-if="units" class="ehbo"><Icon name="ehbo" :size="12" />{{ units }}</span>
@@ -47,6 +52,7 @@ const km = computed(() => kmLabel(props.post));
 .name { font-size: 15px; font-weight: 700; line-height: 1.25; }
 .sub { font-size: 13px; color: var(--muted); }
 .ehbo { display: inline-flex; align-items: center; gap: 3px; color: var(--ok-text); font-weight: 600; }
+.late { align-self: flex-start; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--warn-bg); color: var(--warn); }
 .round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; -webkit-touch-callout: none; }
 .call { background: var(--soft); color: var(--ink); }
 .nav { background: var(--primary); color: #FFFFFF; }

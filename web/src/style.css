@@ -77,6 +77,9 @@ h1, h2, p { margin: 0; }
 .btn.light { background: #FFFFFF; box-shadow: none; color: var(--ink); font-weight: 700; }
 .btn.link { background: none; box-shadow: none; font-size: 14px; color: var(--ink); }
 .btn:disabled { opacity: .45; cursor: default; }
+/* Status around an icon in a list: green is open or available, red is not. */
+.status-ring { outline: 2px solid var(--danger); outline-offset: 2px; margin: 4px; }
+.status-ring.on { outline-color: var(--ok); }
 .icon-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: none; background: none; color: var(--ink); cursor: pointer; padding: 0; }
 .sos { margin-top: 18px; }
 
