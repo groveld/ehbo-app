@@ -54,7 +54,8 @@ const AMBULANCE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 /** Volgorde van de markeringen per soort, van onder naar boven. Eigen soorten liggen onderop, bij Anders. */
 const MARKER_ORDER = ['anders', 'verkeer', 'water', 'stempel', 'ehbo', 'start_finish'];
 /** Boven alle posten: de ambulance en je eigen positie. */
-const UNIT_LAYER = MARKER_ORDER.length + 1;
+const EHBO_RANK = MARKER_ORDER.indexOf('ehbo');
+const UNIT_LAYER = MARKER_ORDER.length + EHBO_RANK + 1;
 /** Altijd bovenop: open oproep, geselecteerde post en het gekozen punt in beheer. */
 const TOP_LAYER = UNIT_LAYER + 1;
 
@@ -103,11 +104,16 @@ function runFeatures() {
   };
 }
 
-/** Laag van een post: open oproep en geselecteerde post bovenop, een standplaats bij de EHBO-posten, anders de laag van de soort. */
+/**
+ * Layer of a post: open call and selected post on top, otherwise the order of its type.
+ * A post with a standplaats only ever moves up: above every post without one, but below the EHBO posts.
+ * Among posts with a standplaats the order of the types still holds, and EHBO and above keep their place.
+ */
 function postLayer(post: PackagePost, typeKey: string | null | undefined, onTop: boolean) {
   if (onTop) return TOP_LAYER;
-  const key = props.pkg.units.some((u) => u.postId === post.id) ? 'ehbo' : typeKey;
-  return Math.max(MARKER_ORDER.indexOf(key ?? ''), 0) + 1;
+  const rank = Math.max(MARKER_ORDER.indexOf(typeKey ?? ''), 0);
+  const raised = rank >= EHBO_RANK || props.pkg.units.some((u) => u.postId === post.id);
+  return rank + (raised ? EHBO_RANK : 0) + 1;
 }
 
 function markerElement(post: PackagePost) {
