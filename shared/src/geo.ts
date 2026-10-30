@@ -11,3 +11,5 @@ export function distanceKm([lng1, lat1]: LngLat, [lng2, lat2]: LngLat) {
 
 /** "21,1" — km zoals in het Nederlands geschreven. */
 export const formatKm = (km: number, digits = 1) => km.toLocaleString('nl-NL', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+/** "1,5, 2,5": the passes of a run. The label already says these are km points. */
+export const formatKmList = (km: number[]) => km.map((k) => formatKm(k)).join(', ');

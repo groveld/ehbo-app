@@ -2,7 +2,7 @@
 // 3.5 · Postdetail: waar is de post, hoe kom je er, wie bel je, en waar is de dichtstbijzijnde EHBO.
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { formatKm, formatPhone, telHref } from '@ehbo/shared';
+import { formatKm, formatKmList, formatPhone, telHref } from '@ehbo/shared';
 import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
@@ -42,10 +42,10 @@ const subtitle = computed(() => {
   return [kmLabel(p), open].filter(Boolean).join(' · ');
 });
 
-/** "10 km: km 2,1 en km 7,4", per run. */
+/** "10 km: 2,1, 7,4", per run. */
 const passages = computed(() => (post.value?.passages ?? []).map(({ runId, km }) => {
   const run = store.pkg?.runs.find((r) => r.id === runId);
-  return `${run?.name ?? 'Loop'}: ${km.map((k) => `km ${formatKm(k)}`).join(' en ')}`;
+  return `${run?.name ?? 'Loop'}: ${formatKmList(km)}`;
 }));
 
 // Eén stap omhoog: de kaart (navigation.ts).

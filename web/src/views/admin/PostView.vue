@@ -2,7 +2,7 @@
 // 1.3 · Post invoeren: soort, naam, GPS-positie (de km-punten volgen uit de GPX), aanrijroute, tijden en contactpersonen.
 import { computed, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import { formatKm, formatPhone, type ContactData, type PostContactRole, type PostData } from '@ehbo/shared';
+import { formatKmList, formatPhone, type ContactData, type PostContactRole, type PostData } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
@@ -70,10 +70,10 @@ function applyCoords() {
   showCoords.value = false;
 }
 
-/** "10 km: km 2,1 en km 7,4", per run; they follow from the GPX of the runs and the position of this post. */
+/** "10 km: 2,1, 7,4", per run; they follow from the GPX of the runs and the position of this post. */
 const passages = computed(() => (post.value?.passages ?? []).map(({ runId, km }) => {
   const run = admin.state?.runs.find((r) => r.id === runId);
-  return `${run?.name ?? 'Loop'}: ${km.map((k) => `km ${formatKm(k)}`).join(' en ')}`;
+  return `${run?.name ?? 'Loop'}: ${formatKmList(km)}`;
 }));
 
 function optionStyle(color: string) {
