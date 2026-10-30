@@ -25,7 +25,6 @@ const type = computed(() => (post.value ? store.typeById.get(post.value.typeId) 
 const contact = computed(() => (post.value ? primaryContact(post.value) : null));
 const here = computed(() => (store.pkg && post.value ? unitsAt(store.pkg, post.value.id) : []));
 const nearest = computed(() => (store.pkg && post.value && !here.value.length ? nearestUnit(store.pkg, post.value) : null));
-const ROLE = { verantwoordelijke: 'verantwoordelijke', lid: 'lid', reserve: 'reserve' } as const;
 const isOpen = computed(() => (post.value ? live.postOpen(post.value.id, post.value.isOpen) : false));
 const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
 /** Zoals op de kaart van het overzicht: open oproepen rood, dichte posten grijs. */
@@ -109,7 +108,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <div v-if="post.contacts?.length" class="list">
         <div v-for="c in post.contacts" :key="c.phone" class="list-row">
           <span class="main">
-            <span class="title-line">{{ c.name || 'Naam onbekend' }} · <span class="role">{{ ROLE[c.role] }}</span></span>
+            <span class="title-line">{{ c.name || 'Naam onbekend' }} · <span class="role">{{ c.role }}</span></span>
             <span class="sub mono">{{ formatPhone(c.phone) }}</span>
           </span>
           <a :href="telHref(c.phone)" class="round" :aria-label="`Bel ${c.name || 'contactpersoon'}`"><Icon name="phone" :size="20" /></a>
