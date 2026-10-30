@@ -2,10 +2,11 @@
 // 1.3 · Post invoeren: soort, naam, GPS-positie (de km-punten volgen uit de GPX), aanrijroute, tijden en contactpersonen.
 import { computed, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import { formatKm, formatPhone, type ContactData, type PostContactRole, type PostData } from '@ehbo/shared';
+import { formatPhone, type ContactData, type PostContactRole, type PostData } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
+import KmPoints from '../../components/KmPoints.vue';
 import { useGpsFix } from '../../composables/useGpsFix.ts';
 import { useDirty } from '../../composables/useDirty.ts';
 import { useSave } from '../../composables/useSave.ts';
@@ -69,12 +70,6 @@ function applyCoords() {
   save.error.value = '';
   showCoords.value = false;
 }
-
-/** "10 km: km 2,1 en km 7,4", per run; they follow from the GPX of the runs and the position of this post. */
-const passages = computed(() => (post.value?.passages ?? []).map(({ runId, km }) => {
-  const run = admin.state?.runs.find((r) => r.id === runId);
-  return `${run?.name ?? 'Loop'}: ${km.map((k) => `km ${formatKm(k)}`).join(' en ')}`;
-}));
 
 function optionStyle(color: string) {
   return { '--option-color': color, '--option-bg': `${color}1A` };
@@ -153,8 +148,8 @@ async function remove() {
 
         <div class="form-field">
           <span class="section-label">Km-punten</span>
-          <span v-for="p in passages" :key="p" class="small">{{ p }}</span>
-          <span v-if="!passages.length" class="small">Geen km: geen GPX, geen positie, of de route komt hier niet langs. De km-punten volgen uit de GPX van de lopen.</span>
+          <KmPoints v-if="post?.passages.length" :passages="post.passages" :runs="admin.state?.runs ?? []" />
+          <span v-else class="small">Geen km: geen GPX, geen positie, of de route komt hier niet langs. De km-punten volgen uit de GPX van de lopen.</span>
         </div>
 
         <div class="row-2">

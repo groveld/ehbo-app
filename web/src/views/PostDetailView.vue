@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { formatKm, formatPhone, telHref } from '@ehbo/shared';
 import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
+import KmPoints from '../components/KmPoints.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { navigationUrl } from '../navigate.ts';
@@ -40,12 +41,6 @@ const subtitle = computed(() => {
   const open = p.timeFrom && p.timeTo ? `open ${p.timeFrom} – ${p.timeTo}` : p.timeFrom ? `open vanaf ${p.timeFrom}` : null;
   return [kmLabel(p), open].filter(Boolean).join(' · ');
 });
-
-/** "10 km: km 2,1 en km 7,4", per run. */
-const passages = computed(() => (post.value?.passages ?? []).map(({ runId, km }) => {
-  const run = store.pkg?.runs.find((r) => r.id === runId);
-  return `${run?.name ?? 'Loop'}: ${km.map((k) => `km ${formatKm(k)}`).join(' en ')}`;
-}));
 
 // Eén stap omhoog: de kaart (navigation.ts).
 const back = () => router.back();
@@ -97,7 +92,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
           </span>
         </div>
         <div v-else class="fact"><span class="label">Locatie</span><span>Nog geen locatie vastgelegd</span></div>
-        <div v-if="passages.length" class="fact stack"><span class="label">Km-punten</span><span v-for="p in passages" :key="p">{{ p }}</span></div>
+        <div v-if="post.passages.length" class="fact stack gap-6"><span class="label">Km-punten</span><KmPoints :passages="post.passages" :runs="store.pkg.runs" /></div>
         <div v-if="post.accessRoute" class="fact"><span class="label">Aanrijroute hulpverlening</span><span>{{ post.accessRoute }}</span></div>
       </div>
 
