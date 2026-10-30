@@ -9,6 +9,10 @@ export function kmLabel(post: Pick<PackagePost, 'km' | 'passages'>) {
 }
 export const lngLat = (p: PackagePost): LngLat | null => (p.lat !== null && p.lng !== null ? [p.lng, p.lat] : null);
 
+/** Is this post part of this run? It comes by according to the GPX, and start/finish always belongs. */
+export const isOnRun = (pkg: EventPackage, post: PackagePost, runId: number) =>
+  post.passages.some((r) => r.runId === runId) || pkg.postTypes.find((t) => t.id === post.typeId)?.key === 'start_finish';
+
 /** Wie je belt voor een post: de verantwoordelijke, anders de eerste contactpersoon. */
 export const primaryContact = (post: PackagePost) =>
   post.contacts?.find((c) => c.role === 'verantwoordelijke') ?? post.contacts?.[0] ?? null;

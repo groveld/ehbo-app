@@ -9,7 +9,7 @@ import { LIGHT, layers, type Flavor } from '@protomaps/basemaps';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { Bbox, EventPackage, LngLat, PackagePost } from '@ehbo/shared';
 import { iconSvg, postTypeIcon } from '../icons.ts';
-import type { Ambulance } from '../posts.ts';
+import { isOnRun, type Ambulance } from '../posts.ts';
 import { assetUrl, tileUrl } from '../stores/package.ts';
 
 maplibregl.setWorkerUrl(workerUrl);
@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<{
   posts?: PackagePost[];
   /** Ingezoomd op deze post. */
   focusPostId?: number | null;
-  /** Deze loop dik en donker, de rest lichter. */
+  /** Deze loop dik en donker en in beeld; wat er niet aan ligt wordt bijna doorzichtig. */
   highlightRunId?: number | null;
   showUser?: boolean;
   /** Beheer: tik op de kaart om een punt te kiezen. */
@@ -116,6 +116,9 @@ function postLayer(post: PackagePost, typeKey: string | null | undefined, onTop:
   return rank + (raised ? EHBO_RANK : 0) + 1;
 }
 
+/** The run in focus, if it has a route on the map. */
+const focusRun = () => props.pkg.runs.find((r) => r.id === props.highlightRunId && r.line) ?? null;
+
 function markerElement(post: PackagePost) {
   const type = props.pkg.postTypes.find((t) => t.id === post.typeId);
   const el = document.createElement('button');
@@ -129,6 +132,12 @@ function markerElement(post: PackagePost) {
   // Een EHBO-post waar de mobiele eenheid niet is: grijs.
   el.style.background = alert ? '#C8261E' : type?.key === 'ehbo' && away ? GREY : (type?.color ?? '#6B7079');
   if (!alert && props.closedPostIds.includes(post.id)) el.classList.add('closed');
+  // A run is chosen: what isn't on it steps back. You want to know where the nearest EHBO is, so that stays half visible.
+  const run = focusRun();
+  if (run && !alert && !focus && !isOnRun(props.pkg, post, run.id)) {
+    const ehbo = type?.key === 'ehbo' || props.pkg.units.some((u) => u.postId === post.id);
+    el.classList.add(ehbo ? 'dimmed' : 'faded');
+  }
   const icon = postTypeIcon(type?.key);
   el.setAttribute('aria-label', away ? `${post.name}, EHBO onderweg` : post.name);
   if (type?.key === 'ehbo') el.innerHTML = CROSS;
@@ -177,20 +186,22 @@ function drawPicked() {
   if (pickedMarker) pickedMarker.getElement().style.zIndex = String(TOP_LAYER);
 }
 
-/** Het hele gebied in beeld, of ingezoomd op één post. */
-function frame() {
+/** Het hele gebied in beeld, de gekozen route, of ingezoomd op één post. */
+function frame(animate = false) {
   if (!map) return;
+  const duration = animate ? 500 : 0;
   const focus = props.focusPostId !== null ? props.pkg.posts.find((p) => p.id === props.focusPostId) : undefined;
   if (focus?.lat != null && focus.lng != null) {
     map.jumpTo({ center: [focus.lng, focus.lat], zoom: 15 });
     return;
   }
-  const points: LngLat[] = [
+  const run = focusRun();
+  const points: LngLat[] = run ? run.line! : [
     ...props.pkg.runs.flatMap((r) => r.line ?? []),
     ...props.pkg.posts.filter((p) => p.lat !== null && p.lng !== null).map((p) => [p.lng!, p.lat!] as LngLat),
   ];
   const bounds = points.length ? points.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(points[0], points[0])) : null;
-  if (bounds) map.fitBounds(bounds, { padding: 32, maxZoom: 16, duration: 0 });
+  if (bounds) map.fitBounds(bounds, { padding: 32, maxZoom: 16, duration });
   else if (props.pkg.map) map.fitBounds(props.pkg.map.bbox as Bbox, { duration: 0 });
 }
 
@@ -236,6 +247,7 @@ onMounted(() => {
       paint: {
         'line-color': ['case', ['get', 'highlight'], '#16181D', '#9A9CA3'],
         'line-width': ['case', ['get', 'highlight'], 4, 3],
+        'line-opacity': ['case', ['get', 'highlight'], 1, 0.35],
       },
     });
   });
@@ -249,13 +261,14 @@ onMounted(() => {
   void startUserLocation();
 });
 
-watch(() => [props.posts, props.pkg, props.focusPostId, props.alertPostIds, props.closedPostIds], drawPosts);
+watch(() => [props.posts, props.pkg, props.focusPostId, props.highlightRunId, props.alertPostIds, props.closedPostIds], drawPosts);
 // Wordt elke tel opnieuw berekend; alleen opnieuw tekenen als er echt iets verandert.
 watch(() => props.awayPostIds.join(), drawPosts);
 watch(() => props.picked, drawPicked);
 watch(() => props.ambulances, drawAmbulances);
 // Naar een andere post (bijv. vanaf de postpagina): de kaart gaat mee.
-watch(() => props.focusPostId, frame);
+watch(() => props.focusPostId, () => frame());
+watch(() => props.highlightRunId, () => frame(true));
 watch(() => [props.highlightRunId, props.pkg], () => (map?.getSource('lopen') as GeoJSONSource | undefined)?.setData(runFeatures()));
 
 onBeforeUnmount(() => {
@@ -279,7 +292,10 @@ onBeforeUnmount(() => {
 }
 .event-map :deep(.post-marker.small) { font-size: 9px; letter-spacing: -0.02em; }
 .event-map :deep(.post-marker.ehbo) { border-radius: 8px; }
-.event-map :deep(.post-marker.closed) { opacity: .55; }
+/* !important: MapLibre sets opacity on every marker itself. */
+.event-map :deep(.post-marker.closed) { opacity: .55 !important; }
+.event-map :deep(.post-marker.dimmed) { opacity: .4 !important; }
+.event-map :deep(.post-marker.faded) { opacity: .15 !important; pointer-events: none; }
 .event-map :deep(.ehbo-dot) {
   position: absolute; right: -6px; bottom: -6px; width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid #FFFFFF;
   background: #0A7D4F; display: flex; align-items: center; justify-content: center;

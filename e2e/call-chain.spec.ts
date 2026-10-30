@@ -282,3 +282,26 @@ test('a new post in admin: open phones get it by themselves, and a call works be
 
   expect((await post.request.post(`/api/incidents/${id}/withdraw`)).ok()).toBe(true);
 });
+
+test('choosing a route: what is not on it steps back, and choosing it again undoes that', async ({ browser }) => {
+  // The post from the earlier test lies far from every route.
+  const FAR = 'Waterpost 9 · nieuw';
+  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
+  const page = await context.newPage();
+  await page.goto('/?browser=1');
+  const faded = page.locator(`.post-marker.faded[aria-label="${FAR}"]`);
+  const view = page.getByRole('button', { name: 'Toon 10 km op de kaart' });
+  await view.waitFor();
+  await expect(page.locator('.post-marker.faded')).toHaveCount(0);
+
+  await view.click();
+  await expect(faded).toHaveCSS('pointer-events', 'none');
+  await expect(faded).toHaveCSS('opacity', '0.15');
+  await expect(page.locator('.list-row').filter({ hasText: FAR })).toHaveCount(0);
+  await expect(page.locator('.list-row').filter({ hasText: 'Kruising 4' })).toHaveCount(2);
+
+  await view.click();
+  await expect(page.locator('.post-marker.faded')).toHaveCount(0);
+  await expect(page.locator('.list-row').filter({ hasText: FAR })).toHaveCount(1);
+  await context.close();
+});
