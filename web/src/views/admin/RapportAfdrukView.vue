@@ -2,7 +2,7 @@
 // Rapport als afdrukpagina: "Opslaan als PDF" in het afdrukvenster geeft het PDF-rapport. Op A4, met het groot logo.
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, formatDuration, formatKm, type Report, type RequestKind } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, formatDuration, formatKm, formatKmList, type Report, type RequestKind } from '@ehbo/shared';
 import { formatDate } from '../../format.ts';
 import { clock } from '../../incidents.ts';
 import { useAdminStore } from '../../stores/admin.ts';
@@ -122,7 +122,7 @@ onMounted(async () => {
               <tr v-for="r in p.runs" :key="r.runName">
                 <td>{{ p.postName }}</td>
                 <td>{{ r.runName }}</td>
-                <td class="mono">{{ r.km.map((km) => formatKm(km)).join(' en ') }}</td>
+                <td class="mono">{{ formatKmList(r.km) }}</td>
               </tr>
             </template>
           </tbody>
