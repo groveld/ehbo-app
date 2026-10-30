@@ -39,7 +39,7 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
 
   if (assignments.length === 0) return undefined;
 
-  // Het startscherm is je functie: stand-by als je EHBO'er bent, anders je post; alleen wie geen van beide heeft, begint op de kaart.
+  // Het startscherm is je functie: EHBO als je EHBO'er bent, anders je post; alleen wie geen van beide heeft, begint op de kaart.
   let home: HomeScreen = 'overzicht';
   if (assignments.some((a) => a.kind === 'ehbo')) home = 'ehbo';
   else if (assignments.some((a) => a.kind === 'post')) home = 'post';

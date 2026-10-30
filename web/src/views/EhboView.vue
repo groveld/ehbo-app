@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 3.3 · EHBO'er: stand-by. Eigen status, positie, team en de oproepen van vandaag.
+// 3.3 · EHBO: het scherm van de EHBO'er. Eigen status, positie, team en de oproepen van vandaag.
 import { computed } from 'vue';
 import { UNIT_AVAILABILITY, formatPhone, telHref, type UnitAvailability } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';

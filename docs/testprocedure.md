@@ -54,8 +54,8 @@ Neem voor D en E bij voorkeur een iPhone en een Android-toestel, zodat je de opr
 | 1.4 | één toestel | Een onbekend nummer invullen | "Dit nummer staat niet in de lijst" met een belknop | |
 | 1.5 | A–E | **Klopt, start** › meldingen en locatie **Aanzetten** | Toestemmingsvragen; daarna allebei aan | |
 | 1.6 | A–E | **Stuur testmelding** | Melding verschijnt binnen enkele seconden | |
-| 1.7 | A–E | **Klaar, naar mijn startscherm** | B, C: Post 1. D, E: Stand-by. A: Post (als A bij een post staat) of de kaart | |
-| 1.8 | A–E | Tabbalk bekijken | B, C: Mijn post, Kaart, Contacten, Menu. D, E: Stand-by, Kaart, Contacten, Menu. A: ook **Meldingen** | |
+| 1.7 | A–E | **Klaar, naar mijn startscherm** | B, C: Post 1. D, E: EHBO. A: Post (als A bij een post staat) of de kaart | |
+| 1.8 | A–E | Tabbalk bekijken | B, C: Mijn post, Kaart, Contacten, Menu. D, E: EHBO, Kaart, Contacten, Menu. A: ook **Meldingen** | |
 | 1.9 | A–E | Menu | Bovenaan je naam en nummer, daaronder je functies (beheer eerst) | |
 
 Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf het beginscherm is geopend, niet in Safari.
@@ -67,7 +67,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 2.1 | A–E | Menu › **Pushmeldingen, locatie en controle** | Alles groen: geïnstalleerd, service worker actief, meldingen en locatie toegestaan, server bereikbaar | |
 | 2.2 | A–E | **Over 10 s** en meteen het scherm vergrendelen | Melding op het vergrendelscherm, met geluid of trilling | |
 | 2.3 | A–E | Buiten: **Test GPS** | Positie en nauwkeurigheid; groen bij 15 m of beter | |
-| 2.4 | E | Stand-by › **Beschikbaar**, dan 2.1 opnieuw | "Positie delen (mobiele EHBO): actief" | |
+| 2.4 | E | EHBO › **Beschikbaar**, dan 2.1 opnieuw | "Positie delen (mobiele EHBO): actief" | |
 | 2.5 | A–E | App volledig afsluiten en opnieuw openen | Nog steeds aangemeld, op hetzelfde startscherm | |
 
 ## Blok 3 · Zonder bereik (alle telefoons behalve F)
@@ -83,11 +83,11 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 
 | # | Toestel | Stap | Verwacht | ✓ |
 | --- | --- | --- | --- | --- |
-| 4.1 | D, E | Stand-by › **Beschikbaar** | Groen blok "Beschikbaar" | |
+| 4.1 | D, E | EHBO › **Beschikbaar** | Groen blok "Beschikbaar" | |
 | 4.2 | E | Scherm vergrendelen, telefoon wegleggen | — | |
 | 4.3 | B | **Post openen** › tegel **EHBO** › *Onwel / flauw* › aanspreekbaar **ja** › **EHBO-verzoek versturen** | "We zoeken een EHBO'er" met aftellen | |
 | 4.4 | E | — | Binnen 5 s een oproep met alarm, ook met scherm uit. Tik op de melding: de oproep opent direct | |
-| 4.5 | E | Tabbalk | Rood getal op **Stand-by** | |
+| 4.5 | E | Tabbalk | Rood getal op **EHBO** | |
 | 4.6 | A | — | Pushmelding met een kopie van de oproep; tik erop: die melding opent. Op **Meldingen** een kaart met label **EHBO** | |
 | 4.7 | E | **Accepteren & navigeren** | Navigatie-app opent naar Post 1 | |
 | 4.8 | B | — | "Hulp is onderweg" met naam en belknop van E | |
