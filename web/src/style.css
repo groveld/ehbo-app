@@ -19,6 +19,9 @@
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
 /* Gedrag als een app: geen zoomen met dubbeltikken, geen meeverend scrollen aan de randen, tekst niet vergroten bij draaien. */
 html { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* Geen scrollbalk, zodat de kolom op de computer niet verspringt tussen korte en lange pagina's. Scrollen werkt gewoon. */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
 body { font: 16px/1.45 var(--sans); -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
 /* iOS zoomt in op invoervelden met tekst kleiner dan 16 px. */
 input, select, textarea { font-size: 16px; }
