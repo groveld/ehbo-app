@@ -1,5 +1,5 @@
 // Evenementpakket op de telefoon: vaste gegevens en de kaart, ook zonder bereik.
-// De app haalt het pakket op bij het openen en af en toe daarna; alleen een nieuwe versie komt over de lijn.
+// De app haalt het pakket op bij het openen en zodra de live stand een nieuwe versie noemt; alleen een nieuwe versie komt over de lijn.
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { EventPackage, PackageMap, PackagePost, PostTypeInfo } from '@ehbo/shared';
@@ -31,6 +31,9 @@ export const usePackageStore = defineStore('package', () => {
     pkg.value = value;
     save('ehbo.package', value);
   }
+
+  /** Does the package on this phone match the data version in the live state? */
+  const isCurrent = (dataVersion: string) => pkg.value?.version.startsWith(`${dataVersion}.`) ?? false;
 
   /** Nieuwste versie ophalen; zonder bereik blijft de bewaarde versie staan. */
   async function refresh() {
@@ -77,5 +80,5 @@ export const usePackageStore = defineStore('package', () => {
     if (pkg.value?.staff) setPackage(null);
   }
 
-  return { pkg, cachedMapVersion, typeById, postById, refresh, cacheMap, clearStaffData };
+  return { pkg, cachedMapVersion, typeById, postById, isCurrent, refresh, cacheMap, clearStaffData };
 });

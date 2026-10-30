@@ -37,7 +37,7 @@ const posts = computed(() => (store.pkg?.posts.filter((p) => (filter.value === n
 const banner = computed(() => {
   const open = live.openIncidents;
   if (!open.length) return null;
-  const names = [...new Set(open.map((i) => store.postById.get(i.postId)?.name.split(' · ')[0]))].filter(Boolean);
+  const names = [...new Set(open.map((i) => i.post.name.split(' · ')[0]))].filter(Boolean);
   return `${open.length} open ${open.length === 1 ? 'oproep' : 'oproepen'} · ${names.join(', ')}`;
 });
 </script>

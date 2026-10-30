@@ -63,7 +63,9 @@ interface Unit {
 
 interface Post {
   id: number;
+  typeId: number;
   name: string;
+  km: number | null;
   lat: number | null;
   lng: number | null;
   isOpen: boolean;
@@ -110,9 +112,11 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   }
 
   function posts(): Map<number, Post> {
-    return new Map(all(`SELECT p.id, p.name, p.lat, p.lng, p.is_open, t.key FROM posts p JOIN post_types t ON t.id = p.type_id`).map((p) => [p.id as number, {
+    return new Map(all(`SELECT p.id, p.type_id, p.name, p.km, p.lat, p.lng, p.is_open, t.key FROM posts p JOIN post_types t ON t.id = p.type_id`).map((p) => [p.id as number, {
       id: p.id as number,
+      typeId: p.type_id as number,
       name: p.name as string,
+      km: p.km as number | null,
       lat: p.lat as number | null,
       lng: p.lng as number | null,
       isOpen: p.is_open === 1,
@@ -176,11 +180,14 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   // ---- Live stand ----
 
-  function toLive(row: Row, eventsById: Map<number, IncidentEvent[]>): LiveIncident {
+  function toLive(row: Row, eventsById: Map<number, IncidentEvent[]>, postMap: Map<number, Post>): LiveIncident {
     const acceptedBy = row.accepted_by as string | null;
+    // An incident keeps its post: the database refuses to delete a post that has incidents.
+    const { typeId, name, km, lat, lng } = postMap.get(row.post_id as number)!;
     return {
       id: row.id as number,
       postId: row.post_id as number,
+      post: { typeId, name, km, lat, lng },
       status: row.status as LiveIncident['status'],
       stage: row.stage as LiveIncident['stage'],
       what: row.what as LiveIncident['what'],
@@ -213,7 +220,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** Voor deelnemers: welke standplaatsen nu leeg zijn. Zonder de oproepen, dus licht genoeg om vaak op te vragen. */
   function ehboStatus(): EhboStatus {
-    return { awayPostIds: awayPostIds(units(), liveUnits(), [...posts().values()], now().getTime()) };
+    return { awayPostIds: awayPostIds(units(), liveUnits(), [...posts().values()], now().getTime()), dataVersion: db.dataVersion() };
   }
 
   function state(): LiveState {
@@ -223,12 +230,14 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       list.push({ at: e.at as string, type: e.type as IncidentEventType, unitId: e.unit_id as number | null, text: e.text as string });
       eventsById.set(e.incident_id as number, list);
     }
+    const postMap = posts();
     return {
       version,
+      dataVersion: db.dataVersion(),
       serverTime: iso(),
-      incidents: all('SELECT * FROM incidents ORDER BY id DESC').map((row) => toLive(row, eventsById)),
+      incidents: all('SELECT * FROM incidents ORDER BY id DESC').map((row) => toLive(row, eventsById, postMap)),
       units: liveUnits(),
-      posts: [...posts().values()].map((p) => ({ id: p.id, isOpen: p.isOpen })),
+      posts: [...postMap.values()].map((p) => ({ id: p.id, isOpen: p.isOpen })),
       requests: requests(),
       testMode: db.testMode(),
     };

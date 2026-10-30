@@ -376,6 +376,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     markPush: db.prepare("UPDATE subscriptions SET last_push_at = datetime('now'), last_status = ? WHERE endpoint = ?"),
     countSubs: db.prepare('SELECT COUNT(*) AS n FROM subscriptions'),
     bumpVersion: db.prepare('UPDATE event SET version = version + 1 WHERE id = 1'),
+    dataVersion: db.prepare('SELECT version, map_version FROM event WHERE id = 1'),
     testMode: db.prepare('SELECT test_mode FROM event WHERE id = 1'),
   };
 
@@ -424,6 +425,11 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
 
     /** Na elke wijziging door een beheerder: telefoons halen dan het nieuwe evenementpakket op. */
     bumpVersion: () => { q.bumpVersion.run(); },
+    /** Version of everything in the event package; also the start of the package version. */
+    dataVersion: () => {
+      const { version, map_version } = q.dataVersion.get() as { version: number; map_version: number };
+      return `${version}.${map_version}`;
+    },
 
     /** Testmodus: oproepen en aanvragen zijn proef (melding met "Test" ervoor) en komen niet in het rapport. */
     testMode: () => (q.testMode.get() as { test_mode: number }).test_mode === 1,

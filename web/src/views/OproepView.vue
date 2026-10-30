@@ -5,9 +5,10 @@ import { useRouter } from 'vue-router';
 import { formatKm, telHref } from '@ehbo/shared';
 import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
+import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentSummary, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
 import { navigationUrl } from '../navigate.ts';
 import { primaryContact } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
@@ -23,7 +24,7 @@ const { busy, error, run } = useSave();
 const RING = 2 * Math.PI * 30;
 
 const incident = computed(() => live.incidentById(Number(props.id)));
-const post = computed(() => (incident.value ? store.postById.get(incident.value.postId) : undefined));
+const post = computed(() => (incident.value ? postOf(store.postById, incident.value) : undefined));
 const contact = computed(() => (post.value ? primaryContact(post.value) : null));
 
 /** Mijn eenheid voor deze oproep: die is opgeroepen of heeft aangenomen; anders mijn eerste eenheid. */
@@ -83,7 +84,7 @@ async function onSite() {
 <template>
   <main class="screen tight">
     <template v-if="mode === 'missing' || !incident || !post">
-      <p class="note warn top-gap">Deze oproep staat (nog) niet op deze telefoon. <button class="add-link" @click="live.refresh()">Opnieuw laden</button></p>
+      <NotOnPhone class="top-gap">Deze oproep staat (nog) niet op deze telefoon.</NotOnPhone>
       <div class="grow" />
       <button class="btn primary" @click="toEhbo">Terug naar EHBO</button>
     </template>
