@@ -132,4 +132,5 @@ Requires Node ≥ 26. For browser testing without installing, open `/?browser=1`
 - Keep `README.md` (Dutch, operator-facing: setup, Unraid, Cloudflare, phone test list) up to date when deployment changes.
 - When a decision changes, update the **Besluiten** table in `docs/functioneel-ontwerp.md` in the same commit.
 - Small, focused commits. Type check and tests must pass, and CI runs a container smoke test before publishing.
+- **Every issue ends in a PR, without being asked:** work on a branch from the latest `origin/main`, then commit, push and open a PR that closes the issue. Issues merged into one piece of work share one PR. The owner reviews and merges; never merge a PR yourself.
 - Web app packages are `devDependencies` of `web/` (they're bundled at build time), so the runtime image only installs the server's dependencies.
