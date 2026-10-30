@@ -40,8 +40,8 @@ const km = computed(() => kmLabel(props.post));
 
 <style scoped>
 .post-row { gap: 10px; padding-right: 12px; }
-/* Inside the list's frame: a red line along the row. */
-.post-row.alert { box-shadow: inset 4px 0 0 var(--danger); background: #FDF1F0; }
+/* A border inside the frame of the list. */
+.post-row.alert { box-shadow: inset 0 0 0 2px var(--danger); border-radius: 16px; }
 .post-row .main { flex-direction: row; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; }
 .text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .name { font-size: 15px; font-weight: 700; line-height: 1.25; }
