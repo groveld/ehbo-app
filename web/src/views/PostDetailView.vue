@@ -30,7 +30,6 @@ const isOpen = computed(() => (post.value ? live.postOpen(post.value.id, post.va
 const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
 /** Zoals op de kaart van het overzicht: open oproepen rood, dichte posten grijs. */
 const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
-const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id) ?? []);
 /** Zoals de server: de postverantwoordelijke van deze post, of een beheerder. */
 const canToggle = computed(() => session.me?.isAdmin
   || session.me?.assignments.some((a) => a.kind === 'post' && a.postId === post.value?.id && a.role === 'verantwoordelijke'));
@@ -84,7 +83,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <div v-if="post.lat !== null" class="map">
         <!-- Net als op het overzicht: tik op een andere post om die te openen. Die vervangt deze pagina, zodat Terug in één stap teruggaat naar waar je vandaan kwam. -->
         <EventMap
-          :pkg="store.pkg" :focus-post-id="post.id" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
+          :pkg="store.pkg" :focus-post-id="post.id" :alert-post-ids="alertIds"
           :ambulances="mobile.ambulances" :away-post-ids="mobile.awayPostIds"
           @select="(id) => id !== post!.id && router.replace({ name: 'post', params: { id } })"
         />
