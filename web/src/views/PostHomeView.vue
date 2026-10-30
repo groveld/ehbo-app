@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { POST_CONTACT_ROLE_LABEL, REQUEST_KINDS, formatKm, formatPhone, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
 import Icon, { type IconName } from '../components/Icon.vue';
+import NotOnPhone from '../components/NotOnPhone.vue';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentSummary } from '../incidents.ts';
 import { coordinatorOf, kmLabel, nearestUnit } from '../posts.ts';
@@ -63,7 +64,7 @@ async function setOpen(value: boolean) {
 
 <template>
   <main class="screen tight">
-    <p v-if="!post || !store.pkg" class="note warn top-gap">Deze post staat niet (meer) in de gegevens van het evenement.</p>
+    <NotOnPhone v-if="!post || !store.pkg" class="top-gap">Deze post staat niet (meer) in de gegevens van het evenement.</NotOnPhone>
     <template v-else>
       <header class="head">
         <div class="stack gap-4 grow">

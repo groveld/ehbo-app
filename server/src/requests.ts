@@ -43,6 +43,7 @@ export function createRequests(db: EventDb, { notify: send, changed, now = () =>
         id: r.id as number,
         isTest: r.is_test === 1,
         postId: r.post_id as number,
+        postName: postName(r.post_id as number),
         kind: r.kind as RequestKind,
         detail: r.detail as string | null,
         status: r.status as RequestStatus,

@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { REQUEST_KINDS, telHref } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
+import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
 import { clock } from '../incidents.ts';
@@ -46,7 +47,7 @@ const toPost = () => (request.value ? router.replace({ name: 'post-home', params
 
 <template>
   <main class="screen tight">
-    <p v-if="!request || !kind" class="note warn top-gap">Deze aanvraag staat (nog) niet op deze telefoon. <button class="add-link" @click="live.refresh()">Opnieuw laden</button></p>
+    <NotOnPhone v-if="!request || !kind" class="top-gap">Deze aanvraag staat (nog) niet op deze telefoon.</NotOnPhone>
     <template v-else>
       <StatusBlock :tone="request.status === 'afgehandeld' ? 'green' : request.status === 'ingetrokken' ? 'dark' : 'blue'" :label="`Aanvraag · ${clock(request.createdAt)}`" :title="title" :sub="sub" />
 
