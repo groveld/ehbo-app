@@ -86,7 +86,7 @@ export function passages(line: LngLat[], point: LngLat, trackKm?: number): numbe
 
   return found
     .filter((at, i) => i === 0 || at - found[i - 1]! >= PASSAGE_MERGE_KM)
-    .map((at) => Math.round(at * scale * 10) / 10);
+    .map((at) => Math.round(at * scale * 1000) / 1000);
 }
 
 /**

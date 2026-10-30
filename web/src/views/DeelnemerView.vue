@@ -82,7 +82,7 @@ const alongRoute = computed(() => {
       </div>
 
       <section v-if="runs.length" class="stack gap-8 section">
-        <span class="section-label">Starttijden<template v-if="day"> · {{ day }}</template> · ster = favoriet vooraan</span>
+        <span class="section-label">Starttijden<template v-if="day"> · {{ day }}</template></span>
         <div class="runs">
           <div v-for="r in runs" :key="r.id" class="run" :class="{ viewing: viewing === r.id, favorite: favorites.includes(r.id) }">
             <button class="run-view" :aria-label="`Toon ${r.name} op de kaart`" :aria-pressed="viewing === r.id" @click="toggleView(r.id)">
@@ -137,8 +137,9 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .time { font-size: 16px; }
 .km { width: 56px; flex-shrink: 0; font-size: 13px; color: var(--ink-2); }
 .post-name { font-size: 15px; }
+/* The last row can end up under the Bel EHBO button: keep its name clear of it. */
+.list-row:last-child { padding-right: 84px; }
 .list-row { gap: 12px; min-height: 48px; }
 /* Ruimte onderaan, zodat de ronde knop de laatste post niet bedekt. */
-.screen { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
 .route-link { margin-top: 8px; }
 </style>

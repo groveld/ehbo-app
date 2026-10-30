@@ -63,7 +63,7 @@ test('alleen beheerders', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   assert.equal(state.event.name, 'Silvesterloop 2026');
   assert.equal(state.posts.length, 4);
-  assert.deepEqual(state.posts.map((p) => p.km), [0, 0, 1.5, 2], 'gesorteerd op km-punt');
+  assert.deepEqual(state.posts.map((p) => Math.round(p.km! * 10) / 10), [0, 0, 1.5, 2], 'gesorteerd op km-punt');
   assert.equal(state.units[0]?.members[0]?.name, 'Eva EHBO');
   assert.equal(state.coreTeam[0]?.isCoordinator, true);
 });
@@ -195,7 +195,7 @@ test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
 
   const me = (await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0687654321' } })).json();
   assert.equal(me.home, 'ehbo');
-  assert.match(me.assignments[0].detail, /Mobiel, fiets · Standplaats Kruising 4/);
+  assert.match(me.assignments[0].detail, /Mobiel \(fiets\) · Standplaats Kruising 4/);
 
   assert.equal((await call('POST', '/api/admin/units', { ...unit, kind: 'vast', postId: null })).statusCode, 400);
   const fixed = await call('PUT', `/api/admin/units/${saved.id}`, { ...unit, kind: 'vast', mobility: 'fiets' });

@@ -41,15 +41,16 @@ test('geen of ongeldige route wordt geweigerd', () => {
 // North along one longitude: 0.009 degrees is about 1 km.
 const LNG = 5.8;
 const north = (km: number): [number, number] => [LNG, 53 + (km * 0.009) / 1.0008];
+const rounded = (list: number[]) => list.map((km) => Math.round(km * 10) / 10);
 
 test('a post along the route is passed once, at its km', () => {
-  assert.deepEqual(passages([north(0), north(4)], north(2.5)), [2.5]);
+  assert.deepEqual(rounded(passages([north(0), north(4)], north(2.5))), [2.5]);
 });
 
 test('out and back: two passes, a post at the turning point only one', () => {
   const line = [north(0), north(3), north(0)];
-  assert.deepEqual(passages(line, north(1)), [1, 5]);
-  assert.deepEqual(passages(line, north(3)), [3]);
+  assert.deepEqual(rounded(passages(line, north(1))), [1, 5]);
+  assert.deepEqual(rounded(passages(line, north(3))), [3]);
 });
 
 test('a lap run twice passes every post twice', () => {
@@ -73,6 +74,14 @@ test('a line wobbling around a post is one pass', () => {
   assert.equal(passages(line, north(1.02)).length, 1);
 });
 
+test('posts close together keep their order, even at the same rounded km', () => {
+  const line = [north(0), north(22)];
+  const [traffic] = passages(line, north(21.08));
+  const [finish] = passages(line, north(21.13));
+  assert.deepEqual(rounded([traffic!, finish!]), [21.1, 21.1]);
+  assert.ok(traffic! < finish!);
+});
+
 test('a thinned-out line still gives the km of the real route', () => {
-  assert.deepEqual(passages([north(0), north(2)], north(1), 2.2), [1.1]);
+  assert.deepEqual(rounded(passages([north(0), north(2)], north(1), 2.2)), [1.1]);
 });

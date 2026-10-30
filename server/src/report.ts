@@ -1,6 +1,6 @@
 // Rapport na afloop (functioneel ontwerp, "Incidentregistratie en rapport"): per incident de tijden en afloop, plus totalen.
 // Proefoproepen en -aanvragen uit de testmodus tellen niet mee.
-import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type Outcome, type Report, type ReportIncident, type ReportPostPassages, type RequestKind, formatKmList } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type Outcome, type Report, type ReportIncident, type ReportPostPassages, type RequestKind, formatKm, formatKmList } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
 
 type Row = Record<string, string | number | null>;
@@ -101,7 +101,7 @@ export function reportCsv(report: Report) {
   const header = ['Nr', 'Post', 'Km', 'Melding', 'Personen', 'AED', 'Status', 'Gemeld', 'Geaccepteerd', 'Ter plaatse', 'Afgerond',
     'Reactietijd (m:ss)', 'Aanrijtijd (m:ss)', 'Eenheid', 'Naar alle eenheden', 'Afloop', 'Notitie'];
   const rows = report.incidents.map((i) => [
-    i.number, i.postName, i.km === null ? null : String(i.km).replace('.', ','), i.what ? INCIDENT_WHAT[i.what] : null, i.persons,
+    i.number, i.postName, i.km === null ? null : formatKm(i.km), i.what ? INCIDENT_WHAT[i.what] : null, i.persons,
     i.aed ? 'ja' : 'nee', STATUS[i.status], localTime(i.reportedAt), localTime(i.acceptedAt), localTime(i.onSiteAt), localTime(i.closedAt),
     minutesSeconds(i.responseSeconds), minutesSeconds(i.travelSeconds), i.unitName, i.escalated ? 'ja' : 'nee', i.outcome ? OUTCOMES[i.outcome] : null, i.note,
   ]);

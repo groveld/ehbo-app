@@ -11,6 +11,7 @@ const session = useSessionStore();
 const push = usePushStore();
 const location = useLocationStore();
 const showQuietHelp = ref(false);
+const showGpsHelp = ref(false);
 const testSent = ref(false);
 
 const who = computed(() => [session.firstName, session.me?.assignments[0]?.title].filter(Boolean).join(', '));
@@ -62,6 +63,17 @@ onMounted(() => {
         <span class="stack text"><span class="name">Locatie</span><span class="small">Kaart; mobiele EHBO zolang in dienst</span></span>
         <span v-if="locationState" class="state" :class="locationState.tone">{{ locationState.state }}</span>
         <button v-else class="turn-on" @click="location.request">Aanzetten</button>
+      </div>
+      <button class="add-link" :aria-expanded="showGpsHelp" @click="showGpsHelp = !showGpsHelp">Hoe zet ik de GPS aan?</button>
+      <div v-if="showGpsHelp" class="note warn stack gap-6">
+        <template v-if="isIOS">
+          <span>Open <strong>Instellingen › Privacy en beveiliging › Locatievoorzieningen</strong> en zet de schakelaar bovenaan aan.</span>
+          <span>Kies in die lijst deze app (of Safari-websites) en zet hem op <strong>Bij gebruik van de app</strong>.</span>
+        </template>
+        <template v-else>
+          <span>Veeg omlaag vanaf de bovenkant van het scherm en zet <strong>Locatie</strong> aan.</span>
+          <span>Staat de app geblokkeerd? Houd het icoon ingedrukt en kies <strong>App-info › Rechten › Locatie › Toestaan tijdens gebruik van de app</strong>.</span>
+        </template>
       </div>
       <p v-if="notifications?.tone === 'bad' || locationState?.tone === 'bad'" class="note warn">{{ deniedHelp }}</p>
       <div class="card row quiet">

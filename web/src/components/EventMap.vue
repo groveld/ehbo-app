@@ -258,10 +258,14 @@ onMounted(() => {
     attributionControl: { compact: true },
     interactive: props.interactive,
     maxZoom: 18,
+    // Only moving and zooming: no tilting or turning, by touch, mouse or keyboard.
+    maxPitch: 0,
+    touchPitch: false,
     pitchWithRotate: false,
     dragRotate: false,
   });
   map.touchZoomRotate.disableRotation();
+  map.keyboard.disableRotation();
   map.on('load', () => {
     // De bronvermelding begint ingeklapt (alleen het ⓘ-knopje), zodat hij de kaart niet bedekt.
     container.value?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
