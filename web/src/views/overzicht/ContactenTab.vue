@@ -7,7 +7,6 @@ import { usePackageStore } from '../../stores/package.ts';
 
 const store = usePackageStore();
 const postsWithContacts = computed(() => store.pkg?.posts.filter((p) => p.contacts?.length) ?? []);
-const ROLE = { verantwoordelijke: 'verantwoordelijke', lid: 'lid', reserve: 'reserve' } as const;
 </script>
 
 <template>
@@ -62,7 +61,7 @@ const ROLE = { verantwoordelijke: 'verantwoordelijke', lid: 'lid', reserve: 'res
             <div v-for="c in p.contacts" :key="`${p.id}-${c.phone}`" class="list-row">
               <span class="main">
                 <span class="title-line">{{ c.name || formatPhone(c.phone) }}</span>
-                <span class="sub">{{ p.name }} · {{ ROLE[c.role] }}</span>
+                <span class="sub">{{ p.name }} · {{ c.role }}</span>
               </span>
               <a :href="telHref(c.phone)" class="round" :aria-label="`Bel ${c.name || p.name}`"><Icon name="phone" :size="20" /></a>
             </div>

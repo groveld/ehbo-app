@@ -247,6 +247,10 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   `
   ALTER TABLE people DROP COLUMN info_accepted_at;
   `,
+  // 11: availability replaced ehbo_units.status in migration 5; the old column was never read again.
+  `
+  ALTER TABLE ehbo_units DROP COLUMN status;
+  `,
 ];
 
 export interface EventRow {
