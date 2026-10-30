@@ -185,3 +185,18 @@ export interface EhboStatus {
 }
 /** Zo vaak deelt een mobiele eenheid in dienst haar positie; bij een statuswissel meteen. */
 export const POSITION_SHARE_MS = 60_000;
+
+/** Should this post be open by now? Within its time slot, on a day of the event, in Dutch time. */
+export function isDueOpen(post: { timeFrom: string | null; timeTo: string | null }, event: { startDate: string | null; endDate: string | null }, now: number) {
+  if (!post.timeFrom || !event.startDate) return false;
+  const local = new Date(now).toLocaleString('sv-SE', { timeZone: 'Europe/Amsterdam' });
+  const [day, time] = [local.slice(0, 10), local.slice(11, 16)];
+  if (day < event.startDate || day > (event.endDate ?? event.startDate)) return false;
+  return time >= post.timeFrom && (!post.timeTo || time < post.timeTo);
+}
+
+/** A mobile team on duty that hasn't shared a position lately, so nobody knows where it is. */
+export function lacksPosition(unit: { kind: UnitKind }, live: LiveUnit | undefined | null, now: number) {
+  if (unit.kind !== 'mobiel' || !live || live.availability === 'uit_dienst') return false;
+  return !live.position || now - new Date(live.position.at).getTime() > POSITION_MAX_AGE_MS;
+}

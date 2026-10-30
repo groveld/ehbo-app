@@ -4,8 +4,10 @@ import { computed } from 'vue';
 import { POSITION_MAX_AGE_MS, UNIT_AVAILABILITY, isAway, telHref, type EventPackage, type PackageUnit } from '@ehbo/shared';
 import { useLiveStore } from '../stores/live.ts';
 import Icon from './Icon.vue';
+import PostBadge from './PostBadge.vue';
 
-const props = defineProps<{ pkg: EventPackage; unit: PackageUnit }>();
+/** attention: something is off with this team (marked for the coordinator). */
+const props = defineProps<{ pkg: EventPackage; unit: PackageUnit; attention?: boolean }>();
 const live = useLiveStore();
 
 const state = computed(() => live.unitState(props.unit.id));
@@ -32,24 +34,27 @@ const where = computed(() => {
   const minutes = Math.floor(age / 60_000);
   return `${away ? 'Onderweg' : `Thuis${base ? ` · ${base}` : ''}`} · positie ${minutes ? `${minutes} min oud` : 'net bijgewerkt'}`;
 });
+const ehboType = computed(() => props.pkg.postTypes.find((t) => t.key === 'ehbo'));
 const phone = computed(() => props.unit.members[0]?.phone ?? null);
 </script>
 
 <template>
   <div class="team-row list-row">
+    <PostBadge :type="ehboType" :size="40" class="status-ring" :class="{ on: status.tone === 'vrij' }" />
     <span class="text">
       <span class="name">{{ unit.name }}<span class="status" :class="status.tone">{{ status.label }}</span></span>
-      <span class="sub">{{ where }}<template v-if="unit.hasAed"> · AED</template></span>
+      <span class="sub" :class="{ attention }">{{ where }}<template v-if="unit.hasAed"> · AED</template></span>
     </span>
     <a v-if="phone" :href="telHref(phone)" class="round" :aria-label="`Bel ${unit.name}`"><Icon name="phone" :size="20" /></a>
   </div>
 </template>
 
 <style scoped>
-.team-row { gap: 10px; padding-right: 12px; }
+.team-row { gap: 12px; padding-right: 12px; }
 .text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1; }
 .name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 15px; font-weight: 700; line-height: 1.25; }
 .sub { font-size: 13px; color: var(--muted); }
+.sub.attention { color: var(--warn); font-weight: 600; }
 .status { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--ink-2); }
 .status.vrij { background: var(--ok-bg); color: var(--ok-text); }
 .status.pauze { background: var(--warn-bg); color: var(--warn); }

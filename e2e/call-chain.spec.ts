@@ -310,16 +310,24 @@ test('overview map: teams in the list for all staff, counters only for the coord
   const coordinator = await staffPhone(browser, PHONE.coordinator);
   await coordinator.getByRole('link', { name: 'Kaart' }).click();
   await expect(coordinator.getByLabel(/^Posten open:/)).toBeVisible();
-  await expect(coordinator.getByLabel(/^Teams beschikbaar:/)).toBeVisible();
+  await expect(coordinator.getByLabel(/^EHBO beschikbaar:/)).toBeVisible();
   await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
 
   await coordinator.getByLabel('Soort post').selectOption('teams');
   await expect(coordinator.locator('.post-row')).toHaveCount(0);
   await expect(coordinator.locator('.team-row')).toHaveCount(2);
+  // Team 2 is on duty without a position, so it needs attention.
+  await coordinator.getByLabel('Soort post').selectOption({ label: 'Vraagt aandacht' });
+  await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
+  await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 1' })).toHaveCount(0);
   await coordinator.getByLabel('Soort post').selectOption({ label: 'Alle' });
+  // The ring shows open or closed in the list.
+  await expect(coordinator.locator('.post-row').filter({ hasText: 'Kruising 4' }).locator('.status-ring')).toHaveCSS('outline-color', 'rgb(200, 38, 30)');
+  await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' }).locator('.status-ring')).toHaveCSS('outline-color', 'rgb(10, 125, 79)');
 
   const post = await staffPhone(browser, PHONE.postLead);
   await post.getByRole('link', { name: 'Kaart' }).click();
   await expect(post.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
+  await expect(post.getByLabel('Soort post').getByRole('option', { name: 'Vraagt aandacht' })).toHaveCount(0);
   await expect(post.getByLabel(/^Posten open:/)).toHaveCount(0);
 });

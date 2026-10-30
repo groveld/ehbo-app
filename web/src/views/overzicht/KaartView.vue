@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 3.4 · Overzicht & kaart: alle posten en EHBO-teams, filter per soort en route, zoeken op naam of km, tellers voor de coördinator, en de lijst met bel- en navigeerknoppen.
 import { computed, ref } from 'vue';
-import type { PackagePost } from '@ehbo/shared';
+import { isDueOpen, lacksPosition, type PackagePost } from '@ehbo/shared';
 import { useRouter } from 'vue-router';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
@@ -17,8 +17,8 @@ const store = usePackageStore();
 const live = useLiveStore();
 const session = useSessionStore();
 const router = useRouter();
-/** A type of post, or only the EHBO teams in the list. */
-const filter = ref<number | 'teams' | null>(null);
+/** A type of post, only the EHBO teams, or only what needs attention. */
+const filter = ref<number | 'teams' | 'attention' | null>(null);
 /** The route shown on the map; only runs with a GPX can be chosen. */
 const route = ref<number | null>(null);
 const routes = computed(() => store.pkg?.runs.filter((r) => r.line) ?? []);
@@ -46,28 +46,38 @@ const matches = (p: PackagePost) => {
 const mapPosts = computed(() => store.pkg?.posts.filter((p) => (typeof filter.value !== 'number' || p.typeId === filter.value) && matches(p)) ?? []);
 /** In the list: only the chosen route, in its order. Open calls always stay, on top. */
 const routeKm = (p: PackagePost) => p.passages.find((r) => r.runId === route.value)?.km[0] ?? Infinity;
+const isLead = computed(() => Boolean(session.me?.isAdmin || coordinatorOf(store.pkg)?.phone === session.me?.phone));
+/** For the coordinator: a post that should be open by now, and a team nobody can locate. */
+const latePosts = computed(() => {
+  const pkg = store.pkg;
+  if (!pkg || !isLead.value) return [];
+  return pkg.posts.filter((p) => closedIds.value.includes(p.id) && isDueOpen(p, pkg.event, live.serverNow)).map((p) => p.id);
+});
+const lostTeams = computed(() => (isLead.value ? store.pkg?.units.filter((u) => live.unitState(u.id)?.incidentId == null && lacksPosition(u, live.unitState(u.id), live.serverNow)).map((u) => u.id) ?? [] : []));
 const posts = computed(() => {
   const pkg = store.pkg;
-  const list = route.value === null || !pkg ? mapPosts.value : mapPosts.value
+  const shown = filter.value === 'attention' ? mapPosts.value.filter((p) => alertIds.value.includes(p.id) || latePosts.value.includes(p.id)) : mapPosts.value;
+  const list = route.value === null || !pkg ? shown : shown
     .filter((p) => alertIds.value.includes(p.id) || isOnRun(pkg, p, route.value!))
     .sort((a, b) => routeKm(a) - routeKm(b));
   return [...list].sort((a, b) => Number(alertIds.value.includes(b.id)) - Number(alertIds.value.includes(a.id)));
 });
 const teams = computed(() => {
   const q = query.value.trim().toLowerCase();
-  return filter.value === null || filter.value === 'teams' ? store.pkg?.units.filter((u) => !q || u.name.toLowerCase().includes(q)) ?? [] : [];
+  if (typeof filter.value === 'number') return [];
+  return store.pkg?.units.filter((u) => (!q || u.name.toLowerCase().includes(q)) && (filter.value !== 'attention' || lostTeams.value.includes(u.id))) ?? [];
 });
 /** How the event is doing, for the coordinator and admins. */
 const counters = computed(() => {
   const pkg = store.pkg;
-  if (!pkg || !(session.me?.isAdmin || coordinatorOf(pkg)?.phone === session.me?.phone)) return null;
+  if (!pkg || !isLead.value) return null;
   const free = pkg.units.filter((u) => {
     const state = live.unitState(u.id);
     return state?.availability === 'vrij' && state.incidentId === null;
   });
   return [
     { label: 'Posten', value: `${pkg.posts.length - closedIds.value.length}/${pkg.posts.length}`, full: 'Posten open' },
-    { label: 'Teams', value: `${free.length}/${pkg.units.length}`, full: 'Teams beschikbaar' },
+    { label: 'EHBO', value: `${free.length}/${pkg.units.length}`, full: 'EHBO beschikbaar' },
     { label: 'Oproepen', value: String(live.openIncidents.length), full: 'Open oproepen' },
     { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'aangevraagd').length), full: 'Aanvragen nog niet opgepakt' },
   ];
@@ -106,7 +116,8 @@ const banner = computed(() => {
         <select v-model="filter" class="input type" aria-label="Soort post">
           <option :value="null">Alle</option>
           <option v-for="c in chips" :key="c.id" :value="c.id">{{ c.label }}</option>
-          <option v-if="store.pkg.units.length" value="teams">EHBO-teams</option>
+          <option v-if="store.pkg.units.length" value="teams">EHBO</option>
+          <option v-if="isLead" value="attention">Vraagt aandacht</option>
         </select>
         <select v-if="routes.length" v-model="route" class="input route" aria-label="Route">
           <option :value="null">Alle routes</option>
@@ -117,15 +128,15 @@ const banner = computed(() => {
       <div class="stack gap-14">
         <section v-if="teams.length" class="stack gap-8">
           <h2 class="section-title">EHBO<template v-if="!live.connected && live.state"> · laatste stand {{ clock(live.state.serverTime) }}</template></h2>
-          <div class="list"><TeamRow v-for="u in teams" :key="u.id" :pkg="store.pkg" :unit="u" /></div>
+          <div class="list"><TeamRow v-for="u in teams" :key="u.id" :pkg="store.pkg" :unit="u" :attention="lostTeams.includes(u.id)" /></div>
         </section>
         <template v-if="filter !== 'teams'">
           <section v-if="posts.length" class="stack gap-8">
             <h2 class="section-title">Posten</h2>
-            <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" /></div>
+            <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="latePosts.includes(p.id)" /></div>
           </section>
           <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen posten ingevoerd.</p>
-          <p v-else-if="!posts.length && !teams.length" class="note">Geen post gevonden.</p>
+          <p v-else-if="!posts.length && !teams.length" class="note">{{ filter === 'attention' ? 'Niets vraagt nu aandacht.' : 'Geen post gevonden.' }}</p>
         </template>
       </div>
     </template>
