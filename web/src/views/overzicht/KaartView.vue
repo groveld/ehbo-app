@@ -32,7 +32,7 @@ const chips = computed(() => {
     .map((t) => ({ id: t.id, label: t.name.replace(/-?post$/i, ''), count: pkg.posts.filter((p) => p.typeId === t.id).length }))
     .filter((c) => c.count > 0);
 });
-/** Posten met een open oproep rood en bovenaan; dichte posten grijs op de kaart. */
+/** Posten met een open oproep rood en bovenaan. */
 const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
 /** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
 const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
@@ -100,7 +100,7 @@ const banner = computed(() => {
       </div>
       <div class="map">
         <EventMap
-          :pkg="store.pkg" :posts="mapPosts" :highlight-run-id="route" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
+          :pkg="store.pkg" :posts="mapPosts" :highlight-run-id="route" :alert-post-ids="alertIds"
           :ambulances="mobile.ambulances" :away-post-ids="mobile.awayPostIds"
           @select="(id) => router.push({ name: 'post', params: { id } })"
         />

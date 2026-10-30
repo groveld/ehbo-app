@@ -1,6 +1,6 @@
 // Rapport na afloop (functioneel ontwerp, "Incidentregistratie en rapport"): per incident de tijden en afloop, plus totalen.
 // Proefoproepen en -aanvragen uit de testmodus tellen niet mee.
-import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type Outcome, type Report, type ReportIncident, type ReportPostPassages, type RequestKind, formatKm } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type Outcome, type Report, type ReportIncident, type ReportPostPassages, type RequestKind, formatKmList } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
 
 type Row = Record<string, string | number | null>;
@@ -109,7 +109,7 @@ export function reportCsv(report: Report) {
   const lines = [header, ...rows, [], ['Totaal'], ['Incidenten', report.totals.incidents], ['Ingetrokken', report.totals.withdrawn],
     ['Naar alle eenheden', report.totals.escalated], ...requests,
     [], ['Km-punten per post'], ['Post', 'Loop', 'Km-punten'],
-    ...report.passages.flatMap((p) => p.runs.map((r) => [p.postName, r.runName, r.km.map((km) => formatKm(km)).join(' en ')])),
+    ...report.passages.flatMap((p) => p.runs.map((r) => [p.postName, r.runName, formatKmList(r.km)])),
   ];
   return `﻿${lines.map((line) => line.map(cell).join(';')).join('\r\n')}\r\n`;
 }

@@ -31,13 +31,11 @@ const props = withDefaults(defineProps<{
   interactive?: boolean;
   /** Posten met een open oproep: rood, met een gloed. */
   alertPostIds?: number[];
-  /** Dichte posten: grijs. */
-  closedPostIds?: number[];
   /** Mobiele EHBO-eenheden onderweg, op hun laatste GPS-positie. */
   ambulances?: Ambulance[];
   /** Standplaatsen waar de mobiele EHBO nu niet is: het kruisje grijs. */
   awayPostIds?: number[];
-}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], closedPostIds: () => [], ambulances: () => [], awayPostIds: () => [] });
+}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], ambulances: () => [], awayPostIds: () => [] });
 
 const emit = defineEmits<{ select: [postId: number]; pick: [lngLat: LngLat] }>();
 
@@ -136,10 +134,9 @@ function markerElement(post: PackagePost) {
   const focus = post.id === props.focusPostId;
   el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${focus ? ' focus' : ''}${alert ? ' alert' : ''}`;
   el.style.zIndex = String(postLayer(post, type?.key, alert || focus));
-  // Altijd de kleur van de soort post; een dichte post is half doorzichtig, een post met een open oproep rood.
+  // Altijd de kleur van de soort post; een post met een open oproep rood.
   // Een EHBO-post waar de mobiele eenheid niet is: grijs.
   el.style.background = alert ? '#C8261E' : type?.key === 'ehbo' && away ? GREY : (type?.color ?? '#6B7079');
-  if (!alert && props.closedPostIds.includes(post.id)) el.classList.add('closed');
   // A run is chosen: what isn't on it steps back. You want to know where the nearest EHBO is, so that stays half visible.
   const run = focusRun();
   if (run && !alert && !focus && !isOnRun(props.pkg, post, run.id)) {
@@ -277,7 +274,7 @@ onMounted(() => {
   void startUserLocation();
 });
 
-watch(() => [props.posts, props.pkg, props.focusPostId, props.highlightRunId, props.alertPostIds, props.closedPostIds], drawPosts);
+watch(() => [props.posts, props.pkg, props.focusPostId, props.highlightRunId, props.alertPostIds], drawPosts);
 // Wordt elke tel opnieuw berekend; alleen opnieuw tekenen als er echt iets verandert.
 watch(() => props.awayPostIds.join(), drawPosts);
 watch(() => props.picked, drawPicked);
@@ -309,7 +306,6 @@ onBeforeUnmount(() => {
 .event-map :deep(.post-marker.small) { font-size: 9px; letter-spacing: -0.02em; }
 .event-map :deep(.post-marker.ehbo) { border-radius: 8px; }
 /* !important: MapLibre sets opacity on every marker itself. */
-.event-map :deep(.post-marker.closed) { opacity: .55 !important; }
 .event-map :deep(.post-marker.dimmed) { opacity: .4 !important; }
 .event-map :deep(.post-marker.faded) { opacity: .15 !important; pointer-events: none; }
 .event-map :deep(.ehbo-dot) {

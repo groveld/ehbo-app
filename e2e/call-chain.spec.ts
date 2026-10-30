@@ -310,6 +310,8 @@ test('overview map: teams in the list for all staff, counters only for the coord
   const coordinator = await staffPhone(browser, PHONE.coordinator);
   await coordinator.getByRole('link', { name: 'Kaart' }).click();
   await expect(coordinator.getByLabel(/^Posten open:/)).toBeVisible();
+  // Closed posts keep their full colour.
+  await expect(coordinator.locator('.post-marker').first()).toHaveCSS('opacity', '1');
   await expect(coordinator.getByLabel(/^EHBO beschikbaar:/)).toBeVisible();
   await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
 
