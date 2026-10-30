@@ -1,12 +1,12 @@
 <script setup lang="ts">
-// 3.4 · Overzicht & kaart: alle posten op de kaart, filter per soort, zoeken op naam of km, en de lijst met bel- en navigeerknoppen.
+// 3.4 · Overzicht & kaart: alle posten op de kaart, filter per soort en route, zoeken op naam of km, en de lijst met bel- en navigeerknoppen.
 import { computed, ref } from 'vue';
 import type { PackagePost } from '@ehbo/shared';
 import { useRouter } from 'vue-router';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
-import { mobileUnits } from '../../posts.ts';
+import { isOnRun, mobileUnits } from '../../posts.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 
@@ -14,6 +14,9 @@ const store = usePackageStore();
 const live = useLiveStore();
 const router = useRouter();
 const filter = ref<number | null>(null);
+/** The route shown on the map; only runs with a GPX can be chosen. */
+const route = ref<number | null>(null);
+const routes = computed(() => store.pkg?.runs.filter((r) => r.line) ?? []);
 const query = ref('');
 
 /** Per soort het aantal posten; soorten zonder posten laten we weg. */
@@ -34,8 +37,17 @@ const matches = (p: PackagePost) => {
   const km = q.replace(/^km\s*/, '');
   return !q || p.name.toLowerCase().includes(q) || p.passages.some((r) => r.km.some((k) => String(k).startsWith(km)));
 };
-const posts = computed(() => (store.pkg?.posts.filter((p) => (filter.value === null || p.typeId === filter.value) && matches(p)) ?? [])
-  .slice().sort((a, b) => Number(alertIds.value.includes(b.id)) - Number(alertIds.value.includes(a.id))));
+/** On the map; what isn't on the chosen route steps back there. */
+const mapPosts = computed(() => store.pkg?.posts.filter((p) => (filter.value === null || p.typeId === filter.value) && matches(p)) ?? []);
+/** In the list: only the chosen route, in its order. Open calls always stay, on top. */
+const routeKm = (p: PackagePost) => p.passages.find((r) => r.runId === route.value)?.km[0] ?? Infinity;
+const posts = computed(() => {
+  const pkg = store.pkg;
+  const list = route.value === null || !pkg ? mapPosts.value : mapPosts.value
+    .filter((p) => alertIds.value.includes(p.id) || isOnRun(pkg, p, route.value!))
+    .sort((a, b) => routeKm(a) - routeKm(b));
+  return [...list].sort((a, b) => Number(alertIds.value.includes(b.id)) - Number(alertIds.value.includes(a.id)));
+});
 const banner = computed(() => {
   const open = live.openIncidents;
   if (!open.length) return null;
@@ -49,7 +61,7 @@ const banner = computed(() => {
     <template v-if="store.pkg">
       <div class="map">
         <EventMap
-          :pkg="store.pkg" :posts="posts" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
+          :pkg="store.pkg" :posts="mapPosts" :highlight-run-id="route" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
           :ambulances="mobile.ambulances" :away-post-ids="mobile.awayPostIds"
           @select="(id) => router.push({ name: 'post', params: { id } })"
         />
@@ -65,6 +77,10 @@ const banner = computed(() => {
         <select v-model="filter" class="input type" aria-label="Soort post">
           <option :value="null">Alle</option>
           <option v-for="c in chips" :key="c.id" :value="c.id">{{ c.label }}</option>
+        </select>
+        <select v-if="routes.length" v-model="route" class="input route" aria-label="Route">
+          <option :value="null">Alle routes</option>
+          <option v-for="r in routes" :key="r.id" :value="r.id">{{ r.name }}</option>
         </select>
       </div>
 
@@ -88,5 +104,6 @@ const banner = computed(() => {
 .search { position: relative; display: block; color: var(--muted); }
 .search svg { position: absolute; left: 12px; top: 13px; }
 .search .input { padding-left: 38px; }
+.route { grid-column: 1 / -1; appearance: auto; font-size: 14px; font-weight: 600; }
 .type { width: auto; max-width: 130px; padding: 0 8px 0 12px; appearance: auto; font-size: 14px; font-weight: 600; }
 </style>

@@ -8,6 +8,7 @@ import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { canUseAsStaff } from '../platform.ts';
+import { isOnRun } from '../posts.ts';
 import { load, save } from '../storage.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -62,9 +63,15 @@ const day = computed(() => {
 });
 /** In the order of the run on the map: a post it passes twice is listed twice. Without a run or GPX, all posts. */
 const alongRoute = computed(() => {
-  const posts = store.pkg?.posts ?? [];
-  const passes = posts.flatMap((post) => (post.passages.find((r) => r.runId === viewing.value)?.km ?? []).map((km) => ({ post, km })));
-  const rows = passes.length ? passes : posts.map((post) => ({ post, km: post.km }));
+  const pkg = store.pkg;
+  if (!pkg) return [];
+  const run = pkg.runs.find((r) => r.id === viewing.value && r.line);
+  const rows = run
+    ? pkg.posts.filter((post) => isOnRun(pkg, post, run.id)).flatMap((post) => {
+      const km = post.passages.find((r) => r.runId === run.id)?.km ?? [null];
+      return km.map((k) => ({ post, km: k }));
+    })
+    : pkg.posts.map((post) => ({ post, km: post.km }));
   return rows.sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity));
 });
 </script>
