@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Gekleurd kopblok (oproep, verstuurd, onderweg, stand-by, aanvraag): altijd 140 px hoog, tekst bovenaan, titel 26 px.
+// Gekleurd kopblok (oproep, verstuurd, onderweg, EHBO-scherm, aanvraag): altijd 140 px hoog, tekst bovenaan, titel 26 px.
 defineProps<{ tone: 'red' | 'orange' | 'green' | 'dark' | 'blue'; label: string; title: string; sub?: string }>();
 </script>
 

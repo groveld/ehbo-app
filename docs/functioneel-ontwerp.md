@@ -41,7 +41,7 @@ Elk evenement krijgt een eigen adres (bijv. silvesterloop.groveld.com). Deelneme
    - Onbekend nummer → opnieuw proberen, de evenementcoördinator bellen, of door als gast.
 6. **Eerste keer:** toestemming voor meldingen en locatie. Info & voorwaarden staan in het menu; bevestigen hoeft niet. Tijdens deze stappen staat de tabbalk er nog niet; die verschijnt na *Klaar, naar mijn startscherm*.
 7. **Ingelogd.** Het beginscherm is je functie:
-   - EHBO'er → stand-by met oproepen;
+   - EHBO'er → EHBO-scherm met oproepen;
    - bij een post (verantwoordelijke, lid of reserve) → de eigen post; alleen de verantwoordelijke zet hem open;
    - geen van beide (bijv. alleen beheer of kernteam) → de kaart.
 
@@ -207,7 +207,7 @@ Alleen de oproep loopt via de server en de push-diensten; kaart en contacten sta
 
 **Vormgevingsregels.** Vaste maten, zodat schermen niet verspringen:
 
-- Gekleurd kopblok bovenaan (oproep, verstuurd, onderweg, stand-by, geen bereik): altijd 140 px hoog, tekst bovenaan uitgelijnd zoals op alle andere schermen, titel 26 px.
+- Gekleurd kopblok bovenaan (oproep, verstuurd, onderweg, EHBO-scherm, geen bereik): altijd 140 px hoog, tekst bovenaan uitgelijnd zoals op alle andere schermen, titel 26 px.
 - Hoofdknop: 56 px hoog, 16 px vet. Tweede knop: 48 px. Icoonknop (bellen, terug): 44 × 44 px. Twee knoppen naast elkaar zijn altijd even hoog.
 - 112 staat alleen waar het ertoe doet (EHBO-schermen, contacten), en daar altijd onderaan op dezelfde plek. De deelnemer heeft Bel EHBO als ronde knop rechtsonder.
 - Uitzondering: de verzoek-tegels op het poststartscherm zijn bewust groot.
@@ -397,6 +397,8 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Kaartstijl (29 okt) | Een rustige kaart in grijs met zachte pastels: water lichtblauw, gras en bos salie, op de warme achtergrond van de app. Geen iconen van winkels en horeca. Zo vallen het parcours en de gekleurde posten op. Alle markeringen zijn even groot (28 px), ook de ambulance. De gekozen loop ligt bovenop de andere, zodat hij altijd helemaal te zien is |
 | Volgorde van markeringen (30 okt) | Overlappen markeringen, dan ligt de belangrijkste bovenop, van boven naar onder: open oproep en geselecteerde post, ambulance en je eigen positie, start/finish, EHBO-post en elke standplaats van een EHBO-eenheid, stempelpost, waterpost, verkeer, en onderop Anders en eigen soorten. Een dichte post houdt zijn laag en is alleen half doorzichtig. De volgorde staat op één plek (`MARKER_ORDER` in `EventMap.vue`) en geldt voor alle kaarten |
 | Taal (30 okt) | Alles wat gebruikers zien is Nederlands. Alles in de broncode is Engels: code, namen, waarden in de data, commentaar, tests, bestandsnamen en routes. Zo kunnen ook mensen uit andere landen aan de app werken. Ook GitHub-issues, PR's en dit functioneel ontwerp worden Engels. Alleen de README blijft Nederlands, omdat die voor de beheerder van de server is. Bestaand Nederlands wordt omgezet in #84 |
+| EHBO screen (30 Oct) | The screen and tab for first aiders are called EHBO instead of Stand-by, at `/ehbo`. It's their whole duty: status, team, position and deployments, and more will follow. "Beschikbaar" stays as a status. Decisions above that say Stand-by refer to this screen |
+| On site, then close (30 Oct) | After "Ik ben ter plaatse" the app goes straight to closing the incident (4.8), because that's the next step. The back arrow returns to the call, with the map and "Incident afronden". Nothing closes automatically, and reopening the call later stays on the call |
 
 **Nog open**
 

@@ -40,7 +40,7 @@ Where the main pieces live:
 - **Style and logos:** colors and short name in `event.style_json`, logos as PNG in `brand_images` (`server/src/brand.ts`, `routes/brand.ts`), served at `/brand/<name>.png` with a redirect to `/icons/…` when there is no own logo. The browser resizes uploads (`web/src/images.ts`); `web/src/theme.ts` sets `--primary`/`--accent`. The manifest is built by the server.
 - **Calls:** `server/src/calls.ts` (dispatch, escalation, AED, accept, on site, close, withdraw, assign, availability, positions) and `routes/calls.ts` (API and SSE at `/api/live`); `notify.ts` pushes to every device of a person. Types in `shared/src/incident.ts`. Tests in `test/calls.test.ts` use a manual scheduler and capture pushes.
 - **Requests:** `server/src/requests.ts` and `routes/requests.ts` (table `requests`); part of the live state. Types in `shared/src/request.ts`.
-- **Screens for calls and requests:** post home 3.1/3.2 (`PostHomeView`), EHBO request 4.1 (`EhboVerzoekView`), follow-up 4.2/4.6 with manual assign (`MeldingView`), stand-by 3.3 (`StandbyView`), call 4.3–4.7 (`OproepView`), closing 4.8 (`AfrondenView`), no signal 4.9 (`GeenBereikView`), request 5.1 (`AanvraagView`), queue 5.2 in the Meldingen tab (`MeldingenTab`). Navigation is one tab bar on every staff page (`components/TabBar.vue`, mounted in `App.vue`); the rest lives in `MenuView`. `components/StatusBlock.vue` is the 140 px header.
+- **Screens for calls and requests:** post home 3.1/3.2 (`PostHomeView`), EHBO request 4.1 (`EhboVerzoekView`), follow-up 4.2/4.6 with manual assign (`MeldingView`), EHBO screen 3.3 (`EhboView`), call 4.3–4.7 (`OproepView`), closing 4.8 (`AfrondenView`), no signal 4.9 (`GeenBereikView`), request 5.1 (`AanvraagView`), queue 5.2 in the Meldingen tab (`MeldingenTab`). Navigation is one tab bar on every staff page (`components/TabBar.vue`, mounted in `App.vue`); the rest lives in `MenuView`. `components/StatusBlock.vue` is the 140 px header.
 - **Live state on the phone:** `web/src/stores/live.ts`: SSE with a watchdog, all actions, the outbox for EHBO requests without signal (resent with the same `clientId`), GPS sharing for mobile units. `web/src/alarm.ts` is the repeating sound and vibration.
 - **End-to-end:** `e2e/` with Playwright; `e2e/server.ts` starts a seeded server on 3090. One worker; tests clean up after themselves.
 
@@ -69,14 +69,14 @@ Where the main pieces live:
 - **Theme:** neutral event theme. Anthracite `#16181D` with yellow accent `#F2C230`, background `#F6F5F1`, font IBM Plex Sans (Plex Mono for numbers).
   - The theme can be configured per event: large logo, square logo used as app icon, and colors.
 - **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and icon (`web/src/icons.ts`: flag, drop, stamp, cone, cross, more); a custom type without an icon shows its letter.
-- **Colored header blocks** (call, sent, en route, stand-by, no signal): always 140 px tall, text top-aligned, title 26 px.
+- **Colored header blocks** (call, sent, en route, EHBO screen, no signal): always 140 px tall, text top-aligned, title 26 px.
 - **No page titles on tab screens** (map, requests, contacts, menu): the tab bar already says where you are. Screens reached from a tab (post detail, admin) keep their header.
 - **Buttons:**
   - Primary: 56 px tall, 16 px bold.
   - Secondary: 48 px.
   - Icon button: 44 × 44.
   - Two buttons side by side are always the same height.
-- **112** is only shown where it matters: the EHBO screens (request, follow-up, stand-by, call, no signal), Overzicht › Contacten. Where it is shown it sits at the bottom, in the same place. The participant screen has "Bel EHBO" instead: a round red button with a white cross, bottom right (falls back to 112 when no number is set). The app never replaces 112.
+- **112** is only shown where it matters: the EHBO screens (request, follow-up, EHBO screen, call, no signal), Overzicht › Contacten. Where it is shown it sits at the bottom, in the same place. The participant screen has "Bel EHBO" instead: a round red button with a white cross, bottom right (falls back to 112 when no number is set). The app never replaces 112.
 - **Start screen:** without a session the app opens with a short intro (`components/IntroSplash.vue`: logo, date, the route drawing itself, about 3.5 s, tap to skip), then the participant page (`/`), with "Aanmelden" at the top right. There is no staff/participant choice screen. The tab bar is hidden during login (Herkend, Toestemmingen) until "Klaar, naar mijn startscherm".
 - **Save only when needed:** a form shows its save button only after a change (`composables/useDirty.ts`: snapshot on load and after saving). A new item (post, unit, run) can always be saved. A new EHBO request can always be sent; adding details only after a change.
 - The request tiles on the post home screen are deliberately large; this is the one exception to the button sizes.

@@ -31,7 +31,7 @@ async function finish(pause = false) {
   const ok = await run(() => live.close(incident.value!.id, {
     outcome: outcome.value!, persons: incident.value!.persons, note: note.value.trim() || null, stayHere: Boolean(canStay.value && stayHere.value), pause,
   }));
-  if (ok) router.replace({ name: 'stand-by' });
+  if (ok) router.replace({ name: 'ehbo' });
 }
 </script>
 

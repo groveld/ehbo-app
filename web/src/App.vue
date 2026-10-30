@@ -34,7 +34,7 @@ watch(() => session.me, (me) => {
 });
 
 // Nieuwe oproep voor mijn eenheid terwijl de app open is: meteen naar het oproepscherm.
-// Niet midden in het afronden van een andere oproep; daar staat de oproep wel op stand-by.
+// Niet midden in het afronden van een andere oproep; daar staat de oproep wel op het EHBO-scherm.
 const seen = new Set<number>(live.invitations.map((i) => i.id));
 watch(() => live.invitations.map((i) => i.id), (ids) => {
   const fresh = ids.find((id) => !seen.has(id));

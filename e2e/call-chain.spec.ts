@@ -53,6 +53,9 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await ehbo.getByRole('button', { name: 'Ik ben ter plaatse' }).click();
   await expect(post.getByRole('heading', { name: 'EHBO is er' })).toBeVisible({ timeout: 10_000 });
 
+  // On site goes straight to closing; the back arrow returns to the call, and nothing has closed.
+  await expect(ehbo.getByRole('heading', { name: 'Incident afronden' })).toBeVisible();
+  await ehbo.getByRole('button', { name: 'Terug' }).click();
   await ehbo.getByRole('link', { name: 'Incident afronden' }).click();
   await ehbo.getByRole('button', { name: 'Ter plaatse geholpen' }).click();
   await ehbo.getByLabel('Korte notitie').fill('Gekoeld en drinken gegeven');
