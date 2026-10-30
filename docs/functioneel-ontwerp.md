@@ -316,7 +316,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | EHBO-eenheden | Vast (eigen EHBO-post) of mobiel, mobiel optioneel met standplaats; mobiele eenheden delen elke minuut hun positie (powerbank-advies in de handleiding) |
 | Ter plaatse | Blijft, één tik |
 | Stil / Niet storen | Geaccepteerd voor deze editie; sms als tweede kanaal pas bij een volgende editie |
-| Deelnemers | Algemene app met alle lopen; een loop als favoriet markeren zet hem bovenaan; installeren niet nodig |
+| Deelnemers | Algemene app met alle lopen; een tik op een loop toont hem op de kaart, de ster maakt hem favoriet en zet hem vooraan (meerdere kan); installeren niet nodig |
 | Installatie | Alleen verplicht voor medewerkers |
 | Kernteam | Voorstel van vijf functies, aan te passen per evenement |
 | Noodnummers | In te vullen in de instellingen |
