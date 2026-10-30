@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { formatKm, formatPhone, telHref } from '@ehbo/shared';
 import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
+import NotOnPhone from '../components/NotOnPhone.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { navigationUrl } from '../navigate.ts';
 import { useSave } from '../composables/useSave.ts';
@@ -63,7 +64,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <RouterLink v-if="session.me?.isAdmin && post" :to="{ name: 'beheer-post', params: { id: post.id } }" class="edit">Bewerken</RouterLink>
     </header>
 
-    <p v-if="!post || !store.pkg" class="note warn">Deze post bestaat niet (meer).</p>
+    <NotOnPhone v-if="!post || !store.pkg">Deze post bestaat niet (meer).</NotOnPhone>
     <template v-else>
       <div class="title">
         <PostBadge :type="type" :size="56" />

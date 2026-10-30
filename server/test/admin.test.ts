@@ -173,6 +173,16 @@ test('post met contactpersonen; nieuw nummer kan daarna aanmelden', async () => 
   assert.equal((await call('DELETE', `/api/admin/posts/${saved.id}`)).statusCode, 200);
 });
 
+test('a post with incidents or requests stays: deleting it gives a clear error', async () => {
+  const state = (await call('GET', '/api/admin')).json() as AdminState;
+  const post = state.posts.find((p) => p.name === 'Kruising 4')!;
+  db.raw.prepare("INSERT INTO requests (client_id, post_id, kind, status, reported_by, created_at) VALUES ('history', ?, 'water', 'afgehandeld', ?, '2026-12-31T10:00:00Z')").run(post.id, DEMO.postLead);
+  const res = await call('DELETE', `/api/admin/posts/${post.id}`);
+  assert.equal(res.statusCode, 409, res.body);
+  assert.match(res.json().error, /oproepen of aanvragen/);
+  db.raw.prepare("DELETE FROM requests WHERE client_id = 'history'").run();
+});
+
 test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   const stamp = state.posts.find((p) => p.name === 'Kruising 4')!;

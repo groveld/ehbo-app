@@ -37,6 +37,7 @@ const GPX_LIMIT = 10 * 1024 * 1024;
 
 const badRequest = (message: string) => Object.assign(new Error(message), { statusCode: 400 });
 const notFound = (message: string) => Object.assign(new Error(message), { statusCode: 404 });
+const conflict = (message: string) => Object.assign(new Error(message), { statusCode: 409 });
 
 /** Telefoonnummer in E.164, of een foutmelding die zegt bij wie het nummer niet klopt. */
 function phoneOf(input: string, who: string) {
@@ -275,6 +276,7 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
     return admin.getState();
   });
   app.delete<{ Params: { id: number }; Reply: AdminState }>('/api/admin/posts/:id', { schema: { params: idParams } }, async (request) => {
+    if (admin.postHasHistory(request.params.id)) throw conflict('Deze post heeft oproepen of aanvragen en kan daarom niet weg. Zet hem dicht, of wis eerst de proefgegevens in het rapport.');
     if (!admin.deletePost(request.params.id)) throw notFound('Post niet gevonden');
     return admin.getState();
   });

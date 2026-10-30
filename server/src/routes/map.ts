@@ -9,11 +9,13 @@ export interface MapRouteOptions {
   db: EventDb;
   /** Bron van de kaart; standaard de openbare Protomaps-bestanden. */
   mapSource: () => Promise<MapSource>;
+  /** The map version is part of the live state: tell everyone there is a new one. */
+  changed: () => void;
 }
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 
-export async function mapRoutes(app: FastifyInstance, { db, mapSource }: MapRouteOptions) {
+export async function mapRoutes(app: FastifyInstance, { db, mapSource, changed }: MapRouteOptions) {
   const job: Omit<MapStatus, 'current'> = { state: 'idle', done: 0, total: 0, message: '' };
   let running: Promise<void> | null = null;
 
@@ -57,6 +59,7 @@ export async function mapRoutes(app: FastifyInstance, { db, mapSource }: MapRout
       try {
         const meta = await prepareMap(db, await mapSource(), (done, total) => Object.assign(job, { done, total }));
         Object.assign(job, { state: 'done', message: `${meta.tiles} kaarttegels opgeslagen` });
+        changed();
         request.log.info(meta, 'kaart opgehaald');
       } catch (err) {
         Object.assign(job, { state: 'error', message: (err as Error).message });
