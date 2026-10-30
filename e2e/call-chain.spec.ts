@@ -305,3 +305,21 @@ test('choosing a route: what is not on it steps back, and choosing it again undo
   await expect(page.locator('.list-row').filter({ hasText: FAR })).toHaveCount(1);
   await context.close();
 });
+
+test('overview map: teams in the list for all staff, counters only for the coordinator', async ({ browser }) => {
+  const coordinator = await staffPhone(browser, PHONE.coordinator);
+  await coordinator.getByRole('link', { name: 'Kaart' }).click();
+  await expect(coordinator.getByLabel(/^Posten open:/)).toBeVisible();
+  await expect(coordinator.getByLabel(/^Teams beschikbaar:/)).toBeVisible();
+  await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
+
+  await coordinator.getByLabel('Soort post').selectOption('teams');
+  await expect(coordinator.locator('.post-row')).toHaveCount(0);
+  await expect(coordinator.locator('.team-row')).toHaveCount(2);
+  await coordinator.getByLabel('Soort post').selectOption({ label: 'Alle' });
+
+  const post = await staffPhone(browser, PHONE.postLead);
+  await post.getByRole('link', { name: 'Kaart' }).click();
+  await expect(post.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
+  await expect(post.getByLabel(/^Posten open:/)).toHaveCount(0);
+});

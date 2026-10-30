@@ -1,19 +1,24 @@
 <script setup lang="ts">
-// 3.4 · Overzicht & kaart: alle posten op de kaart, filter per soort en route, zoeken op naam of km, en de lijst met bel- en navigeerknoppen.
+// 3.4 · Overzicht & kaart: alle posten en EHBO-teams, filter per soort en route, zoeken op naam of km, tellers voor de coördinator, en de lijst met bel- en navigeerknoppen.
 import { computed, ref } from 'vue';
 import type { PackagePost } from '@ehbo/shared';
 import { useRouter } from 'vue-router';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
-import { isOnRun, mobileUnits } from '../../posts.ts';
+import TeamRow from '../../components/TeamRow.vue';
+import { clock } from '../../incidents.ts';
+import { coordinatorOf, isOnRun, mobileUnits } from '../../posts.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
+import { useSessionStore } from '../../stores/session.ts';
 
 const store = usePackageStore();
 const live = useLiveStore();
+const session = useSessionStore();
 const router = useRouter();
-const filter = ref<number | null>(null);
+/** A type of post, or only the EHBO teams in the list. */
+const filter = ref<number | 'teams' | null>(null);
 /** The route shown on the map; only runs with a GPX can be chosen. */
 const route = ref<number | null>(null);
 const routes = computed(() => store.pkg?.runs.filter((r) => r.line) ?? []);
@@ -38,7 +43,7 @@ const matches = (p: PackagePost) => {
   return !q || p.name.toLowerCase().includes(q) || p.passages.some((r) => r.km.some((k) => String(k).startsWith(km)));
 };
 /** On the map; what isn't on the chosen route steps back there. */
-const mapPosts = computed(() => store.pkg?.posts.filter((p) => (filter.value === null || p.typeId === filter.value) && matches(p)) ?? []);
+const mapPosts = computed(() => store.pkg?.posts.filter((p) => (typeof filter.value !== 'number' || p.typeId === filter.value) && matches(p)) ?? []);
 /** In the list: only the chosen route, in its order. Open calls always stay, on top. */
 const routeKm = (p: PackagePost) => p.passages.find((r) => r.runId === route.value)?.km[0] ?? Infinity;
 const posts = computed(() => {
@@ -47,6 +52,25 @@ const posts = computed(() => {
     .filter((p) => alertIds.value.includes(p.id) || isOnRun(pkg, p, route.value!))
     .sort((a, b) => routeKm(a) - routeKm(b));
   return [...list].sort((a, b) => Number(alertIds.value.includes(b.id)) - Number(alertIds.value.includes(a.id)));
+});
+const teams = computed(() => {
+  const q = query.value.trim().toLowerCase();
+  return filter.value === null || filter.value === 'teams' ? store.pkg?.units.filter((u) => !q || u.name.toLowerCase().includes(q)) ?? [] : [];
+});
+/** How the event is doing, for the coordinator and admins. */
+const counters = computed(() => {
+  const pkg = store.pkg;
+  if (!pkg || !(session.me?.isAdmin || coordinatorOf(pkg)?.phone === session.me?.phone)) return null;
+  const free = pkg.units.filter((u) => {
+    const state = live.unitState(u.id);
+    return state?.availability === 'vrij' && state.incidentId === null;
+  });
+  return [
+    { label: 'Posten', value: `${pkg.posts.length - closedIds.value.length}/${pkg.posts.length}`, full: 'Posten open' },
+    { label: 'Teams', value: `${free.length}/${pkg.units.length}`, full: 'Teams beschikbaar' },
+    { label: 'Oproepen', value: String(live.openIncidents.length), full: 'Open oproepen' },
+    { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'aangevraagd').length), full: 'Aanvragen nog niet opgepakt' },
+  ];
 });
 const banner = computed(() => {
   const open = live.openIncidents;
@@ -59,6 +83,11 @@ const banner = computed(() => {
 <template>
   <main class="screen tight tabbed">
     <template v-if="store.pkg">
+      <div v-if="counters" class="facts counters">
+        <div v-for="c in counters" :key="c.label" class="fact" :aria-label="`${c.full}: ${c.value}`">
+          <span class="value mono">{{ c.value }}</span><span class="label">{{ c.label }}</span>
+        </div>
+      </div>
       <div class="map">
         <EventMap
           :pkg="store.pkg" :posts="mapPosts" :highlight-run-id="route" :alert-post-ids="alertIds" :closed-post-ids="closedIds"
@@ -77,6 +106,7 @@ const banner = computed(() => {
         <select v-model="filter" class="input type" aria-label="Soort post">
           <option :value="null">Alle</option>
           <option v-for="c in chips" :key="c.id" :value="c.id">{{ c.label }}</option>
+          <option v-if="store.pkg.units.length" value="teams">EHBO-teams</option>
         </select>
         <select v-if="routes.length" v-model="route" class="input route" aria-label="Route">
           <option :value="null">Alle routes</option>
@@ -85,9 +115,16 @@ const banner = computed(() => {
       </div>
 
       <div class="stack gap-10">
-        <PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" />
-        <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen posten ingevoerd.</p>
-        <p v-else-if="!posts.length" class="note">Geen post gevonden.</p>
+        <template v-if="teams.length">
+          <span class="section-label">EHBO-teams<template v-if="!live.connected && live.state"> · laatste stand {{ clock(live.state.serverTime) }}</template></span>
+          <TeamRow v-for="u in teams" :key="u.id" :pkg="store.pkg" :unit="u" />
+        </template>
+        <template v-if="filter !== 'teams'">
+          <span v-if="teams.length && posts.length" class="section-label">Posten</span>
+          <PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" />
+          <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen posten ingevoerd.</p>
+          <p v-else-if="!posts.length && !teams.length" class="note">Geen post gevonden.</p>
+        </template>
       </div>
     </template>
     <p v-else class="note">Geen bereik, en de gegevens van het evenement staan nog niet op deze telefoon. Probeer het opnieuw met internet.</p>
@@ -95,6 +132,9 @@ const banner = computed(() => {
 </template>
 
 <style scoped>
+.counters { --facts: 4; margin-bottom: 10px; }
+.counters .fact { padding: 8px 6px; align-items: center; min-width: 0; }
+.counters .label { font-size: 11px; }
 .map { position: relative; height: clamp(240px, 40dvh, 480px); }
 .banner {
   position: absolute; left: 12px; top: 12px; right: 12px; z-index: 2; display: flex; align-items: center; gap: 8px; width: fit-content; max-width: calc(100% - 24px);
