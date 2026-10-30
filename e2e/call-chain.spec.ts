@@ -206,3 +206,28 @@ test('geen vorige pagina om naar te vegen; terug in de app gaat één stap omhoo
     await expect(admin).toHaveURL(path);
   }
 });
+
+test('participant: looking at a run keeps the favorites, and there can be several', async ({ browser }) => {
+  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
+  const page = await context.newPage();
+  await page.goto('/?browser=1');
+  const { runs } = await (await page.request.get('/api/package')).json() as { runs: { name: string }[] };
+  expect(runs.length).toBeGreaterThanOrEqual(3);
+  const [first, second, third] = runs.map((r) => r.name);
+  const star = (name: string) => page.getByRole('button', { name: `Favoriet: ${name}` });
+  const view = (name: string) => page.getByRole('button', { name: `Toon ${name} op de kaart` });
+
+  await star(third!).click();
+  await star(second!).click();
+  await view(first!).click();
+  await expect(view(first!)).toHaveAttribute('aria-pressed', 'true');
+  await expect(star(first!)).toHaveAttribute('aria-pressed', 'false');
+  await expect(star(second!)).toHaveAttribute('aria-pressed', 'true');
+  await expect(star(third!)).toHaveAttribute('aria-pressed', 'true');
+
+  await page.reload();
+  await expect(star(second!)).toHaveAttribute('aria-pressed', 'true');
+  await expect(star(third!)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.run-name').first()).toHaveText(second!);
+  await context.close();
+});
