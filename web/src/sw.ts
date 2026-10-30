@@ -42,6 +42,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => (await caches.match(event.request)) ?? fetch(event.request))());
     return;
   }
+  // Route files: the newest, and the saved one without signal. A download is a navigation, so this comes first.
+  if (url.pathname.startsWith('/gpx/')) {
+    event.respondWith(fetch(event.request).catch(async () => (await caches.match(url.pathname)) ?? Response.error()));
+    return;
+  }
   if (DEV) return;
   if (event.request.mode === 'navigate') {
     // Pagina: eerst netwerk, zonder bereik de bewaarde versie.

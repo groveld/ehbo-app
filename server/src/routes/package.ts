@@ -4,10 +4,11 @@ import { sameFunction, type EhboStatus, type EventPackage, type LngLat, type Pac
 import { adminDb } from '../admin-db.ts';
 import type { Calls } from '../calls.ts';
 import type { EventDb } from '../event-db.ts';
+import { cleanGpx } from '../gpx.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
-const PACKAGE_FORMAT = 3;
+const PACKAGE_FORMAT = 4;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
@@ -51,6 +52,19 @@ export async function packageRoutes(app: FastifyInstance, { db, calls }: { db: E
     // De app stuurt de versie die hij al heeft; dan hoeft er niets over de lijn.
     if (request.headers['if-none-match'] === etag) return reply.code(304).send();
     return pkg satisfies EventPackage;
+  });
+
+  // For everyone: the route of a run, for a watch or bike computer.
+  app.get<{ Params: { file: string } }>('/gpx/:file', async (request, reply) => {
+    const id = /^(\d+)\.gpx$/.exec(request.params.file)?.[1];
+    const run = id ? db.raw.prepare('SELECT name, gpx, track_json FROM runs WHERE id = ? AND track_json IS NOT NULL').get(Number(id)) as { name: string; gpx: string | null; track_json: string } | undefined : undefined;
+    if (!run) return reply.code(404).send({ error: 'Geen route gevonden' });
+    const filename = run.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'route';
+    return reply
+      .header('Cache-Control', 'no-cache')
+      .header('Content-Disposition', `attachment; filename="${filename}.gpx"`)
+      .type('application/gpx+xml')
+      .send(cleanGpx(run.name, run.gpx, JSON.parse(run.track_json) as LngLat[]));
   });
 
   // Voor iedereen, ook zonder aanmelding: welke standplaatsen nu zonder EHBO zijn (grijs kruisje). Geen posities of namen.

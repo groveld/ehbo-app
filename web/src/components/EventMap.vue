@@ -22,6 +22,8 @@ const props = withDefaults(defineProps<{
   focusPostId?: number | null;
   /** Deze loop dik en donker en in beeld; wat er niet aan ligt wordt bijna doorzichtig. */
   highlightRunId?: number | null;
+  /** Only the highlighted run, with its start and finish marked. */
+  onlyHighlighted?: boolean;
   showUser?: boolean;
   /** Beheer: tik op de kaart om een punt te kiezen. */
   picking?: boolean;
@@ -33,7 +35,7 @@ const props = withDefaults(defineProps<{
   ambulances?: Ambulance[];
   /** Standplaatsen waar de mobiele EHBO nu niet is: het kruisje grijs. */
   awayPostIds?: number[];
-}>(), { posts: undefined, focusPostId: null, highlightRunId: null, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], ambulances: () => [], awayPostIds: () => [] });
+}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], ambulances: () => [], awayPostIds: () => [] });
 
 const emit = defineEmits<{ select: [postId: number]; pick: [lngLat: LngLat] }>();
 
@@ -94,11 +96,17 @@ function style(): StyleSpecification {
 function runFeatures() {
   return {
     type: 'FeatureCollection' as const,
-    features: props.pkg.runs.filter((r) => r.line).map((r) => ({
-      type: 'Feature' as const,
-      properties: { highlight: props.highlightRunId === null || props.highlightRunId === r.id },
-      geometry: { type: 'LineString' as const, coordinates: r.line! },
-    })),
+    features: props.pkg.runs.filter((r) => r.line && (!props.onlyHighlighted || r.id === props.highlightRunId)).flatMap((r) => [
+      {
+        type: 'Feature' as const,
+        properties: { highlight: props.highlightRunId === null || props.highlightRunId === r.id },
+        geometry: { type: 'LineString' as const, coordinates: r.line! },
+      },
+      ...(props.onlyHighlighted ? [
+        { type: 'Feature' as const, properties: { color: '#0A7D4F' }, geometry: { type: 'Point' as const, coordinates: r.line![0]! } },
+        { type: 'Feature' as const, properties: { color: '#16181D' }, geometry: { type: 'Point' as const, coordinates: r.line!.at(-1)! } },
+      ] : []),
+    ]),
   };
 }
 
@@ -239,6 +247,7 @@ onMounted(() => {
       id: 'lopen',
       type: 'line',
       source: 'lopen',
+      filter: ['==', ['geometry-type'], 'LineString'],
       // De gekozen loop bovenop, zodat hij nergens onder een andere loop verdwijnt.
       layout: { 'line-cap': 'round', 'line-join': 'round', 'line-sort-key': ['case', ['get', 'highlight'], 1, 0] },
       paint: {
@@ -246,6 +255,13 @@ onMounted(() => {
         'line-width': ['case', ['get', 'highlight'], 4, 3],
         'line-opacity': ['case', ['get', 'highlight'], 1, 0.35],
       },
+    });
+    map!.addLayer({
+      id: 'route-ends',
+      type: 'circle',
+      source: 'lopen',
+      filter: ['==', ['geometry-type'], 'Point'],
+      paint: { 'circle-radius': 7, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 2 },
     });
   });
   map.on('click', (e) => {

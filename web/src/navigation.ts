@@ -11,7 +11,7 @@ import { useSessionStore } from './stores/session.ts';
 
 /** Vaste ouders: de terugknop bovenaan dezelfde schermen. */
 const PARENT: Record<string, string> = {
-  post: 'kaart',
+  post: 'kaart', route: 'kaart',
   oproep: 'ehbo', inzetten: 'ehbo',
   info: 'menu', controle: 'menu', beheer: 'menu',
   'beheer-post': 'beheer-posten', 'beheer-eenheid': 'beheer-eenheden',
@@ -22,7 +22,7 @@ const PARENT: Record<string, string> = {
 const ONBOARDING = ['herkend', 'toestemmingen'];
 
 function active(route: RouteLocation) {
-  return Boolean(useSessionStore().me) && (route.meta.staff || route.name === 'info') && !ONBOARDING.includes(String(route.name));
+  return Boolean(useSessionStore().me) && (route.meta.staff || route.name === 'info' || route.name === 'route') && !ONBOARDING.includes(String(route.name));
 }
 
 function isHome(route: RouteLocation) {

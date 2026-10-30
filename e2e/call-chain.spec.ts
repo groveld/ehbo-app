@@ -333,3 +333,30 @@ test('overview map: teams in the list for all staff, counters only for the coord
   await expect(post.getByLabel('Soort post').getByRole('option', { name: 'Vraagt aandacht' })).toHaveCount(0);
   await expect(post.getByLabel(/^Posten open:/)).toHaveCount(0);
 });
+
+test('route page: details, posts in order, GPX download and the star', async ({ browser }) => {
+  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
+  const page = await context.newPage();
+  await page.goto('/?browser=1');
+  await page.getByRole('button', { name: 'Toon 10 km op de kaart' }).click();
+  await page.getByRole('link', { name: 'Alles over 10 km' }).click();
+
+  await expect(page).toHaveURL(/\/route\/\d+$/);
+  await expect(page.getByRole('heading', { name: '10 km', level: 1 })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Bel EHBO' })).toBeVisible();
+  await expect(page.locator('.list-row').filter({ hasText: 'Kruising 4' })).toHaveCount(2);
+  await expect(page.locator('.list-row').filter({ hasText: 'Waterpost 9' })).toHaveCount(0);
+  await expect(page.locator('.list-row .km').first()).toHaveText('km 0,0');
+
+  const star = page.getByRole('button', { name: 'Favoriet: 10 km' });
+  await star.click();
+  await expect(star).toHaveAttribute('aria-pressed', 'true');
+
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'GPX downloaden' }).click();
+  expect((await download).suggestedFilename()).toBe('10-km.gpx');
+
+  await page.getByRole('button', { name: 'Terug' }).click();
+  await expect(page).toHaveURL((url) => url.pathname === '/');
+  await context.close();
+});

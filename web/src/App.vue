@@ -20,7 +20,7 @@ const router = useRouter();
 // Eén tabbalk op elke pagina van een aangemelde medewerker. Niet tijdens het aanmelden (tot "Klaar, naar mijn startscherm")
 // en niet op de afdrukpagina van het rapport.
 const NO_TABS = ['herkend', 'toestemmingen', 'beheer-rapport-afdrukken'];
-const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info') && !NO_TABS.includes(String(route.name)));
+const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info' || route.name === 'route') && !NO_TABS.includes(String(route.name)));
 
 // Intro bij elk openen zonder aanmelding (deelnemers, en medewerkers voor het aanmelden); niet als je al aangemeld bent.
 const intro = ref(!session.me);

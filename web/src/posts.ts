@@ -13,6 +13,13 @@ export const lngLat = (p: PackagePost): LngLat | null => (p.lat !== null && p.ln
 export const isOnRun = (pkg: EventPackage, post: PackagePost, runId: number) =>
   post.passages.some((r) => r.runId === runId) || pkg.postTypes.find((t) => t.id === post.typeId)?.key === 'start_finish';
 
+/** The posts along a run in its order: a post it passes twice is there twice. Start/finish without a pass comes last. */
+export function routeStops(pkg: EventPackage, runId: number) {
+  return pkg.posts.filter((post) => isOnRun(pkg, post, runId))
+    .flatMap((post) => (post.passages.find((r) => r.runId === runId)?.km ?? [null]).map((km) => ({ post, km })))
+    .sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity));
+}
+
 /** Wie je belt voor een post: de verantwoordelijke, anders de eerste contactpersoon. */
 export const primaryContact = (post: PackagePost) =>
   post.contacts?.find((c) => c.role === 'verantwoordelijke') ?? post.contacts?.[0] ?? null;

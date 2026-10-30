@@ -6,6 +6,7 @@ import type { EventPackage, PackageMap, PackagePost, PostTypeInfo } from '@ehbo/
 import { load, save } from '../storage.ts';
 
 const MAP_CACHE_PREFIX = 'ehbo-map-';
+const GPX_CACHE = 'ehbo-gpx';
 const PARALLEL_DOWNLOADS = 6;
 
 export const tileUrl = (map: PackageMap) => `${location.origin}/map/${map.version}/tiles/{z}/{x}/{y}.mvt`;
@@ -39,11 +40,25 @@ export const usePackageStore = defineStore('package', () => {
   async function refresh() {
     try {
       const res = await fetch('/api/package', { headers: pkg.value ? { 'If-None-Match': `"${pkg.value.version}"` } : {} });
-      if (res.ok) setPackage((await res.json()) as EventPackage);
+      if (res.ok) {
+        setPackage((await res.json()) as EventPackage);
+        void cacheGpx();
+      }
     } catch {
       // Geen bereik.
     }
     void cacheMap();
+  }
+
+  /** The route files, so the download works without signal too. */
+  async function cacheGpx() {
+    if (!('caches' in window)) return;
+    try {
+      const cache = await caches.open(GPX_CACHE);
+      await Promise.all((pkg.value?.runs ?? []).filter((r) => r.line).map((r) => cache.add(`/gpx/${r.id}.gpx`)));
+    } catch {
+      // Geen bereik: de volgende nieuwe versie probeert het opnieuw.
+    }
   }
 
   /** Alle kaarttegels vooraf opslaan, zodat de kaart overal werkt. Oude kaartversies gaan weg. */

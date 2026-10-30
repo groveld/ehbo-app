@@ -150,6 +150,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 10.1 | F | Adres openen › **Deelnemer** (niet installeren) | De naam van het evenement als titel, kaart met parcours, starttijden, posten langs de route | |
 | 10.2 | F | Geen namen of telefoonnummers te zien | — | |
 | 10.3 | F | **Bel EHBO** | Belt D (de EHBO-coördinator) | |
+| 10.3b | F | Tik op een loop, dan **Alles over …** | Routepagina met kaart, posten op volgorde en GPX downloaden; de download werkt ook in vliegtuigmodus | |
 | 10.4 | F | Ster bij een loop, en een tik op een andere loop | De favoriet staat vooraan en blijft staan; de andere loop is alleen op de kaart gemarkeerd | |
 | 10.5 | F | Rechtsboven **Sluiten** | Terug op het welkomscherm | |
 

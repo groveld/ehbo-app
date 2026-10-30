@@ -18,7 +18,7 @@ const PASSAGE_RADIUS_KM = 0.03;
 /** Two passes closer together than this are one: the line wobbling around the post. */
 const PASSAGE_MERGE_KM = 0.1;
 
-export function parseGpx(xml: string): Track {
+function readPoints(xml: string) {
   const all: [number, number][] = [];
   // Een track (trkpt) heeft voorrang; routes (rtept) alleen als er geen track in staat.
   for (const tag of ['trkpt', 'rtept']) {
@@ -32,6 +32,11 @@ export function parseGpx(xml: string): Track {
     }
     if (all.length) break;
   }
+  return all;
+}
+
+export function parseGpx(xml: string): Track {
+  const all = readPoints(xml);
   if (all.length < 2) throw new Error('Geen route gevonden in dit GPX-bestand');
 
   let km = 0;
@@ -102,4 +107,12 @@ export function recomputePassages(db: DatabaseSync) {
       if (found.length) setKm.run(found[0]!, post.id);
     }
   }
+}
+
+/** A GPX for participants: only the route. Whatever else the uploaded file holds (author, device, times) stays out. */
+export function cleanGpx(name: string, source: string | null, line: LngLat[]) {
+  const points = source ? readPoints(source) : line;
+  const title = name.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const track = points.map(([lng, lat]) => `<trkpt lat="${lat}" lon="${lng}"/>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Silvesterloop" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${title}</name><trkseg>${track}</trkseg></trk></gpx>\n`;
 }
