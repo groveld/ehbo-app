@@ -158,5 +158,5 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .nearest { margin-top: 12px; align-items: center; }
 .actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 10px; padding-top: 18px; }
 /* Twee knoppen naast elkaar zijn altijd even hoog. */
-.btn.big { height: 56px; border-radius: 16px; font-size: 16px; }
+.btn.big { height: 56px; font-size: 16px; }
 </style>

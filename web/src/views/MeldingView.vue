@@ -131,7 +131,7 @@ const back = () => router.back();
         <span class="section-title">Wordt het erger? Escaleer</span>
         <a href="tel:112" class="btn danger"><Icon name="phone" :size="20" />Bel 112</a>
         <div v-if="emergency.length" class="btn-pair">
-          <a v-for="n in emergency.slice(0, 2)" :key="n.number" :href="telHref(n.number)" class="btn outline"><strong>{{ n.label }}</strong></a>
+          <a v-for="n in emergency.slice(0, 2)" :key="n.number" :href="telHref(n.number)" class="btn"><strong>{{ n.label }}</strong></a>
         </div>
       </div>
     </template>
@@ -208,7 +208,6 @@ const back = () => router.back();
 .dot { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; border: 2px solid #A8A59C; }
 .dot.on { border: none; background: var(--ok); }
 .escalate { padding-top: 18px; }
-.btn.outline { background: var(--card); border: 1px solid var(--line); height: 56px; }
 .assign { padding-top: 18px; }
 .small-btn { width: auto; height: 44px; padding: 0 14px; }
 .bottom { padding-top: 14px; }

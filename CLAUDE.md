@@ -73,7 +73,8 @@ Where the main pieces live:
 - **No page titles on tab screens** (map, requests, contacts, menu): the tab bar already says where you are. Screens reached from a tab (post detail, admin) keep their header.
 - **Buttons:**
   - Primary: 56 px tall, 16 px bold.
-  - Secondary: 48 px.
+  - Secondary: 48 px, white with a 1.5 px line in the primary color.
+  - One corner radius (16 px) for all buttons; screens only change size or fill, never the shape.
   - Icon button: 44 × 44.
   - Two buttons side by side are always the same height.
 - **112** is only shown where it matters: the EHBO screens (request, follow-up, stand-by, call, no signal), Overzicht › Contacten. Where it is shown it sits at the bottom, in the same place. The participant screen has "Bel EHBO" instead: a round red button with a white cross, bottom right (falls back to 112 when no number is set). The app never replaces 112.

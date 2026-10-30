@@ -108,9 +108,8 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
 .picked { font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .request-line { font-size: 15px; font-weight: 600; }
 .request-actions { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; }
-.request-actions .btn { height: 48px; border-radius: 12px; }
 .call { padding: 0; }
-.primary-ish { background: var(--primary); color: #FFFFFF; font-weight: 700; }
-.done { background: var(--ok); color: #FFFFFF; font-weight: 700; }
+.primary-ish { background: var(--primary); box-shadow: none; color: #FFFFFF; font-weight: 700; }
+.done { background: var(--ok); box-shadow: none; color: #FFFFFF; font-weight: 700; }
 .at { color: var(--muted); font-size: 13px; }
 </style>
