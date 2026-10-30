@@ -230,4 +230,50 @@ test('participant: looking at a run keeps the favorites, and there can be severa
   await expect(star(third!)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.run-name').first()).toHaveText(second!);
   await context.close();
+test('a new post in admin: open phones get it by themselves, and a call works before the package has arrived', async ({ browser }) => {
+  const NEW_POST = 'Waterpost 9 · nieuw';
+  const coordinator = await staffPhone(browser, PHONE.coordinator);
+  await coordinator.getByRole('link', { name: 'Kaart' }).click();
+  await expect(coordinator).toHaveURL(/\/overzicht\/kaart$/);
+
+  const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
+  await ehbo.getByRole('button', { name: 'Beschikbaar', exact: true }).click();
+  await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
+  // This phone can't fetch the package, so it only knows what the call itself says.
+  await ehbo.route('**/api/package', (route) => route.abort());
+
+  const admin = await staffPhone(browser, PHONE.admin);
+  const { postTypes } = await (await admin.request.get('/api/package')).json() as { postTypes: { id: number; key: string }[] };
+  const created = await admin.request.post('/api/admin/posts', {
+    data: {
+      typeId: postTypes.find((t) => t.key === 'water')!.id, name: NEW_POST, km: 3, lat: 53.16, lng: 5.84, accuracyM: null, address: null, accessRoute: null,
+      timeFrom: null, timeTo: null, contacts: [{ name: 'Nieuwe Leider', phone: '0600000011', role: 'verantwoordelijke', timeFrom: null, timeTo: null }],
+    },
+  });
+  expect(created.ok()).toBe(true);
+
+  // Nobody reloads: the coordinator's list shows the new post by itself.
+  await expect(coordinator.locator('.post-row').filter({ hasText: NEW_POST })).toBeVisible({ timeout: 15_000 });
+
+  const post = await staffPhone(browser, '0600000011');
+  await expect(post.getByRole('heading', { name: NEW_POST })).toBeVisible();
+  await post.getByRole('button', { name: 'Post openen' }).click();
+  await post.getByRole('link', { name: /EHBO/ }).first().click();
+  await post.getByRole('button', { name: 'Onwel / flauw' }).click();
+  await post.getByRole('button', { name: '1', exact: true }).click();
+  await post.getByRole('button', { name: 'EHBO-verzoek versturen' }).click();
+  await expect(post.getByRole('heading', { name: "We zoeken een EHBO'er" })).toBeVisible();
+
+  await expect(ehbo.getByRole('heading', { name: NEW_POST })).toBeVisible({ timeout: 10_000 });
+  const id = /\/oproep\/(\d+)/.exec(ehbo.url())![1];
+  await ehbo.getByRole('button', { name: 'Accepteren & navigeren' }).click();
+  await ehbo.waitForURL(/google\.com\/maps/);
+  await ehbo.goBack();
+  await expect(post.getByRole('heading', { name: 'Hulp is onderweg' })).toBeVisible({ timeout: 10_000 });
+
+  // With signal back, the rest of the post's data arrives too.
+  await ehbo.unroute('**/api/package');
+  await expect(ehbo.getByRole('link', { name: 'Bel de post' })).toBeVisible({ timeout: 15_000 });
+
+  expect((await post.request.post(`/api/incidents/${id}/withdraw`)).ok()).toBe(true);
 });

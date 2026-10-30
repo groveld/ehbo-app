@@ -25,6 +25,8 @@ export interface LiveRequest {
   /** Gedaan in de testmodus. */
   isTest: boolean;
   postId: number;
+  /** Shown before the new event package has arrived. */
+  postName: string;
   kind: RequestKind;
   detail: string | null;
   status: RequestStatus;

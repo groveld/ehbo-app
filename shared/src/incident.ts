@@ -91,11 +91,21 @@ export interface IncidentEvent {
   text: string;
 }
 
+/** What an incident says about its post, so a call works before the new event package has arrived. */
+export interface IncidentPost {
+  typeId: number;
+  name: string;
+  km: number | null;
+  lat: number | null;
+  lng: number | null;
+}
+
 export interface LiveIncident extends IncidentDetails {
   id: number;
   /** Gedaan in de testmodus: telt niet mee in het rapport. */
   isTest: boolean;
   postId: number;
+  post: IncidentPost;
   status: IncidentStatus;
   stage: IncidentStage;
   /** Niet aanspreekbaar: AED meenemen, en de post krijgt het advies 112 te bellen. */
@@ -129,6 +139,8 @@ export interface LiveUnit {
 export interface LiveState {
   /** Telt op bij elke wijziging. */
   version: number;
+  /** Version of the fixed data; when it differs from the event package, the phone fetches the new one. */
+  dataVersion: string;
   serverTime: string;
   incidents: LiveIncident[];
   units: LiveUnit[];
@@ -168,6 +180,8 @@ export function awayPostIds(
 /** GET /api/ehbo-status: voor iedereen, ook deelnemers. Alleen welke posten nu zonder EHBO zijn; geen posities of namen. */
 export interface EhboStatus {
   awayPostIds: number[];
+  /** Same as in the live state: participants have no live connection. */
+  dataVersion: string;
 }
 /** Zo vaak deelt een mobiele eenheid in dienst haar positie; bij een statuswissel meteen. */
 export const POSITION_SHARE_MS = 60_000;

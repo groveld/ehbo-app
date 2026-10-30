@@ -9,6 +9,7 @@ import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { canUseAsStaff } from '../platform.ts';
 import { load, save } from '../storage.ts';
+import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
 const store = usePackageStore();
@@ -16,6 +17,7 @@ const store = usePackageStore();
 const favorites = ref([load<number | number[]>('ehbo.favoriteRun') ?? []].flat());
 /** The run shown on the map. Separate from the favorites: looking at a run changes nothing. */
 const viewing = ref<number | null>(favorites.value[0] ?? null);
+const live = useLiveStore();
 /** Standplaatsen waar de mobiele EHBO nu niet is: grijs kruisje. Zonder bereik blijft de laatste stand staan. */
 const awayPostIds = ref<number[]>([]);
 // Medewerkers zetten de app eerst op het beginscherm; in de browser kan aanmelden alleen met ?browser=1.
@@ -24,7 +26,10 @@ const staffRoute = canUseAsStaff ? { name: 'aanmelden' } : { name: 'installeren'
 async function refreshEhbo() {
   if (document.visibilityState !== 'visible') return;
   try {
-    awayPostIds.value = (await api<EhboStatus>('/api/ehbo-status')).awayPostIds;
+    const status = await api<EhboStatus>('/api/ehbo-status');
+    awayPostIds.value = status.awayPostIds;
+    // Participants have no live connection, so changes in admin reach them this way.
+    live.checkData(status.dataVersion);
   } catch {
     // Geen bereik.
   }
