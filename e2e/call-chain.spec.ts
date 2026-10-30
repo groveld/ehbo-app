@@ -233,6 +233,8 @@ test('participant: looking at a run keeps the favorites, and there can be severa
   await expect(star(third!)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.run-name').first()).toHaveText(second!);
   await context.close();
+});
+
 test('a new post in admin: open phones get it by themselves, and a call works before the package has arrived', async ({ browser }) => {
   const NEW_POST = 'Waterpost 9 · nieuw';
   const coordinator = await staffPhone(browser, PHONE.coordinator);
