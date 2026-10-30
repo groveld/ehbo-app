@@ -114,14 +114,16 @@ const banner = computed(() => {
         </select>
       </div>
 
-      <div class="stack gap-10">
-        <template v-if="teams.length">
-          <span class="section-label">EHBO-teams<template v-if="!live.connected && live.state"> · laatste stand {{ clock(live.state.serverTime) }}</template></span>
-          <TeamRow v-for="u in teams" :key="u.id" :pkg="store.pkg" :unit="u" />
-        </template>
+      <div class="stack gap-14">
+        <section v-if="teams.length" class="stack gap-8">
+          <h2 class="section-title">EHBO<template v-if="!live.connected && live.state"> · laatste stand {{ clock(live.state.serverTime) }}</template></h2>
+          <div class="list"><TeamRow v-for="u in teams" :key="u.id" :pkg="store.pkg" :unit="u" /></div>
+        </section>
         <template v-if="filter !== 'teams'">
-          <span v-if="teams.length && posts.length" class="section-label">Posten</span>
-          <PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" />
+          <section v-if="posts.length" class="stack gap-8">
+            <h2 class="section-title">Posten</h2>
+            <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" /></div>
+          </section>
           <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen posten ingevoerd.</p>
           <p v-else-if="!posts.length && !teams.length" class="note">Geen post gevonden.</p>
         </template>
