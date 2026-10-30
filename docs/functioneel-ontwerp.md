@@ -41,7 +41,7 @@ Elk evenement krijgt een eigen adres (bijv. silvesterloop.groveld.com). Deelneme
    - Onbekend nummer → opnieuw proberen, de evenementcoördinator bellen, of door als gast.
 6. **Eerste keer:** toestemming voor meldingen en locatie. Info & voorwaarden staan in het menu; bevestigen hoeft niet. Tijdens deze stappen staat de tabbalk er nog niet; die verschijnt na *Klaar, naar mijn startscherm*.
 7. **Ingelogd.** Het beginscherm is je functie:
-   - EHBO'er → stand-by met oproepen;
+   - EHBO'er → EHBO-scherm met oproepen;
    - bij een post (verantwoordelijke, lid of reserve) → de eigen post; alleen de verantwoordelijke zet hem open;
    - geen van beide (bijv. alleen beheer of kernteam) → de kaart.
 
@@ -140,7 +140,7 @@ Alles wat je nodig hebt om iemand te bellen of te bereiken, staat ook op de tele
 - **Navigeren.** De knop opent de navigatie-app van de telefoon (standaard die van de telefoon; per gebruiker te wijzigen naar Google Maps, Waze of Apple Kaarten) met de GPS-coördinaten van de post. Bij elke post staat de aanrijroute voor hulpverlening, omdat de navigatie afsluitingen niet kent.
 - **Bellen.** Gewone telefoonoproep via de telefoon, dus ook zonder internet.
 - **Zonder bereik.** Kaart, posten, contacten, bellen en navigeren werken. De hulpknop valt dan terug op: direct de dichtstbijzijnde EHBO'er en de evenementcoördinator bellen. Een melding wordt alsnog verstuurd zodra er weer bereik is.
-- **Bijwerken.** De app gedraagt zich vrijwel als een statische app. Alle vaste gegevens (posten, mensen, kaart, route, instellingen) komen als één evenementpakket met een versienummer op de telefoon. Pas als de beheerder iets wijzigt, haalt de telefoon een nieuwe versie op. Live zijn alleen de oproepen, statussen en open/dicht van posten.
+- **Bijwerken.** De app gedraagt zich vrijwel als een statische app. Alle vaste gegevens (posten, mensen, kaart, route, instellingen) komen als één evenementpakket met een versienummer op de telefoon. Pas als de beheerder iets wijzigt, haalt de telefoon een nieuwe versie op, en dan binnen enkele seconden: de live stand noemt de versie van de vaste gegevens. Live zijn alleen de oproepen, statussen en open/dicht van posten.
 
 ## Incidentregistratie en rapport
 
@@ -207,7 +207,7 @@ Alleen de oproep loopt via de server en de push-diensten; kaart en contacten sta
 
 **Vormgevingsregels.** Vaste maten, zodat schermen niet verspringen:
 
-- Gekleurd kopblok bovenaan (oproep, verstuurd, onderweg, stand-by, geen bereik): altijd 140 px hoog, tekst bovenaan uitgelijnd zoals op alle andere schermen, titel 26 px.
+- Gekleurd kopblok bovenaan (oproep, verstuurd, onderweg, EHBO-scherm, geen bereik): altijd 140 px hoog, tekst bovenaan uitgelijnd zoals op alle andere schermen, titel 26 px.
 - Hoofdknop: 56 px hoog, 16 px vet. Tweede knop: 48 px. Icoonknop (bellen, terug): 44 × 44 px. Twee knoppen naast elkaar zijn altijd even hoog.
 - 112 staat alleen waar het ertoe doet (EHBO-schermen, contacten), en daar altijd onderaan op dezelfde plek. De deelnemer heeft Bel EHBO als ronde knop rechtsonder.
 - Uitzondering: de verzoek-tegels op het poststartscherm zijn bewust groot.
@@ -316,7 +316,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | EHBO-eenheden | Vast (eigen EHBO-post) of mobiel, mobiel optioneel met standplaats; mobiele eenheden delen elke minuut hun positie (powerbank-advies in de handleiding) |
 | Ter plaatse | Blijft, één tik |
 | Stil / Niet storen | Geaccepteerd voor deze editie; sms als tweede kanaal pas bij een volgende editie |
-| Deelnemers | Algemene app met alle lopen; een loop als favoriet markeren zet hem bovenaan; installeren niet nodig |
+| Deelnemers | Algemene app met alle lopen; een tik op een loop toont hem op de kaart, de ster maakt hem favoriet en zet hem vooraan (meerdere kan); installeren niet nodig |
 | Installatie | Alleen verplicht voor medewerkers |
 | Kernteam | Voorstel van vijf functies, aan te passen per evenement |
 | Noodnummers | In te vullen in de instellingen |
@@ -395,9 +395,12 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Opslaan alleen bij wijzigingen (29 okt) | Op elk scherm waar je iets aanpast (evenement, info, posten, eenheden, lopen, kernteam, noodnummers) verschijnt Opslaan pas als er echt iets gewijzigd is. Bij kernteam en noodnummers heet de knop ernaast dan Annuleren, anders Klaar. Een nieuwe post, eenheid of loop kan altijd opgeslagen worden. Een EHBO-verzoek kan altijd meteen weg; Aanvulling versturen verschijnt pas als je iets aanvult |
 | Terug en vooruit (29 okt) | Vegen om terug of vooruit te gaan staat uit: elke stap in de app vervangt het vorige scherm, dus de telefoon heeft geen vorige of volgende pagina om naar te vegen. Een gebaar afvangen lukt niet netjes (je ziet dan eerst de vorige pagina en daarna een sprong). Op Android sluit de terugknop van het toestel daardoor de app; opnieuw openen brengt je op je startscherm. De terugpijl in de app gaat één stap omhoog, naar het hoofdscherm van wat je bekijkt: postdetail naar de kaart, een oproep of je inzetten naar stand-by, een beheerscherm naar het scherm erboven, een melding naar je post of Meldingen, info naar het menu |
 | Kaartstijl (29 okt) | Een rustige kaart in grijs met zachte pastels: water lichtblauw, gras en bos salie, op de warme achtergrond van de app. Geen iconen van winkels en horeca. Zo vallen het parcours en de gekleurde posten op. Alle markeringen zijn even groot (28 px), ook de ambulance. De gekozen loop ligt bovenop de andere, zodat hij altijd helemaal te zien is |
-| Volgorde van markeringen (30 okt) | Overlappen markeringen, dan ligt de belangrijkste bovenop, van boven naar onder: open oproep en geselecteerde post, ambulance en je eigen positie, start/finish, EHBO-post en elke standplaats van een EHBO-eenheid, stempelpost, waterpost, verkeer, en onderop Anders en eigen soorten. Een dichte post houdt zijn laag en is alleen half doorzichtig. De volgorde staat op één plek (`MARKER_ORDER` in `EventMap.vue`) en geldt voor alle kaarten |
+| Volgorde van markeringen (30 okt) | Overlappen markeringen, dan ligt de belangrijkste bovenop, van boven naar onder: open oproep en geselecteerde post, ambulance en je eigen positie, start/finish, EHBO-post, stempelpost, waterpost, verkeer, en onderop Anders en eigen soorten. Een standplaats van een EHBO-eenheid tilt een post alleen omhoog, nooit omlaag: boven alle posten zonder standplaats, maar onder de EHBO-posten. Onderling houden posten met een standplaats de volgorde van hun soort, en een start/finish met standplaats blijft bovenaan. Een dichte post houdt zijn laag en is alleen half doorzichtig. De volgorde staat op één plek (`MARKER_ORDER` in `EventMap.vue`) en geldt voor alle kaarten |
 | Taal (30 okt) | Alles wat gebruikers zien is Nederlands. Alles in de broncode is Engels: code, namen, waarden in de data, commentaar, tests, bestandsnamen en routes. Zo kunnen ook mensen uit andere landen aan de app werken. Ook GitHub-issues, PR's en dit functioneel ontwerp worden Engels. Alleen de README blijft Nederlands, omdat die voor de beheerder van de server is. Bestaand Nederlands wordt omgezet in #84 |
 | Secondary buttons (30 Oct) | Secondary buttons are white with a line in the primary color and dark text, instead of warm grey. They stand out on the background and on a white card, belong with the dark primary button, and follow the event color. All buttons have the same corner radius. Heights stay 56 and 48 px |
+| EHBO screen (30 Oct) | The screen and tab for first aiders are called EHBO instead of Stand-by, at `/ehbo`. It's their whole duty: status, team, position and deployments, and more will follow. "Beschikbaar" stays as a status. Decisions above that say Stand-by refer to this screen |
+| On site, then close (30 Oct) | After "Ik ben ter plaatse" the app goes straight to closing the incident (4.8), because that's the next step. The back arrow returns to the call, with the map and "Incident afronden". Nothing closes automatically, and reopening the call later stays on the call |
+| Changes reach everyone (30 Oct) | The live state carries the version of the fixed data. When it differs from the phone's event package, the phone fetches the package, its functions and the style within 3 to 8 seconds, spread over the phones so a series of edits doesn't fetch the package every time. Participants have no live connection and read the same version from `/api/ehbo-status` every 30 s. If a call, request or function refers to a post or unit the phone doesn't know, it fetches at once. An incident carries its post's name, type, km and position, and a request its post's name, so a call can always be accepted and navigated to, even if the package doesn't arrive. A post with incidents or requests can't be deleted: the report needs it |
 
 **Nog open**
 

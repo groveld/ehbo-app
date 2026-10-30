@@ -5,9 +5,10 @@ import { useRouter } from 'vue-router';
 import { formatKm, telHref } from '@ehbo/shared';
 import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
+import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentSummary, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
 import { navigationUrl } from '../navigate.ts';
 import { primaryContact } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
@@ -23,7 +24,7 @@ const { busy, error, run } = useSave();
 const RING = 2 * Math.PI * 30;
 
 const incident = computed(() => live.incidentById(Number(props.id)));
-const post = computed(() => (incident.value ? store.postById.get(incident.value.postId) : undefined));
+const post = computed(() => (incident.value ? postOf(store.postById, incident.value) : undefined));
 const contact = computed(() => (post.value ? primaryContact(post.value) : null));
 
 /** Mijn eenheid voor deze oproep: die is opgeroepen of heeft aangenomen; anders mijn eerste eenheid. */
@@ -73,15 +74,19 @@ async function decline() {
   if (!incident.value || myUnitId.value === null) return;
   await run(() => live.decline(incident.value!.id, myUnitId.value!));
 }
-const toStandby = () => router.replace({ name: 'stand-by' });
+const toEhbo = () => router.replace({ name: 'ehbo' });
+/** On site, the next step is closing the incident. Without signal you stay here, with the error. */
+async function onSite() {
+  if (incident.value && await run(() => live.onSite(incident.value!.id))) void router.replace({ name: 'afronden', params: { id: props.id } });
+}
 </script>
 
 <template>
   <main class="screen tight">
     <template v-if="mode === 'missing' || !incident || !post">
-      <p class="note warn top-gap">Deze oproep staat (nog) niet op deze telefoon. <button class="add-link" @click="live.refresh()">Opnieuw laden</button></p>
+      <NotOnPhone class="top-gap">Deze oproep staat (nog) niet op deze telefoon.</NotOnPhone>
       <div class="grow" />
-      <button class="btn primary" @click="toStandby">Terug naar stand-by</button>
+      <button class="btn primary" @click="toEhbo">Terug naar EHBO</button>
     </template>
 
     <!-- 4.3 · Oproep, en 4.4 · naar alle eenheden -->
@@ -168,7 +173,7 @@ const toStandby = () => router.replace({ name: 'stand-by' });
       <div class="grow" />
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div class="stack gap-8 bottom">
-        <button v-if="incident.status === 'geaccepteerd'" class="btn go" :disabled="busy" @click="run(() => live.onSite(incident!.id))">
+        <button v-if="incident.status === 'geaccepteerd'" class="btn go" :disabled="busy" @click="onSite">
           <Icon name="pin" :size="20" />Ik ben ter plaatse
         </button>
         <RouterLink v-else :to="{ name: 'afronden', params: { id: incident.id } }" class="btn go"><Icon name="check" :size="20" />Incident afronden</RouterLink>
@@ -199,7 +204,7 @@ const toStandby = () => router.replace({ name: 'stand-by' });
         </div>
       </div>
       <div class="grow" />
-      <button class="btn primary" @click="toStandby">Terug naar stand-by</button>
+      <button class="btn primary" @click="toEhbo">Terug naar EHBO</button>
       <a v-if="mode === 'taken' && incident.acceptedBy" :href="telHref(incident.acceptedBy.phone)" class="btn link">Toch helpen? Bel {{ takenBy?.name }}</a>
     </template>
   </main>

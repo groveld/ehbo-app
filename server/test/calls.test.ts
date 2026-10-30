@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { EventPackage, LiveIncident, LiveState, NewIncident, PushPayload } from '@ehbo/shared';
+import type { AdminState, EventPackage, LiveIncident, LiveRequest, LiveState, NewIncident, PushPayload } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import type { Schedule } from '../src/calls.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
@@ -344,22 +344,52 @@ test('deelnemers zien welke standplaats leeg is, zonder posities of namen', asyn
   const status = async () => {
     const res = await app.inject({ url: '/api/ehbo-status' });
     assert.equal(res.statusCode, 200, 'ook zonder aanmelding');
-    return res.json();
+    return res.json().awayPostIds;
   };
   await onDuty();
-  assert.deepEqual(await status(), { awayPostIds: [] }, 'zonder GPS-positie telt de standplaats');
+  assert.deepEqual(await status(), [], 'zonder GPS-positie telt de standplaats');
 
   // 20 m van Kruising 4 (53.1488, 5.8279) is thuis; 1 km verderop is onderweg.
   await call(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/position`, { lat: 53.14898, lng: 5.8279 });
-  assert.deepEqual(await status(), { awayPostIds: [] });
+  assert.deepEqual(await status(), []);
   await call(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/position`, { lat: 53.1578, lng: 5.8279 });
-  assert.deepEqual(await status(), { awayPostIds: [KRUISING()] });
+  assert.deepEqual(await status(), [KRUISING()]);
 
   // Een positie ouder dan 3 minuten telt niet meer.
   clock = new Date(clock.getTime() + 4 * 60_000);
-  assert.deepEqual(await status(), { awayPostIds: [] });
+  assert.deepEqual(await status(), []);
 
   const pkg = (await app.inject({ url: '/api/package' })).json() as EventPackage;
   const team2 = pkg.units.find((u) => u.id === TEAM2())!;
   assert.deepEqual([team2.postId, team2.name, team2.members], [KRUISING(), '', []], 'wel de standplaats, niet wie');
+});
+
+test('the data version in the live state and for participants follows changes in admin', async () => {
+  const before = await ok(DEMO.admin, 'GET', '/api/live/state');
+  const pkg = (await app.inject({ url: '/api/package' })).json() as EventPackage;
+  assert.ok(pkg.version.startsWith(`${before.dataVersion}.`), 'the package version starts with it');
+
+  await ok(DEMO.admin, 'PUT', '/api/admin/event', {
+    name: 'Nieuwe naam', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30,
+    style: (await ok<AdminState>(DEMO.admin, 'GET', '/api/admin')).event.style,
+  });
+
+  const after = await ok(DEMO.admin, 'GET', '/api/live/state');
+  assert.notEqual(after.dataVersion, before.dataVersion);
+  assert.equal((await app.inject({ url: '/api/ehbo-status' })).json().dataVersion, after.dataVersion);
+  const fresh = (await app.inject({ url: '/api/package' })).json() as EventPackage;
+  assert.ok(fresh.version.startsWith(`${after.dataVersion}.`));
+});
+
+test('a call and a request say which post they are about, for a phone without the new package', async () => {
+  await onDuty();
+  const { id } = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  const state = await ok(DEMO.ehbo, 'GET', '/api/live/state');
+  const incident = state.incidents.find((i) => i.id === id)!;
+  assert.deepEqual({ name: incident.post.name, km: incident.post.km }, { name: 'Waterpost 3 · brug', km: 10.5 });
+  assert.equal(typeof incident.post.lat, 'number');
+  assert.equal(typeof incident.post.typeId, 'number');
+
+  const water = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/requests', { postId: WATER(), kind: 'water', detail: null, clientId: 'test-sync-abcdef' });
+  assert.equal(water.postName, 'Waterpost 3 · brug');
 });

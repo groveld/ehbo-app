@@ -4,8 +4,9 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { NOTE_MAX, OUTCOMES, type Outcome } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
+import NotOnPhone from '../components/NotOnPhone.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, unitOf } from '../incidents.ts';
+import { clock, postOf, unitOf } from '../incidents.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -16,7 +17,7 @@ const router = useRouter();
 const { busy, error, run } = useSave();
 
 const incident = computed(() => live.incidentById(Number(props.id)));
-const post = computed(() => (incident.value ? store.postById.get(incident.value.postId) : undefined));
+const post = computed(() => (incident.value ? postOf(store.postById, incident.value) : undefined));
 const myUnit = computed(() => unitOf(store.pkg, incident.value?.dispatches.find((d) => d.acceptedAt && live.myUnitIds.includes(d.unitId))?.unitId ?? null));
 const ownPost = computed(() => (myUnit.value?.postId != null ? store.postById.get(myUnit.value.postId) : undefined));
 /** Alleen een vaste eenheid die niet op haar eigen post is, kan "even blijven". */
@@ -31,7 +32,7 @@ async function finish(pause = false) {
   const ok = await run(() => live.close(incident.value!.id, {
     outcome: outcome.value!, persons: incident.value!.persons, note: note.value.trim() || null, stayHere: Boolean(canStay.value && stayHere.value), pause,
   }));
-  if (ok) router.replace({ name: 'stand-by' });
+  if (ok) router.replace({ name: 'ehbo' });
 }
 </script>
 
@@ -45,7 +46,7 @@ async function finish(pause = false) {
       </div>
     </header>
 
-    <p v-if="!incident || !post" class="note warn">Deze oproep staat (nog) niet op deze telefoon.</p>
+    <NotOnPhone v-if="!incident || !post">Deze oproep staat (nog) niet op deze telefoon.</NotOnPhone>
     <div v-else class="stack gap-14 fields">
       <div class="stack gap-8">
         <span class="q">Afloop</span>

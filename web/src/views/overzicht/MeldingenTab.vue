@@ -26,7 +26,7 @@ const doneRequests = computed(() => live.requests.filter((r) => r.status === 'af
 const KIND_STYLE = { water: ['#E4EEF7', '#124A78'], verkeer: ['#FBE6D2', '#7A3F06'], vrijwilliger: ['#EDE4F7', '#4E2A82'] } as const;
 const line = (r: LiveRequest) => {
   const post = store.postById.get(r.postId);
-  return [post?.name, post ? kmLabel(post.km) : null, requestDetailLabel(r.kind, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
+  return [r.postName, post ? kmLabel(post.km) : null, requestDetailLabel(r.kind, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
 };
 const postPhone = (r: LiveRequest) => {
   const post = store.postById.get(r.postId);
@@ -52,7 +52,7 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
           <span class="picked grow state" :class="i.status">{{ STATUS[i.status] }}<template v-if="who(i.unitId)"> · {{ who(i.unitId) }}</template></span>
           <span class="mono at">{{ clock(i.reportedAt) }}</span>
         </div>
-        <span class="request-line">{{ store.postById.get(i.postId)?.name ?? 'Post' }} · {{ incidentSummary(i) }}{{ i.aed ? ' · AED' : '' }}</span>
+        <span class="request-line">{{ i.post.name }} · {{ incidentSummary(i) }}{{ i.aed ? ' · AED' : '' }}</span>
       </RouterLink>
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div v-for="r in openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'opgepakt' && r.pickedBy?.phone === session.me?.phone }">
@@ -63,7 +63,7 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
         </div>
         <span class="request-line">{{ line(r) }}</span>
         <div v-if="handles" class="request-actions">
-          <a v-if="postPhone(r)" :href="telHref(postPhone(r)!)" class="btn call" :aria-label="`Bel ${store.postById.get(r.postId)?.name}`"><Icon name="phone" :size="20" /></a>
+          <a v-if="postPhone(r)" :href="telHref(postPhone(r)!)" class="btn call" :aria-label="`Bel ${r.postName}`"><Icon name="phone" :size="20" /></a>
           <button v-if="r.status === 'aangevraagd'" class="btn primary-ish" :disabled="busy" @click="run(() => live.pickRequest(r.id))">Oppakken</button>
           <button v-else class="btn done" :disabled="busy" @click="run(() => live.finishRequest(r.id))">Afgehandeld</button>
         </div>
@@ -79,7 +79,7 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
             <span class="picked grow">{{ STATUS[i.status] }}<template v-if="who(i.unitId)"> · {{ who(i.unitId) }}</template></span>
             <span class="mono at">{{ clock(i.reportedAt) }}</span>
           </div>
-          <span class="request-line">{{ store.postById.get(i.postId)?.name }} · {{ incidentSummary(i) }}</span>
+          <span class="request-line">{{ i.post.name }} · {{ incidentSummary(i) }}</span>
         </RouterLink>
         <div v-for="r in doneRequests" :key="r.id" class="card request">
           <div class="request-top">

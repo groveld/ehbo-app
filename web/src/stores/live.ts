@@ -20,6 +20,9 @@ import { useSessionStore } from './session.ts';
 
 /** Zonder bericht (ook geen hartslag) in deze tijd is de verbinding stuk: opnieuw verbinden. */
 const STALE_MS = 75_000;
+/** After a change in admin: wait a moment, spread over the phones, so a series of edits doesn't fetch the package every time. */
+const SYNC_DELAY_MS = 3_000;
+const SYNC_SPREAD_MS = 5_000;
 const OPEN = ['verstuurd', 'geaccepteerd', 'ter_plaatse'] as const;
 
 export const isOpen = (incident: LiveIncident) => (OPEN as readonly string[]).includes(incident.status);
@@ -37,7 +40,9 @@ export class OfflineError extends Error {
 export const useLiveStore = defineStore('live', () => {
   const session = useSessionStore();
   const pkg = usePackageStore();
-  const state = ref<LiveState | null>(load('ehbo.live'));
+  // A state saved by an older version of the app lacks what the screens expect; the server sends a new one right away.
+  const stored = load<LiveState>('ehbo.live');
+  const state = ref<LiveState | null>(stored?.dataVersion ? stored : null);
   /** Nog niet bij de server aangekomen. De server telt dezelfde clientId maar één keer, dus opnieuw versturen kan altijd. */
   const outbox = ref<NewIncident[]>(load('ehbo.outbox') ?? []);
   watch(outbox, (value) => save('ehbo.outbox', value.length ? value : null), { deep: true });
@@ -51,6 +56,9 @@ export const useLiveStore = defineStore('live', () => {
   let source: EventSource | null = null;
   let lastMessage = 0;
   let watchdog: ReturnType<typeof setInterval> | null = null;
+  let syncTimer: ReturnType<typeof setTimeout> | undefined;
+  /** The fixed data is being fetched again. */
+  const syncing = ref(false);
 
   function setState(value: LiveState) {
     // Een oudere stand (bijv. een antwoord dat later binnenkomt dan een SSE-bericht) overschrijft een nieuwere niet.
@@ -58,6 +66,22 @@ export const useLiveStore = defineStore('live', () => {
     state.value = value;
     clockOffset.value = new Date(value.serverTime).getTime() - Date.now();
     save('ehbo.live', value);
+    checkData(value.dataVersion);
+  }
+
+  /** Fetch everything that changes through admin: the event package, my functions, and the style and logos. */
+  async function syncData() {
+    clearTimeout(syncTimer);
+    syncTimer = undefined;
+    syncing.value = true;
+    await Promise.all([pkg.refresh(), session.loadEvent(), session.me ? session.refresh() : null]);
+    syncing.value = false;
+  }
+
+  /** Called with the version from the server: a different one means something changed in admin. */
+  function checkData(dataVersion: string) {
+    if (syncTimer !== undefined || pkg.isCurrent(dataVersion)) return;
+    syncTimer = setTimeout(() => void syncData(), SYNC_DELAY_MS + Math.random() * SYNC_SPREAD_MS);
   }
 
   function connect() {
@@ -139,6 +163,19 @@ export const useLiveStore = defineStore('live', () => {
 
   /** Oproep waar een eenheid van mij mee bezig is. */
   const myActive = computed(() => openIncidents.value.find((i) => i.dispatches.some((d) => myUnitIds.value.includes(d.unitId) && d.acceptedAt)) ?? null);
+
+  // Safety net: something refers to a post or unit this phone doesn't know yet. Don't wait: this may be a call.
+  const unknownData = computed(() => {
+    if (!pkg.pkg) return '';
+    const assignments = session.me?.assignments ?? [];
+    const posts = [...incidents.value.map((i) => i.postId), ...(state.value?.requests ?? []).map((r) => r.postId), ...myPostIds.value];
+    const units = [...(state.value?.units ?? []).map((u) => u.id), ...assignments.flatMap((a) => (a.unitId == null ? [] : [a.unitId]))];
+    return [
+      ...posts.filter((id) => !pkg.postById.has(id)).map((id) => `post ${id}`),
+      ...units.filter((id) => !pkg.pkg!.units.some((u) => u.id === id)).map((id) => `unit ${id}`),
+    ].join();
+  });
+  watch(unknownData, (unknown) => { if (unknown) void syncData(); });
 
   // Mobiele eenheid in dienst: elke minuut de positie naar de server (dichtstbijzijnde bepalen, ambulance op de kaart);
   // bij een statuswissel meteen, zodat de kaart van iedereen direct klopt.
@@ -257,8 +294,10 @@ export const useLiveStore = defineStore('live', () => {
   }
 
   return {
-    state, connected, serverNow, sharingUnit, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
-    incidentById, unitState, postOpen, secondsLeft, needsAed, refresh, connect, report,
+    state, connected, syncing, serverNow, sharingUnit, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
+    incidentById, unitState, postOpen, secondsLeft, needsAed, refresh, connect, report, checkData,
+    /** "Opnieuw laden": everything at once. */
+    reload: () => Promise.all([syncData(), refresh()]),
     outbox, delivered, refused, flush,
     update: (id: number, details: IncidentDetails) => act(`/api/incidents/${id}`, 'PUT', details),
     accept: (id: number, unitId: number) => act(`/api/incidents/${id}/accept`, 'POST', { unitId }),

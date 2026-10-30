@@ -12,7 +12,7 @@ import { useSessionStore } from './stores/session.ts';
 /** Vaste ouders: de terugknop bovenaan dezelfde schermen. */
 const PARENT: Record<string, string> = {
   post: 'kaart',
-  oproep: 'stand-by', inzetten: 'stand-by',
+  oproep: 'ehbo', inzetten: 'ehbo',
   info: 'menu', controle: 'menu', beheer: 'menu',
   'beheer-post': 'beheer-posten', 'beheer-eenheid': 'beheer-eenheden',
   'beheer-loop': 'beheer-evenement', 'beheer-app-icoon': 'beheer-evenement', 'beheer-rapport-afdrukken': 'beheer-rapport',
@@ -30,12 +30,12 @@ function isHome(route: RouteLocation) {
   return route.name === home.name && (!('params' in home) || String(route.params.id) === String(home.params?.id));
 }
 
-/** Een melding of aanvraag hoort bij je eigen post, anders bij Meldingen (coördinator, beheer), stand-by (EHBO) of de kaart. */
+/** Een melding of aanvraag hoort bij je eigen post, anders bij Meldingen (coördinator, beheer), het EHBO-scherm of de kaart. */
 function postOrQueue(postId: number | null | undefined): RouteLocationRaw {
   const me = useSessionStore().me!;
   if (postId != null && me.assignments.some((a) => a.kind === 'post' && a.postId === postId)) return { name: 'post-home', params: { id: postId } };
   if (me.isAdmin || coordinatorOf(usePackageStore().pkg)?.phone === me.phone) return { name: 'meldingen' };
-  if (me.assignments.some((a) => a.kind === 'ehbo')) return { name: 'stand-by' };
+  if (me.assignments.some((a) => a.kind === 'ehbo')) return { name: 'ehbo' };
   return { name: 'kaart' };
 }
 
@@ -55,7 +55,7 @@ export function upOf(route: RouteLocation): RouteLocationRaw | null {
   }
   if (PARENT[name]) return { name: PARENT[name] };
   if (name.startsWith('beheer-')) return { name: 'beheer' };
-  // Een tab (kaart, meldingen, contacten, menu, stand-by, een post): terug naar je startscherm.
+  // Een tab (kaart, meldingen, contacten, menu, EHBO, een post): terug naar je startscherm.
   return homeRoute();
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Eén tabbalk onderaan elke medewerkerspagina: een tab per functie (elke post waar je staat, stand-by als je EHBO'er bent),
+// Eén tabbalk onderaan elke medewerkerspagina: een tab per functie (elke post waar je staat, EHBO als je EHBO'er bent),
 // kaart, meldingen (coördinator en beheer), contacten en menu. Zo hoef je tijdens het evenement nooit te wisselen.
 // Een teller op een functie bij een lopende oproep, en op Meldingen voor aanvragen die nog niet zijn opgepakt; allebei even groot.
 import { computed } from 'vue';
@@ -12,7 +12,7 @@ import Icon, { type IconName } from './Icon.vue';
 
 /**
  * color: eigen kleur van het actieve tabblad (icoon en gloed); bij een post de kleur van de soort post, anders de accentkleur.
- * iconColor: het icoon altijd in deze kleur, ook als het tabblad niet actief is (Stand-by: de eigen status).
+ * iconColor: het icoon altijd in deze kleur, ook als het tabblad niet actief is (EHBO: de eigen status).
  */
 interface Tab { key: string; to: RouteLocationRaw; label: string; icon: IconName; active: boolean; count?: number; color?: string; iconColor?: string }
 
@@ -21,13 +21,13 @@ const session = useSessionStore();
 const pkg = usePackageStore();
 const live = useLiveStore();
 
-/** Vaste kleuren van de tabbladen als ze actief zijn; Stand-by in het rood van EHBO. */
+/** Vaste kleuren van de tabbladen als ze actief zijn; EHBO in het rood. */
 const COLORS = { ehbo: '#C8261E', kaart: '#0E7C86', meldingen: '#A16207', contacten: '#3F51B5', menu: '#3E434B' };
 
-/** Het kruis van Stand-by in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
+/** Het kruis van de EHBO-tab in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
 const STATUS = { vrij: '#0A7D4F', pauze: '#C8261E', uit_dienst: 'var(--ink)' } as const;
 
-const EHBO = ['stand-by', 'inzetten', 'oproep', 'afronden'];
+const EHBO = ['ehbo', 'inzetten', 'oproep', 'afronden'];
 const MENU = ['menu', 'info', 'controle'];
 
 /** Bij welke post het huidige scherm hoort (startscherm, verzoek, melding, aanvraag of geen bereik), of null. */
@@ -53,7 +53,7 @@ const tabs = computed<Tab[]>(() => {
   const name = String(route.name ?? '');
   const tabs: Tab[] = [];
   if (me.assignments.some((a) => a.kind === 'ehbo')) {
-    tabs.push({ key: 'ehbo', to: { name: 'stand-by' }, label: 'Stand-by', icon: 'ehboFilled', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
+    tabs.push({ key: 'ehbo', to: { name: 'ehbo' }, label: 'EHBO', icon: 'ehboFilled', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
   }
   const posts = me.assignments.filter((a) => a.kind === 'post');
   for (const a of posts) {
@@ -107,7 +107,7 @@ const tabs = computed<Tab[]>(() => {
 /* Waar je bent: het icoon in de eigen kleur van het tabblad, met een zachte ronde gloed in dezelfde kleur onder het hele item. */
 .tab.active { background: radial-gradient(closest-side, color-mix(in srgb, var(--tab-color, var(--accent)) 25%, transparent), transparent); }
 .tab.active .icon { color: var(--tab-color, var(--ink)); }
-/* Stand-by: het kruis altijd in de kleur van de status; de gloed blijft rood. */
+/* EHBO: het kruis altijd in de kleur van de status; de gloed blijft rood. */
 .tab.status .icon { color: var(--icon-color); }
 .count { position: absolute; top: -4px; right: -10px; background: var(--danger); color: #FFFFFF; border: 2px solid var(--card); border-radius: 999px; }
 .count { min-width: 20px; height: 20px; padding: 0 5px; font: 700 11px/16px var(--mono); text-align: center; }

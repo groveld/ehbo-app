@@ -4,9 +4,10 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { OUTCOMES, formatKm, telHref } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
+import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentSummary, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
 import { coordinatorOf } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -20,7 +21,7 @@ const router = useRouter();
 const { busy, error, run } = useSave();
 
 const incident = computed(() => live.incidentById(Number(props.id)));
-const post = computed(() => (incident.value ? store.postById.get(incident.value.postId) : undefined));
+const post = computed(() => (incident.value ? postOf(store.postById, incident.value) : undefined));
 const coordinator = computed(() => coordinatorOf(store.pkg));
 const isCoordinator = computed(() => coordinator.value?.phone === session.me?.phone || session.me?.isAdmin);
 const atPost = computed(() => live.myPostIds.includes(incident.value?.postId ?? -1));
@@ -59,13 +60,13 @@ async function withdraw() {
   if (!incident.value || !confirm('Melding intrekken? De EHBO hoeft dan niet meer te komen.')) return;
   if (await run(() => live.withdraw(incident.value!.id))) router.back();
 }
-// Eén stap omhoog: je post, Meldingen of stand-by (navigation.ts).
+// Eén stap omhoog: je post, Meldingen of EHBO (navigation.ts).
 const back = () => router.back();
 </script>
 
 <template>
   <main class="screen tight">
-    <p v-if="!incident || !post" class="note warn top-gap">Deze melding staat (nog) niet op deze telefoon. <button class="add-link" @click="live.refresh()">Opnieuw laden</button></p>
+    <NotOnPhone v-if="!incident || !post" class="top-gap">Deze melding staat (nog) niet op deze telefoon.</NotOnPhone>
 
     <!-- 4.2 · Verstuurd: we zoeken een EHBO'er -->
     <template v-else-if="incident.status === 'verstuurd'">

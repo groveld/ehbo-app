@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Mijn inzetten: de afgeronde en ingetrokken oproepen van je EHBO-eenheid, vanaf stand-by. Tik op een inzet voor de melding.
+// Mijn inzetten: de afgeronde en ingetrokken oproepen van je EHBO-eenheid, vanaf het EHBO-scherm. Tik op een inzet voor de melding.
 import { computed } from 'vue';
 import Icon from '../components/Icon.vue';
 import { clock, incidentSummary, myDeployments, unitOf } from '../incidents.ts';
@@ -17,7 +17,7 @@ const deployments = computed(() => (unitId.value !== null ? myDeployments(live.i
 <template>
   <main class="screen tight">
     <header class="header">
-      <RouterLink :to="{ name: 'stand-by' }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
+      <RouterLink :to="{ name: 'ehbo' }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
       <div class="stack">
         <h1 class="heading">Mijn inzetten</h1>
         <span v-if="unit" class="small">{{ unit.name }}</span>
@@ -27,7 +27,7 @@ const deployments = computed(() => (unitId.value !== null ? myDeployments(live.i
     <div v-if="deployments.length" class="list">
       <RouterLink v-for="i in deployments" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="list-row deployment">
         <span class="main">
-          <span class="title-line">{{ store.postById.get(i.postId)?.name }}</span>
+          <span class="title-line">{{ i.post.name }}</span>
           <span class="sub">{{ clock(i.reportedAt) }} · {{ incidentSummary(i) }}</span>
         </span>
         <span class="tag" :class="{ ok: i.status === 'afgerond' }">{{ i.status === 'afgerond' ? 'afgerond' : 'ingetrokken' }}</span>
