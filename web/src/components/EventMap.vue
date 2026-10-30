@@ -51,6 +51,13 @@ const GREY = '#9A9CA3';
 const CROSS = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></svg>';
 const AMBULANCE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 10H6"/><path d="M8 8v4"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.3a1 1 0 0 0-.7-.9l-1.9-.7a1 1 0 0 1-.6-.5l-1.5-3a1 1 0 0 0-.9-.6H14"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
 
+/** Volgorde van de markeringen per soort, van onder naar boven. Eigen soorten liggen onderop, bij Anders. */
+const MARKER_ORDER = ['anders', 'verkeer', 'water', 'stempel', 'ehbo', 'start_finish'];
+/** Boven alle posten: de ambulance en je eigen positie. */
+const UNIT_LAYER = MARKER_ORDER.length + 1;
+/** Altijd bovenop: open oproep, geselecteerde post en het gekozen punt in beheer. */
+const TOP_LAYER = UNIT_LAYER + 1;
+
 /**
  * Rustige kaart: grijs met zachte pastels (water lichtblauw, groen salie), op de warme achtergrond van de app.
  * Geen iconen van winkels en horeca; het parcours en de gekleurde posten moeten opvallen.
@@ -96,13 +103,22 @@ function runFeatures() {
   };
 }
 
+/** Laag van een post: open oproep en geselecteerde post bovenop, een standplaats bij de EHBO-posten, anders de laag van de soort. */
+function postLayer(post: PackagePost, typeKey: string | null | undefined, onTop: boolean) {
+  if (onTop) return TOP_LAYER;
+  const key = props.pkg.units.some((u) => u.postId === post.id) ? 'ehbo' : typeKey;
+  return Math.max(MARKER_ORDER.indexOf(key ?? ''), 0) + 1;
+}
+
 function markerElement(post: PackagePost) {
   const type = props.pkg.postTypes.find((t) => t.id === post.typeId);
   const el = document.createElement('button');
   el.type = 'button';
   const alert = props.alertPostIds.includes(post.id);
   const away = props.awayPostIds.includes(post.id);
-  el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${post.id === props.focusPostId ? ' focus' : ''}${alert ? ' alert' : ''}`;
+  const focus = post.id === props.focusPostId;
+  el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${focus ? ' focus' : ''}${alert ? ' alert' : ''}`;
+  el.style.zIndex = String(postLayer(post, type?.key, alert || focus));
   // Altijd de kleur van de soort post; een dichte post is half doorzichtig, een post met een open oproep rood.
   // Een EHBO-post waar de mobiele eenheid niet is: grijs.
   el.style.background = alert ? '#C8261E' : type?.key === 'ehbo' && away ? GREY : (type?.color ?? '#6B7079');
@@ -140,6 +156,7 @@ function drawAmbulances() {
   ambulanceMarkers = props.ambulances.map((a) => {
     const el = document.createElement('div');
     el.className = `unit-marker${a.available ? '' : ' unavailable'}`;
+    el.style.zIndex = String(UNIT_LAYER);
     el.setAttribute('role', 'img');
     el.setAttribute('aria-label', `EHBO ${a.name}, ${a.busy ? 'bezig met een oproep' : a.available ? 'beschikbaar' : 'niet beschikbaar'}`);
     el.innerHTML = AMBULANCE;
@@ -151,6 +168,7 @@ function drawPicked() {
   if (!map) return;
   pickedMarker?.remove();
   pickedMarker = props.picked ? new maplibregl.Marker({ color: '#C8261E' }).setLngLat(props.picked).addTo(map) : null;
+  if (pickedMarker) pickedMarker.getElement().style.zIndex = String(TOP_LAYER);
 }
 
 /** Het hele gebied in beeld, of ingezoomd op één post. */
@@ -180,6 +198,7 @@ async function startUserLocation() {
   }
   const el = document.createElement('div');
   el.className = 'user-dot';
+  el.style.zIndex = String(UNIT_LAYER);
   watchId = navigator.geolocation.watchPosition(({ coords }) => {
     if (!map) return;
     userMarker ??= new maplibregl.Marker({ element: el }).setLngLat([coords.longitude, coords.latitude]).addTo(map);
@@ -266,7 +285,7 @@ onBeforeUnmount(() => {
   display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
 }
 .event-map :deep(.unit-marker.unavailable) { border-color: #C8261E; color: #C8261E; }
-.event-map :deep(.post-marker.alert) { width: 32px; height: 32px; box-shadow: 0 0 0 10px rgba(200, 38, 30, .2); z-index: 1; }
+.event-map :deep(.post-marker.alert) { width: 32px; height: 32px; box-shadow: 0 0 0 10px rgba(200, 38, 30, .2); }
 .event-map :deep(.post-marker.focus) { width: 36px; height: 36px; box-shadow: 0 0 0 8px rgba(31, 111, 178, .25); }
 .event-map :deep(.user-dot) {
   width: 16px; height: 16px; border-radius: 50%; background: #1F6FB2; border: 3px solid #FFFFFF; box-shadow: 0 0 0 6px rgba(31, 111, 178, .25);
