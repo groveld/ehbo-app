@@ -33,6 +33,7 @@ export const router = createRouter({
     { path: '/onbekend', name: 'onbekend', component: () => import('./views/OnbekendView.vue') },
     { path: '/herkend', name: 'herkend', component: () => import('./views/HerkendView.vue'), meta: { staff: true } },
     { path: '/info', name: 'info', component: () => import('./views/InfoView.vue') },
+    { path: '/route/:id', name: 'route', component: () => import('./views/RouteView.vue'), props: true },
     { path: '/toestemmingen', name: 'toestemmingen', component: () => import('./views/ToestemmingenView.vue'), meta: { staff: true } },
     // /start stuurt altijd door naar het startscherm van je rol (zie beforeEach).
     { path: '/start', name: 'start', component: () => import('./views/MenuView.vue'), meta: { staff: true } },

@@ -271,3 +271,20 @@ test('km points follow from the GPX and the position, and stay up to date', asyn
   moved = (res.json() as AdminState).posts.find((p) => p.id === id)!;
   assert.deepEqual(moved.passages, water.passages);
 });
+
+test('GPX for download: public, and only the route', async () => {
+  const state = (await call('POST', '/api/admin/runs', { name: 'Tocht & Trail', distanceKm: 1, discipline: 'hardlopen', date: '2026-12-31', startTime: '10:00' })).json() as AdminState;
+  const run = state.runs.at(-1)!;
+  assert.equal((await app.inject({ url: `/gpx/${run.id}.gpx` })).statusCode, 404, 'no route yet');
+
+  const gpx = '<gpx><metadata><author>Geheime Naam</author></metadata><trk><trkseg><trkpt lat="53.0" lon="5.8"><time>2026-01-01T10:00:00Z</time></trkpt><trkpt lat="53.009" lon="5.8"/></trkseg></trk></gpx>';
+  await call('PUT', `/api/admin/runs/${run.id}/gpx?filename=a.gpx`, gpx, adminCookie, { 'content-type': 'application/gpx+xml' });
+
+  const res = await app.inject({ url: `/gpx/${run.id}.gpx` });
+  assert.equal(res.statusCode, 200, 'without logging in');
+  assert.match(res.headers['content-disposition'] as string, /filename="tocht-trail\.gpx"/);
+  assert.match(res.body, /<name>Tocht &#38; Trail<\/name>/);
+  assert.match(res.body, /<trkpt lat="53.009" lon="5.8"\/>/);
+  assert.doesNotMatch(res.body, /Geheime Naam|<time>/);
+  assert.equal((await app.inject({ url: '/gpx/abc.gpx' })).statusCode, 404);
+});

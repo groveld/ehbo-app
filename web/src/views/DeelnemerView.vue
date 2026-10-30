@@ -2,20 +2,20 @@
 // 2.8 · Deelnemer, en het beginscherm van de app zonder aanmelding: naam van het evenement, route, starttijden met favoriete loop
 // vooraan, de posten langs de route, Bel EHBO en rechtsboven Aanmelden voor medewerkers.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { formatKm, telHref, type EhboStatus } from '@ehbo/shared';
+import { formatKm, type EhboStatus } from '@ehbo/shared';
 import { api } from '../api.ts';
+import CallEhbo from '../components/CallEhbo.vue';
 import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
+import { useFavorites } from '../composables/useFavorites.ts';
 import { canUseAsStaff } from '../platform.ts';
-import { isOnRun } from '../posts.ts';
-import { load, save } from '../storage.ts';
+import { routeStops } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
 const store = usePackageStore();
-// Older versions stored one run instead of a list.
-const favorites = ref([load<number | number[]>('ehbo.favoriteRun') ?? []].flat());
+const { favorites, toggleFavorite } = useFavorites();
 /** The run shown on the map. Separate from the favorites: looking at a run changes nothing. */
 const viewing = ref<number | null>(favorites.value[0] ?? null);
 const live = useLiveStore();
@@ -47,11 +47,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', refreshEhbo);
 });
 
-function toggleFavorite(id: number) {
-  favorites.value = favorites.value.includes(id) ? favorites.value.filter((f) => f !== id) : [...favorites.value, id];
-  save('ehbo.favoriteRun', favorites.value);
-}
 const toggleView = (id: number) => (viewing.value = viewing.value === id ? null : id);
+const viewedRun = computed(() => store.pkg?.runs.find((r) => r.id === viewing.value) ?? null);
 
 const runs = computed(() => {
   const all = store.pkg?.runs ?? [];
@@ -66,13 +63,8 @@ const alongRoute = computed(() => {
   const pkg = store.pkg;
   if (!pkg) return [];
   const run = pkg.runs.find((r) => r.id === viewing.value && r.line);
-  const rows = run
-    ? pkg.posts.filter((post) => isOnRun(pkg, post, run.id)).flatMap((post) => {
-      const km = post.passages.find((r) => r.runId === run.id)?.km ?? [null];
-      return km.map((k) => ({ post, km: k }));
-    })
-    : pkg.posts.map((post) => ({ post, km: post.km }));
-  return rows.sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity));
+  if (run) return routeStops(pkg, run.id);
+  return pkg.posts.map((post) => ({ post, km: post.km })).sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity));
 });
 </script>
 
@@ -102,6 +94,7 @@ const alongRoute = computed(() => {
             </button>
           </div>
         </div>
+        <RouterLink v-if="viewedRun" :to="{ name: 'route', params: { id: viewedRun.id } }" class="btn route-link">Alles over {{ viewedRun.name }}</RouterLink>
       </section>
 
       <section v-if="alongRoute.length" class="stack gap-8 section">
@@ -117,10 +110,7 @@ const alongRoute = computed(() => {
     </template>
     <p v-else class="note">Geen bereik. Open deze pagina één keer met internet; daarna werkt hij ook zonder.</p>
 
-    <!-- Bel EHBO als ronde knop rechtsonder: de EHBO-coördinator (of de evenementcoördinator) stuurt hulp. Zonder nummer belt hij 112. -->
-    <a :href="store.pkg?.ehboPhone ? telHref(store.pkg.ehboPhone) : 'tel:112'" class="call-ehbo" :aria-label="store.pkg?.ehboPhone ? 'Bel EHBO' : 'Noodgeval: bel 112'">
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" /></svg>
-    </a>
+    <CallEhbo />
   </main>
 </template>
 
@@ -150,9 +140,5 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .list-row { gap: 12px; min-height: 48px; }
 /* Ruimte onderaan, zodat de ronde knop de laatste post niet bedekt. */
 .screen { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
-.call-ehbo {
-  position: fixed; z-index: 10; right: max(16px, calc((100% - 720px) / 2 + 16px)); bottom: max(20px, env(safe-area-inset-bottom));
-  width: 64px; height: 64px; border-radius: 50%; background: var(--danger); box-shadow: 0 4px 12px rgba(0, 0, 0, .3);
-  display: flex; align-items: center; justify-content: center; -webkit-touch-callout: none;
-}
+.route-link { margin-top: 8px; }
 </style>
