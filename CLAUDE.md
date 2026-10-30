@@ -12,7 +12,7 @@ A PWA for coordinating events: logistics (posts, requests, contacts) and first a
 - Other requests (water, traffic, volunteer) go to the coordinator's queue.
 - After the event an admin exports a report (PDF and CSV).
 
-UI language is **Dutch**. Code, identifiers and commit messages are English.
+Everything users see is **Dutch**. Everything in the source is **English**: code, identifiers, data values, comments, tests, file names, routes and commit messages, so people from other countries can work on it. Existing Dutch in the source is being converted in #84; write new source text in English.
 
 ## Where things are
 
