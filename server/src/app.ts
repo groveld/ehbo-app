@@ -88,7 +88,7 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   app.register(adminRoutes, { db, calls });
   app.register(brandRoutes, { db });
   app.register(packageRoutes, { db, calls });
-  app.register(mapRoutes, { db, mapSource });
+  app.register(mapRoutes, { db, mapSource, changed: calls.changed });
 
   const hasWeb = webDir !== undefined && fs.existsSync(path.join(webDir, 'index.html'));
   if (hasWeb) {

@@ -9,10 +9,15 @@ import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { canUseAsStaff } from '../platform.ts';
 import { load, save } from '../storage.ts';
+import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
 const store = usePackageStore();
-const favorite = ref<number | null>(load('ehbo.favoriteRun'));
+// Older versions stored one run instead of a list.
+const favorites = ref([load<number | number[]>('ehbo.favoriteRun') ?? []].flat());
+/** The run shown on the map. Separate from the favorites: looking at a run changes nothing. */
+const viewing = ref<number | null>(favorites.value[0] ?? null);
+const live = useLiveStore();
 /** Standplaatsen waar de mobiele EHBO nu niet is: grijs kruisje. Zonder bereik blijft de laatste stand staan. */
 const awayPostIds = ref<number[]>([]);
 // Medewerkers zetten de app eerst op het beginscherm; in de browser kan aanmelden alleen met ?browser=1.
@@ -21,7 +26,10 @@ const staffRoute = canUseAsStaff ? { name: 'aanmelden' } : { name: 'installeren'
 async function refreshEhbo() {
   if (document.visibilityState !== 'visible') return;
   try {
-    awayPostIds.value = (await api<EhboStatus>('/api/ehbo-status')).awayPostIds;
+    const status = await api<EhboStatus>('/api/ehbo-status');
+    awayPostIds.value = status.awayPostIds;
+    // Participants have no live connection, so changes in admin reach them this way.
+    live.checkData(status.dataVersion);
   } catch {
     // Geen bereik.
   }
@@ -39,13 +47,14 @@ onBeforeUnmount(() => {
 });
 
 function toggleFavorite(id: number) {
-  favorite.value = favorite.value === id ? null : id;
-  save('ehbo.favoriteRun', favorite.value);
+  favorites.value = favorites.value.includes(id) ? favorites.value.filter((f) => f !== id) : [...favorites.value, id];
+  save('ehbo.favoriteRun', favorites.value);
 }
+const toggleView = (id: number) => (viewing.value = viewing.value === id ? null : id);
 
 const runs = computed(() => {
   const all = store.pkg?.runs ?? [];
-  return [...all.filter((r) => r.id === favorite.value), ...all.filter((r) => r.id !== favorite.value)];
+  return [...all.filter((r) => favorites.value.includes(r.id)), ...all.filter((r) => !favorites.value.includes(r.id))];
 });
 const day = computed(() => {
   const date = store.pkg?.runs.find((r) => r.date)?.date ?? store.pkg?.event.startDate;
@@ -64,20 +73,21 @@ const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (
 
     <template v-if="store.pkg">
       <div class="map">
-        <EventMap :pkg="store.pkg" :highlight-run-id="favorite" :away-post-ids="awayPostIds" />
+        <EventMap :pkg="store.pkg" :highlight-run-id="viewing" :away-post-ids="awayPostIds" />
       </div>
 
       <section v-if="runs.length" class="stack gap-8 section">
         <span class="section-label">Starttijden<template v-if="day"> · {{ day }}</template> · ster = favoriet vooraan</span>
         <div class="runs">
-          <button
-            v-for="r in runs" :key="r.id" class="run" :class="{ favorite: favorite === r.id }"
-            :aria-label="favorite === r.id ? `Favoriet: ${r.name}` : `Markeer als favoriet: ${r.name}`" :aria-pressed="favorite === r.id"
-            @click="toggleFavorite(r.id)"
-          >
-            <span class="run-name"><Icon name="star" :size="14" class="star" />{{ r.name }}</span>
-            <span class="mono time">{{ r.startTime ?? '–' }}</span>
-          </button>
+          <div v-for="r in runs" :key="r.id" class="run" :class="{ viewing: viewing === r.id, favorite: favorites.includes(r.id) }">
+            <button class="run-view" :aria-label="`Toon ${r.name} op de kaart`" :aria-pressed="viewing === r.id" @click="toggleView(r.id)">
+              <span class="run-name">{{ r.name }}</span>
+              <span class="mono time">{{ r.startTime ?? '–' }}</span>
+            </button>
+            <button class="run-star" :aria-label="`Favoriet: ${r.name}`" :aria-pressed="favorites.includes(r.id)" @click="toggleFavorite(r.id)">
+              <Icon name="star" :size="18" class="star" />
+            </button>
+          </div>
         </div>
       </section>
 
@@ -110,13 +120,15 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 }
 .map { height: clamp(200px, 35dvh, 420px); }
 .section { margin-top: 16px; }
-.runs { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
-.run {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px; border-radius: 14px;
-  border: 1px solid var(--line); background: var(--card); font: inherit; color: var(--ink); cursor: pointer;
+.runs { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.run { display: flex; align-items: flex-start; border-radius: 14px; border: 1px solid var(--line); background: var(--card); }
+.run.viewing { box-shadow: inset 0 0 0 1px var(--ink); border-color: var(--ink); }
+.run-view {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0 10px 10px;
+  border: none; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
 }
-.run.favorite { border: 2px solid var(--ink); }
-.run-name { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; }
+.run-star { flex-shrink: 0; width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; border: none; background: none; cursor: pointer; }
+.run-name { font-size: 14px; font-weight: 700; }
 .star { color: #9A9CA3; }
 .favorite .star { color: #D9A400; fill: #F2C230; }
 .time { font-size: 16px; }

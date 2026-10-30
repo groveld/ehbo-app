@@ -11,7 +11,6 @@ const PACKAGE_FORMAT = 2;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
-  const eventVersion = (db.raw.prepare('SELECT version FROM event WHERE id = 1').get() as { version: number }).version;
   const lines = new Map((db.raw.prepare('SELECT id, track_json FROM runs WHERE track_json IS NOT NULL').all() as { id: number; track_json: string }[])
     .map((r) => [r.id, JSON.parse(r.track_json) as LngLat[]]));
 
@@ -25,7 +24,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   };
 
   return {
-    version: `${eventVersion}.${map?.version ?? 0}.${staff ? 's' : 'p'}${PACKAGE_FORMAT}`,
+    version: `${db.dataVersion()}.${staff ? 's' : 'p'}${PACKAGE_FORMAT}`,
     staff,
     event: { name: state.event.name, startDate: state.event.startDate, endDate: state.event.endDate, startLocation: state.event.startLocation },
     postTypes: state.postTypes,

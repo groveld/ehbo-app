@@ -225,6 +225,8 @@ export function adminDb(events: EventDb) {
     deletePost: (id: number) => run('DELETE FROM posts WHERE id = ?', id).changes > 0,
     postTypeExists: (id: number) => exists('post_types', id),
     postExists: (id: number) => exists('posts', id),
+    /** The report needs them: a post with incidents or requests can't be deleted. */
+    postHasHistory: (id: number) => db.prepare('SELECT 1 FROM incidents WHERE post_id = ? UNION SELECT 1 FROM requests WHERE post_id = ?').get(id, id) !== undefined,
     saveUnit,
     deleteUnit: (id: number) => run('DELETE FROM ehbo_units WHERE id = ?', id).changes > 0,
     saveCoreTeam,

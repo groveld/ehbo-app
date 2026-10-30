@@ -32,7 +32,7 @@ const label = computed(() => {
 });
 
 const block = computed(() => {
-  if (active.value) return { tone: 'red' as const, title: 'Bezig met een oproep', sub: store.postById.get(active.value.postId)?.name ?? '' };
+  if (active.value) return { tone: 'red' as const, title: 'Bezig met een oproep', sub: active.value.post.name };
   if (availability.value === 'vrij') return { tone: 'green' as const, title: 'Beschikbaar', sub: 'Je krijgt oproepen uit de buurt.' };
   if (availability.value === 'pauze') return { tone: 'red' as const, title: 'Niet beschikbaar', sub: 'Je krijgt geen oproepen.' };
   return { tone: 'dark' as const, title: 'Uit dienst', sub: 'Je krijgt geen oproepen.' };
@@ -77,7 +77,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
         Naar de oproep · {{ incidentSummary(active) }}
       </RouterLink>
       <RouterLink v-for="i in live.invitations" :key="i.id" :to="{ name: 'oproep', params: { id: i.id } }" class="btn danger gap-top">
-        Oproep · {{ store.postById.get(i.postId)?.name }}
+        Oproep · {{ i.post.name }}
       </RouterLink>
 
       <div class="stack gap-8 gap-top">
