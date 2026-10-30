@@ -26,11 +26,18 @@ export interface ReportIncident {
   note: string | null;
 }
 
+/** All passes of one post, per run. For the permit. */
+export interface ReportPostPassages {
+  postName: string;
+  runs: { runName: string; km: number[] }[];
+}
+
 export interface Report {
   event: { name: string; startDate: string | null; endDate: string | null };
   generatedAt: string;
   counts: { posts: number; staff: number; units: number };
   incidents: ReportIncident[];
+  passages: ReportPostPassages[];
   totals: {
     incidents: number;
     withdrawn: number;

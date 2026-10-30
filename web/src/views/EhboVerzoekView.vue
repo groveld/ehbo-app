@@ -62,7 +62,7 @@ async function send() {
     <header class="page-header">
       <button class="icon-btn" aria-label="Terug" @click="router.back()"><Icon name="back" /></button>
       <div>
-        <span class="eyebrow">{{ [post?.name, post ? kmLabel(post.km) : null].filter(Boolean).join(' · ') }}</span>
+        <span class="eyebrow">{{ [post?.name, post ? kmLabel(post) : null].filter(Boolean).join(' · ') }}</span>
         <h1>{{ existing ? 'Melding aanvullen' : 'EHBO aanvragen' }}</h1>
       </div>
     </header>

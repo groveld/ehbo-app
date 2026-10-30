@@ -14,7 +14,7 @@ const contact = computed(() => primaryContact(props.post));
 /** km-punt, dan de EHBO-eenheid die hier staat (met kruisje), anders de contactpersoon. */
 const units = computed(() => unitsAt(props.pkg, props.post.id).map((u) => u.name).join(', '));
 const who = computed(() => units.value || contact.value?.name || '');
-const km = computed(() => kmLabel(props.post.km));
+const km = computed(() => kmLabel(props.post));
 </script>
 
 <template>

@@ -26,7 +26,7 @@ const doneRequests = computed(() => live.requests.filter((r) => r.status === 'af
 const KIND_STYLE = { water: ['#E4EEF7', '#124A78'], verkeer: ['#FBE6D2', '#7A3F06'], vrijwilliger: ['#EDE4F7', '#4E2A82'] } as const;
 const line = (r: LiveRequest) => {
   const post = store.postById.get(r.postId);
-  return [r.postName, post ? kmLabel(post.km) : null, requestDetailLabel(r.kind, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
+  return [r.postName, post ? kmLabel(post) : null, requestDetailLabel(r.kind, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
 };
 const postPhone = (r: LiveRequest) => {
   const post = store.postById.get(r.postId);

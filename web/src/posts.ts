@@ -1,7 +1,12 @@
 // Posten in het evenementpakket: contactpersoon, eenheden, dichtstbijzijnde EHBO.
 import { awayPostIds, distanceKm, formatKm, isAway, type EventPackage, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, sameFunction } from '@ehbo/shared';
 
-export const kmLabel = (km: number | null) => (km === null ? null : `km ${formatKm(km)}`);
+/** "km 2,1", and "+1" when the longest run comes by more often. */
+export function kmLabel(post: Pick<PackagePost, 'km' | 'passages'>) {
+  if (post.km === null) return null;
+  const more = (post.passages[0]?.km.length ?? 1) - 1;
+  return `km ${formatKm(post.km)}${more > 0 ? ` +${more}` : ''}`;
+}
 export const lngLat = (p: PackagePost): LngLat | null => (p.lat !== null && p.lng !== null ? [p.lng, p.lat] : null);
 
 /** Wie je belt voor een post: de verantwoordelijke, anders de eerste contactpersoon. */

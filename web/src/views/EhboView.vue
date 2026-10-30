@@ -46,7 +46,7 @@ const position = computed(() => {
   if (stay) return `${stay.name} (gebleven)`;
   const base = u.postId !== null ? store.postById.get(u.postId) : null;
   if (u.kind === 'mobiel') return availability.value === 'uit_dienst' ? (base ? `Standplaats ${base.name}` : '–') : `GPS${base ? `, anders ${base.name}` : ''}`;
-  return base ? [base.name, kmLabel(base.km)].filter(Boolean).join(' · ') : '–';
+  return base ? [base.name, kmLabel(base)].filter(Boolean).join(' · ') : '–';
 });
 const teammates = computed(() => unit.value?.members.filter((m) => m.phone !== session.me?.phone) ?? []);
 const othersFree = computed(() => {

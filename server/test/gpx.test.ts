@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { distanceKm, parseGpx } from '../src/gpx.ts';
+import { distanceKm, parseGpx, passages } from '../src/gpx.ts';
 
 const gpx = (points: string) => `<?xml version="1.0"?><gpx version="1.1"><trk><trkseg>${points}</trkseg></trk></gpx>`;
 
@@ -36,4 +36,43 @@ test('geen of ongeldige route wordt geweigerd', () => {
   assert.throws(() => parseGpx('<gpx></gpx>'), /Geen route/);
   assert.throws(() => parseGpx('geen xml'), /Geen route/);
   assert.throws(() => parseGpx(gpx('<trkpt lat="95" lon="5"/><trkpt lat="53" lon="5"/>')), /ongeldig punt/);
+});
+
+// North along one longitude: 0.009 degrees is about 1 km.
+const LNG = 5.8;
+const north = (km: number): [number, number] => [LNG, 53 + (km * 0.009) / 1.0008];
+
+test('a post along the route is passed once, at its km', () => {
+  assert.deepEqual(passages([north(0), north(4)], north(2.5)), [2.5]);
+});
+
+test('out and back: two passes, a post at the turning point only one', () => {
+  const line = [north(0), north(3), north(0)];
+  assert.deepEqual(passages(line, north(1)), [1, 5]);
+  assert.deepEqual(passages(line, north(3)), [3]);
+});
+
+test('a lap run twice passes every post twice', () => {
+  const square: [number, number][] = [[5.8, 53], [5.8, 53.009], [5.815, 53.009], [5.815, 53], [5.8, 53]];
+  const line = [...square, ...square.slice(1)];
+  const found = passages(line, [5.8, 53.0045]);
+  assert.equal(found.length, 2);
+  assert.ok(found[1]! > found[0]! + 1, 'one lap apart');
+});
+
+test('a post beside the route: within 30 m it counts, further away it does not', () => {
+  const line = [north(0), north(2)];
+  const beside = (metres: number): [number, number] => [LNG + metres / 67_000, north(1)[1]];
+  assert.equal(passages(line, beside(20)).length, 1);
+  assert.equal(passages(line, beside(50)).length, 0);
+});
+
+test('a line wobbling around a post is one pass', () => {
+  const wobble = (metres: number, km: number): [number, number] => [LNG + metres / 67_000, north(km)[1]];
+  const line = [north(0), wobble(0, 1), wobble(50, 1.02), wobble(0, 1.04), north(2)];
+  assert.equal(passages(line, north(1.02)).length, 1);
+});
+
+test('a thinned-out line still gives the km of the real route', () => {
+  assert.deepEqual(passages([north(0), north(2)], north(1), 2.2), [1.1]);
 });

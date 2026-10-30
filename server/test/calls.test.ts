@@ -386,7 +386,7 @@ test('a call and a request say which post they are about, for a phone without th
   const { id } = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   const state = await ok(DEMO.ehbo, 'GET', '/api/live/state');
   const incident = state.incidents.find((i) => i.id === id)!;
-  assert.deepEqual({ name: incident.post.name, km: incident.post.km }, { name: 'Waterpost 3 · brug', km: 10.5 });
+  assert.deepEqual({ name: incident.post.name, km: incident.post.km }, { name: 'Waterpost 3 · brug', km: 2 });
   assert.equal(typeof incident.post.lat, 'number');
   assert.equal(typeof incident.post.typeId, 'number');
 

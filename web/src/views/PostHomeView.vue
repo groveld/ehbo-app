@@ -35,7 +35,7 @@ const planned = computed(() => {
   const p = post.value;
   if (!p) return '';
   const times = p.timeFrom && p.timeTo ? `gepland open ${p.timeFrom} – ${p.timeTo}` : null;
-  return [kmLabel(p.km), times].filter(Boolean).join(' · ');
+  return [kmLabel(p), times].filter(Boolean).join(' · ');
 });
 
 // Water, verkeer en vrijwilliger: een aanvraag in de wachtrij van de coördinator (5.1). Kleuren uit het schermontwerp.
@@ -70,7 +70,7 @@ async function setOpen(value: boolean) {
         <div class="stack gap-4 grow">
           <span class="eyebrow">{{ eyebrow }}</span>
           <h1>{{ post.name }}</h1>
-          <span v-if="open" class="small">{{ kmLabel(post.km) }}<template v-if="post.km !== null"> · </template><strong class="open">post open</strong></span>
+          <span v-if="open" class="small">{{ kmLabel(post) }}<template v-if="post.km !== null"> · </template><strong class="open">post open</strong></span>
           <span v-else class="small">{{ planned }}</span>
         </div>
         <button v-if="open && canOpen" class="close-post" :disabled="busy" @click="setOpen(false)"><Icon name="close" :size="14" />Post sluiten</button>

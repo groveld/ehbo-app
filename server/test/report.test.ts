@@ -101,7 +101,8 @@ test('CSV voor Excel: puntkomma, BOM, Nederlandse tijd, aanhalingstekens in noti
   assert.match(String(res.headers['content-disposition']), /rapport-2026-12-31\.csv/);
   const lines = res.body.split('\r\n');
   assert.ok(lines[0]!.startsWith('﻿Nr;Post;Km;Melding'));
-  assert.match(lines[1]!, /^1;Waterpost 3 · brug;10,5;Onwel \/ flauw;1;nee;afgerond;2026-12-31 11:00:00;2026-12-31 11:00:40;/);
+  assert.ok(lines.includes('Kruising 4;10 km;1,5 en 2,5'), 'all passes per post and run');
+  assert.match(lines[1]!, /^1;Waterpost 3 · brug;2;Onwel \/ flauw;1;nee;afgerond;2026-12-31 11:00:00;2026-12-31 11:00:40;/);
   assert.match(lines[1]!, /;0:40;4:00;Team 2;nee;Ter plaatse geholpen;"Gekoeld; ""drinken"" gegeven"$/);
 });
 

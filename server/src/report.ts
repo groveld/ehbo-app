@@ -1,6 +1,6 @@
 // Rapport na afloop (functioneel ontwerp, "Incidentregistratie en rapport"): per incident de tijden en afloop, plus totalen.
 // Proefoproepen en -aanvragen uit de testmodus tellen niet mee.
-import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type Outcome, type Report, type ReportIncident, type RequestKind } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type Outcome, type Report, type ReportIncident, type ReportPostPassages, type RequestKind, formatKm } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
 
 type Row = Record<string, string | number | null>;
@@ -49,6 +49,17 @@ export function buildReport(db: EventDb, now = new Date()): Report {
     requestsByKind[r.kind as RequestKind] = r.n as number;
   }
 
+  const passages = new Map<string, ReportPostPassages>();
+  for (const r of all(`SELECT p.name AS post_name, r.name AS run_name, pp.km FROM post_passages pp
+                       JOIN posts p ON p.id = pp.post_id JOIN runs r ON r.id = pp.run_id
+                       ORDER BY p.km, p.sort, p.id, r.track_km DESC, r.id, pp.seq`)) {
+    const post = passages.get(r.post_name as string) ?? { postName: r.post_name as string, runs: [] };
+    const run = post.runs.find((x) => x.runName === r.run_name);
+    if (run) run.km.push(r.km as number);
+    else post.runs.push({ runName: r.run_name as string, km: [r.km as number] });
+    passages.set(post.postName, post);
+  }
+
   return {
     event: { name: event.name, startDate: event.start_date, endDate: event.end_date },
     generatedAt: now.toISOString(),
@@ -60,6 +71,7 @@ export function buildReport(db: EventDb, now = new Date()): Report {
       units: count('SELECT COUNT(*) AS n FROM ehbo_units'),
     },
     incidents,
+    passages: [...passages.values()],
     totals: {
       incidents: incidents.filter((i) => i.status !== 'ingetrokken').length,
       withdrawn: incidents.filter((i) => i.status === 'ingetrokken').length,
@@ -95,6 +107,9 @@ export function reportCsv(report: Report) {
   ]);
   const requests = Object.entries(report.totals.requestsByKind).map(([kind, n]) => [`Aanvragen ${REQUEST_KINDS[kind as RequestKind].label.toLowerCase()}`, n]);
   const lines = [header, ...rows, [], ['Totaal'], ['Incidenten', report.totals.incidents], ['Ingetrokken', report.totals.withdrawn],
-    ['Naar alle eenheden', report.totals.escalated], ...requests];
+    ['Naar alle eenheden', report.totals.escalated], ...requests,
+    [], ['Km-punten per post'], ['Post', 'Loop', 'Km-punten'],
+    ...report.passages.flatMap((p) => p.runs.map((r) => [p.postName, r.runName, r.km.map((km) => formatKm(km)).join(' en ')])),
+  ];
   return `﻿${lines.map((line) => line.map(cell).join(';')).join('\r\n')}\r\n`;
 }

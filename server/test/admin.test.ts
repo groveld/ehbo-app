@@ -63,7 +63,7 @@ test('alleen beheerders', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   assert.equal(state.event.name, 'Silvesterloop 2026');
   assert.equal(state.posts.length, 4);
-  assert.deepEqual(state.posts.map((p) => p.km), [0, 0, 9.7, 10.5], 'gesorteerd op km-punt');
+  assert.deepEqual(state.posts.map((p) => p.km), [0, 0, 1.5, 2], 'gesorteerd op km-punt');
   assert.equal(state.units[0]?.members[0]?.name, 'Eva EHBO');
   assert.equal(state.coreTeam[0]?.isCoordinator, true);
 });
@@ -146,7 +146,7 @@ test('post met contactpersonen; nieuw nummer kan daarna aanmelden', async () => 
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   const water = state.postTypes.find((t) => t.key === 'water')!;
   const post: PostData = {
-    typeId: water.id, name: 'Waterpost 5', km: 30.5, lat: 53.16, lng: 5.85, accuracyM: 4, address: null,
+    typeId: water.id, name: 'Waterpost 5', lat: 53.16, lng: 5.85, accuracyM: 4, address: null,
     accessRoute: 'Via de dijk', timeFrom: '11:00', timeTo: '14:00',
     contacts: [{ name: 'Nieuwe Vrijwilliger', phone: '06-1234 5678', role: 'verantwoordelijke', timeFrom: null, timeTo: null }],
   };
@@ -247,4 +247,27 @@ test('info & voorwaarden: eigen tekst met plaatshouders, terug naar de standaard
   const reset = (await call('PUT', '/api/admin/info', { sections: null, policy: null, contact: null })).json() as AdminState;
   assert.equal(reset.info.sections, null);
   assert.match((await app.inject({ url: '/api/event' })).json().info[0].title, /Waarvoor is deze app/);
+});
+
+test('km points follow from the GPX and the position, and stay up to date', async () => {
+  const state = (await call('GET', '/api/admin')).json() as AdminState;
+  const water = state.posts.find((p) => p.name === 'Waterpost 3 · brug')!;
+  const tenKm = state.runs.find((r) => r.name === '10 km')!;
+  assert.equal(water.passages.length, 1);
+  assert.equal(water.passages[0]!.runId, tenKm.id);
+  assert.equal(water.km, water.passages[0]!.km[0]);
+  const crossing = state.posts.find((p) => p.name === 'Kruising 4')!;
+  assert.equal(crossing.passages[0]!.km.length, 2, 'out and back passes it twice');
+
+  // Moved away from every route: no km points any more.
+  const { id, ...data } = water;
+  let res = await call('PUT', `/api/admin/posts/${id}`, { ...data, lat: 53.3, lng: 5.9 });
+  assert.equal(res.statusCode, 200, res.body);
+  let moved = (res.json() as AdminState).posts.find((p) => p.id === id)!;
+  assert.deepEqual([moved.km, moved.passages], [null, []]);
+
+  // And back: they return.
+  res = await call('PUT', `/api/admin/posts/${id}`, data);
+  moved = (res.json() as AdminState).posts.find((p) => p.id === id)!;
+  assert.deepEqual(moved.passages, water.passages);
 });

@@ -7,7 +7,7 @@ import type { EventDb } from '../event-db.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
-const PACKAGE_FORMAT = 2;
+const PACKAGE_FORMAT = 3;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
@@ -29,7 +29,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
     event: { name: state.event.name, startDate: state.event.startDate, endDate: state.event.endDate, startLocation: state.event.startLocation },
     postTypes: state.postTypes,
     posts: state.posts.map((p) => ({
-      id: p.id, typeId: p.typeId, name: p.name, km: p.km, lat: p.lat, lng: p.lng, isOpen: p.isOpen, timeFrom: p.timeFrom, timeTo: p.timeTo,
+      id: p.id, typeId: p.typeId, name: p.name, km: p.km, passages: p.passages, lat: p.lat, lng: p.lng, isOpen: p.isOpen, timeFrom: p.timeFrom, timeTo: p.timeTo,
       // Namen, nummers en aanrijroutes alleen voor medewerkers.
       ...(staff ? { address: p.address, accessRoute: p.accessRoute, contacts: p.contacts.map(({ name, phone, role }) => ({ name, phone, role })) } : {}),
     })),

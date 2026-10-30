@@ -109,11 +109,10 @@ const personSchema = {
 
 const postSchema = {
   type: 'object',
-  required: ['typeId', 'name', 'km', 'lat', 'lng', 'accuracyM', 'address', 'accessRoute', 'timeFrom', 'timeTo', 'contacts'],
+  required: ['typeId', 'name', 'lat', 'lng', 'accuracyM', 'address', 'accessRoute', 'timeFrom', 'timeTo', 'contacts'],
   properties: {
     typeId: { type: 'integer' },
     name: { type: 'string', minLength: 1, maxLength: 80 },
-    km: { type: ['number', 'null'], minimum: 0, maximum: 1000 },
     lat: { type: ['number', 'null'], minimum: -90, maximum: 90 },
     lng: { type: ['number', 'null'], minimum: -180, maximum: 180 },
     accuracyM: { type: ['number', 'null'], minimum: 0 },
