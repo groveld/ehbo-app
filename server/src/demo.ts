@@ -1,5 +1,7 @@
 // Verzonnen gegevens om lokaal en in tests mee te werken. Alle nummers zijn nep (06-0000 xxxx bestaat niet).
+import type { LngLat } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
+import { distanceKm, recomputePassages } from './gpx.ts';
 
 export const DEMO = {
   admin: '+31600000001',
@@ -28,11 +30,11 @@ export function seedDemo(db: EventDb) {
     sql.prepare('UPDATE core_team SET phone = ? WHERE is_coordinator = 1').run(DEMO.coordinator);
 
     const typeId = (key: string) => (sql.prepare('SELECT id FROM post_types WHERE key = ?').get(key) as { id: number }).id;
-    const post = sql.prepare('INSERT INTO posts (type_id, name, km, lat, lng, time_from, time_to, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-    const start = Number(post.run(typeId('start_finish'), 'Start/finish De Trilker', 0, 53.1406, 5.8107, '10:00', '15:00', 0).lastInsertRowid);
-    const ehboPost = Number(post.run(typeId('ehbo'), 'EHBO-post 1 · start', 0, 53.1409, 5.8111, '10:00', '15:00', 1).lastInsertRowid);
-    const water = Number(post.run(typeId('water'), 'Waterpost 3 · brug', 10.5, 53.1512, 5.8344, '10:15', '13:30', 2).lastInsertRowid);
-    const traffic = Number(post.run(typeId('verkeer'), 'Kruising 4', 9.7, 53.1488, 5.8279, '11:30', '13:00', 3).lastInsertRowid);
+    const post = sql.prepare('INSERT INTO posts (type_id, name, lat, lng, time_from, time_to, sort) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const start = Number(post.run(typeId('start_finish'), 'Start/finish De Trilker', 53.1406, 5.8107, '10:00', '15:00', 0).lastInsertRowid);
+    const ehboPost = Number(post.run(typeId('ehbo'), 'EHBO-post 1 · start', 53.1409, 5.8111, '10:00', '15:00', 1).lastInsertRowid);
+    const water = Number(post.run(typeId('water'), 'Waterpost 3 · brug', 53.1512, 5.8344, '10:15', '13:30', 2).lastInsertRowid);
+    const traffic = Number(post.run(typeId('verkeer'), 'Kruising 4', 53.1488, 5.8279, '11:30', '13:00', 3).lastInsertRowid);
 
     const contact = sql.prepare('INSERT INTO post_contacts (post_id, phone, role, time_from, time_to) VALUES (?, ?, ?, ?, ?)');
     contact.run(water, DEMO.postLead, 'verantwoordelijke', null, null);
@@ -51,5 +53,11 @@ export function seedDemo(db: EventDb) {
     run.run('5 km', 5, 'hardlopen + wandelen', '2026-12-31', '12:00', 1);
     run.run('10 km', 10, 'hardlopen + wandelen', '2026-12-31', '12:00', 2);
     run.run('21 km', 21.1, 'hardlopen + wandelen', '2026-12-31', '12:00', 3);
+
+    // Out and back past the posts, so Kruising 4 is passed twice.
+    const line: LngLat[] = [[5.8107, 53.1406], [5.8111, 53.1409], [5.8279, 53.1488], [5.8344, 53.1512], [5.8279, 53.1488], [5.8111, 53.1409], [5.8107, 53.1406]];
+    const trackKm = line.slice(1).reduce((sum, p, i) => sum + distanceKm(line[i]!, p), 0);
+    sql.prepare("UPDATE runs SET track_json = ?, track_points = ?, track_km = ? WHERE name = '10 km'").run(JSON.stringify(line), line.length, trackKm);
+    recomputePassages(sql);
   });
 }

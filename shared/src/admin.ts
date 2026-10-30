@@ -51,10 +51,15 @@ export interface ContactData {
   timeTo: string | null;
 }
 
+/** The passes of one run along a post, in km from the start, calculated from the GPX. */
+export interface PostPassages {
+  runId: number;
+  km: number[];
+}
+
 export interface PostData {
   typeId: number;
   name: string;
-  km: number | null;
   lat: number | null;
   lng: number | null;
   /** Nauwkeurigheid van de GPS-positie in meters. */
@@ -69,6 +74,10 @@ export interface PostData {
 export interface AdminPost extends PostData {
   id: number;
   isOpen: boolean;
+  /** First pass on the longest run that comes by; null without a GPX or position. */
+  km: number | null;
+  /** Per run, longest run first. */
+  passages: PostPassages[];
 }
 
 export interface MemberData {

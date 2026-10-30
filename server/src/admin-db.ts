@@ -12,13 +12,14 @@ import type {
   InfoSection,
   InfoSettings,
   PostData,
+  PostPassages,
   PostTypeInfo,
   RunData,
   UnitData,
 } from '@ehbo/shared';
 import { getBrand, getStyle, saveStyle } from './brand.ts';
 import type { EventDb } from './event-db.ts';
-import type { Track } from './gpx.ts';
+import { recomputePassages, type Track } from './gpx.ts';
 
 type Row = Record<string, string | number | null>;
 
@@ -69,11 +70,21 @@ export function adminDb(events: EventDb) {
       list.push({ name: c.name as string, phone: c.phone as string, role: c.role as PostData['contacts'][number]['role'], timeFrom: c.time_from as string | null, timeTo: c.time_to as string | null });
       contactsByPost.set(c.post_id as number, list);
     }
+    const passagesByPost = new Map<number, PostPassages[]>();
+    for (const r of all(`SELECT pp.post_id, pp.run_id, pp.km FROM post_passages pp JOIN runs r ON r.id = pp.run_id
+                         ORDER BY r.track_km DESC, r.id, pp.seq`)) {
+      const list = passagesByPost.get(r.post_id as number) ?? [];
+      const entry = list.find((e) => e.runId === r.run_id);
+      if (entry) entry.km.push(r.km as number);
+      else list.push({ runId: r.run_id as number, km: [r.km as number] });
+      passagesByPost.set(r.post_id as number, list);
+    }
     const posts: AdminPost[] = all('SELECT * FROM posts ORDER BY km IS NULL, km, sort, id').map((p) => ({
       id: p.id as number,
       typeId: p.type_id as number,
       name: p.name as string,
       km: p.km as number | null,
+      passages: passagesByPost.get(p.id as number) ?? [],
       lat: p.lat as number | null,
       lng: p.lng as number | null,
       accuracyM: p.accuracy_m as number | null,
@@ -145,20 +156,22 @@ export function adminDb(events: EventDb) {
   }
 
   function setRunGpx(id: number, filename: string, gpx: string, track: Track) {
-    return run('UPDATE runs SET gpx = ?, gpx_filename = ?, track_json = ?, track_points = ?, track_km = ? WHERE id = ?',
+    const saved = run('UPDATE runs SET gpx = ?, gpx_filename = ?, track_json = ?, track_points = ?, track_km = ? WHERE id = ?',
       gpx, filename, JSON.stringify(track.line), track.points, track.km, id).changes > 0;
+    recomputePassages(db);
+    return saved;
   }
 
   function savePost(id: number | null, p: PostData): number | null {
     if (id !== null && !exists('posts', id)) return null;
     return events.transaction(() => {
-      const values = [p.typeId, p.name.trim(), p.km, p.lat, p.lng, p.accuracyM, p.address?.trim() || null, p.accessRoute?.trim() || null, p.timeFrom, p.timeTo] as const;
+      const values = [p.typeId, p.name.trim(), p.lat, p.lng, p.accuracyM, p.address?.trim() || null, p.accessRoute?.trim() || null, p.timeFrom, p.timeTo] as const;
       let postId = id;
       if (postId === null) {
-        postId = Number(run(`INSERT INTO posts (type_id, name, km, lat, lng, accuracy_m, address, access_route, time_from, time_to)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, ...values).lastInsertRowid);
+        postId = Number(run(`INSERT INTO posts (type_id, name, lat, lng, accuracy_m, address, access_route, time_from, time_to)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, ...values).lastInsertRowid);
       } else {
-        run(`UPDATE posts SET type_id = ?, name = ?, km = ?, lat = ?, lng = ?, accuracy_m = ?, address = ?, access_route = ?, time_from = ?, time_to = ?
+        run(`UPDATE posts SET type_id = ?, name = ?, lat = ?, lng = ?, accuracy_m = ?, address = ?, access_route = ?, time_from = ?, time_to = ?
              WHERE id = ?`, ...values, postId);
         run('DELETE FROM post_contacts WHERE post_id = ?', postId);
       }
@@ -166,6 +179,7 @@ export function adminDb(events: EventDb) {
         upsertPerson(c.phone, c.name);
         run('INSERT INTO post_contacts (post_id, phone, role, time_from, time_to) VALUES (?, ?, ?, ?, ?)', postId, c.phone, c.role, c.timeFrom, c.timeTo);
       }
+      recomputePassages(db);
       return postId;
     });
   }
@@ -220,7 +234,11 @@ export function adminDb(events: EventDb) {
     saveInfo,
     saveRun,
     setRunGpx,
-    deleteRun: (id: number) => run('DELETE FROM runs WHERE id = ?', id).changes > 0,
+    deleteRun: (id: number) => {
+      const deleted = run('DELETE FROM runs WHERE id = ?', id).changes > 0;
+      recomputePassages(db);
+      return deleted;
+    },
     savePost,
     deletePost: (id: number) => run('DELETE FROM posts WHERE id = ?', id).changes > 0,
     postTypeExists: (id: number) => exists('post_types', id),

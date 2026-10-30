@@ -3,6 +3,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
+import { recomputePassages } from './gpx.ts';
 import { DEFAULT_CORE_TEAM, DEFAULT_POST_TYPES, normalizeEmergencyNumber, type PostContactRole, type PushSubscriptionData, type UnitKind, type UnitMobility } from '@ehbo/shared';
 
 // Elke stap draait één keer; PRAGMA user_version onthoudt tot waar het bestand is bijgewerkt.
@@ -251,6 +252,19 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   `
   ALTER TABLE ehbo_units DROP COLUMN status;
   `,
+  // 12: km points come from the GPX: every pass of every run. posts.km is now calculated, and hand-entered values are replaced.
+  (db) => {
+    db.exec(`
+      CREATE TABLE post_passages (
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+        seq     INTEGER NOT NULL,
+        km      REAL NOT NULL,
+        PRIMARY KEY (post_id, run_id, seq)
+      );
+    `);
+    recomputePassages(db);
+  },
 ];
 
 export interface EventRow {

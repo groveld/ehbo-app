@@ -251,7 +251,7 @@ test('a new post in admin: open phones get it by themselves, and a call works be
   const { postTypes } = await (await admin.request.get('/api/package')).json() as { postTypes: { id: number; key: string }[] };
   const created = await admin.request.post('/api/admin/posts', {
     data: {
-      typeId: postTypes.find((t) => t.key === 'water')!.id, name: NEW_POST, km: 3, lat: 53.16, lng: 5.84, accuracyM: null, address: null, accessRoute: null,
+      typeId: postTypes.find((t) => t.key === 'water')!.id, name: NEW_POST, lat: 53.16, lng: 5.84, accuracyM: null, address: null, accessRoute: null,
       timeFrom: null, timeTo: null, contacts: [{ name: 'Nieuwe Leider', phone: '0600000011', role: 'verantwoordelijke', timeFrom: null, timeTo: null }],
     },
   });

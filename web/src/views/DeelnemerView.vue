@@ -60,7 +60,13 @@ const day = computed(() => {
   const date = store.pkg?.runs.find((r) => r.date)?.date ?? store.pkg?.event.startDate;
   return date ? new Date(`${date}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' }) : null;
 });
-const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity)));
+/** In the order of the run on the map: a post it passes twice is listed twice. Without a run or GPX, all posts. */
+const alongRoute = computed(() => {
+  const posts = store.pkg?.posts ?? [];
+  const passes = posts.flatMap((post) => (post.passages.find((r) => r.runId === viewing.value)?.km ?? []).map((km) => ({ post, km })));
+  const rows = passes.length ? passes : posts.map((post) => ({ post, km: post.km }));
+  return rows.sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity));
+});
 </script>
 
 <template>
@@ -94,10 +100,10 @@ const alongRoute = computed(() => [...(store.pkg?.posts ?? [])].sort((a, b) => (
       <section v-if="alongRoute.length" class="stack gap-8 section">
         <span class="section-label">Langs de route</span>
         <div class="list">
-          <div v-for="p in alongRoute" :key="p.id" class="list-row">
-            <span class="mono km">{{ p.km !== null ? `km ${formatKm(p.km)}` : '' }}</span>
-            <PostBadge :type="store.typeById.get(p.typeId)" :size="28" />
-            <span class="post-name">{{ p.name }}</span>
+          <div v-for="{ post, km } in alongRoute" :key="`${post.id}-${km}`" class="list-row">
+            <span class="mono km">{{ km !== null ? `km ${formatKm(km)}` : '' }}</span>
+            <PostBadge :type="store.typeById.get(post.typeId)" :size="28" />
+            <span class="post-name">{{ post.name }}</span>
           </div>
         </div>
       </section>

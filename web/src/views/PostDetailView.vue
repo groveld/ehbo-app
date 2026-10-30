@@ -39,8 +39,14 @@ const subtitle = computed(() => {
   const p = post.value;
   if (!p) return '';
   const open = p.timeFrom && p.timeTo ? `open ${p.timeFrom} – ${p.timeTo}` : p.timeFrom ? `open vanaf ${p.timeFrom}` : null;
-  return [kmLabel(p.km), open].filter(Boolean).join(' · ');
+  return [kmLabel(p), open].filter(Boolean).join(' · ');
 });
+
+/** "10 km: km 2,1 en km 7,4", per run. */
+const passages = computed(() => (post.value?.passages ?? []).map(({ runId, km }) => {
+  const run = store.pkg?.runs.find((r) => r.id === runId);
+  return `${run?.name ?? 'Loop'}: ${km.map((k) => `km ${formatKm(k)}`).join(' en ')}`;
+}));
 
 // Eén stap omhoog: de kaart (navigation.ts).
 const back = () => router.back();
@@ -92,6 +98,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
           </span>
         </div>
         <div v-else class="fact"><span class="label">Locatie</span><span>Nog geen locatie vastgelegd</span></div>
+        <div v-if="passages.length" class="fact stack"><span class="label">Km-punten</span><span v-for="p in passages" :key="p">{{ p }}</span></div>
         <div v-if="post.accessRoute" class="fact"><span class="label">Aanrijroute hulpverlening</span><span>{{ post.accessRoute }}</span></div>
       </div>
 

@@ -156,7 +156,7 @@ test('aanmelden met een bekend nummer: rollen, startscherm en cookie', async () 
   assert.equal(first?.title, 'Verkeersregelaar', 'vroegste dienst eerst; verkeerspost toont de eigen benaming');
   assert.equal(first?.times, '08:30 – 10:00');
   assert.equal(second?.title, 'Postverantwoordelijke');
-  assert.equal(second?.detail, 'Waterpost 3 · brug · km 10,5');
+  assert.equal(second?.detail, 'Waterpost 3 · brug · km 2');
   assert.equal(second?.letter, 'W');
 
   assert.equal((await login(DEMO.ehbo)).me.home, 'ehbo');

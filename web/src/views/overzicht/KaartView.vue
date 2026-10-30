@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 3.4 · Overzicht & kaart: alle posten op de kaart, filter per soort, zoeken op naam of km, en de lijst met bel- en navigeerknoppen.
 import { computed, ref } from 'vue';
+import type { PackagePost } from '@ehbo/shared';
 import { useRouter } from 'vue-router';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
@@ -28,9 +29,10 @@ const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.post
 /** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
 const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
 const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id) ?? []);
-const matches = (p: { name: string; km: number | null }) => {
+const matches = (p: PackagePost) => {
   const q = query.value.trim().toLowerCase().replace(',', '.');
-  return !q || p.name.toLowerCase().includes(q) || (p.km !== null && String(p.km).startsWith(q.replace(/^km\s*/, '')));
+  const km = q.replace(/^km\s*/, '');
+  return !q || p.name.toLowerCase().includes(q) || p.passages.some((r) => r.km.some((k) => String(k).startsWith(km)));
 };
 const posts = computed(() => (store.pkg?.posts.filter((p) => (filter.value === null || p.typeId === filter.value) && matches(p)) ?? [])
   .slice().sort((a, b) => Number(alertIds.value.includes(b.id)) - Number(alertIds.value.includes(a.id))));

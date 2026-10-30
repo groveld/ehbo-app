@@ -113,6 +113,22 @@ onMounted(async () => {
         <p v-else>Geen incidenten.</p>
       </section>
 
+      <section v-if="report.passages.length">
+        <h2>Km-punten per post</h2>
+        <table class="incidents">
+          <thead><tr><th>Post</th><th>Loop</th><th>Km-punten</th></tr></thead>
+          <tbody>
+            <template v-for="p in report.passages" :key="p.postName">
+              <tr v-for="r in p.runs" :key="r.runName">
+                <td>{{ p.postName }}</td>
+                <td>{{ r.runName }}</td>
+                <td class="mono">{{ r.km.map((km) => formatKm(km)).join(' en ') }}</td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </section>
+
       <p class="meta footer">Zonder namen of medische gegevens van slachtoffers. Proefoproepen uit de testmodus tellen niet mee.</p>
     </template>
   </main>

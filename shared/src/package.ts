@@ -1,5 +1,5 @@
 // Evenementpakket: alles wat een telefoon nodig heeft om zonder bereik te werken, met één versienummer.
-import type { PostTypeInfo } from './admin.ts';
+import type { PostPassages, PostTypeInfo } from './admin.ts';
 import type { PostContactRole, UnitKind, UnitMobility } from './event.ts';
 
 /** [lengtegraad, breedtegraad] */
@@ -17,7 +17,10 @@ export interface PackagePost {
   id: number;
   typeId: number;
   name: string;
+  /** First pass on the longest run that comes by; null without a GPX or position. */
   km: number | null;
+  /** All passes per run, longest run first. */
+  passages: PostPassages[];
   lat: number | null;
   lng: number | null;
   isOpen: boolean;
