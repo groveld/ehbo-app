@@ -93,13 +93,36 @@ function style(): StyleSpecification {
   };
 }
 
+/** A small arrowhead pointing along the line. Drawn here, so it works offline and needs no sprite. */
+function arrowImage() {
+  const size = 40;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(33, 20);
+  ctx.lineTo(8, 8);
+  ctx.lineTo(14, 20);
+  ctx.lineTo(8, 32);
+  ctx.closePath();
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 7;
+  ctx.stroke();
+  ctx.fillStyle = '#16181D';
+  ctx.fill();
+  return ctx.getImageData(0, 0, size, size);
+}
+
 function runFeatures() {
+  const routes = props.pkg.runs.filter((r) => r.line).length;
   return {
     type: 'FeatureCollection' as const,
     features: props.pkg.runs.filter((r) => r.line && (!props.onlyHighlighted || r.id === props.highlightRunId)).flatMap((r) => [
       {
         type: 'Feature' as const,
-        properties: { highlight: props.highlightRunId === null || props.highlightRunId === r.id },
+        // Arrows on all routes at once would be too busy: only on the chosen one, or if there's just one.
+        properties: { highlight: props.highlightRunId === null || props.highlightRunId === r.id, arrows: props.highlightRunId === r.id || routes === 1 },
         geometry: { type: 'LineString' as const, coordinates: r.line! },
       },
       ...(props.onlyHighlighted ? [
@@ -254,6 +277,23 @@ onMounted(() => {
         'line-color': ['case', ['get', 'highlight'], '#16181D', '#9A9CA3'],
         'line-width': ['case', ['get', 'highlight'], 4, 3],
         'line-opacity': ['case', ['get', 'highlight'], 1, 0.35],
+      },
+    });
+    map!.addImage('route-arrow', arrowImage(), { pixelRatio: 2 });
+    map!.addLayer({
+      id: 'route-arrows',
+      type: 'symbol',
+      source: 'lopen',
+      filter: ['all', ['==', ['geometry-type'], 'LineString'], ['get', 'arrows']],
+      layout: {
+        'symbol-placement': 'line',
+        'symbol-spacing': 70,
+        'icon-image': 'route-arrow',
+        'icon-rotation-alignment': 'map',
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        // Beside the line, on the right of the running direction: out and back over the same road then reads as two lanes.
+        'icon-offset': [0, 9],
       },
     });
     map!.addLayer({
