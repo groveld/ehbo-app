@@ -265,6 +265,8 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
     `);
     recomputePassages(db);
   },
+  // 13: km points to the metre, so posts close together keep their order. They're shown with one decimal.
+  (db) => recomputePassages(db),
 ];
 
 export interface EventRow {

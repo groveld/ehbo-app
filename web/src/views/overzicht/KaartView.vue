@@ -40,7 +40,7 @@ const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p
 const matches = (p: PackagePost) => {
   const q = query.value.trim().toLowerCase().replace(',', '.');
   const km = q.replace(/^km\s*/, '');
-  return !q || p.name.toLowerCase().includes(q) || p.passages.some((r) => r.km.some((k) => String(k).startsWith(km)));
+  return !q || p.name.toLowerCase().includes(q) || p.passages.some((r) => r.km.some((k) => String(Math.round(k * 10) / 10).startsWith(km)));
 };
 /** On the map; what isn't on the chosen route steps back there. */
 const mapPosts = computed(() => store.pkg?.posts.filter((p) => (typeof filter.value !== 'number' || p.typeId === filter.value) && matches(p)) ?? []);

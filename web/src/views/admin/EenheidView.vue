@@ -93,7 +93,7 @@ async function remove() {
           <select id="post" v-model="form.postId" class="input">
             <option :value="null">{{ form.kind === 'vast' ? 'Kies de EHBO-post' : 'Geen standplaats (niet op de kaart)' }}</option>
             <option v-for="p in postChoices" :key="p.id" :value="p.id">
-              {{ p.name }}{{ p.km !== null ? ` · km ${p.km.toLocaleString('nl-NL')}` : '' }}
+              {{ p.name }}{{ p.km !== null ? ` · km ${p.km.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}` : '' }}
             </option>
           </select>
           <span v-if="form.kind === 'vast' && !ehboPosts.length" class="note warn">
