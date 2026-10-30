@@ -36,7 +36,7 @@ const phone = computed(() => props.unit.members[0]?.phone ?? null);
 </script>
 
 <template>
-  <div class="team-row">
+  <div class="team-row list-row">
     <span class="text">
       <span class="name">{{ unit.name }}<span class="status" :class="status.tone">{{ status.label }}</span></span>
       <span class="sub">{{ where }}<template v-if="unit.hasAed"> · AED</template></span>
@@ -46,7 +46,7 @@ const phone = computed(() => props.unit.members[0]?.phone ?? null);
 </template>
 
 <style scoped>
-.team-row { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 10px 12px 10px 14px; background: var(--card); border-radius: 16px; }
+.team-row { gap: 10px; padding-right: 12px; }
 .text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1; }
 .name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 15px; font-weight: 700; line-height: 1.25; }
 .sub { font-size: 13px; color: var(--muted); }

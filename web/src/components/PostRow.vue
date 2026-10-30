@@ -18,7 +18,7 @@ const km = computed(() => kmLabel(props.post));
 </script>
 
 <template>
-  <div class="post-row" :class="{ alert }">
+  <div class="post-row list-row" :class="{ alert }">
     <RouterLink :to="{ name: 'post', params: { id: post.id } }" class="main">
       <PostBadge :type="type" :size="40" />
       <span class="text">
@@ -39,9 +39,10 @@ const km = computed(() => kmLabel(props.post));
 </template>
 
 <style scoped>
-.post-row { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 14px; background: var(--card); border-radius: 16px; }
-.post-row.alert { border: 2px solid var(--danger); padding: 10px 10px 10px 12px; }
-.main { display: flex; align-items: center; gap: 12px; flex-grow: 1; min-width: 0; color: var(--ink); text-decoration: none; }
+.post-row { gap: 10px; padding-right: 12px; }
+/* Inside the list's frame: a red line along the row. */
+.post-row.alert { box-shadow: inset 4px 0 0 var(--danger); background: #FDF1F0; }
+.post-row .main { flex-direction: row; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; }
 .text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .name { font-size: 15px; font-weight: 700; line-height: 1.25; }
 .sub { font-size: 13px; color: var(--muted); }
