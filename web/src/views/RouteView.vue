@@ -67,8 +67,6 @@ const isFavorite = computed(() => (run.value ? favorites.value.includes(run.valu
           </div>
         </div>
       </section>
-
-      <RouterLink :to="{ name: 'info' }" class="add-link">Info &amp; voorwaarden</RouterLink>
     </div>
     <CallEhbo v-if="!session.me" />
   </main>
@@ -82,6 +80,8 @@ const isFavorite = computed(() => (run.value ? favorites.value.includes(run.valu
 .fact { min-width: 0; }
 .kind { font-size: 13px; font-weight: 600; line-height: 1.25; }
 .map { height: clamp(220px, 38dvh, 460px); }
+/* The last row can end up under the Bel EHBO button: keep its name clear of it. */
+.list-row:last-child { padding-right: 152px; }
 .km { width: 56px; flex-shrink: 0; font-size: 13px; color: var(--ink-2); }
 .post-name { font-size: 15px; }
 </style>

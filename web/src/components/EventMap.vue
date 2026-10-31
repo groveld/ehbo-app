@@ -87,7 +87,7 @@ function style(): StyleSpecification {
     glyphs: assetUrl(m, 'fonts/{fontstack}/{range}.pbf'),
     sprite: assetUrl(m, 'sprites/v4/light'),
     sources: {
-      protomaps: { type: 'vector', tiles: [tileUrl(m)], maxzoom: m.maxZoom, bounds: m.bbox, attribution: '© OpenStreetMap · Protomaps' },
+      protomaps: { type: 'vector', tiles: [tileUrl(m)], maxzoom: m.maxZoom, bounds: m.bbox },
     },
     layers: layers('protomaps', MAP_FLAVOR, { lang: 'nl' }),
   };
@@ -255,7 +255,8 @@ onMounted(() => {
   map = new maplibregl.Map({
     container: container.value!,
     style: style(),
-    attributionControl: { compact: true },
+    // The credit is on the intro and the info page, so the map shows only the map.
+    attributionControl: false,
     interactive: props.interactive,
     maxZoom: 18,
     // Only moving and zooming: no tilting or turning, by touch, mouse or keyboard.

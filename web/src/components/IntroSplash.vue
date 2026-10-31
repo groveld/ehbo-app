@@ -72,6 +72,7 @@ onBeforeUnmount(() => timers.forEach(clearTimeout));
         <span v-if="date" class="date">{{ formatDate(date) }}</span>
         <span v-if="place" class="place">{{ place }}</span>
       </template>
+      <span class="credit">Kaart © OpenStreetMap-bijdragers · Protomaps</span>
     </div>
   </div>
 </template>
@@ -96,6 +97,7 @@ onBeforeUnmount(() => timers.forEach(clearTimeout));
 .date { font-size: 17px; font-weight: 600; line-height: 1.4; }
 .date::first-letter { text-transform: uppercase; }
 .place { font-size: 15px; font-weight: 500; line-height: 1.4; }
+.credit { margin-top: 12px; font-size: 11px; font-weight: 500; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
 @media (prefers-reduced-motion: reduce) {
