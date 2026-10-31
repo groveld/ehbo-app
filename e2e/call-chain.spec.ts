@@ -297,12 +297,13 @@ test('choosing a route: what is not on it steps back, and choosing it again undo
   await view.click();
   await expect(faded).toHaveCSS('pointer-events', 'none');
   await expect(faded).toHaveCSS('opacity', '0.15');
-  await expect(page.locator('.list-row').filter({ hasText: FAR })).toHaveCount(0);
-  await expect(page.locator('.list-row').filter({ hasText: 'Kruising 4' })).toHaveCount(2);
 
   await view.click();
   await expect(page.locator('.post-marker.faded')).toHaveCount(0);
-  await expect(page.locator('.list-row').filter({ hasText: FAR })).toHaveCount(1);
+
+  // The first screen explains the map with one entry per post type, and names no posts.
+  await expect(page.locator('.legend-item').filter({ hasText: 'Water' })).toHaveCount(1);
+  await expect(page.locator('.legend').getByText(FAR)).toHaveCount(0);
   await context.close();
 });
 
