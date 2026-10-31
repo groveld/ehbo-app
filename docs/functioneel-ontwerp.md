@@ -33,7 +33,7 @@ Eén persoon kan meerdere rollen hebben (bijv. beheerder én EHBO'er). De rol vo
 Elk evenement krijgt een eigen adres (bijv. silvesterloop.groveld.com). Deelnemers en gasten kijken direct mee; medewerkers zetten de app eerst op hun beginscherm en melden zich aan met hun telefoonnummer.
 
 1. **Link of QR-code openen** op het adres van het evenement.
-2. **Deelnemerspagina:** zonder aanmelding opent de app direct op route, posten en tijden. Geen keuzescherm, geen installatie, geen aanmelding, geen persoonsgegevens. At the bottom right a floating red button with a cross and the text Bel EHBO.
+2. **Deelnemerspagina:** zonder aanmelding opent de app direct op route, tijden en een legenda van de soorten posten. Geen keuzescherm, geen installatie, geen aanmelding, geen persoonsgegevens. At the bottom right a floating red button with a cross and the text Bel EHBO.
 3. **Aanmelden** rechtsboven op de deelnemerspagina is voor medewerkers.
 4. **Medewerker** zet eerst de app op het beginscherm (verplicht, nodig voor meldingen). De app herkent het toestel: iPhone krijgt stap-voor-stap uitleg, Android één knop *Installeren*.
 5. **Telefoonnummer invullen** (06 of +31 wordt gelijk getrokken).
@@ -410,6 +410,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | On site, then close (30 Oct) | After "Ik ben ter plaatse" the app goes straight to closing the incident (4.8), because that's the next step. The back arrow returns to the call, with the map and "Incident afronden". Nothing closes automatically, and reopening the call later stays on the call |
 | Changes reach everyone (30 Oct) | The live state carries the version of the fixed data. When it differs from the phone's event package, the phone fetches the package, its functions and the style within 3 to 8 seconds, spread over the phones so a series of edits doesn't fetch the package every time. Participants have no live connection and read the same version from `/api/ehbo-status` every 30 s. If a call, request or function refers to a post or unit the phone doesn't know, it fetches at once. An incident carries its post's name, type, km and position, and a request its post's name, so a call can always be accepted and navigated to, even if the package doesn't arrive. A post with incidents or requests can't be deleted: the report needs it |
 | Bel EHBO button (31 Oct) | The participant button shows a cross and the text "Bel EHBO" ("Bel 112" without a number), because a lone cross looks like an add button. It stays at the bottom right and grows to the left, with the normal primary button size and radius |
+| Participant legend (31 Oct) | The first participant screen no longer lists posts, because every post of every run is hard to read. It has a legend instead: each post type that occurs, once, with icon and name. The posts per run are on the route page |
 
 **Nog open**
 
