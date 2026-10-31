@@ -53,7 +53,7 @@ const tabs = computed<Tab[]>(() => {
   const name = String(route.name ?? '');
   const tabs: Tab[] = [];
   if (me.assignments.some((a) => a.kind === 'ehbo')) {
-    tabs.push({ key: 'ehbo', to: { name: 'ehbo' }, label: 'EHBO', icon: 'ehboFilled', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
+    tabs.push({ key: 'ehbo', to: { name: 'ehbo' }, label: 'EHBO', icon: 'ehbo', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
   }
   const posts = me.assignments.filter((a) => a.kind === 'post');
   for (const a of posts) {

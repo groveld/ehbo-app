@@ -16,7 +16,7 @@ const fontSize = computed(() => Math.round(props.size * ((props.type?.letter.len
     class="post-badge" :class="{ ehbo }" aria-hidden="true"
     :style="{ width: `${size}px`, height: `${size}px`, background: type?.color ?? '#6B7079', fontSize: `${fontSize}px` }"
   >
-    <svg v-if="ehbo" :width="size * 0.45" :height="size * 0.45" viewBox="0 0 18 18" fill="#FFFFFF"><path d="M6 0h6v6h6v6h-6v6H6v-6H0V6h6z" /></svg>
+    <Icon v-if="ehbo" name="ehbo" :size="Math.round(size * 0.6)" />
     <Icon v-else-if="icon" :name="icon" :size="Math.round(size * 0.5)" />
     <template v-else>{{ type?.letter }}</template>
   </span>

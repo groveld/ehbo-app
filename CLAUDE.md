@@ -70,7 +70,7 @@ Where the main pieces live:
 
 - **Theme:** neutral event theme. Anthracite `#16181D` with yellow accent `#F2C230`, background `#F6F5F1`, font IBM Plex Sans (Plex Mono for numbers).
   - The theme can be configured per event: large logo, square logo used as app icon, and colors.
-- **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and icon (`web/src/icons.ts`: flag, drop, stamp, cone, cross, more); a custom type without an icon shows its letter.
+- **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and icon (`web/src/icons.ts`: flag, drop, stamp, cone, ehbo, more); a custom type without an icon shows its letter.
 - **Colored header blocks** (call, sent, en route, EHBO screen, no signal): always 140 px tall, text top-aligned, title 26 px.
 - **No page titles on tab screens** (map, requests, contacts, menu): the tab bar already says where you are. Screens reached from a tab (post detail, admin) keep their header.
 - **Buttons:**

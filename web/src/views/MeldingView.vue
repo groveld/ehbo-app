@@ -109,7 +109,7 @@ const back = () => router.back();
       </StatusBlock>
 
       <div v-if="helper" class="card helper">
-        <span class="cross"><Icon name="cross" :size="24" /></span>
+        <span class="cross"><Icon name="ehbo" :size="24" /></span>
         <span class="stack grow">
           <span class="name">{{ helper.name }}</span>
           <span class="small">{{ helper.detail }}</span>

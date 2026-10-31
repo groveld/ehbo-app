@@ -98,7 +98,7 @@ async function setOpen(value: boolean) {
           </div>
         </div>
         <p v-if="nearest" class="note ok nearest">
-          <Icon name="cross" :size="14" /><span>Dichtstbij: <strong>{{ nearest.post.name }}</strong> · {{ formatKm(nearest.km) }} km</span>
+          <Icon name="ehbo" :size="14" /><span>Dichtstbij: <strong>{{ nearest.post.name }}</strong> · {{ formatKm(nearest.km) }} km</span>
         </p>
       </template>
 
@@ -107,7 +107,7 @@ async function setOpen(value: boolean) {
         <span class="ask">Wat heb je nodig?</span>
         <div class="tiles">
           <RouterLink :to="{ name: 'ehbo-verzoek', params: { id: post.id } }" class="tile ehbo">
-            <span class="tile-icon" style="background: var(--danger)"><Icon name="cross" :size="22" /></span>
+            <span class="tile-icon" style="background: var(--danger)"><Icon name="ehbo" :size="22" /></span>
             <span class="tile-text"><span class="tile-label">EHBO</span><span class="tile-sub">Eerste hulp nodig</span></span>
           </RouterLink>
           <button

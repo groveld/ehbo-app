@@ -116,7 +116,7 @@ async function remove() {
         </section>
 
         <div class="card aed">
-          <span class="badge heart"><Icon name="cross" :size="20" /></span>
+          <span class="badge heart"><Icon name="ehbo" :size="20" /></span>
           <span class="main"><span class="label">AED bij zich</span><span class="small">Voorrang bij "niet aanspreekbaar"</span></span>
           <button role="switch" class="switch" :aria-checked="form.hasAed" aria-label="AED bij zich" @click="form.hasAed = !form.hasAed" />
         </div>
