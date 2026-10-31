@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // 2.8 · Deelnemer, en het beginscherm van de app zonder aanmelding: naam van het evenement, route, starttijden met favoriete loop
-// vooraan, de posten langs de route, Bel EHBO en rechtsboven Aanmelden voor medewerkers.
+// vooraan, een legenda van de soorten posten, Bel EHBO en rechtsboven Aanmelden voor medewerkers.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { formatKm, type EhboStatus } from '@ehbo/shared';
+import type { EhboStatus } from '@ehbo/shared';
 import { api } from '../api.ts';
 import CallEhbo from '../components/CallEhbo.vue';
 import EventMap from '../components/EventMap.vue';
@@ -10,7 +10,6 @@ import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { useFavorites } from '../composables/useFavorites.ts';
 import { canUseAsStaff } from '../platform.ts';
-import { routeStops } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -58,13 +57,10 @@ const day = computed(() => {
   const date = store.pkg?.runs.find((r) => r.date)?.date ?? store.pkg?.event.startDate;
   return date ? new Date(`${date}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' }) : null;
 });
-/** In the order of the run on the map: a post it passes twice is listed twice. Without a run or GPX, all posts. */
-const alongRoute = computed(() => {
-  const pkg = store.pkg;
-  if (!pkg) return [];
-  const run = pkg.runs.find((r) => r.id === viewing.value && r.line);
-  if (run) return routeStops(pkg, run.id);
-  return pkg.posts.map((post) => ({ post, km: post.km })).sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity));
+/** Explains the map: each post type that occurs in this event, once. The posts per run are on the route page. */
+const legend = computed(() => {
+  const used = new Set(store.pkg?.posts.map((p) => p.typeId));
+  return store.pkg?.postTypes.filter((t) => used.has(t.id)) ?? [];
 });
 </script>
 
@@ -97,16 +93,14 @@ const alongRoute = computed(() => {
         <RouterLink v-if="viewedRun" :to="{ name: 'route', params: { id: viewedRun.id } }" class="btn route-link">Alles over {{ viewedRun.name }}</RouterLink>
       </section>
 
-      <section v-if="alongRoute.length" class="stack gap-8 section">
-        <span class="section-label">Langs de route</span>
-        <div class="list">
-          <div v-for="{ post, km } in alongRoute" :key="`${post.id}-${km}`" class="list-row">
-            <span class="mono km">{{ km !== null ? `km ${formatKm(km)}` : '' }}</span>
-            <PostBadge :type="store.typeById.get(post.typeId)" :size="28" />
-            <span class="post-name">{{ post.name }}</span>
-          </div>
+      <section v-if="legend.length" class="stack gap-8 section">
+        <span class="section-label">Soorten posten</span>
+        <div class="legend">
+          <span v-for="type in legend" :key="type.id" class="legend-item"><PostBadge :type="type" :size="28" />{{ type.name }}</span>
         </div>
       </section>
+
+      <RouterLink :to="{ name: 'info' }" class="add-link info-link">Info &amp; voorwaarden</RouterLink>
     </template>
     <p v-else class="note">Geen bereik. Open deze pagina één keer met internet; daarna werkt hij ook zonder.</p>
 
@@ -135,11 +129,8 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .star { color: #9A9CA3; }
 .favorite .star { color: #D9A400; fill: #F2C230; }
 .time { font-size: 16px; }
-.km { width: 56px; flex-shrink: 0; font-size: 13px; color: var(--ink-2); }
-.post-name { font-size: 15px; }
-/* The last row can end up under the Bel EHBO button: keep its name clear of it. */
-.list-row:last-child { padding-right: 84px; }
-.list-row { gap: 12px; min-height: 48px; }
-/* Ruimte onderaan, zodat de ronde knop de laatste post niet bedekt. */
+.legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 8px 12px; }
+.legend-item { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
 .route-link { margin-top: 8px; }
+.info-link { align-self: flex-start; margin-top: 12px; }
 </style>

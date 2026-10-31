@@ -22,7 +22,7 @@ function describe(u: AdminUnit) {
     <template #default="{ state }">
       <div v-if="state.units.length" class="stack gap-8">
         <RouterLink v-for="u in state.units" :key="u.id" :to="{ name: 'beheer-eenheid', params: { id: u.id } }" class="card unit">
-          <span class="badge cross" :class="u.kind"><Icon name="cross" :size="22" /></span>
+          <span class="badge cross" :class="u.kind"><Icon name="ehbo" :size="22" /></span>
           <span class="main">
             <span class="title-line">
               {{ u.name }}

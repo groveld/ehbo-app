@@ -24,6 +24,14 @@ const back = () => router.back();
         <p class="section-body">{{ section.body }}</p>
       </section>
       <p v-if="!session.event" class="note">Geen bereik. De info-pagina verschijnt zodra de app één keer verbinding heeft gehad.</p>
+      <!-- Fixed, apart from the text an admin can edit: the licence requires this credit. -->
+      <section class="card stack section">
+        <h2 class="section-title">Kaart</h2>
+        <p class="section-body">
+          Kaartgegevens © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-bijdragers</a>,
+          kaartstijl <a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps</a>.
+        </p>
+      </section>
     </div>
   </main>
 </template>

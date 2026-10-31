@@ -177,7 +177,6 @@ async function onSite() {
           <Icon name="pin" :size="20" />Ik ben ter plaatse
         </button>
         <RouterLink v-else :to="{ name: 'afronden', params: { id: incident.id } }" class="btn go"><Icon name="check" :size="20" />Incident afronden</RouterLink>
-        <span class="small center">De post en de coördinator zien dit direct</span>
       </div>
     </template>
 
@@ -230,7 +229,6 @@ async function onSite() {
 .dot.accepted { background: var(--ok); }
 .dot.coordinator { background: var(--primary); }
 .bottom { padding-top: 12px; }
-.center { text-align: center; }
 .done-top { padding-top: 96px; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; }
 .done-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--ok-bg); color: var(--ok); display: flex; align-items: center; justify-content: center; }
 .done-icon.grey { background: var(--soft); color: var(--muted); }

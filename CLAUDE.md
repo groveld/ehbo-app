@@ -70,7 +70,7 @@ Where the main pieces live:
 
 - **Theme:** neutral event theme. Anthracite `#16181D` with yellow accent `#F2C230`, background `#F6F5F1`, font IBM Plex Sans (Plex Mono for numbers).
   - The theme can be configured per event: large logo, square logo used as app icon, and colors.
-- **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and icon (`web/src/icons.ts`: flag, drop, stamp, cone, cross, more); a custom type without an icon shows its letter.
+- **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and icon (`web/src/icons.ts`: flag, drop, stamp, cone, ehbo, more); a custom type without an icon shows its letter.
 - **Colored header blocks** (call, sent, en route, EHBO screen, no signal): always 140 px tall, text top-aligned, title 26 px.
 - **No page titles on tab screens** (map, requests, contacts, menu): the tab bar already says where you are. Screens reached from a tab (post detail, admin) keep their header.
 - **Buttons:**
@@ -79,7 +79,7 @@ Where the main pieces live:
   - One corner radius (16 px) for all buttons; screens only change size or fill, never the shape.
   - Icon button: 44 × 44.
   - Two buttons side by side are always the same height.
-- **112** is only shown where it matters: the EHBO screens (request, follow-up, EHBO screen, call, no signal), Overzicht › Contacten. Where it is shown it sits at the bottom, in the same place. The participant screen has "Bel EHBO" instead: a round red button with a white cross, bottom right (falls back to 112 when no number is set). The app never replaces 112.
+- **112** is only shown where it matters: the EHBO screens (request, follow-up, EHBO screen, call, no signal), Overzicht › Contacten. Where it is shown it sits at the bottom, in the same place. The participant screen has "Bel EHBO" instead: a floating red button with a cross and that text, anchored bottom right and growing to the left (says "Bel 112" and calls 112 when no number is set). The app never replaces 112.
 - **Start screen:** without a session the app opens with a short intro (`components/IntroSplash.vue`: fixed pink and yellow shapes, apart from the event theme; all runs drawn alike as one course; logo, event name, date and place centered; about 3.5 s, tap to skip), then the participant page (`/`), with "Aanmelden" at the top right. There is no staff/participant choice screen. The tab bar is hidden during login (Herkend, Toestemmingen) until "Klaar, naar mijn startscherm".
 - **Save only when needed:** a form shows its save button only after a change (`composables/useDirty.ts`: snapshot on load and after saving). A new item (post, unit, run) can always be saved. A new EHBO request can always be sent; adding details only after a change.
 - The request tiles on the post home screen are deliberately large; this is the one exception to the button sizes.

@@ -48,7 +48,7 @@ let pickedMarker: maplibregl.Marker | null = null;
 let watchId: number | null = null;
 
 const GREY = '#9A9CA3';
-const CROSS = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></svg>';
+const CROSS = iconSvg('ehbo', 16);
 const AMBULANCE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 10H6"/><path d="M8 8v4"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.3a1 1 0 0 0-.7-.9l-1.9-.7a1 1 0 0 1-.6-.5l-1.5-3a1 1 0 0 0-.9-.6H14"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
 
 /** Volgorde van de markeringen per soort, van onder naar boven. Eigen soorten liggen onderop, bij Anders. */
@@ -87,7 +87,7 @@ function style(): StyleSpecification {
     glyphs: assetUrl(m, 'fonts/{fontstack}/{range}.pbf'),
     sprite: assetUrl(m, 'sprites/v4/light'),
     sources: {
-      protomaps: { type: 'vector', tiles: [tileUrl(m)], maxzoom: m.maxZoom, bounds: m.bbox, attribution: '© OpenStreetMap · Protomaps' },
+      protomaps: { type: 'vector', tiles: [tileUrl(m)], maxzoom: m.maxZoom, bounds: m.bbox },
     },
     layers: layers('protomaps', MAP_FLAVOR, { lang: 'nl' }),
   };
@@ -255,7 +255,8 @@ onMounted(() => {
   map = new maplibregl.Map({
     container: container.value!,
     style: style(),
-    attributionControl: { compact: true },
+    // The credit is on the intro and the info page, so the map shows only the map.
+    attributionControl: false,
     interactive: props.interactive,
     maxZoom: 18,
     // Only moving and zooming: no tilting or turning, by touch, mouse or keyboard.
