@@ -342,7 +342,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* Geen position op de markers zelf: MapLibre zet ze absoluut; relatief maken laat ze verschuiven. */
-.event-map { width: 100%; height: 100%; border-radius: 18px; overflow: hidden; background: #E9E7E1; }
+/* isolate: the markers' z-index only counts inside the map, so a banner or button over the map stays on top. */
+.event-map { isolation: isolate; width: 100%; height: 100%; border-radius: 18px; overflow: hidden; background: #E9E7E1; }
 .event-map.picking :deep(.maplibregl-canvas) { cursor: crosshair; }
 .event-map :deep(.post-marker) {
   width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 2px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
