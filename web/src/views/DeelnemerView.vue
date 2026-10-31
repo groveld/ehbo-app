@@ -99,8 +99,6 @@ const legend = computed(() => {
           <span v-for="type in legend" :key="type.id" class="legend-item"><PostBadge :type="type" :size="28" />{{ type.name }}</span>
         </div>
       </section>
-
-      <RouterLink :to="{ name: 'info' }" class="add-link info-link">Info &amp; voorwaarden</RouterLink>
     </template>
     <p v-else class="note">Geen bereik. Open deze pagina één keer met internet; daarna werkt hij ook zonder.</p>
 
@@ -129,8 +127,8 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .star { color: #9A9CA3; }
 .favorite .star { color: #D9A400; fill: #F2C230; }
 .time { font-size: 16px; }
-.legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 8px 12px; }
+/* Room at the end, so the Bel EHBO button doesn't cover the last entries. */
+.legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 8px 12px; margin-bottom: 56px; }
 .legend-item { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
 .route-link { margin-top: 8px; }
-.info-link { align-self: flex-start; margin-top: 12px; }
 </style>
