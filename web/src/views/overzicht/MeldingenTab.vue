@@ -68,7 +68,7 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
           <button v-else class="btn done" :disabled="busy" @click="run(() => live.finishRequest(r.id))">Afgehandeld</button>
         </div>
       </div>
-      <p v-if="!live.openIncidents.length && !openRequests.length" class="note ok">Niets open.</p>
+      <p v-if="!live.openIncidents.length && !openRequests.length" class="card nothing-open"><Icon name="check" :size="20" />Niets open.</p>
       <p v-if="!live.connected" class="small">Geen live verbinding; dit is de laatst bekende stand.</p>
 
       <template v-if="closed.length || doneRequests.length">
@@ -99,6 +99,8 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
 .incident.open { border: 2px solid var(--danger); }
 .state { font-weight: 700; color: var(--danger); }
 .state.geaccepteerd, .state.ter_plaatse { color: var(--ok-text); }
+/* As tall as an open item, so the list looks the same with or without calls. */
+.nothing-open { display: flex; align-items: center; gap: 8px; min-height: 80px; background: var(--ok-bg); color: #0A4D33; font-size: 15px; font-weight: 600; }
 .later { margin-top: 8px; }
 .request { display: flex; flex-direction: column; gap: 10px; }
 .request.mine { border: 2px solid var(--ink); }
