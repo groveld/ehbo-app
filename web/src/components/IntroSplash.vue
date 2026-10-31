@@ -16,10 +16,9 @@ const date = computed(() => session.event?.startDate ?? store.pkg?.event.startDa
 const place = computed(() => store.pkg?.event.startLocation ?? null);
 
 const SIZE = 100;
-/** De lopen als lijnen in een vak van 100 × 100, de langste voorop. Lengtegraden korter naar het noorden (cos breedte). */
+/** All runs as lines in a 100 × 100 box, drawn alike so they read as one course. Longitude shrinks towards the north (cos latitude). */
 const routes = computed(() => {
-  const runs = (store.pkg?.runs ?? []).filter((r) => r.line && r.line.length > 1)
-    .sort((a, b) => (b.distanceKm ?? 0) - (a.distanceKm ?? 0));
+  const runs = (store.pkg?.runs ?? []).filter((r) => r.line && r.line.length > 1);
   const points = runs.flatMap((r) => r.line!);
   if (!points.length) return [];
   const k = Math.cos((points[0]![1] * Math.PI) / 180);
@@ -29,9 +28,8 @@ const routes = computed(() => {
   const span = Math.max(Math.max(...xs) - minX, Math.max(...ys) - minY) || 1;
   const offX = (SIZE - ((Math.max(...xs) - minX) / span) * SIZE) / 2;
   const offY = (SIZE - ((Math.max(...ys) - minY) / span) * SIZE) / 2;
-  return runs.map((r, index) => ({
+  return runs.map((r) => ({
     id: r.id,
-    main: index === 0,
     d: r.line!.map(([lng, lat], i) => `${i ? 'L' : 'M'}${(offX + ((lng * k - minX) / span) * SIZE).toFixed(2)} ${(offY + ((-lat - minY) / span) * SIZE).toFixed(2)}`).join(''),
   }));
 });
@@ -50,39 +48,54 @@ onBeforeUnmount(() => timers.forEach(clearTimeout));
 
 <template>
   <div class="intro" :class="{ leaving }" role="dialog" :aria-label="name || 'Intro'" @click="close">
-    <svg v-if="routes.length" class="route" :viewBox="`-6 -6 ${SIZE + 12} ${SIZE + 12}`" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-      <path v-for="r in routes" :key="r.id" :d="r.d" pathLength="1" :class="{ main: r.main }" />
+    <!-- Fixed colours: the intro has its own look, apart from the event's theme. -->
+    <svg class="art" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <path d="M-40 560C60 470 150 520 240 450S380 300 460 340V900H-40Z" fill="#F2C230" />
+      <path d="M-40 700C70 640 170 700 280 640S400 560 460 580V900H-40Z" fill="#FFD95C" />
+      <path d="M250-40C230 60 300 110 360 130S430 170 460 150V-40Z" fill="#E8347F" />
+      <path d="M-40 110C30 90 70 150 40 220S-20 300-40 290Z" fill="#F2C230" />
+      <circle cx="330" cy="400" r="64" fill="#E8347F" />
     </svg>
-    <Icon v-else name="runner" :size="160" class="runner" />
+
+    <div class="course">
+      <svg v-if="routes.length" class="route" :viewBox="`-6 -6 ${SIZE + 12} ${SIZE + 12}`" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <path v-for="r in routes" :key="r.id" :d="r.d" pathLength="1" />
+      </svg>
+      <Icon v-else name="runner" :size="160" />
+    </div>
 
     <div class="content">
       <img v-if="session.event?.brand.logo" :src="session.event.brand.logo" :alt="`Logo ${name}`" class="logo-image">
-      <span v-else class="logo">{{ name }}</span>
-      <span v-if="date || place" class="meta">{{ [date && formatDate(date), place].filter(Boolean).join(' · ') }}</span>
+      <h1 class="name">{{ name }}</h1>
+      <template v-if="date || place">
+        <span class="rule" />
+        <span v-if="date" class="date">{{ formatDate(date) }}</span>
+        <span v-if="place" class="place">{{ place }}</span>
+      </template>
     </div>
   </div>
 </template>
 
 <style scoped>
 .intro {
-  position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
-  padding: max(24px, env(safe-area-inset-top)) 24px max(48px, env(safe-area-inset-bottom));
-  background: var(--primary); color: #FFFFFF; cursor: pointer; transition: opacity .35s;
+  position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; gap: 24px; overflow: hidden;
+  padding: max(48px, env(safe-area-inset-top)) 24px max(64px, env(safe-area-inset-bottom));
+  background: #FF5C9E; color: var(--ink); cursor: pointer; transition: opacity .35s;
 }
 .intro.leaving { opacity: 0; }
-.route { position: absolute; inset: 8% 8% 32%; width: 84%; height: 60%; }
-.route path { fill: none; stroke: #FFFFFF; stroke-opacity: .25; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.route path.main { stroke: var(--accent); stroke-opacity: 1; stroke-width: 4; }
-/* Het parcours tekent zichzelf in ruim een seconde. */
+.art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.course { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.route { width: 100%; height: 100%; max-width: 720px; }
+.route path { fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+/* The course draws itself in just over a second. No non-scaling-stroke here: it breaks pathLength, and the lines stay in pieces. */
 .route path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.4s ease-in-out .1s forwards; }
-.runner { position: absolute; top: 22%; left: 50%; translate: -50% 0; color: var(--accent); opacity: .9; }
-.content { position: relative; display: flex; flex-direction: column; gap: 12px; max-width: 720px; width: 100%; margin: 0 auto; animation: rise .6s ease-out both; }
-.logo-image { align-self: flex-start; max-width: 100%; max-height: 120px; object-fit: contain; object-position: left center; }
-.logo {
-  align-self: flex-start; max-width: 100%; padding: 16px 18px; border-radius: 16px; background: var(--accent); color: var(--ink);
-  font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; text-transform: uppercase;
-}
-.meta { font-size: 16px; font-weight: 600; color: var(--soft-text); }
+.content { position: relative; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; max-width: 720px; width: 100%; margin: 0 auto; text-align: center; animation: rise .6s ease-out both; }
+.logo-image { max-width: 100%; max-height: 120px; margin-bottom: 16px; object-fit: contain; }
+.name { font-size: clamp(28px, 8.7vw, 40px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.08; text-wrap: balance; }
+.rule { width: 44px; height: 4px; border-radius: 2px; background: currentColor; margin: 18px 0 16px; }
+.date { font-size: 17px; font-weight: 600; line-height: 1.4; }
+.date::first-letter { text-transform: uppercase; }
+.place { font-size: 15px; font-weight: 500; line-height: 1.4; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
 @media (prefers-reduced-motion: reduce) {
