@@ -505,7 +505,8 @@ test('status bar: the call is one tap away on every page, for the post and the t
 
   // The bottom button stays above the bar, and a tap goes straight back.
   await ehbo.locator('.tabbar').getByRole('link', { name: 'EHBO' }).click();
-  await expect(ehbo.getByRole('link', { name: 'Bel 112' })).toBeVisible();
+  // Contacten has a Bel 112 too: first be sure this is the EHBO screen.
+  await expect(ehbo.getByRole('heading', { name: 'Bezig met een oproep' })).toBeVisible();
   const button = (await ehbo.getByRole('link', { name: 'Bel 112' }).boundingBox())!;
   const bar = (await ehbo.locator('.live-bar').boundingBox())!;
   expect(button.y + button.height).toBeLessThanOrEqual(bar.y);
