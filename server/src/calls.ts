@@ -9,6 +9,7 @@ import {
   awayPostIds,
   distanceKm,
   formatKm,
+  placeOf,
   plannedClose,
   type CloseIncident,
   type CloseSummary,
@@ -26,6 +27,7 @@ import {
   type LastSeen,
   type Me,
   type NewIncident,
+  type NewSelfIncident,
   type PushPayload,
   type UnitAvailability,
 } from '@ehbo/shared';
@@ -209,10 +211,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const acceptedBy = row.accepted_by as string | null;
     // An incident keeps its post: the database refuses to delete a post that has incidents.
     const { typeId, name, km, lat, lng } = postMap.get(row.post_id as number)!;
+    const place = row.place_name as string | null;
     return {
       id: row.id as number,
       postId: row.post_id as number,
-      post: { typeId, name, km, lat, lng },
+      post: { typeId, name: place ?? name, km, lat: (row.place_lat as number | null) ?? lat, lng: (row.place_lng as number | null) ?? lng },
+      selfStarted: row.self_started === 1,
+      offPost: place !== null,
       status: row.status as LiveIncident['status'],
       stage: row.stage as LiveIncident['stage'],
       what: row.what as LiveIncident['what'],
@@ -441,6 +446,50 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       // Geen beschikbare eenheid met bekende positie: meteen naar iedereen die vrij is.
       escalate(id, 'Geen beschikbare eenheid in de buurt bekend');
     }
+    return state().incidents.find((i) => i.id === id)!;
+  }
+
+  /** Someone came to the team: no call, the team is already there. Only a person who isn't responsive still brings an AED. */
+  function selfStart(me: Me, body: NewSelfIncident): LiveIncident {
+    const existing = get('SELECT id FROM incidents WHERE client_id = ?', body.clientId);
+    if (existing) return state().incidents.find((i) => i.id === existing.id)!;
+    const unit = requireUnitMember(me, body.unitId);
+    if (busyUnits().has(unit.id)) throw httpError(409, `${unit.name} is al bezig met een andere oproep`);
+
+    const postMap = posts();
+    const position: [number, number] | null = body.lat !== null && body.lng !== null ? [body.lng, body.lat] : null;
+    const place = position ? placeOf([...postMap.values()], position) : null;
+    const post = postMap.get(place?.postId ?? body.postId);
+    if (!post) throw httpError(404, 'Post niet gevonden');
+    const offPost = place !== null && !place.atPost;
+    const at = stamp();
+    const aed = body.responsive === 'nee';
+
+    const id = db.transaction(() => {
+      const incidentId = Number(run(`
+        INSERT INTO incidents (client_id, post_id, reported_by, what, persons, responsive, note, aed, status, stage, reported_at, sent_at,
+                               unit_id, accepted_by, accepted_at, on_site_at, is_test, self_started, place_name, place_lat, place_lng)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ter_plaatse', 'dichtstbij', ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+      body.clientId, post.id, me.phone, body.what, body.persons, body.responsive, body.note?.trim() || null, aed ? 1 : 0, at, at,
+      unit.id, me.phone, at, at, db.testMode() ? 1 : 0, offPost ? place.name : null, offPost ? position![1] : null, offPost ? position![0] : null).lastInsertRowid);
+      addDispatch(incidentId, unit.id, 'handmatig', 0);
+      run('UPDATE incident_dispatches SET accepted_at = ? WHERE incident_id = ? AND unit_id = ?', at, incidentId, unit.id);
+      run("UPDATE ehbo_units SET availability = 'vrij', stay_post_id = NULL WHERE id = ?", unit.id);
+      log(incidentId, 'gemeld', `Zelf gestart door ${unit.name} · ${offPost ? place.name : post.name}`, unit.id);
+      return incidentId;
+    });
+
+    const row = incidentRow(id);
+    if (aed && !unit.hasAed) {
+      const aedUnit = nearest(freeUnits(post).filter((c) => c.unit.hasAed && c.unit.id !== unit.id));
+      if (aedUnit) {
+        addDispatch(id, aedUnit.unit.id, 'aed', aedUnit.km);
+        log(id, 'verstuurd', `Naar ${aedUnit.unit.name} (AED) gestuurd`, aedUnit.unit.id);
+        alarmUnits(row, [aedUnit.unit.id], 'EHBO-oproep · AED nodig');
+      }
+    }
+    copyToCoordinator(row, `${unit.name} is zelf een incident gestart: ${summary(row)}${offPost ? `, ${place.name}` : ''}.`);
+    changed();
     return state().incidents.find((i) => i.id === id)!;
   }
 
@@ -884,7 +933,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       listeners.add(listener);
       return () => { listeners.delete(listener); };
     },
-    report, update, accept, assign, decline, onSite, close, withdraw, setAvailability, setPosition, setPostOpen, resume, stop, at, once, moment,
+    report, selfStart, update, accept, assign, decline, onSite, close, withdraw, setAvailability, setPosition, setPostOpen, resume, stop, at, once, moment,
     sweep, keepPost, keepUnit, reopenAutoClosed, lastSeen, openAll, closeAll, closeDay,
     /** The live connection is a contact with the phone too. */
     seen: (sessionHash: string) => db.touchSession(sessionHash),

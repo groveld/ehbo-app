@@ -53,6 +53,7 @@ export const router = createRouter({
     { path: '/melding/:incidentId/aanvullen', name: 'aanvullen', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
     // EHBO: het EHBO-scherm (3.3) met je inzetten, oproep (4.3–4.7) en afronden (4.8).
     { path: '/ehbo', name: 'ehbo', component: () => import('./views/EhboView.vue'), meta: { staff: true } },
+    { path: '/ehbo/incident', name: 'eigen-incident', component: () => import('./views/EigenIncidentView.vue'), meta: { staff: true } },
     { path: '/ehbo/inzetten', name: 'inzetten', component: () => import('./views/InzettenView.vue'), meta: { staff: true } },
     { path: '/ehbo/inzetten/:id', name: 'inzet', component: () => import('./views/MeldingView.vue'), props: true, meta: { staff: true } },
     { path: '/oproep/:id', name: 'oproep', component: () => import('./views/OproepView.vue'), props: true, meta: { staff: true } },

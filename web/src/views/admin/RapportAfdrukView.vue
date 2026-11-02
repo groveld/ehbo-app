@@ -98,7 +98,7 @@ onMounted(async () => {
             <tr v-for="i in report.incidents" :key="i.number">
               <td class="num">{{ i.number }}</td>
               <td>{{ i.postName }}<template v-if="i.km !== null"> (km {{ formatKm(i.km) }})</template></td>
-              <td>{{ i.what ? INCIDENT_WHAT[i.what] : '–' }}{{ i.aed ? ' · AED' : '' }}{{ i.escalated ? ' · alle eenheden' : '' }}</td>
+              <td>{{ i.what ? INCIDENT_WHAT[i.what] : '–' }}{{ i.aed ? ' · AED' : '' }}{{ i.escalated ? ' · alle eenheden' : '' }}{{ i.selfStarted ? ' · zelf gestart' : '' }}</td>
               <td class="mono">{{ clock(i.reportedAt) }}</td>
               <td class="mono">{{ clock(i.acceptedAt) }}</td>
               <td class="mono">{{ clock(i.onSiteAt) }}</td>

@@ -28,10 +28,10 @@ const myRole = computed(() => session.me?.assignments.find((a) => a.kind === 'po
 const canOpen = computed(() => myRole.value?.role === 'verantwoordelijke' || session.me?.isAdmin);
 const coordinator = computed(() => coordinatorOf(store.pkg));
 const nearest = computed(() => (store.pkg && post.value ? nearestUnit(store.pkg, post.value) : null));
-const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id));
+const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id && !i.offPost));
 /** Eerder vandaag: afgeronde meldingen en aanvragen, om terug te kijken. Nieuwste eerst. */
 const history = computed(() => [
-  ...live.incidents.filter((i) => i.postId === post.value?.id && (i.status === 'afgerond' || i.status === 'ingetrokken')).map((i) => ({
+  ...live.incidents.filter((i) => i.postId === post.value?.id && !i.offPost && (i.status === 'afgerond' || i.status === 'ingetrokken')).map((i) => ({
     key: `i${i.id}`, at: i.reportedAt, text: `EHBO · ${incidentSummary(i)}`, state: i.status === 'afgerond' ? 'afgerond' : 'ingetrokken', to: { name: 'melding', params: { id: i.id } },
   })),
   ...live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'afgehandeld' || r.status === 'ingetrokken')).map((r) => ({

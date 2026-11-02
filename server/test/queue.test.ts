@@ -20,7 +20,7 @@ const context: ActionContext = {
 };
 
 const incident = (changes: Partial<LiveIncident> = {}): LiveIncident => ({
-  id: 7, isTest: false, postId: 20, post: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'verstuurd', stage: 'dichtstbij', aed: false,
+  id: 7, isTest: false, selfStarted: false, offPost: false, postId: 20, post: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'verstuurd', stage: 'dichtstbij', aed: false,
   reportedAt: AT, sentAt: AT, escalatesAt: AT, unitId: null, acceptedBy: null, acceptedAt: null, onSiteAt: null, closedAt: null, outcome: null,
   dispatches: [{ unitId: 2, at: AT, reason: 'dichtstbij', distanceKm: 1, declinedAt: null, acceptedAt: null }], events: [],
   what: 'onwel', persons: '1', responsive: null, note: null, ...changes,
@@ -68,6 +68,17 @@ test('a fixed unit and its post go together; a phone with no state yet still sho
 test('a request made without signal is there at once, and follows its steps', () => {
   const after = apply(state(), { type: 'requestNew', tempId: -5, clientId: 'abc', postId: 20, postName: 'Waterpost', kind: 'water' }, { type: 'requestDetail', requestId: -5, detail: 'flink' }, { type: 'requestWithdraw', requestId: -5 });
   assert.deepEqual([after.requests[0]?.id, after.requests[0]?.detail, after.requests[0]?.status], [-5, 'flink', 'ingetrokken']);
+});
+
+test('an incident started without signal is there at once, on site, and can be closed', () => {
+  const started = apply(state({ incidents: [] }), {
+    type: 'selfStart', tempId: -9, postId: 20, offPost: true, post: { typeId: 1, name: '120 m van Waterpost', km: 3, lat: 53, lng: 5 },
+    body: { clientId: 'abcdefgh', unitId: 2, postId: 20, lat: 53, lng: 5, what: 'kramp', persons: '1', responsive: null, note: null },
+  });
+  assert.deepEqual([started.incidents[0]?.status, started.incidents[0]?.unitId, started.units[1]?.incidentId], ['ter_plaatse', 2, -9]);
+  const closed = apply(started, { type: 'close', incidentId: -9, body: { outcome: 'geholpen', persons: '1', note: null, stayHere: false } });
+  assert.equal(closed.incidents[0]?.status, 'afgerond');
+  assert.equal(closed.units[1]?.incidentId, null);
 });
 
 test('the server carries out a queued change once, with the time it happened', async () => {

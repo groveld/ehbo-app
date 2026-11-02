@@ -16,6 +16,7 @@ import {
   type LastSeen,
   type LiveState,
   type NewIncident,
+  type NewSelfIncident,
   type UnitAvailability,
 } from '@ehbo/shared';
 import { requireMe } from '../auth.ts';
@@ -96,6 +97,24 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
       },
     },
   }, async (request, reply) => reply.code(201).send(calls.report(request.me!, request.body)));
+
+  const coordinate = (max: number) => ({ type: ['number', 'null'], minimum: -max, maximum: max }) as const;
+  app.post<{ Body: NewSelfIncident }>('/api/incidents/self', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['clientId', 'unitId', 'postId', 'lat', 'lng', ...detailsRequired],
+        properties: {
+          clientId: { type: 'string', minLength: 8, maxLength: 64 },
+          unitId: { type: 'integer', minimum: 1 },
+          postId: { type: 'integer', minimum: 1 },
+          lat: coordinate(90),
+          lng: coordinate(180),
+          ...details,
+        },
+      },
+    },
+  }, async (request, reply) => reply.code(201).send(calls.at(actionHeaders(request)[1], () => calls.selfStart(request.me!, request.body))));
 
   app.put<Id & { Body: IncidentDetails; Reply: LiveState }>('/api/incidents/:id', {
     schema: { params: idParams, body: { type: 'object', required: detailsRequired, properties: details } },

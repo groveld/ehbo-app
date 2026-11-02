@@ -39,7 +39,7 @@ const chips = computed(() => {
     .filter((c) => c.count > 0);
 });
 /** Posten met een open oproep rood en bovenaan. */
-const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
+const alertIds = computed(() => [...new Set(live.openIncidents.filter((i) => !i.offPost).map((i) => i.postId))]);
 /** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
 const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
 const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id) ?? []);

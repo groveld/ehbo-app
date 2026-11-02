@@ -450,6 +450,32 @@ test('overview map: teams in the list for all staff, counters only for the coord
   await expect(post.getByLabel(/^Posten open:/)).toHaveCount(0);
 });
 
+test('EHBO starts an incident itself, also without signal, and goes straight to closing', async ({ browser }) => {
+  const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
+  await expect(ehbo.getByRole('heading', { name: /Uit dienst|Beschikbaar/ })).toBeVisible();
+  await ehbo.getByRole('button', { name: 'Beschikbaar', exact: true }).click();
+  await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
+  await installed(ehbo);
+  await ehbo.waitForFunction(() => !localStorage.getItem('ehbo.queue'));
+
+  await ehbo.getByRole('link', { name: 'Incident starten' }).click();
+  await ehbo.context().setOffline(true);
+  await expect(ehbo.locator('.where')).toContainText('Kruising 4');
+  await ehbo.getByRole('button', { name: 'Kramp / blessure' }).click();
+  await ehbo.getByRole('button', { name: 'Incident starten' }).click();
+  await expect(ehbo.getByRole('heading', { name: 'Incident afronden' })).toBeVisible();
+  await ehbo.getByRole('button', { name: 'Loos alarm' }).click();
+  await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
+  await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
+
+  await ehbo.context().setOffline(false);
+  await expect(ehbo.locator('.offline-pill')).toBeHidden({ timeout: 20_000 });
+  await ehbo.waitForFunction(() => !localStorage.getItem('ehbo.queue'));
+  const coordinator = await staffPhone(browser, PHONE.coordinator);
+  await coordinator.getByRole('link', { name: 'Meldingen' }).click();
+  await expect(coordinator.locator('.incident').filter({ hasText: 'zelf gestart' }).filter({ hasText: 'afgerond' })).toBeVisible();
+});
+
 test('map tab: quiet out of view, up to date the moment it opens', async ({ browser }) => {
   const post = await staffPhone(browser, PHONE.postLead);
   const open = post.getByRole('button', { name: 'Post openen' });

@@ -27,7 +27,7 @@ const COLORS = { ehbo: '#C8261E', kaart: '#0E7C86', meldingen: '#A16207', contac
 /** Het kruis van de EHBO-tab in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
 const STATUS = { vrij: '#0A7D4F', pauze: '#C8261E', uit_dienst: 'var(--ink)' } as const;
 
-const EHBO = ['ehbo', 'inzetten', 'inzet', 'oproep', 'afronden'];
+const EHBO = ['ehbo', 'eigen-incident', 'inzetten', 'inzet', 'oproep', 'afronden'];
 const MENU = ['menu', 'info', 'controle', 'sturing'];
 
 /** Bij welke post het huidige scherm hoort (startscherm, verzoek, melding, aanvraag of geen bereik), of null. */
@@ -63,7 +63,7 @@ const tabs = computed<Tab[]>(() => {
       label: posts.length > 1 ? (pkg.postById.get(postId)?.name.split(' · ')[0] ?? 'Post') : 'Mijn post',
       active: routePostId.value === postId,
       color: pkg.typeById.get(pkg.postById.get(postId)?.typeId ?? -1)?.color,
-      count: live.openIncidents.filter((i) => i.postId === postId).length,
+      count: live.openIncidents.filter((i) => i.postId === postId && !i.offPost).length,
     });
   }
   tabs.push({ key: 'kaart', to: { name: 'kaart' }, label: 'Kaart', icon: 'map', active: name === 'kaart' || name === 'post', color: COLORS.kaart });
