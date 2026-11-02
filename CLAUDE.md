@@ -71,10 +71,10 @@ Where the main pieces live:
 - **Theme:** neutral event theme. Anthracite `#16181D` with yellow accent `#F2C230`, background `#F6F5F1`, font IBM Plex Sans (Plex Mono for numbers).
   - The theme can be configured per event: large logo, square logo used as app icon, and colors.
 - **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and icon (`web/src/icons.ts`: flag, drop, stamp, cone, ehbo, more); a custom type without an icon shows its letter.
-- **Colored header blocks** (call, sent, en route, EHBO screen, no signal): always 104 px tall, text top-aligned, title 26 px, no subtext.
+- **Colored header blocks** (call, sent, en route, EHBO screen, no signal): always 84 px tall, text vertically centered, title 26 px, no subtext.
 - **EHBO status colors** are fixed, never the event's primary color: dark (`--off`) is not here, red is here but not available (also during a call), green is here and available.
 - **Dialogs:** never the browser's `confirm()`; use `confirmDialog`/`messageDialog` (`composables/useDialog.ts`, shown by `components/AppDialog.vue`).
-- **Offline pill** (`components/OfflinePill.vue`): on every screen, on the edge of the tab bar (bottom left without one), only the word Offline: no count and nothing to tap. Online shows nothing.
+- **Offline pill** (`components/OfflinePill.vue`): on every screen, centered between the bottom button and the tab bar (bottom left without one), only the word Offline: no count and nothing to tap. Online shows nothing.
 - **No page titles on tab screens** (map, requests, contacts, menu): the tab bar already says where you are. Screens reached from a tab (post detail, admin) keep their header.
 - **Buttons:**
   - Primary: 56 px tall, 16 px bold.

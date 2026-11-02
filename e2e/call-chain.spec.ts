@@ -68,7 +68,12 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
   await ehbo.getByRole('link', { name: /Mijn inzetten/ }).click();
-  await expect(ehbo.locator('.deployment').filter({ hasText: 'Waterpost 3 · brug' }).filter({ hasText: 'Onwel' }).first()).toBeVisible();
+  const deployment = ehbo.locator('.deployment').filter({ hasText: 'Waterpost 3 · brug' }).filter({ hasText: 'Onwel' }).first();
+  await deployment.click();
+  await expect(ehbo.getByRole('heading', { name: 'Klaar' })).toBeVisible();
+  await expect(ehbo.locator('.tab.active')).toContainText('EHBO');
+  await ehbo.getByRole('button', { name: 'Terug' }).click();
+  await expect(ehbo.getByRole('heading', { name: 'Mijn inzetten' })).toBeVisible();
 
   await expect(post.getByRole('heading', { name: 'Klaar' })).toBeVisible({ timeout: 10_000 });
   await expect(post.getByText('Ter plaatse geholpen')).toBeVisible();
@@ -192,6 +197,8 @@ test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later
 test('closing: the warning on the post, keep open without signal, and everything at once', async ({ browser }) => {
   const post = await staffPhone(browser, PHONE.postLead);
   const open = post.getByRole('button', { name: 'Post openen' });
+  // Wait for the screen: open or closed, depending on the test before.
+  await expect(open.or(post.getByText('Wat heb je nodig?'))).toBeVisible();
   if (await open.isVisible()) await open.click();
   await expect(post.getByText('Wat heb je nodig?')).toBeVisible();
   await installed(post);

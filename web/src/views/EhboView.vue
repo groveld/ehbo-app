@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 3.3 · EHBO: het scherm van de EHBO'er. Eigen status, positie, team en de oproepen van vandaag.
 import { computed } from 'vue';
-import { UNIT_AVAILABILITY, formatPhone, telHref, type UnitAvailability } from '@ehbo/shared';
+import { UNIT_AVAILABILITY, formatPhone, mobilityLabel, telHref, type UnitAvailability } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
@@ -23,12 +23,11 @@ const state = computed(() => (unitId.value !== null ? live.unitState(unitId.valu
 const availability = computed<UnitAvailability>(() => state.value?.availability ?? 'uit_dienst');
 const active = computed(() => (state.value?.incidentId ? live.incidentById(state.value.incidentId) : null));
 
-const MOBILITY = { te_voet: 'te voet', fiets: 'fiets', auto: 'auto', anders: 'mobiel' } as const;
 const label = computed(() => {
   const u = unit.value;
   if (!u) return '';
   const base = u.postId !== null ? store.postById.get(u.postId)?.name : null;
-  return [u.name, u.kind === 'vast' ? 'vast' : `mobiel · ${MOBILITY[u.mobility ?? 'anders']}`, u.kind === 'vast' ? base : null].filter(Boolean).join(' · ');
+  return [`EHBO ${u.name}`, u.kind === 'vast' ? 'vast' : mobilityLabel(u.mobility), u.kind === 'vast' ? base : null].filter(Boolean).join(' · ');
 });
 
 const block = computed(() => {
