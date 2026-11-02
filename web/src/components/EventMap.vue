@@ -31,13 +31,15 @@ const props = withDefaults(defineProps<{
   interactive?: boolean;
   /** Posten met een open oproep: rood, met een gloed. */
   alertPostIds?: number[];
+  /** Posts with an open request: an amber glow, less urgent than a call. */
+  taskPostIds?: number[];
   /** Mobiele EHBO-eenheden onderweg, op hun laatste GPS-positie. */
   ambulances?: Ambulance[];
   /** Standplaatsen waar de mobiele EHBO nu niet is: het kruisje grijs. */
   awayPostIds?: number[];
   /** Kept in memory but not in view: no location, and nothing happens until it's back. */
   paused?: boolean;
-}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], ambulances: () => [], awayPostIds: () => [], paused: false });
+}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], taskPostIds: () => [], ambulances: () => [], awayPostIds: () => [], paused: false });
 
 const emit = defineEmits<{ select: [postId: number]; pick: [lngLat: LngLat] }>();
 
@@ -158,7 +160,8 @@ function markerElement(post: PackagePost) {
   const alert = props.alertPostIds.includes(post.id);
   const away = props.awayPostIds.includes(post.id);
   const focus = post.id === props.focusPostId;
-  el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${focus ? ' focus' : ''}${alert ? ' alert' : ''}`;
+  const task = !alert && props.taskPostIds.includes(post.id);
+  el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${focus ? ' focus' : ''}${alert ? ' alert' : ''}${task ? ' task' : ''}`;
   el.style.zIndex = String(postLayer(post, type?.key, alert || focus));
   // Altijd de kleur van de soort post; een post met een open oproep rood.
   // Een EHBO-post waar de mobiele eenheid niet is: grijs.
@@ -344,7 +347,7 @@ onMounted(() => {
   document.addEventListener('visibilitychange', restoreMap);
 });
 
-watch(() => [props.posts, props.pkg, props.focusPostId, props.highlightRunId, props.alertPostIds], drawPosts);
+watch(() => [props.posts, props.pkg, props.focusPostId, props.highlightRunId, props.alertPostIds, props.taskPostIds], drawPosts);
 // Wordt elke tel opnieuw berekend; alleen opnieuw tekenen als er echt iets verandert.
 watch(() => props.awayPostIds.join(), drawPosts);
 watch(() => props.picked, drawPicked);
@@ -406,8 +409,14 @@ onBeforeUnmount(() => {
   display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
 }
 .event-map :deep(.unit-marker.unavailable) { border-color: #C8261E; color: #C8261E; }
-.event-map :deep(.post-marker.alert) { width: 32px; height: 32px; box-shadow: 0 0 0 10px rgba(200, 38, 30, .2); }
 .event-map :deep(.post-marker.focus) { width: 36px; height: 36px; box-shadow: 0 0 0 8px rgba(31, 111, 178, .25); }
+/* A blinking glow, so you see at once where something is going on. Only the shadow: MapLibre positions markers with transform. */
+.event-map :deep(.post-marker.alert) { width: 32px; height: 32px; --glow: rgba(200, 38, 30, .55); box-shadow: 0 0 0 10px var(--glow); animation: glow 1.2s ease-in-out infinite; }
+.event-map :deep(.post-marker.task) { --glow: rgba(217, 120, 28, .55); box-shadow: 0 0 0 8px var(--glow); animation: glow 1.6s ease-in-out infinite; }
+@keyframes glow { 50% { box-shadow: 0 0 0 12px transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .event-map :deep(.post-marker.alert), .event-map :deep(.post-marker.task) { animation: none; }
+}
 .event-map :deep(.user-dot) {
   width: 16px; height: 16px; border-radius: 50%; background: #1F6FB2; border: 3px solid #FFFFFF; box-shadow: 0 0 0 6px rgba(31, 111, 178, .25);
 }

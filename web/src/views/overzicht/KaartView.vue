@@ -40,6 +40,8 @@ const chips = computed(() => {
 });
 /** Posten met een open oproep rood en bovenaan. */
 const alertIds = computed(() => [...new Set(live.openIncidents.filter((i) => !i.offPost).map((i) => i.postId))]);
+/** Posts with a request that's still open. */
+const taskIds = computed(() => [...new Set(live.requests.filter((r) => r.status === 'aangevraagd' || r.status === 'opgepakt').map((r) => r.postId))]);
 /** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
 const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
 const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id) ?? []);
@@ -113,11 +115,11 @@ const counters = computed(() => {
   ];
 });
 /** What the map shows. Out of view none of this is read, so nothing live reaches the map; opening the tab brings it up to date in one go. */
-const mapView = shallowRef<{ pkg: EventPackage; posts: PackagePost[]; highlightRunId: number | null; alertPostIds: number[]; ambulances: Ambulance[]; awayPostIds: number[] } | null>(null);
+const mapView = shallowRef<{ pkg: EventPackage; posts: PackagePost[]; highlightRunId: number | null; alertPostIds: number[]; taskPostIds: number[]; ambulances: Ambulance[]; awayPostIds: number[] } | null>(null);
 watchEffect(() => {
   if ((!props.active && mapView.value) || !store.pkg) return;
   mapView.value = {
-    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
+    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, taskPostIds: taskIds.value, ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
   };
 });
 const banner = computed(() => {
