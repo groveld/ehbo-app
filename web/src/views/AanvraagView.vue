@@ -3,12 +3,12 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { REQUEST_KINDS, telHref } from '@ehbo/shared';
-import Icon from '../components/Icon.vue';
+import ActivityLog from '../components/ActivityLog.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { confirmDialog } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
-import { clock } from '../incidents.ts';
+import { clock, requestLog } from '../incidents.ts';
 import { coordinatorOf } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -37,7 +37,7 @@ async function withdraw() {
   if (!request.value || !await confirmDialog({ title: 'Aanvraag intrekken?', text: 'De coördinator hoeft er dan niets meer mee te doen.', confirm: 'Aanvraag intrekken', cancel: 'Niet intrekken', tone: 'danger' })) return;
   await run(() => live.withdrawRequest(request.value!.id));
 }
-const toPost = () => (request.value ? router.replace({ name: 'post-home', params: { id: request.value.postId } }) : router.back());
+const atPost = computed(() => live.myPostIds.includes(request.value?.postId ?? -1));
 </script>
 
 <template>
@@ -53,18 +53,9 @@ const toPost = () => (request.value ? router.replace({ name: 'post-home', params
         </div>
       </div>
 
-      <div class="card steps">
-        <div class="step"><span class="mark done"><Icon name="check" :size="14" /></span><span>Ontvangen<template v-if="request.position"> · plek {{ request.position }} in de wachtrij</template></span></div>
-        <div class="step" :class="{ later: !request.pickedAt }">
-          <span class="mark" :class="{ done: request.pickedAt }"><Icon v-if="request.pickedAt" name="check" :size="14" /></span>
-          <span v-if="request.pickedAt">{{ request.pickedBy?.name ?? 'De coördinator' }} regelt het · {{ clock(request.pickedAt) }}</span>
-          <span v-else>Wordt geregeld</span>
-        </div>
-        <div class="step" :class="{ later: request.status !== 'afgehandeld' }">
-          <span class="mark" :class="{ done: request.status === 'afgehandeld' }"><Icon v-if="request.status === 'afgehandeld'" name="check" :size="14" /></span>
-          <span>Afgehandeld<template v-if="request.status === 'afgehandeld'"> · {{ clock(request.doneAt) }}</template></span>
-        </div>
-      </div>
+      <p v-if="request.status === 'opgepakt'" class="note info gap-top">{{ request.pickedBy?.name ?? 'De coördinator' }} regelt het.</p>
+      <p v-else-if="request.position" class="note info gap-top">Plek {{ request.position }} in de wachtrij van de coördinator.</p>
+      <ActivityLog :entries="requestLog(request)" />
 
       <p v-if="open" class="note gap-top">Geen spoed: je krijgt een melding als de coördinator het oppakt. Bij spoed: bel de coördinator.</p>
 
@@ -72,7 +63,7 @@ const toPost = () => (request.value ? router.replace({ name: 'post-home', params
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div class="stack gap-8 bottom">
         <a v-if="open && coordinator" :href="telHref(coordinator.phone)" class="btn">Bel evenementcoördinator</a>
-        <button class="btn primary" @click="toPost">Terug naar mijn post</button>
+        <button class="btn primary" @click="router.back()">{{ atPost ? 'Terug naar mijn post' : 'Terug' }}</button>
         <button v-if="open" class="btn link muted" :disabled="busy" @click="withdraw">Aanvraag intrekken</button>
       </div>
     </template>
@@ -82,11 +73,6 @@ const toPost = () => (request.value ? router.replace({ name: 'post-home', params
 <style scoped>
 .top-gap { margin-top: 24px; }
 .gap-top { margin-top: 14px; }
-.steps { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; font-size: 14px; }
-.step { display: flex; gap: 12px; align-items: center; }
-.step.later { color: var(--muted); }
-.mark { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; border: 2px solid #A8A59C; display: flex; align-items: center; justify-content: center; }
-.mark.done { border: none; background: var(--ok); color: #FFFFFF; }
 .bottom { padding-top: 14px; }
 .muted { color: var(--muted); }
 </style>

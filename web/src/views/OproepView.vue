@@ -3,11 +3,12 @@
 import { computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatKm, telHref } from '@ehbo/shared';
+import ActivityLog from '../components/ActivityLog.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentLog, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
 import { navigationUrl } from '../navigate.ts';
 import { primaryContact } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
@@ -126,11 +127,7 @@ async function onSite() {
         <div v-if="mode === 'call'" class="fact"><span class="label">Km-punt</span><span class="value">{{ post.km !== null ? formatKm(post.km) : '–' }}</span></div>
       </div>
 
-      <div v-if="mode === 'call'" class="card timeline gap-top">
-        <div v-for="(e, n) in incident.events" :key="n" class="row" :class="{ warn: e.type === 'geescaleerd' || e.type === 'herhaald' }">
-          <span class="at">{{ clock(e.at) }}</span><span>{{ e.text }}</span>
-        </div>
-      </div>
+      <ActivityLog v-if="mode === 'call'" :entries="incidentLog(incident)" />
       <div v-else class="list others gap-top">
         <span class="small others-label">Ook opgeroepen</span>
         <div v-for="o in others" :key="o.name" class="list-row">

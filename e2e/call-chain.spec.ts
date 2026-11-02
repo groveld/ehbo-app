@@ -101,7 +101,7 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await post.getByRole('button', { name: 'Post openen' }).click();
   await post.getByRole('button', { name: /^Water/ }).click();
   await expect(post.getByRole('heading', { name: 'Water aangevraagd' })).toBeVisible();
-  await expect(post.getByText(/plek 1 in de wachtrij/)).toBeVisible();
+  await expect(post.getByText(/Plek 1 in de wachtrij/)).toBeVisible();
   await post.getByRole('button', { name: 'Bijna op' }).click();
   await expect(post.getByRole('button', { name: 'Bijna op' })).toHaveAttribute('aria-pressed', 'true');
 
@@ -111,12 +111,18 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await expect(card).toContainText('bijna op');
   await card.getByRole('button', { name: 'Oppakken' }).click();
   await expect(card).toContainText('Opgepakt door jou');
-  await expect(post.getByText(/Cor Coördinator regelt het/)).toBeVisible({ timeout: 10_000 });
+  await expect(post.getByText('Cor Coördinator regelt het.')).toBeVisible({ timeout: 10_000 });
 
   await card.getByRole('button', { name: 'Afgehandeld' }).click();
   await expect(post.getByRole('heading', { name: 'Water: afgehandeld' })).toBeVisible({ timeout: 10_000 });
 
+  // Looked back at later: from the queue, and from the post.
+  await coordinator.locator('.request').filter({ hasText: 'Afgehandeld' }).filter({ hasText: 'Waterpost 3' }).first().getByRole('link').click();
+  await expect(coordinator.getByRole('heading', { name: 'Water: afgehandeld' })).toBeVisible();
+  await expect(coordinator.getByText('Opgepakt door Cor Coördinator')).toBeVisible();
+
   await post.getByRole('button', { name: 'Terug naar mijn post' }).click();
+  await expect(post.getByRole('link', { name: /Water.*afgehandeld/ }).first()).toBeVisible();
   await post.getByRole('button', { name: 'Post sluiten' }).click();
   await expect(post.getByRole('dialog').getByText(/altijd weer openen/)).toBeVisible();
   await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();

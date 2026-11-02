@@ -27,6 +27,15 @@ const canOpen = computed(() => myRole.value?.role === 'verantwoordelijke' || ses
 const coordinator = computed(() => coordinatorOf(store.pkg));
 const nearest = computed(() => (store.pkg && post.value ? nearestUnit(store.pkg, post.value) : null));
 const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id));
+/** Eerder vandaag: afgeronde meldingen en aanvragen, om terug te kijken. Nieuwste eerst. */
+const history = computed(() => [
+  ...live.incidents.filter((i) => i.postId === post.value?.id && (i.status === 'afgerond' || i.status === 'ingetrokken')).map((i) => ({
+    key: `i${i.id}`, at: i.reportedAt, text: `EHBO · ${incidentSummary(i)}`, state: i.status === 'afgerond' ? 'afgerond' : 'ingetrokken', to: { name: 'melding', params: { id: i.id } },
+  })),
+  ...live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'afgehandeld' || r.status === 'ingetrokken')).map((r) => ({
+    key: `r${r.id}`, at: r.createdAt, text: [REQUEST_KINDS[r.kind].label, requestDetailLabel(r.kind, r.detail)].filter(Boolean).join(' · '), state: r.status === 'afgehandeld' ? 'afgehandeld' : 'ingetrokken', to: { name: 'aanvraag', params: { id: r.id } },
+  })),
+].sort((a, b) => b.at.localeCompare(a.at)));
 /** Meldingen die zonder bereik op deze telefoon wachten. */
 const waiting = computed(() => live.outbox.filter((i) => i.postId === post.value?.id));
 
@@ -146,6 +155,18 @@ async function setOpen(value: boolean) {
             </RouterLink>
           </template>
           <div v-else-if="!waiting.length && !openRequests.length" class="request"><span class="grow muted">Open verzoeken van deze post</span><strong>geen</strong></div>
+        </div>
+      </template>
+
+      <template v-if="history.length">
+        <span class="section-label people-label">Eerder vandaag</span>
+        <div class="card requests">
+          <RouterLink v-for="h in history" :key="h.key" :to="h.to" class="request">
+            <span class="mono at">{{ clock(h.at) }}</span>
+            <span class="grow">{{ h.text }}</span>
+            <span class="muted">{{ h.state }}</span>
+            <Icon name="forward" :size="16" />
+          </RouterLink>
         </div>
       </template>
     </template>

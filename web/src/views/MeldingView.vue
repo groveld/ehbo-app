@@ -3,12 +3,13 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { OUTCOMES, formatKm, telHref } from '@ehbo/shared';
+import ActivityLog from '../components/ActivityLog.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { confirmDialog } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentLog, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
 import { coordinatorOf } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -129,11 +130,7 @@ const back = () => router.back();
         <RouterLink v-if="canChange" :to="{ name: 'aanvullen', params: { incidentId: incident.id } }" class="add-link">Aanvullen</RouterLink>
       </div>
 
-      <div class="card timeline">
-        <div class="row"><span class="dot on" /><span class="at">{{ clock(incident.sentAt) }}</span><span>Melding verstuurd</span></div>
-        <div class="row"><span class="dot on" /><span class="at">{{ clock(incident.acceptedAt) }}</span><span>Geaccepteerd door {{ unitName(incident.unitId!) }}</span></div>
-        <div class="row" :class="{ muted: !incident.onSiteAt }"><span class="dot" :class="{ on: incident.onSiteAt }" /><span class="at">{{ clock(incident.onSiteAt) }}</span><span>Ter plaatse</span></div>
-      </div>
+      <ActivityLog :entries="incidentLog(incident)" />
 
       <div class="stack gap-8 escalate">
         <span class="section-title">Wordt het erger? Escaleer</span>
@@ -156,9 +153,7 @@ const back = () => router.back();
         <span class="summary">{{ incidentSummary(incident) }}</span>
         <span v-if="incident.outcome" class="small">Afloop: {{ OUTCOMES[incident.outcome] }}</span>
       </div>
-      <div class="card timeline gap-top">
-        <div v-for="(e, n) in incident.events" :key="n" class="row"><span class="at">{{ clock(e.at) }}</span><span>{{ e.text }}</span></div>
-      </div>
+      <ActivityLog :entries="incidentLog(incident)" />
     </template>
 
     <!-- Coördinator: zelf een eenheid inzetten (na telefonisch overleg) -->
@@ -214,11 +209,6 @@ const back = () => router.back();
 .name { font-size: 16px; font-weight: 700; }
 .round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--ink); }
 .round.green { background: var(--ok); color: #FFFFFF; }
-.timeline { margin-top: 10px; font-size: 14px; }
-.timeline .row { align-items: center; }
-.timeline .muted { color: var(--muted); }
-.dot { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; border: 2px solid #A8A59C; }
-.dot.on { border: none; background: var(--ok); }
 .escalate { padding-top: 18px; }
 .assign { padding-top: 18px; }
 .small-btn { width: auto; height: 44px; padding: 0 14px; }

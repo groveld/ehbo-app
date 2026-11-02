@@ -61,7 +61,7 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
           <span class="picked grow">{{ pickedText(r) }}</span>
           <span class="mono at">{{ clock(r.createdAt) }}</span>
         </div>
-        <span class="request-line">{{ line(r) }}</span>
+        <RouterLink :to="{ name: 'aanvraag', params: { id: r.id } }" class="request-line open-link">{{ line(r) }}<Icon name="forward" :size="16" /></RouterLink>
         <div v-if="handles" class="request-actions">
           <a v-if="postPhone(r)" :href="telHref(postPhone(r)!)" class="btn call" :aria-label="`Bel ${r.postName}`"><Icon name="phone" :size="20" /></a>
           <button v-if="r.status === 'aangevraagd'" class="btn primary-ish" :disabled="busy" @click="run(() => live.pickRequest(r.id))">Oppakken</button>
@@ -69,7 +69,6 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
         </div>
       </div>
       <p v-if="!live.openIncidents.length && !openRequests.length" class="card nothing-open"><Icon name="check" :size="20" />Niets open.</p>
-      <p v-if="!live.connected" class="small">Geen live verbinding; dit is de laatst bekende stand.</p>
 
       <template v-if="closed.length || doneRequests.length">
         <span class="section-title later">Afgerond</span>
@@ -87,7 +86,7 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
             <span class="picked grow">{{ pickedText(r) }}</span>
             <span class="mono at">{{ clock(r.createdAt) }}</span>
           </div>
-          <span class="request-line">{{ line(r) }}</span>
+          <RouterLink :to="{ name: 'aanvraag', params: { id: r.id } }" class="request-line open-link">{{ line(r) }}<Icon name="forward" :size="16" /></RouterLink>
         </div>
       </template>
     </div>
@@ -109,6 +108,7 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
 .kind.ehbo { background: #FBE3E1; color: #8A1A14; }
 .picked { font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .request-line { font-size: 15px; font-weight: 600; }
+.open-link { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--ink); text-decoration: none; }
 .request-actions { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; }
 .call { padding: 0; }
 .primary-ish { background: var(--primary); box-shadow: none; color: #FFFFFF; font-weight: 700; }
