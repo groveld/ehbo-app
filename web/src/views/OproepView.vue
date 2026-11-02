@@ -10,7 +10,7 @@ import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentLog, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
 import { navigationUrl } from '../navigate.ts';
-import { primaryContact } from '../posts.ts';
+import { callLines, primaryContact } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -67,6 +67,8 @@ const others = computed(() => (incident.value?.dispatches ?? []).filter((d) => d
   state: d.acceptedAt ? 'accepted' : d.declinedAt ? 'declined' : 'pending',
   km: d.distanceKm,
 })));
+/** From this team to the call, on the map. */
+const lines = computed(() => callLines(store.pkg, (live.state?.units ?? []).filter((u) => u.id === myUnitId.value), live.incidents, live.serverNow));
 const navUrl = computed(() => (post.value?.lat != null && post.value.lng != null ? navigationUrl(post.value.lat, post.value.lng, post.value.name) : null));
 
 async function accept() {
@@ -156,7 +158,7 @@ async function onSite() {
         :title="post.name"
       />
       <div v-if="store.pkg" class="map small-map">
-        <EventMap :pkg="store.pkg" :posts="[post]" :focus-post-id="post.id" :alert-post-ids="[post.id]" whole-route />
+        <EventMap :pkg="store.pkg" :posts="[post]" :focus-post-id="post.id" :alert-post-ids="[post.id]" :lines="lines" whole-route />
       </div>
       <div v-if="post.accessRoute" class="card route">
         <span class="small">Aanrijroute</span>

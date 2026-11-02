@@ -1,5 +1,5 @@
 // Posten in het evenementpakket: contactpersoon, eenheden, dichtstbijzijnde EHBO.
-import { awayPostIds, distanceKm, formatKm, isAway, type EventPackage, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, sameFunction } from '@ehbo/shared';
+import { POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, sameFunction } from '@ehbo/shared';
 
 /** "km 2,1", and "+1" when the longest run comes by more often. */
 export function kmLabel(post: Pick<PackagePost, 'km' | 'passages'>) {
@@ -70,6 +70,22 @@ export function mobileUnits(pkg: EventPackage | null, units: LiveUnit[], now: nu
     return [{ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'vrij' }];
   });
   return { ambulances, awayPostIds: awayPostIds(pkg.units, units, pkg.posts, now) };
+}
+
+/**
+ * A line from each team on its way to where the call is, so you see at once which team goes where.
+ * It starts at the team's last GPS position, or else at its own post. Once on site there's nothing left to show.
+ */
+export function callLines(pkg: EventPackage | null, units: LiveUnit[], incidents: LiveIncident[], now: number): [LngLat, LngLat][] {
+  if (!pkg) return [];
+  return units.flatMap((u) => {
+    const incident = incidents.find((i) => i.id === u.incidentId && i.status === 'geaccepteerd');
+    if (!incident || incident.post.lat === null || incident.post.lng === null) return [];
+    const fresh = u.position && now - new Date(u.position.at).getTime() <= POSITION_MAX_AGE_MS ? u.position : null;
+    const home = pkg.posts.find((p) => p.id === pkg.units.find((x) => x.id === u.id)?.postId);
+    const from = fresh ? [fresh.lng, fresh.lat] as LngLat : home ? lngLat(home) : null;
+    return from ? [[from, [incident.post.lng, incident.post.lat]] as [LngLat, LngLat]] : [];
+  });
 }
 
 /** "12:00 – 16:00", or what's known of it. */

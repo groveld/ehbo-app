@@ -1,14 +1,14 @@
 <script setup lang="ts">
 // 3.4 · Overzicht & kaart: alle posten en EHBO-teams, filter per soort en route, zoeken op naam of km, tellers voor de coördinator, en de lijst met bel- en navigeerknoppen.
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef, watch, watchEffect } from 'vue';
-import { QUIET_AFTER_MIN, isDueOpen, lacksPosition, type EventPackage, type LastSeen, type PackagePost } from '@ehbo/shared';
+import { QUIET_AFTER_MIN, isDueOpen, lacksPosition, type EventPackage, type LastSeen, type LngLat, type PackagePost } from '@ehbo/shared';
 import { api } from '../../api.ts';
 import { useRouter } from 'vue-router';
 import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
 import TeamRow from '../../components/TeamRow.vue';
 import { clock } from '../../incidents.ts';
-import { coordinatorOf, isOnRun, mobileUnits, type Ambulance } from '../../posts.ts';
+import { callLines, coordinatorOf, isOnRun, mobileUnits, type Ambulance } from '../../posts.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 import { useSessionStore } from '../../stores/session.ts';
@@ -115,11 +115,11 @@ const counters = computed(() => {
   ];
 });
 /** What the map shows. Out of view none of this is read, so nothing live reaches the map; opening the tab brings it up to date in one go. */
-const mapView = shallowRef<{ pkg: EventPackage; posts: PackagePost[]; highlightRunId: number | null; alertPostIds: number[]; taskPostIds: number[]; ambulances: Ambulance[]; awayPostIds: number[] } | null>(null);
+const mapView = shallowRef<{ pkg: EventPackage; posts: PackagePost[]; highlightRunId: number | null; alertPostIds: number[]; taskPostIds: number[]; lines: [LngLat, LngLat][]; ambulances: Ambulance[]; awayPostIds: number[] } | null>(null);
 watchEffect(() => {
   if ((!props.active && mapView.value) || !store.pkg) return;
   mapView.value = {
-    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, taskPostIds: taskIds.value, ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
+    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, taskPostIds: taskIds.value, lines: callLines(store.pkg, live.state?.units ?? [], live.incidents, live.serverNow), ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
   };
 });
 const banner = computed(() => {

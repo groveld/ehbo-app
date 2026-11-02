@@ -9,7 +9,7 @@ import { confirmClosePost } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentSummary } from '../incidents.ts';
 import { coordinatorOf, kmLabel, nearestUnit } from '../posts.ts';
-import { useLiveStore } from '../stores/live.ts';
+import { isOpen, useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
 
@@ -29,15 +29,9 @@ const canOpen = computed(() => myRole.value?.role === 'verantwoordelijke' || ses
 const coordinator = computed(() => coordinatorOf(store.pkg));
 const nearest = computed(() => (store.pkg && post.value ? nearestUnit(store.pkg, post.value) : null));
 const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id && !i.offPost));
-/** Eerder vandaag: afgeronde meldingen en aanvragen, om terug te kijken. Nieuwste eerst. */
-const history = computed(() => [
-  ...live.incidents.filter((i) => i.postId === post.value?.id && !i.offPost && (i.status === 'afgerond' || i.status === 'ingetrokken')).map((i) => ({
-    key: `i${i.id}`, at: i.reportedAt, text: `EHBO · ${incidentSummary(i)}`, state: i.status === 'afgerond' ? 'afgerond' : 'ingetrokken', to: { name: 'melding', params: { id: i.id } },
-  })),
-  ...live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'afgehandeld' || r.status === 'ingetrokken')).map((r) => ({
-    key: `r${r.id}`, at: r.createdAt, text: [REQUEST_KINDS[r.kind].label, requestDetailLabel(r.kind, r.detail)].filter(Boolean).join(' · '), state: r.status === 'afgehandeld' ? 'afgehandeld' : 'ingetrokken', to: { name: 'aanvraag', params: { id: r.id } },
-  })),
-].sort((a, b) => b.at.localeCompare(a.at)));
+/** Eerder vandaag, op een eigen scherm. */
+const earlier = computed(() => live.incidents.filter((i) => i.postId === post.value?.id && !i.offPost && !isOpen(i)).length
+  + live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'afgehandeld' || r.status === 'ingetrokken')).length);
 /** Meldingen die zonder bereik op deze telefoon wachten. */
 const waiting = computed(() => live.outbox.filter((i) => i.postId === post.value?.id));
 
@@ -137,7 +131,7 @@ async function setOpen(value: boolean) {
           </button>
           <a :href="coordinator ? telHref(coordinator.phone) : undefined" class="tile other">
             <span class="tile-icon" style="background: var(--primary)"><Icon name="phone" :size="20" /></span>
-            <span class="tile-text"><span class="tile-label">Anders</span><span class="tile-sub">Bel de evenementcoördinator</span></span>
+            <span class="tile-text"><span class="tile-label">Bel de evenementcoördinator</span></span>
           </a>
         </div>
 
@@ -166,17 +160,13 @@ async function setOpen(value: boolean) {
         </div>
       </template>
 
-      <template v-if="history.length">
-        <span class="section-label people-label">Eerder vandaag</span>
-        <div class="card requests">
-          <RouterLink v-for="h in history" :key="h.key" :to="h.to" class="request">
-            <span class="mono at">{{ clock(h.at) }}</span>
-            <span class="grow">{{ h.text }}</span>
-            <span class="muted">{{ h.state }}</span>
-            <Icon name="forward" :size="16" />
-          </RouterLink>
-        </div>
-      </template>
+      <div class="list earlier">
+        <RouterLink :to="{ name: 'post-eerder', params: { id: post.id } }" class="list-row">
+          <span class="grow">Eerder vandaag</span>
+          <strong>{{ earlier || 'nog niets' }}</strong>
+          <Icon name="forward" :size="16" />
+        </RouterLink>
+      </div>
     </template>
   </main>
 </template>
@@ -222,4 +212,6 @@ h1 { font-size: 24px; font-weight: 700; line-height: 1.2; }
 .state { font-weight: 700; color: var(--danger); }
 .state.blue { color: var(--info); }
 .muted { color: var(--ink-2); }
+.earlier { margin-top: 12px; }
+.earlier .list-row { gap: 8px; min-height: 50px; font-size: 14px; color: var(--ink); text-decoration: none; }
 </style>

@@ -377,6 +377,30 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     changed();
   }
 
+  /**
+   * These units just became available. A call that's waiting with nobody to react to it goes to them at once, not at the next round.
+   * A call that another available team still has stays with that team, and goes to everyone with the escalation as usual.
+   */
+  function offerOpenCalls(unitIds: number[]) {
+    for (const row of all("SELECT * FROM incidents WHERE status = 'verstuurd' ORDER BY id")) {
+      const id = row.id as number;
+      const free = freeUnits(posts().get(row.post_id as number)!);
+      const pending = invited(id);
+      if (free.some((c) => pending.includes(c.unit.id))) continue;
+      const fresh = free.filter((c) => unitIds.includes(c.unit.id));
+      if (!fresh.length) continue;
+      db.transaction(() => {
+        for (const { unit, km } of fresh) {
+          addDispatch(id, unit.id, 'alle', km);
+          // Who said "kan niet" and is available now, gets the question again.
+          run('UPDATE incident_dispatches SET declined_at = NULL WHERE incident_id = ? AND unit_id = ?', id, unit.id);
+          log(id, 'verstuurd', `Naar ${unit.name} gestuurd: nu beschikbaar`, unit.id);
+        }
+      });
+      alarmUnits(row, fresh.map((c) => c.unit.id), 'EHBO-oproep');
+    }
+  }
+
   // ---- Rechten ----
 
   const isCoordinator = (me: Me) => coordinator() === me.phone;
@@ -633,6 +657,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       log(id, 'afgerond', `Afgerond door ${unit.name}${body.pause ? ', daarna pauze' : ''}`, unitId);
     });
     copyToCoordinator(incidentRow(id), `Afgerond door ${unit.name}.`);
+    offerOpenCalls([unitId]);
     changed();
     return state();
   }
@@ -670,6 +695,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
         run('UPDATE ehbo_units SET keep_until = ?, closes_at = NULL WHERE id = ?', keepAfterOpening(planOf(unit)), unit.id);
       }
     });
+    if (availability === 'vrij') offerOpenCalls([unit.id]);
     changed();
     return state();
   }
@@ -698,6 +724,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
         if (unit.availability !== 'pauze') run('UPDATE ehbo_units SET availability = ? WHERE id = ?', open ? 'vrij' : 'uit_dienst', unit.id);
       }
     });
+    if (open) offerOpenCalls(fixed.map((u) => u.id));
     changed();
     return state();
   }
@@ -845,6 +872,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       for (const unit of off) run("UPDATE ehbo_units SET availability = 'vrij', keep_until = ?, closes_at = NULL WHERE id = ?", keepAfterOpening(planOf(unit)), unit.id);
     });
     for (const post of closedPosts) notify(postPhones(post.id), { title: `${post.name} is geopend`, body: 'De coördinator heeft je post geopend.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+    offerOpenCalls(off.map((u) => u.id));
     for (const unit of off) notify(unit.members, { title: 'Je staat op Beschikbaar', body: 'De coördinator heeft je op Beschikbaar gezet.', tag: `dienst-${unit.id}`, url: '/ehbo' });
     changed();
     return state();

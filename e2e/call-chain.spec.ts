@@ -142,7 +142,12 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await expect(coordinator.getByText('Opgepakt door Cor Coördinator')).toBeVisible();
 
   await post.getByRole('button', { name: 'Terug naar mijn post' }).click();
-  await expect(post.getByRole('link', { name: /Water.*afgehandeld/ }).first()).toBeVisible();
+  await post.getByRole('link', { name: /Eerder vandaag/ }).click();
+  await post.getByRole('link', { name: /Water.*afgehandeld/ }).first().click();
+  await expect(post.getByRole('heading', { name: 'Water: afgehandeld' })).toBeVisible();
+  await post.getByRole('button', { name: 'Terug', exact: true }).click();
+  await expect(post.getByRole('heading', { name: 'Eerder vandaag' })).toBeVisible();
+  await post.getByRole('link', { name: 'Terug' }).click();
   await post.getByRole('button', { name: 'Post sluiten' }).click();
   await expect(post.getByRole('dialog').getByText(/altijd weer openen/)).toBeVisible();
   await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
@@ -521,6 +526,19 @@ test('status bar: the call is one tap away on every page, for the post and the t
   await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
   await expect(post.getByText('POST IS DICHT')).toBeVisible();
   await expect(ehbo.locator('.live-bar')).toHaveCount(0);
+});
+
+test('every page keeps its own scroll position', async ({ browser }) => {
+  const coordinator = await staffPhone(browser, PHONE.coordinator);
+  await coordinator.setViewportSize({ width: 390, height: 420 });
+  await coordinator.getByRole('link', { name: 'Contacten' }).click();
+  await expect(coordinator.getByText('Noodnummers')).toBeVisible();
+  await coordinator.evaluate(() => scrollTo(0, 300));
+  await coordinator.getByRole('link', { name: 'Menu' }).click();
+  await expect(coordinator).toHaveURL(/\/menu$/);
+  await expect.poll(() => coordinator.evaluate(() => scrollY)).toBe(0);
+  await coordinator.getByRole('link', { name: 'Contacten' }).click();
+  await expect.poll(() => coordinator.evaluate(() => scrollY)).toBe(300);
 });
 
 test('map tab: quiet out of view, up to date the moment it opens', async ({ browser }) => {

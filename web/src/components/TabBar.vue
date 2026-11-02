@@ -34,7 +34,8 @@ const MENU = ['menu', 'info', 'controle', 'sturing'];
 const routePostId = computed(() => {
   const p = route.params;
   switch (route.name) {
-    case 'post-home': case 'ehbo-verzoek': return Number(p.id);
+    case 'post-home': case 'ehbo-verzoek': case 'post-eerder': return Number(p.id);
+    case 'post-melding': case 'post-aanvraag': return Number(p.postId);
     case 'melding': return live.incidentById(Number(p.id))?.postId ?? null;
     case 'aanvullen': return live.incidentById(Number(p.incidentId))?.postId ?? null;
     case 'aanvraag': return live.requestById(Number(p.id))?.postId ?? null;

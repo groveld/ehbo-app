@@ -35,13 +35,15 @@ const props = withDefaults(defineProps<{
   alertPostIds?: number[];
   /** Posts with an open request: an amber glow, less urgent than a call. */
   taskPostIds?: number[];
+  /** From a team to the call it's going to. */
+  lines?: [LngLat, LngLat][];
   /** Mobiele EHBO-eenheden onderweg, op hun laatste GPS-positie. */
   ambulances?: Ambulance[];
   /** Standplaatsen waar de mobiele EHBO nu niet is: het kruisje grijs. */
   awayPostIds?: number[];
   /** Kept in memory but not in view: no location, and nothing happens until it's back. */
   paused?: boolean;
-}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, wholeRoute: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], taskPostIds: () => [], ambulances: () => [], awayPostIds: () => [], paused: false });
+}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, wholeRoute: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], taskPostIds: () => [], lines: () => [], ambulances: () => [], awayPostIds: () => [], paused: false });
 
 const emit = defineEmits<{ select: [postId: number]; pick: [lngLat: LngLat] }>();
 
@@ -120,6 +122,11 @@ function arrowImage() {
   ctx.fill();
   return ctx.getImageData(0, 0, size, size);
 }
+
+const lineFeatures = () => ({
+  type: 'FeatureCollection' as const,
+  features: props.lines.map((coordinates) => ({ type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates } })),
+});
 
 function runFeatures() {
   const routes = props.pkg.runs.filter((r) => r.line).length;
@@ -291,6 +298,7 @@ function createMap() {
     // De bronvermelding begint ingeklapt (alleen het ⓘ-knopje), zodat hij de kaart niet bedekt.
     container.value?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
     map!.addSource('lopen', { type: 'geojson', data: runFeatures() });
+    map!.addSource('oproeplijnen', { type: 'geojson', data: lineFeatures() });
     map!.addLayer({
       id: 'lopen',
       type: 'line',
@@ -303,6 +311,13 @@ function createMap() {
         'line-width': ['case', ['get', 'highlight'], 4, 3],
         'line-opacity': ['case', ['get', 'highlight'], 1, 0.35],
       },
+    });
+    map!.addLayer({
+      id: 'oproeplijnen',
+      type: 'line',
+      source: 'oproeplijnen',
+      layout: { 'line-cap': 'round' },
+      paint: { 'line-color': '#C8261E', 'line-width': 3, 'line-dasharray': [1.5, 2] },
     });
     map!.addImage('route-arrow', arrowImage(), { pixelRatio: 2 });
     map!.addLayer({
@@ -364,6 +379,8 @@ watch(() => [props.posts, props.pkg, props.focusPostId, props.highlightRunId, pr
 watch(() => props.awayPostIds.join(), drawPosts);
 watch(() => props.picked, drawPicked);
 watch(() => props.ambulances, drawAmbulances);
+// Recalculated every second; only redraw when a line really moved.
+watch(() => JSON.stringify(props.lines), () => (map?.getSource('oproeplijnen') as GeoJSONSource | undefined)?.setData(lineFeatures()));
 // Naar een andere post (bijv. vanaf de postpagina): de kaart gaat mee.
 watch(() => props.focusPostId, () => frame());
 watch(() => props.highlightRunId, () => frame(true));
