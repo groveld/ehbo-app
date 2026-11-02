@@ -126,6 +126,9 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await coordinator.getByRole('link', { name: 'Meldingen' }).click();
   const card = coordinator.locator('.request').filter({ hasText: 'Waterpost 3' });
   await expect(card).toContainText('bijna op');
+  await coordinator.getByRole('link', { name: 'Kaart' }).click();
+  await expect(coordinator.locator('.post-marker.task')).toHaveCSS('animation-iteration-count', 'infinite');
+  await coordinator.getByRole('link', { name: 'Meldingen' }).click();
   await card.getByRole('button', { name: 'Oppakken' }).click();
   await expect(card).toContainText('Opgepakt door jou');
   await expect(post.getByText('Cor Coördinator regelt het.')).toBeVisible({ timeout: 10_000 });
@@ -502,6 +505,7 @@ test('status bar: the call is one tap away on every page, for the post and the t
 
   // The bottom button stays above the bar, and a tap goes straight back.
   await ehbo.locator('.tabbar').getByRole('link', { name: 'EHBO' }).click();
+  await expect(ehbo.getByRole('link', { name: 'Bel 112' })).toBeVisible();
   const button = (await ehbo.getByRole('link', { name: 'Bel 112' }).boundingBox())!;
   const bar = (await ehbo.locator('.live-bar').boundingBox())!;
   expect(button.y + button.height).toBeLessThanOrEqual(bar.y);
@@ -542,6 +546,26 @@ test('map tab: quiet out of view, up to date the moment it opens', async ({ brow
 
   await coordinator.getByRole('link', { name: 'Kaart' }).click();
   await expect(coordinator.locator('.post-marker.alert')).toHaveCount(1);
+  await expect(coordinator.locator('.post-marker.alert')).toHaveCSS('animation-iteration-count', 'infinite');
+
+  // Dragged away from the route: on return the whole route is back in view.
+  const allInView = () => coordinator.evaluate(() => {
+    const frame = document.querySelector('.event-map')!.getBoundingClientRect();
+    return [...document.querySelectorAll('.event-map .post-marker')].every((m) => {
+      const r = m.getBoundingClientRect();
+      return r.left >= frame.left && r.right <= frame.right && r.top >= frame.top && r.bottom <= frame.bottom;
+    });
+  });
+  expect(await allInView()).toBe(true);
+  const box = (await coordinator.locator('.event-map').boundingBox())!;
+  await coordinator.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await coordinator.mouse.down();
+  await coordinator.mouse.move(box.x + box.width - 5, box.y + box.height / 2, { steps: 8 });
+  await coordinator.mouse.up();
+  await expect.poll(allInView).toBe(false);
+  await coordinator.getByRole('link', { name: 'Contacten' }).click();
+  await coordinator.getByRole('link', { name: 'Kaart' }).click();
+  await expect.poll(allInView).toBe(true);
 
   await post.getByRole('button', { name: 'Melding intrekken' }).click();
   await post.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();

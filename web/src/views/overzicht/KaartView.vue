@@ -155,11 +155,11 @@ const banner = computed(() => {
           <option v-if="store.pkg.units.length" value="teams">EHBO</option>
           <option v-if="isLead" value="attention">Vraagt aandacht</option>
         </select>
-        <select v-if="routes.length" v-model="route" class="input route" aria-label="Route">
+        <select v-if="routes.length" v-model="route" class="input route" :class="{ chosen: route !== null }" aria-label="Route">
           <option :value="null">Alle routes</option>
           <option v-for="r in routes" :key="r.id" :value="r.id">{{ r.name }}</option>
         </select>
-        <RouterLink v-if="route !== null" :to="{ name: 'route', params: { id: route } }" class="add-link route-link">Alles over deze route</RouterLink>
+        <RouterLink v-if="route !== null" :to="{ name: 'route', params: { id: route } }" class="btn route-info"><Icon name="info" :size="18" />Route-info</RouterLink>
       </div>
 
       <div v-if="active" class="stack gap-14">
@@ -194,7 +194,8 @@ const banner = computed(() => {
 .search { position: relative; display: block; color: var(--muted); }
 .search svg { position: absolute; left: 12px; top: 13px; }
 .search .input { padding-left: 38px; }
-.route-link { grid-column: 1 / -1; }
 .route { grid-column: 1 / -1; appearance: auto; font-size: 14px; font-weight: 600; }
+.route.chosen { grid-column: auto; }
+.route-info { height: 44px; }
 .type { width: auto; max-width: 130px; padding: 0 8px 0 12px; appearance: auto; font-size: 14px; font-weight: 600; }
 </style>
