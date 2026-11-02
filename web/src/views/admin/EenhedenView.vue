@@ -1,12 +1,11 @@
 <script setup lang="ts">
 // 1.4 · EHBO-eenheden: overzicht.
-import type { AdminUnit } from '@ehbo/shared';
+import { mobilityLabel, type AdminUnit } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 import { useAdminStore } from '../../stores/admin.ts';
 
 const admin = useAdminStore();
-const MOBILITY = { te_voet: 'TE VOET', fiets: 'FIETS', auto: 'AUTO', anders: 'ANDERS' } as const;
 
 function describe(u: AdminUnit) {
   const post = u.postId !== null ? admin.postById.get(u.postId) : undefined;
@@ -26,7 +25,7 @@ function describe(u: AdminUnit) {
           <span class="main">
             <span class="title-line">
               {{ u.name }}
-              <span class="tag">{{ u.kind === 'vast' ? 'VAST' : `MOBIEL · ${MOBILITY[u.mobility ?? 'anders']}` }}</span>
+              <span class="tag">{{ u.kind === 'vast' ? 'VAST' : mobilityLabel(u.mobility).toUpperCase() }}</span>
               <span v-if="u.hasAed" class="tag ok">AED</span>
             </span>
             <span class="sub" :class="{ warn: u.kind === 'vast' && u.postId === null }">{{ describe(u) }}</span>

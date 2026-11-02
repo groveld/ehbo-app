@@ -127,6 +127,14 @@ export interface PublicEvent {
 }
 
 /** Eén plek of functie waarop iemand is ingepland. */
+const MOBILITY_LABEL: Record<UnitMobility, string | null> = { te_voet: 'te voet', fiets: 'fiets', auto: 'auto', anders: null };
+
+/** "mobiel (auto)", or just "mobiel" when it's nothing in particular. */
+export const mobilityLabel = (mobility: UnitMobility | null) => {
+  const how = MOBILITY_LABEL[mobility ?? 'anders'];
+  return how ? `mobiel (${how})` : 'mobiel';
+};
+
 export interface Assignment {
   kind: 'post' | 'ehbo' | 'kernteam' | 'beheerder';
   /** Bijv. "Posthouder", "EHBO Team 3", "Evenementcoördinator". */

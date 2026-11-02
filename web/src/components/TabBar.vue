@@ -27,7 +27,7 @@ const COLORS = { ehbo: '#C8261E', kaart: '#0E7C86', meldingen: '#A16207', contac
 /** Het kruis van de EHBO-tab in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
 const STATUS = { vrij: '#0A7D4F', pauze: '#C8261E', uit_dienst: 'var(--ink)' } as const;
 
-const EHBO = ['ehbo', 'inzetten', 'oproep', 'afronden'];
+const EHBO = ['ehbo', 'inzetten', 'inzet', 'oproep', 'afronden'];
 const MENU = ['menu', 'info', 'controle', 'sturing'];
 
 /** Bij welke post het huidige scherm hoort (startscherm, verzoek, melding, aanvraag of geen bereik), of null. */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Gekleurd kopblok (oproep, verstuurd, onderweg, EHBO-scherm, aanvraag): altijd 104 px hoog, tekst bovenaan, titel 26 px.
+// Gekleurd kopblok (oproep, verstuurd, onderweg, EHBO-scherm, aanvraag): altijd 84 px hoog, tekst verticaal gecentreerd, titel 26 px.
 // Status colors are fixed, never the event's: dark is off duty or finished, red is busy or urgent, green is available.
 defineProps<{ tone: 'red' | 'orange' | 'green' | 'dark' | 'blue'; label: string; title: string }>();
 </script>
@@ -16,12 +16,12 @@ defineProps<{ tone: 'red' | 'orange' | 'green' | 'dark' | 'blue'; label: string;
 
 <style scoped>
 .status-block {
-  flex-shrink: 0; display: flex; align-items: flex-start; gap: 16px;
+  flex-shrink: 0; display: flex; align-items: center; gap: 16px;
   /* Over de volle breedte van het scherm, ook onder de statusbalk van de telefoon. */
-  margin: calc(-1 * env(safe-area-inset-top)) -16px 0; height: calc(104px + env(safe-area-inset-top));
-  padding: calc(16px + env(safe-area-inset-top)) 20px 16px;
+  margin: calc(-1 * env(safe-area-inset-top)) -16px 0; height: calc(84px + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 20px 0;
 }
-.texts { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-width: 0; }
+.texts { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0; }
 .label { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
 h1 { font-size: 26px; font-weight: 700; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .label { opacity: .8; }

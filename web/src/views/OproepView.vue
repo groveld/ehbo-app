@@ -99,7 +99,7 @@ async function onSite() {
       >
         <template v-if="mode === 'all'" #label><span class="all-chip">Alle eenheden</span></template>
         <div v-if="mode === 'call' && left !== null" class="ring">
-          <svg width="72" height="72" viewBox="0 0 72 72" role="img" :aria-label="`Nog ${left} seconden om te reageren`">
+          <svg width="64" height="64" viewBox="0 0 72 72" role="img" :aria-label="`Nog ${left} seconden om te reageren`">
             <circle cx="36" cy="36" r="30" fill="none" stroke="#FFFFFF" stroke-opacity="0.3" stroke-width="6" />
             <circle
               cx="36" cy="36" r="30" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"
@@ -214,9 +214,9 @@ async function onSite() {
 .gap-top { margin-top: 12px; }
 .gap-top-lg { margin-top: 32px; }
 .all-chip { background: #FFFFFF; color: var(--danger); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
-.ring { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+.ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
 .ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
-.ring-text .mono { font-size: 22px; }
+.ring-text .mono { font-size: 20px; }
 .sec { font-size: 10px; margin-top: 2px; }
 .what { font-size: 15px; }
 .map { margin-top: 14px; height: 190px; border-radius: 16px; overflow: hidden; }

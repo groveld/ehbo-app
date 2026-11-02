@@ -1,8 +1,7 @@
 // Wie is iemand vandaag? Rollen volgen uit het telefoonnummer: post, EHBO-eenheid, kernteam of beheerderslijst.
-import { POST_CONTACT_ROLE_LABEL, type Assignment, type HomeScreen, type Me } from '@ehbo/shared';
+import { POST_CONTACT_ROLE_LABEL, mobilityLabel, type Assignment, type HomeScreen, type Me } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
 
-const MOBILITY_LABEL = { te_voet: 'te voet', fiets: 'fiets', auto: 'auto', anders: 'mobiel' } as const;
 const EHBO_COLOR = '#0A7D4F';
 const INK = '#16181D';
 
@@ -20,7 +19,7 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
   for (const r of db.unitAssignments(phone)) {
     const detail = r.kind === 'vast'
       ? (r.post_name ?? 'Vaste EHBO-post')
-      : `Mobiel (${MOBILITY_LABEL[r.mobility ?? 'anders']})${r.post_name ? ` · Standplaats ${r.post_name}` : ''}`;
+      : `${mobilityLabel(r.mobility).replace('m', 'M')}${r.post_name ? ` · Standplaats ${r.post_name}` : ''}`;
     assignments.push({ kind: 'ehbo', title: `EHBO ${r.unit_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, unitId: r.unit_id });
   }
   for (const r of db.postAssignments(phone)) {
