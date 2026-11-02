@@ -26,7 +26,7 @@ const router = useRouter();
 const NO_TABS = ['herkend', 'toestemmingen', 'beheer-rapport-afdrukken'];
 const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info' || route.name === 'route') && !NO_TABS.includes(String(route.name)));
 
-// The map tab is built once, in the background, and stays: going to it is instant. Just after the first screen, so that comes first.
+// The map tab is built once, in the background, and stays in memory: going to it is instant. Out of view it does nothing and is brought up to date when it's opened. Just after the first screen, so that comes first.
 const MAP_DELAY_MS = 500;
 const mapMounted = ref(false);
 watch(() => Boolean(session.me), (staff) => {
@@ -83,7 +83,7 @@ onMounted(() => {
   <div v-if="live.state?.testMode && route.name !== 'beheer-rapport-afdrukken'" class="test-banner" role="status">Testmodus · oproepen zijn proef</div>
   <div :class="{ 'with-tabs': tabs }">
     <RouterView />
-    <KaartView v-if="mapMounted" :class="{ 'map-waiting': route.name !== 'kaart' }" />
+    <KaartView v-if="mapMounted" :active="route.name === 'kaart'" :class="{ 'map-waiting': route.name !== 'kaart' }" />
     <OfflinePill v-if="route.name !== 'beheer-rapport-afdrukken'" :tabs="tabs" />
   </div>
   <TabBar v-if="tabs" />
@@ -92,7 +92,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* Full size but out of sight: the map keeps its tiles drawn, ready for the tab. No fixed height: that would squeeze the map, and it would frame the route for the wrong size. */
+/* Full size but out of sight, so the map is framed right and ready for the tab. No fixed height: that would squeeze the map, and it would frame the route for the wrong size. */
 .map-waiting { position: fixed; top: 0; left: 0; right: 0; visibility: hidden; pointer-events: none; }
 .test-banner {
   position: sticky; top: 0; z-index: 50; padding: max(4px, env(safe-area-inset-top)) 12px 4px;

@@ -450,6 +450,38 @@ test('overview map: teams in the list for all staff, counters only for the coord
   await expect(post.getByLabel(/^Posten open:/)).toHaveCount(0);
 });
 
+test('map tab: quiet out of view, up to date the moment it opens', async ({ browser }) => {
+  const post = await staffPhone(browser, PHONE.postLead);
+  const open = post.getByRole('button', { name: 'Post openen' });
+  await expect(open.or(post.getByText('Wat heb je nodig?'))).toBeVisible();
+  if (await open.isVisible()) await open.click();
+
+  const coordinator = await staffPhone(browser, PHONE.coordinator);
+  await coordinator.getByRole('link', { name: 'Contacten' }).click();
+  await coordinator.locator('.event-map .post-marker').first().waitFor({ state: 'attached' });
+  await coordinator.evaluate(() => {
+    const seen = { changes: 0 };
+    Object.assign(window, { seen });
+    new MutationObserver((list) => { seen.changes += list.length; }).observe(document.querySelector('.event-map')!, { subtree: true, childList: true, attributes: true });
+  });
+
+  await post.getByRole('link', { name: /EHBO/ }).first().click();
+  await post.getByRole('button', { name: 'EHBO-verzoek versturen' }).click();
+  await expect(post.getByRole('button', { name: 'Melding intrekken' })).toBeVisible();
+  await coordinator.waitForTimeout(2_000);
+  await expect(coordinator.locator('.post-marker.alert')).toHaveCount(0);
+  expect(await coordinator.evaluate(() => (window as unknown as { seen: { changes: number } }).seen.changes)).toBe(0);
+
+  await coordinator.getByRole('link', { name: 'Kaart' }).click();
+  await expect(coordinator.locator('.post-marker.alert')).toHaveCount(1);
+
+  await post.getByRole('button', { name: 'Melding intrekken' }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
+  await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
+  await expect(post.getByText('POST IS DICHT')).toBeVisible();
+});
+
 test('route page: details, posts in order, GPX download and the star', async ({ browser }) => {
   const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
   const page = await context.newPage();

@@ -1,20 +1,23 @@
 <script setup lang="ts">
 // 3.4 · Overzicht & kaart: alle posten en EHBO-teams, filter per soort en route, zoeken op naam of km, tellers voor de coördinator, en de lijst met bel- en navigeerknoppen.
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue';
-import { QUIET_AFTER_MIN, isDueOpen, lacksPosition, type LastSeen, type PackagePost } from '@ehbo/shared';
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef, watch, watchEffect } from 'vue';
+import { QUIET_AFTER_MIN, isDueOpen, lacksPosition, type EventPackage, type LastSeen, type PackagePost } from '@ehbo/shared';
 import { api } from '../../api.ts';
 import { useRouter } from 'vue-router';
 import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
 import TeamRow from '../../components/TeamRow.vue';
 import { clock } from '../../incidents.ts';
-import { coordinatorOf, isOnRun, mobileUnits } from '../../posts.ts';
+import { coordinatorOf, isOnRun, mobileUnits, type Ambulance } from '../../posts.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 import { useSessionStore } from '../../stores/session.ts';
 
 // The map library is large: the screen doesn't wait for it.
 const EventMap = defineAsyncComponent(() => import('../../components/EventMap.vue'));
+
+/** The tab is in view. Out of view the map stays in memory but does nothing. */
+const props = defineProps<{ active: boolean }>();
 
 const store = usePackageStore();
 const live = useLiveStore();
@@ -60,7 +63,7 @@ const lostTeams = computed(() => (isLead.value ? store.pkg?.units.filter((u) => 
 /** No contact for a while. Only a signal for the coordinator: a phone in a pocket has no connection either, so nothing closes by this. */
 const lastSeen = ref<LastSeen | null>(null);
 async function loadLastSeen() {
-  if (!isLead.value || document.visibilityState !== 'visible') return;
+  if (!props.active || !isLead.value || document.visibilityState !== 'visible') return;
   try {
     lastSeen.value = await api<LastSeen>('/api/live/last-seen', { timeoutMs: 8_000 });
   } catch {
@@ -73,6 +76,7 @@ onMounted(() => {
   seenTimer = setInterval(loadLastSeen, 60_000);
 });
 onBeforeUnmount(() => clearInterval(seenTimer));
+watch(() => props.active, () => void loadLastSeen());
 const quietMinutes = (at: string | null | undefined) => {
   if (at === undefined || at === null) return null;
   const minutes = Math.floor((live.serverNow - new Date(at).getTime()) / 60_000);
@@ -108,6 +112,14 @@ const counters = computed(() => {
     { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'aangevraagd').length), full: 'Aanvragen nog niet opgepakt' },
   ];
 });
+/** What the map shows. Out of view none of this is read, so nothing live reaches the map; opening the tab brings it up to date in one go. */
+const mapView = shallowRef<{ pkg: EventPackage; posts: PackagePost[]; highlightRunId: number | null; alertPostIds: number[]; ambulances: Ambulance[]; awayPostIds: number[] } | null>(null);
+watchEffect(() => {
+  if ((!props.active && mapView.value) || !store.pkg) return;
+  mapView.value = {
+    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
+  };
+});
 const banner = computed(() => {
   const open = live.openIncidents;
   if (!open.length) return null;
@@ -119,22 +131,18 @@ const banner = computed(() => {
 <template>
   <main class="screen tight tabbed">
     <template v-if="store.pkg">
-      <div v-if="counters" class="facts counters">
+      <div v-if="active && counters" class="facts counters">
         <div v-for="c in counters" :key="c.label" class="fact" :aria-label="`${c.full}: ${c.value}`">
           <span class="value mono">{{ c.value }}</span><span class="label">{{ c.label }}</span>
         </div>
       </div>
       <div class="map">
-        <EventMap
-          :pkg="store.pkg" :posts="mapPosts" :highlight-run-id="route" :alert-post-ids="alertIds"
-          :ambulances="mobile.ambulances" :away-post-ids="mobile.awayPostIds"
-          @select="(id) => router.push({ name: 'post', params: { id } })"
-        />
-        <RouterLink v-if="banner" :to="{ name: 'meldingen' }" class="banner"><Icon name="bell" :size="16" />{{ banner }}</RouterLink>
+        <EventMap v-if="mapView" v-bind="mapView" :paused="!active" @select="(id) => router.push({ name: 'post', params: { id } })" />
+        <RouterLink v-if="active && banner" :to="{ name: 'meldingen' }" class="banner"><Icon name="bell" :size="16" />{{ banner }}</RouterLink>
       </div>
 
       <!-- Zoeken en filteren op één regel: het zoekveld, en rechts de soort post. -->
-      <div v-if="store.pkg.posts.length" class="find">
+      <div v-if="active && store.pkg.posts.length" class="find">
         <label class="search">
           <Icon name="search" :size="18" />
           <input v-model="query" class="input" type="search" placeholder="Zoek post of km" aria-label="Zoek een post">
@@ -152,7 +160,7 @@ const banner = computed(() => {
         <RouterLink v-if="route !== null" :to="{ name: 'route', params: { id: route } }" class="add-link route-link">Alles over deze route</RouterLink>
       </div>
 
-      <div class="stack gap-14">
+      <div v-if="active" class="stack gap-14">
         <section v-if="teams.length" class="stack gap-8">
           <h2 class="section-title">EHBO<template v-if="!live.connected && live.state"> · laatste stand {{ clock(live.state.serverTime) }}</template></h2>
           <div class="list"><TeamRow v-for="u in teams" :key="u.id" :pkg="store.pkg" :unit="u" :attention="lostTeams.includes(u.id)" :quiet-minutes="quietUnit(u.id)" /></div>
