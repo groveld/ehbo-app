@@ -5,7 +5,7 @@ import { UNIT_AVAILABILITY, formatPhone, mobilityLabel, telHref, type UnitAvaila
 import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentSummary, myDeployments, unitOf } from '../incidents.ts';
+import { clock, myDeployments, unitOf } from '../incidents.ts';
 import { coordinatorOf, coreTeamMember, kmLabel, shiftText } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -81,9 +81,6 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
         <span class="grow">Je dienst stopt om <strong>{{ clock(state.closesAt) }}</strong>.</span>
         <button class="btn keep" :disabled="busy" @click="run(() => live.keepUnit(unitId!))">In dienst blijven</button>
       </div>
-      <RouterLink v-if="active" :to="{ name: 'oproep', params: { id: active.id } }" class="btn danger gap-top">
-        Naar de oproep · {{ active.post.name }} · {{ incidentSummary(active) }}
-      </RouterLink>
       <RouterLink v-for="i in live.invitations" :key="i.id" :to="{ name: 'oproep', params: { id: i.id } }" class="btn danger gap-top">
         Oproep · {{ i.post.name }}
       </RouterLink>

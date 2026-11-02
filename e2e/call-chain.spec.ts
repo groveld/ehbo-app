@@ -476,6 +476,48 @@ test('EHBO starts an incident itself, also without signal, and goes straight to 
   await expect(coordinator.locator('.incident').filter({ hasText: 'zelf gestart' }).filter({ hasText: 'afgerond' })).toBeVisible();
 });
 
+test('status bar: the call is one tap away on every page, for the post and the team', async ({ browser }) => {
+  const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
+  await expect(ehbo.getByRole('heading', { name: /Uit dienst|Beschikbaar/ })).toBeVisible();
+  await ehbo.getByRole('button', { name: 'Beschikbaar', exact: true }).click();
+  const post = await staffPhone(browser, PHONE.postLead);
+  const open = post.getByRole('button', { name: 'Post openen' });
+  await expect(open.or(post.getByText('Wat heb je nodig?'))).toBeVisible();
+  if (await open.isVisible()) await open.click();
+
+  await post.getByRole('link', { name: /EHBO/ }).first().click();
+  await post.getByRole('button', { name: 'EHBO-verzoek versturen' }).click();
+  // Not on the call itself: the header is already there.
+  await expect(post.getByRole('heading', { name: "We zoeken een EHBO'er" })).toBeVisible();
+  await expect(post.locator('.live-bar')).toHaveCount(0);
+  await post.locator('.tabbar').getByRole('link', { name: 'Contacten' }).click();
+  await expect(post.locator('.live-bar.orange')).toContainText("We zoeken een EHBO'er");
+
+  await ehbo.getByRole('button', { name: 'Accepteren & navigeren' }).click();
+  await ehbo.waitForURL(/google\.com\/maps/);
+  await ehbo.goBack();
+  await expect(post.locator('.live-bar.green')).toContainText('Hulp is onderweg', { timeout: 10_000 });
+  await ehbo.locator('.tabbar').getByRole('link', { name: 'Contacten' }).click();
+  await expect(ehbo.locator('.live-bar.red')).toContainText('Onderweg · Waterpost 3');
+
+  // The bottom button stays above the bar, and a tap goes straight back.
+  await ehbo.locator('.tabbar').getByRole('link', { name: 'EHBO' }).click();
+  const button = (await ehbo.getByRole('link', { name: 'Bel 112' }).boundingBox())!;
+  const bar = (await ehbo.locator('.live-bar').boundingBox())!;
+  expect(button.y + button.height).toBeLessThanOrEqual(bar.y);
+  await ehbo.locator('.live-bar').click();
+  await expect(ehbo.getByRole('button', { name: 'Ik ben ter plaatse' })).toBeVisible();
+  await post.locator('.live-bar').click();
+  await expect(post.getByRole('heading', { name: 'Hulp is onderweg' })).toBeVisible();
+
+  await post.getByRole('button', { name: /Melding intrekken/ }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
+  await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
+  await expect(post.getByText('POST IS DICHT')).toBeVisible();
+  await expect(ehbo.locator('.live-bar')).toHaveCount(0);
+});
+
 test('map tab: quiet out of view, up to date the moment it opens', async ({ browser }) => {
   const post = await staffPhone(browser, PHONE.postLead);
   const open = post.getByRole('button', { name: 'Post openen' });

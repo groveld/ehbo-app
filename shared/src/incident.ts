@@ -121,6 +121,8 @@ export interface LiveIncident extends IncidentDetails {
   offPost: boolean;
   postId: number;
   post: IncidentPost;
+  /** Phone number of who reported it. */
+  reportedBy: string;
   status: IncidentStatus;
   stage: IncidentStage;
   /** Niet aanspreekbaar: AED meenemen, en de post krijgt het advies 112 te bellen. */
