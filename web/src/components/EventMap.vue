@@ -35,7 +35,9 @@ const props = withDefaults(defineProps<{
   ambulances?: Ambulance[];
   /** Standplaatsen waar de mobiele EHBO nu niet is: het kruisje grijs. */
   awayPostIds?: number[];
-}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], ambulances: () => [], awayPostIds: () => [] });
+  /** Kept in memory but not in view: no location, and nothing happens until it's back. */
+  paused?: boolean;
+}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], ambulances: () => [], awayPostIds: () => [], paused: false });
 
 const emit = defineEmits<{ select: [postId: number]; pick: [lngLat: LngLat] }>();
 
@@ -236,9 +238,9 @@ function frame(animate = false) {
 
 /** Eigen positie als blauwe stip, maar alleen als de app al toestemming heeft (niet ongevraagd vragen). */
 async function startUserLocation() {
-  if (!props.showUser || !('geolocation' in navigator) || !navigator.permissions) return;
+  if (!props.showUser || props.paused || watchId !== null || !('geolocation' in navigator) || !navigator.permissions) return;
   try {
-    if ((await navigator.permissions.query({ name: 'geolocation' })).state !== 'granted') return;
+    if ((await navigator.permissions.query({ name: 'geolocation' })).state !== 'granted' || props.paused) return;
   } catch {
     return;
   }
@@ -323,7 +325,7 @@ function createMap() {
 
 // A phone can take the graphics memory of an app in the background, which leaves the map black. It usually comes back by itself; if not, start the map again.
 function restoreMap() {
-  if (document.visibilityState !== 'visible' || !contextLost) return;
+  if (document.visibilityState !== 'visible' || !contextLost || props.paused) return;
   setTimeout(() => {
     if (!contextLost || !map) return;
     contextLost = false;
@@ -352,9 +354,24 @@ watch(() => props.focusPostId, () => frame());
 watch(() => props.highlightRunId, () => frame(true));
 watch(() => [props.highlightRunId, props.pkg], () => (map?.getSource('lopen') as GeoJSONSource | undefined)?.setData(runFeatures()));
 
+function stopUserLocation() {
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = null;
+}
+
+watch(() => props.paused, (paused) => {
+  if (paused) {
+    stopUserLocation();
+    return;
+  }
+  map?.resize();
+  restoreMap();
+  void startUserLocation();
+});
+
 onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', restoreMap);
-  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  stopUserLocation();
   map?.remove();
   map = null;
 });
