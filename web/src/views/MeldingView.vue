@@ -2,7 +2,7 @@
 // 4.2 · Post: verzoek verstuurd, en 4.6 · hulp onderweg + escalatie. Ook voor de coördinator, die hier een eenheid kan toewijzen.
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { OUTCOMES, formatKm, telHref } from '@ehbo/shared';
+import { formatKm, telHref } from '@ehbo/shared';
 import ActivityLog from '../components/ActivityLog.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
@@ -151,7 +151,6 @@ const back = () => router.back();
       <div class="card yours gap-top">
         <span class="small">{{ incident.post.name }}</span>
         <span class="summary">{{ incidentSummary(incident) }}</span>
-        <span v-if="incident.outcome" class="small">Afloop: {{ OUTCOMES[incident.outcome] }}</span>
       </div>
       <ActivityLog :entries="incidentLog(incident)" />
     </template>

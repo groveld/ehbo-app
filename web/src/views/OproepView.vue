@@ -78,7 +78,7 @@ async function decline() {
   await run(() => live.decline(incident.value!.id, myUnitId.value!));
 }
 const toEhbo = () => router.replace({ name: 'ehbo' });
-/** On site, the next step is closing the incident. Without signal you stay here, with the error. */
+/** On site, the next step is closing the incident; also without signal. */
 async function onSite() {
   if (incident.value && await run(() => live.onSite(incident.value!.id))) void router.replace({ name: 'afronden', params: { id: props.id } });
 }

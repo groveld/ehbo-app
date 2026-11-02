@@ -60,7 +60,7 @@ const openRequests = computed(() => live.requests.filter((r) => r.postId === pos
 async function ask(kind: RequestKind) {
   if (!post.value) return;
   let id: number | null = null;
-  // Zonder bereik lukt een aanvraag niet; dan bel je de coördinator (de foutmelding zegt dat).
+  // Zonder bereik gaat dit gewoon door: de aanvraag wacht op de telefoon tot er weer verbinding is.
   const ok = await run(async () => { id = (await live.request(post.value!.id, kind)).id; });
   if (ok && id !== null) router.push({ name: 'aanvraag', params: { id } });
 }

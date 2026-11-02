@@ -1,7 +1,9 @@
 // Oproepen, beschikbaarheid van eenheden en post open/dicht; plus de live stand (SSE) voor alle medewerkers.
 import type { ServerResponse } from 'node:http';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import {
+  ACTION_AT_HEADER,
+  ACTION_ID_HEADER,
   INCIDENT_PERSONS,
   INCIDENT_WHAT,
   LIVE_HEARTBEAT_MS,
@@ -31,6 +33,9 @@ const unitBody = { type: 'object', required: ['unitId'], properties: { unitId: {
 
 type Id = { Params: { id: number } };
 
+/** Id and time of a change from a phone's queue. */
+export const actionHeaders = (request: FastifyRequest) => [request.headers[ACTION_ID_HEADER], request.headers[ACTION_AT_HEADER]] as [string | undefined, string | undefined];
+
 export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls }) {
   app.addHook('preHandler', requireMe);
 
@@ -56,7 +61,8 @@ export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls
     res.write('retry: 3000\n\n');
     send(calls.state());
     const unsubscribe = calls.subscribe(send);
-    const heartbeat = setInterval(() => res.write(': hartslag\n\n'), LIVE_HEARTBEAT_MS);
+    // A real event, not a comment: the phone has to see it to know the connection is alive.
+    const heartbeat = setInterval(() => res.write('event: ping\ndata: 1\n\n'), LIVE_HEARTBEAT_MS);
     streams.add(res);
     request.raw.on('close', () => {
       clearInterval(heartbeat);
@@ -82,18 +88,18 @@ export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls
 
   app.put<Id & { Body: IncidentDetails; Reply: LiveState }>('/api/incidents/:id', {
     schema: { params: idParams, body: { type: 'object', required: detailsRequired, properties: details } },
-  }, async (request) => calls.update(request.me!, request.params.id, request.body));
+  }, async (request) => calls.once(...actionHeaders(request), () => calls.update(request.me!, request.params.id, request.body)));
 
   app.post<Id & { Body: { unitId: number }; Reply: LiveState }>('/api/incidents/:id/accept', { schema: { params: idParams, body: unitBody } },
-    async (request) => calls.accept(request.me!, request.params.id, request.body.unitId));
+    async (request) => calls.once(...actionHeaders(request), () => calls.accept(request.me!, request.params.id, request.body.unitId)));
   app.post<Id & { Body: { unitId: number }; Reply: LiveState }>('/api/incidents/:id/decline', { schema: { params: idParams, body: unitBody } },
-    async (request) => calls.decline(request.me!, request.params.id, request.body.unitId));
+    async (request) => calls.once(...actionHeaders(request), () => calls.decline(request.me!, request.params.id, request.body.unitId)));
   app.post<Id & { Body: { unitId: number }; Reply: LiveState }>('/api/incidents/:id/assign', { schema: { params: idParams, body: unitBody } },
-    async (request) => calls.assign(request.me!, request.params.id, request.body.unitId));
+    async (request) => calls.once(...actionHeaders(request), () => calls.assign(request.me!, request.params.id, request.body.unitId)));
   app.post<Id & { Reply: LiveState }>('/api/incidents/:id/on-site', { schema: { params: idParams } },
-    async (request) => calls.onSite(request.me!, request.params.id));
+    async (request) => calls.once(...actionHeaders(request), () => calls.onSite(request.me!, request.params.id)));
   app.post<Id & { Reply: LiveState }>('/api/incidents/:id/withdraw', { schema: { params: idParams } },
-    async (request) => calls.withdraw(request.me!, request.params.id));
+    async (request) => calls.once(...actionHeaders(request), () => calls.withdraw(request.me!, request.params.id)));
   app.post<Id & { Body: CloseIncident; Reply: LiveState }>('/api/incidents/:id/close', {
     schema: {
       params: idParams,
@@ -103,11 +109,11 @@ export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls
         properties: { outcome: { enum: Object.keys(OUTCOMES) }, persons: details.persons, note, stayHere: { type: 'boolean' }, pause: { type: 'boolean' } },
       },
     },
-  }, async (request) => calls.close(request.me!, request.params.id, request.body));
+  }, async (request) => calls.once(...actionHeaders(request), () => calls.close(request.me!, request.params.id, request.body)));
 
   app.put<Id & { Body: { availability: UnitAvailability }; Reply: LiveState }>('/api/units/:id/availability', {
     schema: { params: idParams, body: { type: 'object', required: ['availability'], properties: { availability: { enum: ['vrij', 'pauze', 'uit_dienst'] } } } },
-  }, async (request) => calls.setAvailability(request.me!, request.params.id, request.body.availability));
+  }, async (request) => calls.once(...actionHeaders(request), () => calls.setAvailability(request.me!, request.params.id, request.body.availability)));
 
   // Mobiele eenheden delen elke minuut hun positie; de server bewaart alleen de laatste, in het geheugen.
   app.put<Id & { Body: { lat: number; lng: number } }>('/api/units/:id/position', {
@@ -122,5 +128,5 @@ export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls
 
   app.put<Id & { Body: { open: boolean }; Reply: LiveState }>('/api/posts/:id/open', {
     schema: { params: idParams, body: { type: 'object', required: ['open'], properties: { open: { type: 'boolean' } } } },
-  }, async (request) => calls.setPostOpen(request.me!, request.params.id, request.body.open));
+  }, async (request) => calls.once(...actionHeaders(request), () => calls.setPostOpen(request.me!, request.params.id, request.body.open)));
 }

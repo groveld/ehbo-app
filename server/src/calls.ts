@@ -1,6 +1,7 @@
 // EHBO-oproepen: wie krijgt de oproep, escalatie na de ingestelde tijd, accepteren, ter plaatse, afronden.
 // Functioneel ontwerp, "Hulpoproep en escalatie". De stand staat in de database; alleen timers en GPS-posities staan in het geheugen.
 import {
+  ACTION_MAX_AGE_MS,
   INCIDENT_WHAT,
   POSITION_MAX_AGE_MS,
   awayPostIds,
@@ -82,6 +83,11 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   const get = (query: string, ...params: (string | number | null)[]) => sql.prepare(query).get(...params) as Row | undefined;
   const run = (query: string, ...params: (string | number | null)[]) => sql.prepare(query).run(...params);
   const iso = () => now().toISOString();
+
+  /** While a change from a phone's queue is carried out: when it really happened. */
+  let happenedAt: Date | null = null;
+  const moment = () => happenedAt ?? now();
+  const stamp = () => moment().toISOString();
 
   /** Laatste GPS-positie per mobiele eenheid; bewust niet in de database. */
   const positions = new Map<number, { lng: number; lat: number; at: number }>();
@@ -253,7 +259,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   // ---- Bouwstenen ----
 
   const log = (incidentId: number, type: IncidentEventType, text: string, unitId: number | null = null) =>
-    run('INSERT INTO incident_events (incident_id, at, type, unit_id, text) VALUES (?, ?, ?, ?, ?)', incidentId, iso(), type, unitId, text);
+    run('INSERT INTO incident_events (incident_id, at, type, unit_id, text) VALUES (?, ?, ?, ?, ?)', incidentId, stamp(), type, unitId, text);
 
   function summary(row: Row) {
     const what = row.what ? INCIDENT_WHAT[row.what as keyof typeof INCIDENT_WHAT] : null;
@@ -465,7 +471,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       throw httpError(409, `Oproep is al aangenomen door ${acceptedUnits[0]?.name ?? 'een andere eenheid'}`);
     }
 
-    const at = iso();
+    const at = stamp();
     const post = posts().get(row.post_id as number)!;
     db.transaction(() => {
       const km = freeUnits(post).find((c) => c.unit.id === unit.id)?.km ?? null;
@@ -516,7 +522,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (row.status !== 'verstuurd') return state();
     db.transaction(() => {
       run(`INSERT INTO incident_dispatches (incident_id, unit_id, at, reason, declined_at) VALUES (?, ?, ?, 'alle', ?)
-           ON CONFLICT(incident_id, unit_id) DO UPDATE SET declined_at = excluded.declined_at`, id, unit.id, iso(), iso());
+           ON CONFLICT(incident_id, unit_id) DO UPDATE SET declined_at = excluded.declined_at`, id, unit.id, stamp(), stamp());
       log(id, 'geweigerd', `${unit.name}: kan niet`, unit.id);
     });
     if (row.stage === 'dichtstbij') {
@@ -534,7 +540,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (row.status !== 'geaccepteerd' && row.status !== 'ter_plaatse') throw httpError(409, 'Deze melding is niet meer open');
     const unit = unitById(unitId)!;
     db.transaction(() => {
-      if (row.status === 'geaccepteerd') run("UPDATE incidents SET status = 'ter_plaatse', on_site_at = ? WHERE id = ?", iso(), id);
+      if (row.status === 'geaccepteerd') run("UPDATE incidents SET status = 'ter_plaatse', on_site_at = ? WHERE id = ?", stamp(), id);
       log(id, 'ter_plaatse', `${unit.name} is ter plaatse`, unitId);
     });
     copyToCoordinator(incidentRow(id), `${unit.name} is ter plaatse.`);
@@ -549,7 +555,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const unit = unitById(unitId)!;
     db.transaction(() => {
       run(`UPDATE incidents SET status = 'afgerond', closed_at = ?, outcome = ?, outcome_persons = ?, outcome_note = ?, on_site_at = COALESCE(on_site_at, ?)
-           WHERE id = ?`, iso(), body.outcome, body.persons, body.note?.trim() || null, iso(), id);
+           WHERE id = ?`, stamp(), body.outcome, body.persons, body.note?.trim() || null, stamp(), id);
       // Alleen een vaste eenheid "blijft hier"; een mobiele eenheid geeft haar positie zelf door.
       const stay = body.stayHere && unit.kind === 'vast' && row.post_id !== unit.postId ? (row.post_id as number) : null;
       run('UPDATE ehbo_units SET stay_post_id = ? WHERE id = ?', stay, unitId);
@@ -568,7 +574,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (!['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string)) return state();
     const post = posts().get(row.post_id as number)!;
     db.transaction(() => {
-      run("UPDATE incidents SET status = 'ingetrokken', closed_at = ?, escalates_at = NULL WHERE id = ?", iso(), id);
+      run("UPDATE incidents SET status = 'ingetrokken', closed_at = ?, escalates_at = NULL WHERE id = ?", stamp(), id);
       log(id, 'ingetrokken', `Ingetrokken door ${personName(me.phone)}`);
     });
     cancelTimer(id);
@@ -621,6 +627,27 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     return state();
   }
 
+  /** Carries out a change with the time it happened on the phone, when that time can be believed. */
+  function at<T>(time: string | undefined, change: () => T): T {
+    const date = time ? new Date(time) : null;
+    const age = date ? now().getTime() - date.getTime() : NaN;
+    happenedAt = age >= 0 && age <= ACTION_MAX_AGE_MS ? date : null;
+    try {
+      return change();
+    } finally {
+      happenedAt = null;
+    }
+  }
+
+  /** A change from a phone's queue: only the first time this id arrives. The phone may send it again when the answer got lost. */
+  function once(id: string | undefined, time: string | undefined, change: () => LiveState): LiveState {
+    if (!id) return at(time, change);
+    if (get('SELECT id FROM client_actions WHERE id = ?', id)) return state();
+    const result = at(time, change);
+    run('INSERT INTO client_actions (id, at) VALUES (?, ?)', id, iso());
+    return result;
+  }
+
   /** Na een herstart: lopende escalaties en herhalingen opnieuw inplannen. */
   function resume() {
     for (const row of all("SELECT id, stage, escalates_at FROM incidents WHERE status = 'verstuurd'")) {
@@ -646,7 +673,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       listeners.add(listener);
       return () => { listeners.delete(listener); };
     },
-    report, update, accept, assign, decline, onSite, close, withdraw, setAvailability, setPosition, setPostOpen, resume, stop,
+    report, update, accept, assign, decline, onSite, close, withdraw, setAvailability, setPosition, setPostOpen, resume, stop, at, once, moment,
     /** Wijziging van buitenaf (bijv. beheer): iedereen de nieuwe stand sturen. */
     changed,
   };

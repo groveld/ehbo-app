@@ -76,7 +76,7 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   // Oproepen en aanvragen delen één live stand; de aanvragen melden hun wijzigingen via calls.changed.
   let requests: Requests | null = null;
   const calls = createCalls(db, { notify: notifier.toPhones, requests: () => requests?.list() ?? [], ...callOptions });
-  requests = createRequests(db, { notify: callOptions.notify ?? notifier.toPhones, changed: calls.changed, now: callOptions.now });
+  requests = createRequests(db, { notify: callOptions.notify ?? notifier.toPhones, changed: calls.changed, now: calls.moment });
   // Lopende oproepen gaan na een herstart verder waar ze waren.
   app.addHook('onReady', async () => calls.resume());
   app.addHook('onClose', async () => calls.stop());
