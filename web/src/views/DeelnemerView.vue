@@ -17,8 +17,6 @@ const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue')
 
 const store = usePackageStore();
 const { favorites, toggleFavorite } = useFavorites();
-/** The run shown on the map. Separate from the favorites: looking at a run changes nothing. */
-const viewing = ref<number | null>(favorites.value[0] ?? null);
 const live = useLiveStore();
 /** Standplaatsen waar de mobiele EHBO nu niet is: grijs kruisje. Zonder bereik blijft de laatste stand staan. */
 const awayPostIds = ref<number[]>([]);
@@ -48,9 +46,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', refreshEhbo);
 });
 
-const toggleView = (id: number) => (viewing.value = viewing.value === id ? null : id);
-const viewedRun = computed(() => store.pkg?.runs.find((r) => r.id === viewing.value) ?? null);
-
 const runs = computed(() => {
   const all = store.pkg?.runs ?? [];
   return [...all.filter((r) => favorites.value.includes(r.id)), ...all.filter((r) => !favorites.value.includes(r.id))];
@@ -76,29 +71,28 @@ const legend = computed(() => {
 
     <template v-if="store.pkg">
       <div class="map">
-        <EventMap :pkg="store.pkg" :highlight-run-id="viewing" :away-post-ids="awayPostIds" />
+        <EventMap :pkg="store.pkg" :away-post-ids="awayPostIds" />
       </div>
 
       <section v-if="runs.length" class="stack gap-8 section">
         <span class="section-label">Starttijden<template v-if="day"> · {{ day }}</template></span>
         <div class="runs">
-          <div v-for="r in runs" :key="r.id" class="run" :class="{ viewing: viewing === r.id, favorite: favorites.includes(r.id) }">
-            <button class="run-view" :aria-label="`Toon ${r.name} op de kaart`" :aria-pressed="viewing === r.id" @click="toggleView(r.id)">
+          <div v-for="r in runs" :key="r.id" class="run" :class="{ favorite: favorites.includes(r.id) }">
+            <RouterLink :to="{ name: 'route', params: { id: r.id } }" class="run-view">
               <span class="run-name">{{ r.name }}</span>
               <span class="mono time">{{ r.startTime ?? '–' }}</span>
-            </button>
+            </RouterLink>
             <button class="run-star" :aria-label="`Favoriet: ${r.name}`" :aria-pressed="favorites.includes(r.id)" @click="toggleFavorite(r.id)">
               <Icon name="star" :size="18" class="star" />
             </button>
           </div>
         </div>
-        <RouterLink v-if="viewedRun" :to="{ name: 'route', params: { id: viewedRun.id } }" class="btn route-link">Alles over {{ viewedRun.name }}</RouterLink>
       </section>
 
       <section v-if="legend.length" class="stack gap-8 section">
         <span class="section-label">Soorten posten</span>
-        <div class="legend">
-          <span v-for="type in legend" :key="type.id" class="legend-item"><PostBadge :type="type" :size="28" />{{ type.name }}</span>
+        <div class="list legend">
+          <div v-for="type in legend" :key="type.id" class="list-row legend-item"><PostBadge :type="type" :size="32" /><span class="title-line">{{ type.name }}</span></div>
         </div>
       </section>
     </template>
@@ -119,10 +113,9 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .section { margin-top: 16px; }
 .runs { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
 .run { display: flex; align-items: flex-start; border-radius: 14px; border: 1px solid var(--line); background: var(--card); }
-.run.viewing { box-shadow: inset 0 0 0 1px var(--ink); border-color: var(--ink); }
 .run-view {
   flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0 10px 10px;
-  border: none; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+  color: var(--ink); text-decoration: none;
 }
 .run-star { flex-shrink: 0; width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; border: none; background: none; cursor: pointer; }
 .run-name { font-size: 14px; font-weight: 700; }
@@ -130,7 +123,6 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .favorite .star { color: #D9A400; fill: #F2C230; }
 .time { font-size: 16px; }
 /* Room at the end, so the Bel EHBO button doesn't cover the last entries. */
-.legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 8px 12px; margin-bottom: 56px; }
-.legend-item { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
-.route-link { margin-top: 8px; }
+.legend { margin-bottom: 72px; }
+.legend-item { min-height: 52px; padding: 8px 14px; }
 </style>
