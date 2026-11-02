@@ -71,3 +71,10 @@ export function mobileUnits(pkg: EventPackage | null, units: LiveUnit[], now: nu
   });
   return { ambulances, awayPostIds: awayPostIds(pkg.units, units, pkg.posts, now) };
 }
+
+/** "12:00 – 16:00", or what's known of it. */
+export const shiftText = (unit: { timeFrom: string | null; timeTo: string | null } | undefined) => {
+  if (!unit) return '';
+  if (unit.timeFrom && unit.timeTo) return `${unit.timeFrom} – ${unit.timeTo}`;
+  return unit.timeFrom ? `vanaf ${unit.timeFrom}` : unit.timeTo ? `tot ${unit.timeTo}` : '';
+};

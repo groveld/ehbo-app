@@ -11,7 +11,7 @@ import PostBadge from './PostBadge.vue';
  * alert: er is een open oproep bij deze post (rode rand en badge).
  * open: open or closed, as a ring around the icon. late: it should be open by now.
  */
-const props = defineProps<{ pkg: EventPackage; post: PackagePost; alert?: boolean; open: boolean; late?: boolean }>();
+const props = defineProps<{ pkg: EventPackage; post: PackagePost; alert?: boolean; open: boolean; late?: boolean; quietMinutes?: number | null }>();
 const type = computed(() => props.pkg.postTypes.find((t) => t.id === props.post.typeId));
 const contact = computed(() => primaryContact(props.post));
 /** km-punt, dan de EHBO-eenheid die hier staat (met kruisje), anders de contactpersoon. */
@@ -28,6 +28,7 @@ const km = computed(() => kmLabel(props.post));
       <span class="text">
         <span class="name">{{ post.name }}</span>
         <span v-if="late" class="late">Nog dicht</span>
+        <span v-if="quietMinutes" class="late">{{ quietMinutes }} min niet gezien</span>
         <span v-if="km || who" class="sub">
           {{ km }}<template v-if="km && who"> · </template>
           <span v-if="units" class="ehbo"><Icon name="ehbo" :size="12" />{{ units }}</span>

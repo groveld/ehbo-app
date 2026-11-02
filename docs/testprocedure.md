@@ -136,6 +136,8 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 8.1 | C | Mijn post | Ziet de post, maar kan hem niet openen of sluiten | |
 | 8.2 | B | Rechtsboven **Post sluiten** › bevestigen | Post is dicht; op de kaart grijs; de verzoektegels werken niet meer | |
 | 8.3 | A | Kaart › Post 1 › schakelaar **Post open** | De post gaat open; B ziet het direct | |
+| 8.x | B | Only with the event date set to today: give the post an end time 25 minutes ago | Within a few minutes a push; the post shows when it closes and **Open houden**; without a tap it closes after 10 minutes and says so | |
+| 8.y | A | Menu › **Posten en EHBO openen of sluiten**: **Alles openen**, then **Dag sluiten** | Counts are right, everyone gets a push, and all posts are closed | |
 
 ## Blok 9 · Aanvragen (B, A)
 

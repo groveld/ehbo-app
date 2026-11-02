@@ -2,12 +2,13 @@
 // One EHBO team in a list: its status, where it is, AED, and a call button.
 import { computed } from 'vue';
 import { POSITION_MAX_AGE_MS, UNIT_AVAILABILITY, isAway, telHref, type EventPackage, type PackageUnit } from '@ehbo/shared';
+import { shiftText } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import Icon from './Icon.vue';
 import PostBadge from './PostBadge.vue';
 
 /** attention: something is off with this team (marked for the coordinator). */
-const props = defineProps<{ pkg: EventPackage; unit: PackageUnit; attention?: boolean }>();
+const props = defineProps<{ pkg: EventPackage; unit: PackageUnit; attention?: boolean; quietMinutes?: number | null }>();
 const live = useLiveStore();
 
 const state = computed(() => live.unitState(props.unit.id));
@@ -34,6 +35,7 @@ const where = computed(() => {
   const minutes = Math.floor(age / 60_000);
   return `${away ? 'Onderweg' : `Thuis${base ? ` · ${base}` : ''}`} · positie ${minutes ? `${minutes} min oud` : 'net bijgewerkt'}`;
 });
+const shift = computed(() => shiftText(props.unit));
 const ehboType = computed(() => props.pkg.postTypes.find((t) => t.key === 'ehbo'));
 const phone = computed(() => props.unit.members[0]?.phone ?? null);
 </script>
@@ -43,7 +45,8 @@ const phone = computed(() => props.unit.members[0]?.phone ?? null);
     <PostBadge :type="ehboType" :size="40" class="status-ring" :class="{ on: status.tone === 'vrij', off: status.tone === 'uit_dienst' }" />
     <span class="text">
       <span class="name">{{ unit.name }}<span class="status" :class="status.tone">{{ status.label }}</span></span>
-      <span class="sub" :class="{ attention }">{{ where }}<template v-if="unit.hasAed"> · AED</template></span>
+      <span class="sub" :class="{ attention }">{{ where }}<template v-if="unit.hasAed"> · AED</template><template v-if="shift"> · {{ shift }}</template></span>
+      <span v-if="quietMinutes" class="sub attention">{{ quietMinutes }} min niet gezien</span>
     </span>
     <a v-if="phone" :href="telHref(phone)" class="round" :aria-label="`Bel ${unit.name}`"><Icon name="phone" :size="20" /></a>
   </div>

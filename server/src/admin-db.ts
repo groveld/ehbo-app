@@ -109,6 +109,8 @@ export function adminDb(events: EventDb) {
       mobility: u.mobility as AdminUnit['mobility'],
       postId: u.post_id as number | null,
       hasAed: u.has_aed === 1,
+      timeFrom: u.time_from as string | null,
+      timeTo: u.time_to as string | null,
       availability: u.availability as AdminUnit['availability'],
       members: membersByUnit.get(u.id as number) ?? [],
     }));
@@ -187,13 +189,13 @@ export function adminDb(events: EventDb) {
   function saveUnit(id: number | null, u: UnitData): number | null {
     if (id !== null && !exists('ehbo_units', id)) return null;
     return events.transaction(() => {
-      const values = [u.name.trim(), u.kind, u.kind === 'mobiel' ? (u.mobility ?? 'anders') : null, u.postId, u.hasAed ? 1 : 0] as const;
+      const values = [u.name.trim(), u.kind, u.kind === 'mobiel' ? (u.mobility ?? 'anders') : null, u.postId, u.hasAed ? 1 : 0, u.timeFrom ?? null, u.timeTo ?? null] as const;
       let unitId = id;
       if (unitId === null) {
         const sort = (db.prepare('SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM ehbo_units').get() as { n: number }).n;
-        unitId = Number(run('INSERT INTO ehbo_units (name, kind, mobility, post_id, has_aed, sort) VALUES (?, ?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
+        unitId = Number(run('INSERT INTO ehbo_units (name, kind, mobility, post_id, has_aed, time_from, time_to, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
       } else {
-        run('UPDATE ehbo_units SET name = ?, kind = ?, mobility = ?, post_id = ?, has_aed = ? WHERE id = ?', ...values, unitId);
+        run('UPDATE ehbo_units SET name = ?, kind = ?, mobility = ?, post_id = ?, has_aed = ?, time_from = ?, time_to = ? WHERE id = ?', ...values, unitId);
         run('DELETE FROM ehbo_unit_members WHERE unit_id = ?', unitId);
       }
       for (const m of u.members) {

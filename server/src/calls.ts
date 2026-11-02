@@ -2,12 +2,16 @@
 // Functioneel ontwerp, "Hulpoproep en escalatie". De stand staat in de database; alleen timers en GPS-posities staan in het geheugen.
 import {
   ACTION_MAX_AGE_MS,
+  CLOSE_WARNING_MIN,
   INCIDENT_WHAT,
+  KEEP_OPEN_MIN,
   POSITION_MAX_AGE_MS,
   awayPostIds,
   distanceKm,
   formatKm,
+  plannedClose,
   type CloseIncident,
+  type CloseSummary,
   type Dispatch,
   type EhboStatus,
   type DispatchReason,
@@ -19,6 +23,7 @@ import {
   type LiveRequest,
   type LiveState,
   type LiveUnit,
+  type LastSeen,
   type Me,
   type NewIncident,
   type PushPayload,
@@ -59,6 +64,9 @@ interface Unit {
   hasAed: boolean;
   availability: UnitAvailability;
   stayPostId: number | null;
+  timeTo: string | null;
+  keepUntil: string | null;
+  closesAt: string | null;
   members: string[];
 }
 
@@ -71,6 +79,10 @@ interface Post {
   lng: number | null;
   isOpen: boolean;
   isEhbo: boolean;
+  timeTo: string | null;
+  keepUntil: string | null;
+  closesAt: string | null;
+  autoClosedAt: string | null;
 }
 
 export type Calls = ReturnType<typeof createCalls>;
@@ -105,7 +117,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     for (const m of all('SELECT unit_id, phone FROM ehbo_unit_members ORDER BY rowid')) {
       members.set(m.unit_id as number, [...(members.get(m.unit_id as number) ?? []), m.phone as string]);
     }
-    return all('SELECT id, name, kind, post_id, has_aed, availability, stay_post_id FROM ehbo_units ORDER BY sort, id').map((u) => ({
+    return all('SELECT id, name, kind, post_id, has_aed, availability, stay_post_id, time_to, keep_until, closes_at FROM ehbo_units ORDER BY sort, id').map((u) => ({
       id: u.id as number,
       name: u.name as string,
       kind: u.kind as Unit['kind'],
@@ -113,12 +125,15 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       hasAed: u.has_aed === 1,
       availability: u.availability as UnitAvailability,
       stayPostId: u.stay_post_id as number | null,
+      timeTo: u.time_to as string | null,
+      keepUntil: u.keep_until as string | null,
+      closesAt: u.closes_at as string | null,
       members: members.get(u.id as number) ?? [],
     }));
   }
 
   function posts(): Map<number, Post> {
-    return new Map(all(`SELECT p.id, p.type_id, p.name, p.km, p.lat, p.lng, p.is_open, t.key FROM posts p JOIN post_types t ON t.id = p.type_id`).map((p) => [p.id as number, {
+    return new Map(all(`SELECT p.id, p.type_id, p.name, p.km, p.lat, p.lng, p.is_open, p.time_to, p.keep_until, p.closes_at, p.auto_closed_at, t.key FROM posts p JOIN post_types t ON t.id = p.type_id`).map((p) => [p.id as number, {
       id: p.id as number,
       typeId: p.type_id as number,
       name: p.name as string,
@@ -127,6 +142,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       lng: p.lng as number | null,
       isOpen: p.is_open === 1,
       isEhbo: p.key === 'ehbo',
+      timeTo: p.time_to as string | null,
+      keepUntil: p.keep_until as string | null,
+      closesAt: p.closes_at as string | null,
+      autoClosedAt: p.auto_closed_at as string | null,
     }]));
   }
 
@@ -220,7 +239,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const busy = busyUnits();
     return units().map((u) => {
       const fix = u.kind === 'mobiel' ? positions.get(u.id) : undefined;
-      return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null };
+      return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null, closesAt: u.closesAt };
     });
   }
 
@@ -243,7 +262,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       serverTime: iso(),
       incidents: all('SELECT * FROM incidents ORDER BY id DESC').map((row) => toLive(row, eventsById, postMap)),
       units: liveUnits(),
-      posts: [...postMap.values()].map((p) => ({ id: p.id, isOpen: p.isOpen })),
+      posts: [...postMap.values()].map((p) => ({ id: p.id, isOpen: p.isOpen, closesAt: p.closesAt, autoClosedAt: p.autoClosedAt })),
       requests: requests(),
       testMode: db.testMode(),
     };
@@ -382,7 +401,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const post = posts().get(body.postId);
     if (!post) throw httpError(404, 'Post niet gevonden');
     if (!atPost(me, post.id) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Je kunt alleen een verzoek doen vanaf je eigen post');
-    if (!post.isOpen) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
+    if (!post.isOpen && !reopenAutoClosed(post.id)) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
 
     const sentAt = iso();
     // Een melding die zonder bereik is bewaard, houdt het moment van versturen; nooit in de toekomst of meer dan een uur terug.
@@ -591,13 +610,14 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const unit = requireUnitMember(me, unitId);
     db.transaction(() => {
       run('UPDATE ehbo_units SET availability = ? WHERE id = ?', availability, unit.id);
-      // Vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde (functioneel ontwerp, "Post open of dicht").
-      if (unit.kind === 'vast' && unit.postId !== null && availability !== 'pauze') {
-        run('UPDATE posts SET is_open = ? WHERE id = ?', availability === 'vrij' ? 1 : 0, unit.postId);
-      }
+      // Vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde (functioneel ontwerp, "Post open of dicht"), zolang er geen andere dienst staat.
+      if (unit.kind === 'vast' && unit.postId !== null && availability === 'vrij') setPost(unit.postId, true);
+      if (unit.kind === 'vast' && unit.postId !== null && availability === 'uit_dienst' && !otherShiftOnDuty(unit)) setPost(unit.postId, false);
       if (availability === 'uit_dienst') {
-        run('UPDATE ehbo_units SET stay_post_id = NULL WHERE id = ?', unit.id);
+        run('UPDATE ehbo_units SET stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?', unit.id);
         positions.delete(unit.id);
+      } else if (unit.availability === 'uit_dienst') {
+        run('UPDATE ehbo_units SET keep_until = ?, closes_at = NULL WHERE id = ?', keepAfterOpening(planOf(unit)), unit.id);
       }
     });
     changed();
@@ -618,13 +638,204 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
     const ownEhboPost = post.isEhbo && units().some((u) => u.kind === 'vast' && u.postId === postId && memberOf(me, u.id));
     if (!lead && !ownEhboPost && !me.isAdmin) throw httpError(403, 'Alleen de postverantwoordelijke kan de post open of dicht zetten');
+    const fixed = units().filter((u) => u.kind === 'vast' && u.postId === postId);
+    // Openen: je eigen eenheid, als je daarbij hoort; een andere dienst op dezelfde post blijft zoals hij is.
+    const mine = fixed.filter((u) => memberOf(me, u.id));
     db.transaction(() => {
-      run('UPDATE posts SET is_open = ? WHERE id = ?', open ? 1 : 0, postId);
+      setPost(postId, open);
       // Een vaste eenheid op deze EHBO-post gaat mee in dienst of uit dienst.
-      run(`UPDATE ehbo_units SET availability = ? WHERE kind = 'vast' AND post_id = ? AND availability <> 'pauze'`, open ? 'vrij' : 'uit_dienst', postId);
+      for (const unit of open && mine.length ? mine : fixed) {
+        if (unit.availability !== 'pauze') run('UPDATE ehbo_units SET availability = ? WHERE id = ?', open ? 'vrij' : 'uit_dienst', unit.id);
+      }
     });
     changed();
     return state();
+  }
+
+  // ---- Sluiten op tijd (functioneel ontwerp, "Openen en sluiten") ----
+  // Op de geplande tijd, nooit op "geen verbinding": een telefoon in je zak heeft die ook niet. Altijd eerst een waarschuwing,
+  // en nooit tijdens een open melding of aanvraag.
+
+  const eventDates = () => {
+    const row = get('SELECT start_date, end_date FROM event WHERE id = 1')!;
+    return { startDate: row.start_date as string | null, endDate: row.end_date as string | null };
+  };
+  const clockText = (at: number) => new Date(at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
+  const postPlan = (postId: number | null) => (postId === null ? null : posts().get(postId)?.timeTo ?? null);
+  /** A fixed team without its own end time follows its post. */
+  const planOf = (unit: Unit) => unit.timeTo ?? (unit.kind === 'vast' ? postPlan(unit.postId) : null);
+
+  /** Opened again around or after the planned end: don't close it straight away. */
+  function keepAfterOpening(timeTo: string | null) {
+    const planned = plannedClose({ timeTo }, eventDates(), now().getTime());
+    const late = planned !== null && now().getTime() >= planned - CLOSE_WARNING_MIN * 60_000;
+    return late ? new Date(now().getTime() + KEEP_OPEN_MIN * 60_000).toISOString() : null;
+  }
+
+  function setPost(postId: number, open: boolean) {
+    run('UPDATE posts SET is_open = ?, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', open ? 1 : 0, open ? keepAfterOpening(postPlan(postId)) : null, postId);
+  }
+
+  const otherShiftOnDuty = (unit: Unit) => units().some((u) => u.id !== unit.id && u.kind === 'vast' && u.postId === unit.postId && u.availability !== 'uit_dienst');
+
+  /** A phone without signal didn't see its post close by time: what it asks for still counts, and the post is open again. */
+  function reopenAutoClosed(postId: number) {
+    if (!posts().get(postId)?.autoClosedAt) return false;
+    setPost(postId, true);
+    return true;
+  }
+
+  function closeUnitAuto(unit: Unit) {
+    run("UPDATE ehbo_units SET availability = 'uit_dienst', stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", unit.id);
+    positions.delete(unit.id);
+    if (unit.kind === 'vast' && unit.postId !== null && !otherShiftOnDuty(unit)) {
+      run('UPDATE posts SET is_open = 0, keep_until = NULL, closes_at = NULL, auto_closed_at = ? WHERE id = ?', iso(), unit.postId);
+    }
+  }
+
+  /** What to do with something open now. */
+  function nextStep(item: { keepUntil: string | null; closesAt: string | null }, timeTo: string | null, inUse: boolean, at: number) {
+    if (inUse) return item.closesAt ? 'clear' : null;
+    if (item.closesAt) return at >= new Date(item.closesAt).getTime() ? 'close' : null;
+    const deadline = Math.max(plannedClose({ timeTo }, eventDates(), at) ?? 0, item.keepUntil ? new Date(item.keepUntil).getTime() : 0);
+    return deadline && at >= deadline - CLOSE_WARNING_MIN * 60_000 ? new Date(Math.max(deadline, at + CLOSE_WARNING_MIN * 60_000)) : null;
+  }
+
+  /** Every minute. */
+  function sweep() {
+    const at = now().getTime();
+    const postMap = posts();
+    const allUnits = units();
+    const busy = busyUnits();
+    const fixedPosts = new Set(allUnits.filter((u) => u.kind === 'vast').map((u) => u.postId));
+    const inUsePosts = new Set(all(`SELECT post_id FROM incidents WHERE status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse')
+                                    UNION SELECT post_id FROM requests WHERE status IN ('aangevraagd', 'opgepakt')`).map((r) => r.post_id as number));
+    const closed: string[] = [];
+    let touched = false;
+
+    for (const unit of allUnits.filter((u) => u.availability !== 'uit_dienst')) {
+      const step = nextStep(unit, planOf(unit), busy.has(unit.id), at);
+      if (!step) continue;
+      touched = true;
+      if (step === 'clear') {
+        run('UPDATE ehbo_units SET closes_at = NULL WHERE id = ?', unit.id);
+      } else if (step === 'close') {
+        db.transaction(() => closeUnitAuto(unit));
+        closed.push(unit.name);
+        notify(unit.members, { title: 'Je bent uit dienst gezet', body: 'Je dienst is voorbij. Nog bezig? Zet jezelf weer op Beschikbaar.', tag: `dienst-${unit.id}`, url: '/ehbo' });
+      } else {
+        run('UPDATE ehbo_units SET closes_at = ? WHERE id = ?', step.toISOString(), unit.id);
+        notify(unit.members, { title: `Je dienst stopt om ${clockText(step.getTime())}`, body: 'Nog nodig? Tik om in dienst te blijven.', tag: `dienst-${unit.id}`, url: '/ehbo' });
+      }
+    }
+    for (const post of [...postMap.values()].filter((p) => p.isOpen && !fixedPosts.has(p.id))) {
+      const step = nextStep(post, post.timeTo, inUsePosts.has(post.id), at);
+      if (!step) continue;
+      touched = true;
+      if (step === 'clear') {
+        run('UPDATE posts SET closes_at = NULL WHERE id = ?', post.id);
+      } else if (step === 'close') {
+        run('UPDATE posts SET is_open = 0, keep_until = NULL, closes_at = NULL, auto_closed_at = ? WHERE id = ?', iso(), post.id);
+        closed.push(post.name);
+        notify(postPhones(post.id), { title: `${post.name} is gesloten`, body: 'De geplande tijd is voorbij. Nog bezig? Je kunt de post altijd weer openen.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+      } else {
+        run('UPDATE posts SET closes_at = ? WHERE id = ?', step.toISOString(), post.id);
+        notify(postPhones(post.id), { title: `${post.name} sluit om ${clockText(step.getTime())}`, body: 'Nog nodig? Tik om de post open te houden.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+      }
+    }
+    const phone = coordinator();
+    if (closed.length && phone) notify([phone], { title: 'Automatisch gesloten', body: closed.join(', '), tag: 'gesloten', url: '/sturing' });
+    if (touched) changed();
+  }
+
+  function keepPost(me: Me, postId: number) {
+    const post = posts().get(postId);
+    if (!post) throw httpError(404, 'Post niet gevonden');
+    const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
+    if (!lead && !isLead(me)) throw httpError(403, 'Alleen de postverantwoordelijke of de coördinator kan de post open houden');
+    const until = new Date(now().getTime() + KEEP_OPEN_MIN * 60_000).toISOString();
+    run('UPDATE posts SET is_open = 1, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', until, postId);
+    changed();
+    return state();
+  }
+
+  function keepUnit(me: Me, unitId: number) {
+    const unit = unitById(unitId);
+    if (!unit) throw httpError(404, 'EHBO-eenheid niet gevonden');
+    if (!memberOf(me, unitId) && !isLead(me)) throw httpError(403, 'Je hoort niet bij deze EHBO-eenheid');
+    run('UPDATE ehbo_units SET keep_until = ?, closes_at = NULL WHERE id = ?', new Date(now().getTime() + KEEP_OPEN_MIN * 60_000).toISOString(), unitId);
+    changed();
+    return state();
+  }
+
+  // ---- Voor de coördinator: alles tegelijk, en wie er nog contact heeft ----
+
+  const isLead = (me: Me) => isCoordinator(me) || me.isAdmin;
+  function requireLead(me: Me) {
+    if (!isLead(me)) throw httpError(403, 'Alleen de evenementcoördinator of een beheerder');
+  }
+
+  /** Who hasn't been in touch: the last contact per open post and per team on duty. Only to look at; see QUIET_AFTER_MIN. */
+  function lastSeen(me: Me): LastSeen {
+    requireLead(me);
+    const seen = new Map(all('SELECT phone, MAX(last_seen_at) AS at FROM sessions GROUP BY phone').map((r) => [r.phone as string, `${(r.at as string).replace(' ', 'T')}Z`]));
+    const latest = (phones: string[]) => phones.map((p) => seen.get(p)).filter((t) => t !== undefined).sort().at(-1) ?? null;
+    const result: LastSeen = { posts: {}, units: {} };
+    for (const post of posts().values()) if (post.isOpen) result.posts[post.id] = latest(postPhones(post.id));
+    for (const unit of units()) if (unit.availability !== 'uit_dienst') result.units[unit.id] = latest(unit.members);
+    return result;
+  }
+
+  function openAll(me: Me) {
+    requireLead(me);
+    const closedPosts = [...posts().values()].filter((p) => !p.isOpen);
+    const off = units().filter((u) => u.availability === 'uit_dienst');
+    db.transaction(() => {
+      for (const post of closedPosts) setPost(post.id, true);
+      for (const unit of off) run("UPDATE ehbo_units SET availability = 'vrij', keep_until = ?, closes_at = NULL WHERE id = ?", keepAfterOpening(planOf(unit)), unit.id);
+    });
+    for (const post of closedPosts) notify(postPhones(post.id), { title: `${post.name} is geopend`, body: 'De coördinator heeft je post geopend.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+    for (const unit of off) notify(unit.members, { title: 'Je staat op Beschikbaar', body: 'De coördinator heeft je op Beschikbaar gezet.', tag: `dienst-${unit.id}`, url: '/ehbo' });
+    changed();
+    return state();
+  }
+
+  /** Everything except what's in the middle of a call: that says so instead. */
+  function closeEverything(): CloseSummary {
+    const busy = busyUnits();
+    const openPosts = new Set(all("SELECT post_id FROM incidents WHERE status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse')").map((r) => r.post_id as number));
+    const skipped = [...units().filter((u) => busy.has(u.id)).map((u) => u.name), ...[...posts().values()].filter((p) => openPosts.has(p.id)).map((p) => p.name)];
+    db.transaction(() => {
+      for (const post of posts().values()) if (!openPosts.has(post.id)) setPost(post.id, false);
+      for (const unit of units()) {
+        if (busy.has(unit.id)) continue;
+        run("UPDATE ehbo_units SET availability = 'uit_dienst', stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", unit.id);
+        positions.delete(unit.id);
+      }
+    });
+    return { state: state(), skipped };
+  }
+
+  function closeAll(me: Me) {
+    requireLead(me);
+    const result = closeEverything();
+    changed();
+    return result;
+  }
+
+  function closeDay(me: Me, finishRequests: () => void) {
+    requireLead(me);
+    const open = all("SELECT post_id, reported_at FROM incidents WHERE status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse') ORDER BY id");
+    const postMap = posts();
+    if (open.length) {
+      throw httpError(409, `Eerst afronden: ${open.map((i) => `${postMap.get(i.post_id as number)?.name}, ${clockText(new Date(i.reported_at as string).getTime())}`).join('; ')}`);
+    }
+    finishRequests();
+    const everyone = new Set(all('SELECT phone FROM post_contacts UNION SELECT phone FROM ehbo_unit_members').map((r) => r.phone as string));
+    const result = closeEverything();
+    notify(everyone, { title: 'Dag gesloten', body: 'Alle posten zijn dicht. Tot morgen.', tag: 'dag-gesloten', url: '/' });
+    changed();
+    return result;
   }
 
   /** Carries out a change with the time it happened on the phone, when that time can be believed. */
@@ -674,6 +885,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       return () => { listeners.delete(listener); };
     },
     report, update, accept, assign, decline, onSite, close, withdraw, setAvailability, setPosition, setPostOpen, resume, stop, at, once, moment,
+    sweep, keepPost, keepUnit, reopenAutoClosed, lastSeen, openAll, closeAll, closeDay,
+    /** The live connection is a contact with the phone too. */
+    seen: (sessionHash: string) => db.touchSession(sessionHash),
     /** Wijziging van buitenaf (bijv. beheer): iedereen de nieuwe stand sturen. */
     changed,
   };

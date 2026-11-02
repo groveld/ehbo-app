@@ -133,6 +133,17 @@ export interface LiveUnit {
   stayPostId: number | null;
   /** Mobiele eenheid: laatste GPS-positie (alleen in het geheugen van de server, nooit opgeslagen). */
   position: { lat: number; lng: number; at: string } | null;
+  /** The team has been warned: it goes off duty at this time, unless it stays on. */
+  closesAt: string | null;
+}
+
+export interface LivePost {
+  id: number;
+  isOpen: boolean;
+  /** The post has been warned: it closes at this time, unless it's kept open. */
+  closesAt: string | null;
+  /** It was closed by the planned time, not by a person. */
+  autoClosedAt: string | null;
 }
 
 /** GET /api/live/state, en elk bericht op GET /api/live (SSE). Iedere medewerker ziet hetzelfde. */
@@ -144,11 +155,23 @@ export interface LiveState {
   serverTime: string;
   incidents: LiveIncident[];
   units: LiveUnit[];
-  posts: { id: number; isOpen: boolean }[];
+  posts: LivePost[];
   /** Aanvragen voor water, verkeer en vrijwilligers (wachtrij van de coördinator). */
   requests: LiveRequest[];
   /** Testmodus: oproepen en aanvragen zijn proef en komen niet in het rapport. */
   testMode: boolean;
+}
+
+/** GET /api/live/last-seen: last contact by id, for the coordinator. Open posts and teams on duty only. */
+export interface LastSeen {
+  posts: Record<number, string | null>;
+  units: Record<number, string | null>;
+}
+
+/** Closing everything: the new state, and what stayed open because of a call. */
+export interface CloseSummary {
+  state: LiveState;
+  skipped: string[];
 }
 
 /** SSE: hartslag, zodat Cloudflare de verbinding niet na 100 s stil sluit. */
@@ -185,6 +208,41 @@ export interface EhboStatus {
 }
 /** Zo vaak deelt een mobiele eenheid in dienst haar positie; bij een statuswissel meteen. */
 export const POSITION_SHARE_MS = 60_000;
+
+/** A post or team closes this long after its planned end, never during an open call or request. */
+export const AUTO_CLOSE_AFTER_MIN = 30;
+/** Everyone gets this warning before anything closes by itself. */
+export const CLOSE_WARNING_MIN = 10;
+/** "Open houden": this much longer, then a new warning. */
+export const KEEP_OPEN_MIN = 30;
+/** No contact for this long is shown to the coordinator. Only shown: a phone in a pocket has no connection either, so it never closes anything. */
+export const QUIET_AFTER_MIN = 15;
+
+const EVENT_ZONE = 'Europe/Amsterdam';
+const localParts = (now: number) => {
+  const local = new Date(now).toLocaleString('sv-SE', { timeZone: EVENT_ZONE });
+  return { day: local.slice(0, 10), time: local.slice(11, 16) };
+};
+
+/** The moment of a day and time in Dutch time. */
+function eventInstant(day: string, time: string) {
+  const guess = Date.parse(`${day}T${time}:00Z`);
+  const { day: d, time: t } = localParts(guess);
+  return guess - (Date.parse(`${d}T${t}:00Z`) - guess);
+}
+
+/**
+ * When something planned should be closed, in ms: its end time plus the margin, on today or the last day of the event.
+ * Without an end time only when the event is over: until then a person closes it. Null before the event, and without a date.
+ */
+export function plannedClose(plan: { timeTo: string | null }, event: { startDate: string | null; endDate: string | null }, now: number) {
+  if (!event.startDate) return null;
+  const last = event.endDate ?? event.startDate;
+  const { day: today } = localParts(now);
+  if (today < event.startDate) return null;
+  if (plan.timeTo) return eventInstant(today > last ? last : today, plan.timeTo) + AUTO_CLOSE_AFTER_MIN * 60_000;
+  return today > last ? eventInstant(last, '23:59') : null;
+}
 
 /** Should this post be open by now? Within its time slot, on a day of the event, in Dutch time. */
 export function isDueOpen(post: { timeFrom: string | null; timeTo: string | null }, event: { startDate: string | null; endDate: string | null }, now: number) {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // 3.4 · Overzicht & kaart: alle posten en EHBO-teams, filter per soort en route, zoeken op naam of km, tellers voor de coördinator, en de lijst met bel- en navigeerknoppen.
-import { computed, defineAsyncComponent, ref } from 'vue';
-import { isDueOpen, lacksPosition, type PackagePost } from '@ehbo/shared';
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue';
+import { QUIET_AFTER_MIN, isDueOpen, lacksPosition, type LastSeen, type PackagePost } from '@ehbo/shared';
+import { api } from '../../api.ts';
 import { useRouter } from 'vue-router';
 import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
@@ -56,9 +57,32 @@ const latePosts = computed(() => {
   return pkg.posts.filter((p) => closedIds.value.includes(p.id) && isDueOpen(p, pkg.event, live.serverNow)).map((p) => p.id);
 });
 const lostTeams = computed(() => (isLead.value ? store.pkg?.units.filter((u) => live.unitState(u.id)?.incidentId == null && lacksPosition(u, live.unitState(u.id), live.serverNow)).map((u) => u.id) ?? [] : []));
+/** No contact for a while. Only a signal for the coordinator: a phone in a pocket has no connection either, so nothing closes by this. */
+const lastSeen = ref<LastSeen | null>(null);
+async function loadLastSeen() {
+  if (!isLead.value || document.visibilityState !== 'visible') return;
+  try {
+    lastSeen.value = await api<LastSeen>('/api/live/last-seen', { timeoutMs: 8_000 });
+  } catch {
+    // Geen bereik: de vorige stand blijft staan.
+  }
+}
+let seenTimer: ReturnType<typeof setInterval> | undefined;
+onMounted(() => {
+  void loadLastSeen();
+  seenTimer = setInterval(loadLastSeen, 60_000);
+});
+onBeforeUnmount(() => clearInterval(seenTimer));
+const quietMinutes = (at: string | null | undefined) => {
+  if (at === undefined || at === null) return null;
+  const minutes = Math.floor((live.serverNow - new Date(at).getTime()) / 60_000);
+  return minutes >= QUIET_AFTER_MIN ? minutes : null;
+};
+const quietPost = (id: number) => (lastSeen.value && !closedIds.value.includes(id) ? quietMinutes(lastSeen.value.posts[id]) : null);
+const quietUnit = (id: number) => (lastSeen.value ? quietMinutes(lastSeen.value.units[id]) : null);
 const posts = computed(() => {
   const pkg = store.pkg;
-  const shown = filter.value === 'attention' ? mapPosts.value.filter((p) => alertIds.value.includes(p.id) || latePosts.value.includes(p.id)) : mapPosts.value;
+  const shown = filter.value === 'attention' ? mapPosts.value.filter((p) => alertIds.value.includes(p.id) || latePosts.value.includes(p.id) || quietPost(p.id)) : mapPosts.value;
   const list = route.value === null || !pkg ? shown : shown
     .filter((p) => alertIds.value.includes(p.id) || isOnRun(pkg, p, route.value!))
     .sort((a, b) => routeKm(a) - routeKm(b));
@@ -67,7 +91,7 @@ const posts = computed(() => {
 const teams = computed(() => {
   const q = query.value.trim().toLowerCase();
   if (typeof filter.value === 'number') return [];
-  return store.pkg?.units.filter((u) => (!q || u.name.toLowerCase().includes(q)) && (filter.value !== 'attention' || lostTeams.value.includes(u.id))) ?? [];
+  return store.pkg?.units.filter((u) => (!q || u.name.toLowerCase().includes(q)) && (filter.value !== 'attention' || lostTeams.value.includes(u.id) || quietUnit(u.id))) ?? [];
 });
 /** How the event is doing, for the coordinator and admins. */
 const counters = computed(() => {
@@ -131,12 +155,12 @@ const banner = computed(() => {
       <div class="stack gap-14">
         <section v-if="teams.length" class="stack gap-8">
           <h2 class="section-title">EHBO<template v-if="!live.connected && live.state"> · laatste stand {{ clock(live.state.serverTime) }}</template></h2>
-          <div class="list"><TeamRow v-for="u in teams" :key="u.id" :pkg="store.pkg" :unit="u" :attention="lostTeams.includes(u.id)" /></div>
+          <div class="list"><TeamRow v-for="u in teams" :key="u.id" :pkg="store.pkg" :unit="u" :attention="lostTeams.includes(u.id)" :quiet-minutes="quietUnit(u.id)" /></div>
         </section>
         <template v-if="filter !== 'teams'">
           <section v-if="posts.length" class="stack gap-8">
             <h2 class="section-title">Posten</h2>
-            <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="latePosts.includes(p.id)" /></div>
+            <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="latePosts.includes(p.id)" :quiet-minutes="quietPost(p.id)" /></div>
           </section>
           <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen posten ingevoerd.</p>
           <p v-else-if="!posts.length && !teams.length" class="note">{{ filter === 'attention' ? 'Niets vraagt nu aandacht.' : 'Geen post gevonden.' }}</p>

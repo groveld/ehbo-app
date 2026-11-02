@@ -11,13 +11,16 @@ import {
   OUTCOMES,
   RESPONSIVE,
   type CloseIncident,
+  type CloseSummary,
   type IncidentDetails,
+  type LastSeen,
   type LiveState,
   type NewIncident,
   type UnitAvailability,
 } from '@ehbo/shared';
 import { requireMe } from '../auth.ts';
 import type { Calls } from '../calls.ts';
+import type { Requests } from '../requests.ts';
 
 const nullable = (values: readonly string[]) => ({ enum: [...values, null] });
 const note = { type: ['string', 'null'], maxLength: NOTE_MAX } as const;
@@ -36,7 +39,7 @@ type Id = { Params: { id: number } };
 /** Id and time of a change from a phone's queue. */
 export const actionHeaders = (request: FastifyRequest) => [request.headers[ACTION_ID_HEADER], request.headers[ACTION_AT_HEADER]] as [string | undefined, string | undefined];
 
-export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls }) {
+export async function callRoutes(app: FastifyInstance, { calls, requests }: { calls: Calls; requests: Requests }) {
   app.addHook('preHandler', requireMe);
 
   // Open SSE-verbindingen sluiten bij afsluiten, anders wacht de server erop.
@@ -46,6 +49,11 @@ export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls
   });
 
   app.get<{ Reply: LiveState }>('/api/live/state', async () => calls.state());
+
+  app.get<{ Reply: LastSeen }>('/api/live/last-seen', async (request) => calls.lastSeen(request.me!));
+  app.post<{ Reply: LiveState }>('/api/control/open-all', async (request) => calls.openAll(request.me!));
+  app.post<{ Reply: CloseSummary }>('/api/control/close-all', async (request) => calls.closeAll(request.me!));
+  app.post<{ Reply: CloseSummary }>('/api/control/close-day', async (request) => calls.closeDay(request.me!, () => requests.finishAll()));
 
   app.get('/api/live', (request, reply) => {
     reply.hijack();
@@ -62,7 +70,10 @@ export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls
     send(calls.state());
     const unsubscribe = calls.subscribe(send);
     // A real event, not a comment: the phone has to see it to know the connection is alive.
-    const heartbeat = setInterval(() => res.write('event: ping\ndata: 1\n\n'), LIVE_HEARTBEAT_MS);
+    const heartbeat = setInterval(() => {
+      res.write('event: ping\ndata: 1\n\n');
+      if (request.sessionHash) calls.seen(request.sessionHash);
+    }, LIVE_HEARTBEAT_MS);
     streams.add(res);
     request.raw.on('close', () => {
       clearInterval(heartbeat);
@@ -125,6 +136,11 @@ export async function callRoutes(app: FastifyInstance, { calls }: { calls: Calls
     calls.setPosition(request.me!, request.params.id, request.body);
     return reply.code(204).send();
   });
+
+  app.post<Id & { Reply: LiveState }>('/api/posts/:id/keep-open', { schema: { params: idParams } },
+    async (request) => calls.once(...actionHeaders(request), () => calls.keepPost(request.me!, request.params.id)));
+  app.post<Id & { Reply: LiveState }>('/api/units/:id/keep-on-duty', { schema: { params: idParams } },
+    async (request) => calls.once(...actionHeaders(request), () => calls.keepUnit(request.me!, request.params.id)));
 
   app.put<Id & { Body: { open: boolean }; Reply: LiveState }>('/api/posts/:id/open', {
     schema: { params: idParams, body: { type: 'object', required: ['open'], properties: { open: { type: 'boolean' } } } },

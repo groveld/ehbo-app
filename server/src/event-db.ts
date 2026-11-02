@@ -274,6 +274,16 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
     at TEXT NOT NULL
   );
   `,
+  // 15: teams get a planned shift like posts. Closing by time: keep_until = "keep open" was pressed, closes_at = the warning went out.
+  `
+  ALTER TABLE ehbo_units ADD COLUMN time_from TEXT;
+  ALTER TABLE ehbo_units ADD COLUMN time_to TEXT;
+  ALTER TABLE ehbo_units ADD COLUMN keep_until TEXT;
+  ALTER TABLE ehbo_units ADD COLUMN closes_at TEXT;
+  ALTER TABLE posts ADD COLUMN keep_until TEXT;
+  ALTER TABLE posts ADD COLUMN closes_at TEXT;
+  ALTER TABLE posts ADD COLUMN auto_closed_at TEXT;
+  `,
 ];
 
 export interface EventRow {
@@ -308,6 +318,8 @@ export interface UnitAssignmentRow {
   unit_name: string;
   kind: UnitKind;
   mobility: UnitMobility | null;
+  time_from: string | null;
+  time_to: string | null;
   post_name: string | null;
 }
 
@@ -378,7 +390,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
       FROM post_contacts c JOIN posts p ON p.id = c.post_id JOIN post_types t ON t.id = p.type_id
       WHERE c.phone = ? ORDER BY COALESCE(c.time_from, p.time_from), p.sort, p.id`),
     unitAssignments: db.prepare(`
-      SELECT u.id AS unit_id, u.name AS unit_name, u.kind, u.mobility, p.name AS post_name
+      SELECT u.id AS unit_id, u.name AS unit_name, u.kind, u.mobility, u.time_from, u.time_to, p.name AS post_name
       FROM ehbo_unit_members m JOIN ehbo_units u ON u.id = m.unit_id LEFT JOIN posts p ON p.id = u.post_id
       WHERE m.phone = ? ORDER BY u.sort, u.id`),
     coreTeamAssignments: db.prepare('SELECT function, is_coordinator FROM core_team WHERE phone = ? ORDER BY sort, id'),

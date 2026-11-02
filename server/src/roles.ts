@@ -21,7 +21,7 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
     const detail = r.kind === 'vast'
       ? (r.post_name ?? 'Vaste EHBO-post')
       : `Mobiel (${MOBILITY_LABEL[r.mobility ?? 'anders']})${r.post_name ? ` · Standplaats ${r.post_name}` : ''}`;
-    assignments.push({ kind: 'ehbo', title: `EHBO ${r.unit_name}`, detail, letter: '+', color: EHBO_COLOR, unitId: r.unit_id });
+    assignments.push({ kind: 'ehbo', title: `EHBO ${r.unit_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, unitId: r.unit_id });
   }
   for (const r of db.postAssignments(phone)) {
     assignments.push({
