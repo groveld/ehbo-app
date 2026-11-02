@@ -50,6 +50,8 @@ export interface PackageUnit {
   mobility: UnitMobility | null;
   postId: number | null;
   hasAed: boolean;
+  timeFrom: string | null;
+  timeTo: string | null;
   members: { name: string; phone: string }[];
 }
 

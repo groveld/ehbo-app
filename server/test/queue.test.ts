@@ -27,8 +27,8 @@ const incident = (changes: Partial<LiveIncident> = {}): LiveIncident => ({
 });
 
 const state = (changes: Partial<LiveState> = {}): LiveState => ({
-  version: 1, dataVersion: '1.1', serverTime: AT, incidents: [incident()], testMode: false, requests: [], posts: [{ id: 10, isOpen: false }],
-  units: [{ id: 1, availability: 'uit_dienst', incidentId: null, stayPostId: null, position: null }, { id: 2, availability: 'vrij', incidentId: null, stayPostId: null, position: null }],
+  version: 1, dataVersion: '1.1', serverTime: AT, incidents: [incident()], testMode: false, requests: [], posts: [{ id: 10, isOpen: false, closesAt: null, autoClosedAt: null }],
+  units: [{ id: 1, availability: 'uit_dienst', incidentId: null, stayPostId: null, position: null, closesAt: null }, { id: 2, availability: 'vrij', incidentId: null, stayPostId: null, position: null, closesAt: null }],
   ...changes,
 });
 
@@ -60,7 +60,7 @@ test('closing and taking a break; a fixed unit can stay where it was', () => {
 
 test('a fixed unit and its post go together; a phone with no state yet still shows its own change', () => {
   assert.equal(apply(state(), { type: 'availability', unitId: 1, availability: 'vrij' }).posts[0]?.isOpen, true);
-  const closedPost = apply(state({ units: [{ id: 1, availability: 'vrij', incidentId: null, stayPostId: null, position: null }] }), { type: 'postOpen', postId: 10, open: false });
+  const closedPost = apply(state({ units: [{ id: 1, availability: 'vrij', incidentId: null, stayPostId: null, position: null, closesAt: null }] }), { type: 'postOpen', postId: 10, open: false });
   assert.equal(closedPost.units[0]?.availability, 'uit_dienst');
   assert.equal(apply(state({ units: [] }), { type: 'availability', unitId: 2, availability: 'pauze' }).units[0]?.availability, 'pauze');
 });

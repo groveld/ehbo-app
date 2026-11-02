@@ -93,6 +93,9 @@ export interface UnitData {
   /** Vast: de eigen EHBO-post. Mobiel: de standplaats (optioneel). */
   postId: number | null;
   hasAed: boolean;
+  /** Planned shift, like a post. Calls keep going to a team that's available, whatever these say. */
+  timeFrom: string | null;
+  timeTo: string | null;
   members: MemberData[];
 }
 

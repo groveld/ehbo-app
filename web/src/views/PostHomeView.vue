@@ -22,6 +22,8 @@ const { busy, error, run } = useSave();
 
 const post = computed(() => store.postById.get(Number(props.id)) ?? null);
 const open = computed(() => (post.value ? live.postOpen(post.value.id, post.value.isOpen) : false));
+const closing = computed(() => (post.value ? live.postState(post.value.id)?.closesAt : null));
+const autoClosed = computed(() => (post.value ? live.postState(post.value.id)?.autoClosedAt : null));
 const myRole = computed(() => session.me?.assignments.find((a) => a.kind === 'post' && a.postId === post.value?.id));
 const canOpen = computed(() => myRole.value?.role === 'verantwoordelijke' || session.me?.isAdmin);
 const coordinator = computed(() => coordinatorOf(store.pkg));
@@ -88,10 +90,16 @@ async function setOpen(value: boolean) {
 
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
 
+      <div v-if="open && closing" class="note warn closing">
+        <span class="grow">Deze post sluit om <strong>{{ clock(closing) }}</strong>. De geplande tijd is voorbij.</span>
+        <button v-if="canOpen" class="btn keep" :disabled="busy" @click="run(() => live.keepPost(post!.id))">Open houden</button>
+      </div>
+
       <!-- 3.1 · Post is dicht -->
       <template v-if="!open">
         <div class="card closed">
           <span class="closed-chip"><span class="dot" />POST IS DICHT</span>
+          <p v-if="autoClosed" class="small center">Automatisch gesloten om {{ clock(autoClosed) }}: de geplande tijd was voorbij.</p>
           <p v-if="canOpen" class="lead center">Ben je op je plek en is alles klaar? Zet de post open. Dan ziet de evenementcoördinator dat je er bent en werkt de hulpknop. Je kunt de post zo vaak openen en sluiten als nodig.</p>
           <p v-else class="lead center">De postverantwoordelijke zet de post open. Daarna werkt de hulpknop ook voor jou.</p>
           <button v-if="canOpen" class="btn go" :disabled="busy" @click="setOpen(true)">Post openen</button>
@@ -175,6 +183,8 @@ async function setOpen(value: boolean) {
 
 <style scoped>
 .top-gap { margin-top: 24px; }
+.closing { align-items: center; margin-top: 8px; font-size: 14px; }
+.keep { width: auto; flex-shrink: 0; padding: 0 14px; }
 .head { display: flex; align-items: flex-start; gap: 8px; padding: max(20px, env(safe-area-inset-top)) 0 8px 4px; }
 .gap-4 { gap: 4px; }
 h1 { font-size: 24px; font-weight: 700; line-height: 1.2; }

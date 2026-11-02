@@ -5,8 +5,8 @@ import { UNIT_AVAILABILITY, formatPhone, telHref, type UnitAvailability } from '
 import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { incidentSummary, myDeployments, unitOf } from '../incidents.ts';
-import { coordinatorOf, coreTeamMember, kmLabel } from '../posts.ts';
+import { clock, incidentSummary, myDeployments, unitOf } from '../incidents.ts';
+import { coordinatorOf, coreTeamMember, kmLabel, shiftText } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -50,6 +50,7 @@ const position = computed(() => {
   if (u.kind === 'mobiel') return availability.value === 'uit_dienst' ? (base ? `Standplaats ${base.name}` : '–') : `GPS${base ? `, anders ${base.name}` : ''}`;
   return base ? [base.name, kmLabel(base)].filter(Boolean).join(' · ') : '–';
 });
+const shift = computed(() => shiftText(unit.value));
 const teammates = computed(() => unit.value?.members.filter((m) => m.phone !== session.me?.phone) ?? []);
 const othersFree = computed(() => {
   const others = (live.state?.units ?? []).filter((u) => u.id !== unitId.value);
@@ -75,6 +76,10 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
     <template v-else>
       <StatusBlock :tone="block.tone" :label="label" :title="block.title" />
 
+      <div v-if="state?.closesAt && !active" class="note warn closing gap-top">
+        <span class="grow">Je dienst stopt om <strong>{{ clock(state.closesAt) }}</strong>.</span>
+        <button class="btn keep" :disabled="busy" @click="run(() => live.keepUnit(unitId!))">In dienst blijven</button>
+      </div>
       <RouterLink v-if="active" :to="{ name: 'oproep', params: { id: active.id } }" class="btn danger gap-top">
         Naar de oproep · {{ active.post.name }} · {{ incidentSummary(active) }}
       </RouterLink>
@@ -94,6 +99,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
       </div>
 
       <div class="list facts-list">
+        <div v-if="shift" class="list-row"><span class="grow">Dienst</span><strong>{{ shift }}</strong></div>
         <div class="list-row"><span class="grow">Positie</span><strong>{{ position }}</strong></div>
         <div class="list-row"><span class="grow">Teamleden</span><strong>{{ teammates.map((m) => m.name || formatPhone(m.phone)).join(', ') || 'alleen jij' }}</strong></div>
         <div class="list-row"><span class="grow">Andere eenheden beschikbaar</span><strong>{{ othersFree.free }} van {{ othersFree.total }}</strong></div>
@@ -121,6 +127,8 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 <style scoped>
 .top-gap { margin-top: 24px; }
 .gap-top { margin-top: 14px; }
+.closing { align-items: center; font-size: 14px; }
+.keep { width: auto; flex-shrink: 0; padding: 0 14px; }
 .option[aria-pressed="true"] { font-weight: 700; }
 /* Green is here and available, red is here but not available, dark is not here. Fixed colors, not the event's. */
 .option[aria-pressed="true"] { color: #FFFFFF; }

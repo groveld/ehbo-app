@@ -38,6 +38,7 @@ export interface AppOptions {
 
 // Bestanden die nooit lang in een cache (ook niet bij Cloudflare) mogen blijven.
 const NO_CACHE = new Set(['index.html', 'sw.js']);
+const SWEEP_MS = 60_000;
 
 export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = false, mapSource = protomapsSource, calls: callOptions = {}, logger = false }: AppOptions) {
   const app = Fastify({
@@ -76,14 +77,18 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   // Oproepen en aanvragen delen één live stand; de aanvragen melden hun wijzigingen via calls.changed.
   let requests: Requests | null = null;
   const calls = createCalls(db, { notify: notifier.toPhones, requests: () => requests?.list() ?? [], ...callOptions });
-  requests = createRequests(db, { notify: callOptions.notify ?? notifier.toPhones, changed: calls.changed, now: calls.moment });
+  requests = createRequests(db, { notify: callOptions.notify ?? notifier.toPhones, changed: calls.changed, reopen: calls.reopenAutoClosed, now: calls.moment });
   // Lopende oproepen gaan na een herstart verder waar ze waren.
   app.addHook('onReady', async () => calls.resume());
   app.addHook('onClose', async () => calls.stop());
+  // Sluiten op tijd: posten en eenheden voorbij hun geplande eindtijd.
+  const sweeper = setInterval(() => calls.sweep(), SWEEP_MS);
+  sweeper.unref();
+  app.addHook('onClose', async () => clearInterval(sweeper));
 
   app.register(sessionRoutes, { db });
   app.register(pushRoutes, { db, notifier, allowInsecureEndpoints });
-  app.register(callRoutes, { calls });
+  app.register(callRoutes, { calls, requests });
   app.register(requestRoutes, { calls, requests });
   app.register(adminRoutes, { db, calls });
   app.register(brandRoutes, { db });

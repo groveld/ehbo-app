@@ -55,6 +55,7 @@ export const router = createRouter({
     { path: '/ehbo/inzetten', name: 'inzetten', component: () => import('./views/InzettenView.vue'), meta: { staff: true } },
     { path: '/oproep/:id', name: 'oproep', component: () => import('./views/OproepView.vue'), props: true, meta: { staff: true } },
     { path: '/oproep/:id/afronden', name: 'afronden', component: () => import('./views/AfrondenView.vue'), props: true, meta: { staff: true } },
+    { path: '/sturing', name: 'sturing', component: () => import('./views/SturingView.vue'), meta: { staff: true } },
     { path: '/controle', name: 'controle', component: () => import('./views/ControleView.vue'), meta: { staff: true } },
     { path: '/beheer', name: 'beheer', component: () => import('./views/admin/BeheerView.vue'), meta: { staff: true, admin: true } },
     { path: '/beheer/evenement', name: 'beheer-evenement', component: () => import('./views/admin/EvenementView.vue'), meta: { staff: true, admin: true } },

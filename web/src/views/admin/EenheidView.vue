@@ -21,7 +21,7 @@ const MOBILITY: { value: UnitMobility; label: string }[] = [
   { value: 'te_voet', label: 'Te voet' }, { value: 'fiets', label: 'Fiets' }, { value: 'auto', label: 'Auto' }, { value: 'anders', label: 'Anders' },
 ];
 
-const form = reactive<UnitData>({ name: '', kind: 'vast', mobility: null, postId: null, hasAed: false, members: [] });
+const form = reactive<UnitData>({ name: '', kind: 'vast', mobility: null, postId: null, hasAed: false, timeFrom: null, timeTo: null, members: [] });
 const loaded = ref(false);
 // Een nieuwe post, eenheid of loop is nog niet opgeslagen; een bestaande alleen als er iets gewijzigd is.
 const { dirty, markClean } = useDirty(() => form);
@@ -57,6 +57,8 @@ async function submit() {
   const data: UnitData = {
     ...form,
     mobility: form.kind === 'mobiel' ? form.mobility : null,
+    timeFrom: form.timeFrom || null,
+    timeTo: form.timeTo || null,
     members: form.members.filter((m) => m.phone.trim()),
   };
   if (await save.run(() => admin.saveUnit(isNew.value ? null : Number(props.id), data))) router.push({ name: 'beheer-eenheden' });
@@ -117,6 +119,18 @@ async function remove() {
         </section>
 
         <div class="card aed">
+        <div class="row-2">
+          <div class="form-field">
+            <label for="dienst-van">Dienst vanaf</label>
+            <input id="dienst-van" v-model="form.timeFrom" class="input" type="time">
+          </div>
+          <div class="form-field">
+            <label for="dienst-tot">Tot</label>
+            <input id="dienst-tot" v-model="form.timeTo" class="input" type="time">
+          </div>
+        </div>
+        <p class="small">Oproepen gaan gewoon naar wie beschikbaar is. Na de eindtijd gaat de eenheid vanzelf uit dienst, na een waarschuwing.</p>
+
           <span class="badge heart"><Icon name="ehbo" :size="20" /></span>
           <span class="main"><span class="label">AED bij zich</span><span class="small">Voorrang bij "niet aanspreekbaar"</span></span>
           <button role="switch" class="switch" :aria-checked="form.hasAed" aria-label="AED bij zich" @click="form.hasAed = !form.hasAed" />

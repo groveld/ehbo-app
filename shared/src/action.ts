@@ -10,6 +10,9 @@ export type LiveAction =
   | { type: 'update'; incidentId: number; details: IncidentDetails }
   | { type: 'availability'; unitId: number; availability: UnitAvailability }
   | { type: 'postOpen'; postId: number; open: boolean }
+  /** After the warning that it's about to close. */
+  | { type: 'keepPost'; postId: number }
+  | { type: 'keepUnit'; unitId: number }
   /** tempId: a negative id until the server has given the real one. */
   | { type: 'requestNew'; tempId: number; clientId: string; postId: number; postName: string; kind: RequestKind }
   | { type: 'requestDetail'; requestId: number; detail: string | null }
@@ -43,12 +46,13 @@ const changeIncident = (state: LiveState, id: number, change: (incident: LiveInc
 /** A unit or post the state doesn't list yet (a phone that never had a connection) is added. */
 function changeUnit(state: LiveState, id: number, change: (unit: LiveUnit) => LiveUnit): LiveState {
   if (state.units.some((u) => u.id === id)) return { ...state, units: state.units.map((u) => (u.id === id ? change(u) : u)) };
-  return { ...state, units: [...state.units, change({ id, availability: 'uit_dienst', incidentId: null, stayPostId: null, position: null })] };
+  return { ...state, units: [...state.units, change({ id, availability: 'uit_dienst', incidentId: null, stayPostId: null, position: null, closesAt: null })] };
 }
 
 function setPostOpen(state: LiveState, id: number, isOpen: boolean): LiveState {
-  if (state.posts.some((p) => p.id === id)) return { ...state, posts: state.posts.map((p) => (p.id === id ? { ...p, isOpen } : p)) };
-  return { ...state, posts: [...state.posts, { id, isOpen }] };
+  const change = { isOpen, closesAt: null, autoClosedAt: null };
+  if (state.posts.some((p) => p.id === id)) return { ...state, posts: state.posts.map((p) => (p.id === id ? { ...p, ...change } : p)) };
+  return { ...state, posts: [...state.posts, { id, ...change }] };
 }
 
 const changeRequest = (state: LiveState, id: number, change: (request: LiveRequest) => LiveRequest): LiveState =>
@@ -118,14 +122,21 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
     case 'update': return changeIncident(state, action.incidentId, (i) => ({ ...i, ...action.details, aed: i.aed || action.details.responsive === 'nee' }));
     case 'availability': {
       const { availability, unitId } = action;
-      const changed = changeUnit(state, unitId, (u) => (availability === 'uit_dienst' ? { ...u, availability, stayPostId: null, position: null } : { ...u, availability }));
+      const changed = changeUnit(state, unitId, (u) => (availability === 'uit_dienst' ? { ...u, availability, stayPostId: null, position: null, closesAt: null } : { ...u, availability }));
       const unit = context.units.find((u) => u.id === unitId);
-      // A fixed unit on duty and its own EHBO post open are the same thing.
-      return unit?.kind === 'vast' && unit.postId !== null && availability !== 'pauze' ? setPostOpen(changed, unit.postId, availability === 'vrij') : changed;
+      if (unit?.kind !== 'vast' || unit.postId === null || availability === 'pauze') return changed;
+      // A fixed unit on duty and its own EHBO post open are the same thing, as long as no other shift is still there.
+      const othersOnDuty = context.units.some((u) => u.id !== unitId && u.kind === 'vast' && u.postId === unit.postId
+        && (changed.units.find((l) => l.id === u.id)?.availability ?? 'uit_dienst') !== 'uit_dienst');
+      return availability === 'vrij' || !othersOnDuty ? setPostOpen(changed, unit.postId, availability === 'vrij') : changed;
     }
+    case 'keepPost': return { ...state, posts: state.posts.map((p) => (p.id === action.postId ? { ...p, isOpen: true, closesAt: null, autoClosedAt: null } : p)) };
+    case 'keepUnit': return changeUnit(state, action.unitId, (u) => ({ ...u, closesAt: null }));
     case 'postOpen': {
       const fixed = context.units.filter((u) => u.kind === 'vast' && u.postId === action.postId);
-      return fixed.reduce(
+      // Opening: your own team, when you're on one; the other shift stays as it is.
+      const mine = fixed.filter((u) => u.members?.some((m) => m.phone === context.me?.phone));
+      return (action.open && mine.length ? mine : fixed).reduce(
         (s, u) => (s.units.find((l) => l.id === u.id)?.availability === 'pauze' ? s : changeUnit(s, u.id, (l) => ({ ...l, availability: action.open ? 'vrij' : 'uit_dienst' }))),
         setPostOpen(state, action.postId, action.open),
       );
@@ -156,6 +167,8 @@ export function actionRequest(action: LiveAction): { method: 'POST' | 'PUT'; pat
     case 'update': return { method: 'PUT', path: `/api/incidents/${action.incidentId}`, body: action.details };
     case 'availability': return { method: 'PUT', path: `/api/units/${action.unitId}/availability`, body: { availability: action.availability } };
     case 'postOpen': return { method: 'PUT', path: `/api/posts/${action.postId}/open`, body: { open: action.open } };
+    case 'keepPost': return { method: 'POST', path: `/api/posts/${action.postId}/keep-open` };
+    case 'keepUnit': return { method: 'POST', path: `/api/units/${action.unitId}/keep-on-duty` };
     case 'requestNew': return {
       method: 'POST', path: '/api/requests',
       body: { postId: action.postId, kind: action.kind, detail: null, clientId: action.clientId } satisfies NewRequest,

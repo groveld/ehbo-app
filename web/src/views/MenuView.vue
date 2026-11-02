@@ -5,12 +5,16 @@ import { useRouter } from 'vue-router';
 import { formatPhone } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import { getNavApp, NAV_APPS, setNavApp, type NavApp } from '../navigate.ts';
+import { coordinatorOf } from '../posts.ts';
+import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
 
 const session = useSessionStore();
 const router = useRouter();
 const me = computed(() => session.me!);
 const navApp = ref<NavApp>(getNavApp());
+const pkg = usePackageStore();
+const isCoordinator = computed(() => coordinatorOf(pkg.pkg)?.phone === me.value.phone);
 
 // Rollen kunnen intussen gewijzigd zijn (bijv. door het beheer).
 onMounted(() => session.refresh());
@@ -44,6 +48,7 @@ async function logout() {
     </div>
 
     <nav class="stack gap-10 menu">
+      <RouterLink v-if="me.isAdmin || isCoordinator" :to="{ name: 'sturing' }" class="btn item"><Icon name="list" :size="20" />Posten en EHBO openen of sluiten</RouterLink>
       <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn item"><Icon name="settings" :size="20" />Beheer</RouterLink>
       <RouterLink :to="{ name: 'info' }" class="btn item"><Icon name="info" :size="20" />Info &amp; voorwaarden</RouterLink>
       <RouterLink :to="{ name: 'controle' }" class="btn item"><Icon name="check" :size="20" />Pushmeldingen, locatie en controle</RouterLink>

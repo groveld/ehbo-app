@@ -186,7 +186,7 @@ test('a post with incidents or requests stays: deleting it gives a clear error',
 test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   const stamp = state.posts.find((p) => p.name === 'Kruising 4')!;
-  const unit: UnitData = { name: 'Team 3', kind: 'mobiel', mobility: 'fiets', postId: stamp.id, hasAed: true, members: [{ name: 'Fiets Fred', phone: '0687654321' }] };
+  const unit: UnitData = { name: 'Team 3', kind: 'mobiel', mobility: 'fiets', postId: stamp.id, hasAed: true, timeFrom: null, timeTo: null, members: [{ name: 'Fiets Fred', phone: '0687654321' }] };
   const res = await call('POST', '/api/admin/units', unit);
   assert.equal(res.statusCode, 200, res.body);
   const saved = (res.json() as AdminState).units.find((u) => u.name === 'Team 3')!;

@@ -4,6 +4,7 @@ import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import type {
   CloseIncident,
+  CloseSummary,
   IncidentDetails,
   LiveAction,
   LiveIncident,
@@ -215,6 +216,7 @@ export const useLiveStore = defineStore('live', () => {
   const unitState = (id: number) => state.value?.units.find((u) => u.id === id) ?? null;
   /** Live open/dicht; zonder live stand wat in het evenementpakket staat. */
   const postOpen = (postId: number, fallback = false) => state.value?.posts.find((p) => p.id === postId)?.isOpen ?? fallback;
+  const postState = (postId: number) => state.value?.posts.find((p) => p.id === postId) ?? null;
 
   const myUnitIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'ehbo').map((a) => a.unitId!) ?? []);
   const myPostIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'post').map((a) => a.postId!) ?? []);
@@ -437,7 +439,7 @@ export const useLiveStore = defineStore('live', () => {
 
   return {
     state, connected, offline, syncing, serverNow, sharingUnit, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
-    incidentById, unitState, postOpen, secondsLeft, needsAed, refresh, connect, report, checkData,
+    incidentById, unitState, postOpen, postState, secondsLeft, needsAed, refresh, connect, report, checkData,
     /** "Opnieuw laden": everything at once. */
     reload: () => Promise.all([syncData(), refresh()]),
     outbox, delivered, refused, flush,
@@ -450,6 +452,14 @@ export const useLiveStore = defineStore('live', () => {
     withdraw: (incidentId: number) => act({ type: 'withdraw', incidentId }),
     setAvailability: (unitId: number, availability: UnitAvailability) => act({ type: 'availability', unitId, availability }),
     setPostOpen: (postId: number, open: boolean) => act({ type: 'postOpen', postId, open }),
+    keepPost: (postId: number) => act({ type: 'keepPost', postId }),
+    keepUnit: (unitId: number) => act({ type: 'keepUnit', unitId }),
+    /** The coordinator's buttons: these change everything at once, so they need the server. */
+    async control(action: 'open-all' | 'close-all' | 'close-day') {
+      const answer = await api<LiveState | CloseSummary>(`/api/control/${action}`, { method: 'POST' });
+      setState('skipped' in answer ? answer.state : answer);
+      return 'skipped' in answer ? answer.skipped : [];
+    },
     // Aanvragen (water, verkeer, vrijwilliger) gaan ook zonder bereik door: ze wachten in de wachtrij.
     requests: computed(() => state.value?.requests ?? []),
     requestById,

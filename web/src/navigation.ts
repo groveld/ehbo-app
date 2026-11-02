@@ -13,7 +13,7 @@ import { useSessionStore } from './stores/session.ts';
 const PARENT: Record<string, string> = {
   post: 'kaart', route: 'kaart',
   oproep: 'ehbo', inzetten: 'ehbo',
-  info: 'menu', controle: 'menu', beheer: 'menu',
+  info: 'menu', controle: 'menu', beheer: 'menu', sturing: 'menu',
   'beheer-post': 'beheer-posten', 'beheer-eenheid': 'beheer-eenheden',
   'beheer-loop': 'beheer-evenement', 'beheer-app-icoon': 'beheer-evenement', 'beheer-rapport-afdrukken': 'beheer-rapport',
 };

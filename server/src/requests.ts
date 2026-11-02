@@ -11,12 +11,14 @@ export interface RequestsOptions {
   notify: (phones: Iterable<string>, payload: PushPayload) => void;
   /** De live stand is veranderd: iedereen het nieuwe overzicht sturen. */
   changed: () => void;
+  /** Opens a post that closed by time; false if a person closed it. */
+  reopen: (postId: number) => boolean;
   now?: () => Date;
 }
 
 export type Requests = ReturnType<typeof createRequests>;
 
-export function createRequests(db: EventDb, { notify: send, changed, now = () => new Date() }: RequestsOptions) {
+export function createRequests(db: EventDb, { notify: send, changed, reopen, now = () => new Date() }: RequestsOptions) {
   const notify: RequestsOptions['notify'] = (phones, payload) => send(phones, db.testMode() ? { ...payload, title: `Test · ${payload.title}` } : payload);
   const sql = db.raw;
   const get = (query: string, ...params: (string | number | null)[]) => sql.prepare(query).get(...params) as Row | undefined;
@@ -75,7 +77,7 @@ export function createRequests(db: EventDb, { notify: send, changed, now = () =>
     const post = get('SELECT id, is_open FROM posts WHERE id = ?', body.postId);
     if (!post) throw httpError(404, 'Post niet gevonden');
     if (!atPost(me, body.postId) && !handles(me)) throw httpError(403, 'Je kunt alleen een aanvraag doen vanaf je eigen post');
-    if (post.is_open !== 1) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
+    if (post.is_open !== 1 && !reopen(body.postId)) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
     checkDetail(body.kind, body.detail);
     const id = Number(run(`INSERT INTO requests (client_id, post_id, kind, detail, status, reported_by, created_at, is_test)
                            VALUES (?, ?, ?, ?, 'aangevraagd', ?, ?, ?)`, body.clientId, body.postId, body.kind, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);
@@ -126,5 +128,10 @@ export function createRequests(db: EventDb, { notify: send, changed, now = () =>
     return list();
   }
 
-  return { list, create, setDetail, pick, done, withdraw };
+  /** End of the day: nothing stays in the queue overnight. */
+  function finishAll() {
+    run("UPDATE requests SET status = 'afgehandeld', done_at = ?, picked_at = COALESCE(picked_at, ?) WHERE status IN ('aangevraagd', 'opgepakt')", iso(), iso());
+  }
+
+  return { list, create, setDetail, pick, done, withdraw, finishAll };
 }

@@ -189,6 +189,40 @@ test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later
   await expect(post.getByText('POST IS DICHT')).toBeVisible();
 });
 
+test('closing: the warning on the post, keep open without signal, and everything at once', async ({ browser }) => {
+  const post = await staffPhone(browser, PHONE.postLead);
+  const open = post.getByRole('button', { name: 'Post openen' });
+  if (await open.isVisible()) await open.click();
+  await expect(post.getByText('Wat heb je nodig?')).toBeVisible();
+  await installed(post);
+  // Opening the post has reached the server; a change still in the queue would go over the warning.
+  await post.waitForFunction(() => !localStorage.getItem('ehbo.queue'));
+
+  // The server's warning, as the phone has saved it.
+  await post.context().setOffline(true);
+  await post.evaluate(() => {
+    const live = JSON.parse(localStorage.getItem('ehbo.live')!);
+    for (const p of live.posts) p.closesAt = '2026-12-31T13:00:00.000Z';
+    localStorage.setItem('ehbo.live', JSON.stringify(live));
+  });
+  await post.reload();
+  await expect(post.getByText(/Deze post sluit om/)).toBeVisible();
+  await post.getByRole('button', { name: 'Open houden' }).click();
+  await expect(post.getByText(/Deze post sluit om/)).toBeHidden();
+  await post.context().setOffline(false);
+  await expect(post.locator('.offline-pill')).toBeHidden({ timeout: 20_000 });
+
+  const coordinator = await staffPhone(browser, PHONE.coordinator);
+  await coordinator.getByRole('link', { name: 'Menu' }).click();
+  await coordinator.getByRole('link', { name: /Posten en EHBO openen/ }).click();
+  await coordinator.getByRole('button', { name: 'Alles openen' }).click();
+  await coordinator.getByRole('dialog').getByRole('button', { name: 'Alles openen' }).click();
+  await expect(coordinator.getByText('Posten open').locator('..')).toContainText('/');
+  await coordinator.getByRole('button', { name: 'Dag sluiten' }).click();
+  await coordinator.getByRole('dialog').getByRole('button', { name: 'Dag sluiten' }).click();
+  await expect(post.getByText('POST IS DICHT')).toBeVisible({ timeout: 10_000 });
+});
+
 test('rapport: cijfers, CSV, afdrukpagina en de testmodus', async ({ browser }) => {
   const admin = await staffPhone(browser, PHONE.admin);
   await admin.goto('/beheer/rapport');

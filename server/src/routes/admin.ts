@@ -146,6 +146,8 @@ const unitSchema = {
     mobility: { enum: ['te_voet', 'fiets', 'auto', 'anders', null] },
     postId: { type: ['integer', 'null'] },
     hasAed: { type: 'boolean' },
+    timeFrom: time,
+    timeTo: time,
     members: { type: 'array', maxItems: 20, items: personSchema },
   },
 } as const;
