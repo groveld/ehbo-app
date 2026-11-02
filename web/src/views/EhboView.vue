@@ -102,10 +102,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
         <div class="list-row"><span class="grow">Positie</span><strong>{{ position }}</strong></div>
         <div class="list-row"><span class="grow">Teamleden</span><strong>{{ teammates.map((m) => m.name || formatPhone(m.phone)).join(', ') || 'alleen jij' }}</strong></div>
         <div class="list-row"><span class="grow">Andere eenheden beschikbaar</span><strong>{{ othersFree.free }} van {{ othersFree.total }}</strong></div>
-      </div>
-
-      <!-- De oproepen van vandaag op een eigen scherm, zodat de status en de belknoppen in beeld blijven. -->
-      <div class="list history">
+        <!-- De oproepen van vandaag op een eigen scherm, zodat de status en de belknoppen in beeld blijven. -->
         <RouterLink :to="{ name: 'inzetten' }" class="list-row">
           <span class="grow">Mijn inzetten</span>
           <strong>{{ today.length || 'nog geen' }}</strong>
@@ -136,8 +133,6 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 .option.uit_dienst[aria-pressed="true"] { border-color: var(--off); background: var(--off); }
 .facts-list { margin-top: 14px; }
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
-.history { margin-top: 10px; }
-.history .list-row { gap: 8px; min-height: 50px; font-size: 14px; color: var(--ink); text-decoration: none; }
 /* De onderrand van het scherm telt al; anders staan de knoppen dubbel zo ver van de tabbalk. */
 .form-footer { margin: 14px 0 -16px; }
 </style>

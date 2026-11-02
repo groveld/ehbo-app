@@ -19,6 +19,12 @@ async function staffPhone(browser: Browser, phone: string): Promise<Page> {
   return page;
 }
 
+/** The map on its tab is as tall as the layout says, not squeezed. */
+async function expectFullMap(page: Page) {
+  const heights = await page.locator('.map').first().evaluate((map) => [map.getBoundingClientRect().height, Math.min(480, Math.max(240, innerHeight * 0.4))]);
+  expect(heights[0]).toBeCloseTo(heights[1]!, 0);
+}
+
 /** The service worker has everything: from here on the app works without a network. */
 const installed = (page: Page) => page.waitForFunction(async () => {
   await navigator.serviceWorker.ready;
@@ -328,12 +334,9 @@ test('participant: looking at a run keeps the favorites, and there can be severa
   expect(runs.length).toBeGreaterThanOrEqual(3);
   const [first, second, third] = runs.map((r) => r.name);
   const star = (name: string) => page.getByRole('button', { name: `Favoriet: ${name}` });
-  const view = (name: string) => page.getByRole('button', { name: `Toon ${name} op de kaart` });
 
   await star(third!).click();
   await star(second!).click();
-  await view(first!).click();
-  await expect(view(first!)).toHaveAttribute('aria-pressed', 'true');
   await expect(star(first!)).toHaveAttribute('aria-pressed', 'false');
   await expect(star(second!)).toHaveAttribute('aria-pressed', 'true');
   await expect(star(third!)).toHaveAttribute('aria-pressed', 'true');
@@ -396,22 +399,24 @@ test('a new post in admin: open phones get it by themselves, and a call works be
 test('choosing a route: what is not on it steps back, and choosing it again undoes that', async ({ browser }) => {
   // The post from the earlier test lies far from every route.
   const FAR = 'Waterpost 9 · nieuw';
-  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
-  const page = await context.newPage();
-  await page.goto('/?browser=1');
-  const faded = page.locator(`.post-marker.faded[aria-label="${FAR}"]`);
-  const view = page.getByRole('button', { name: 'Toon 10 km op de kaart' });
-  await view.waitFor();
-  await expect(page.locator('.post-marker.faded')).toHaveCount(0);
+  const coordinator = await staffPhone(browser, PHONE.coordinator);
+  await coordinator.getByRole('link', { name: 'Kaart' }).click();
+  // Built out of sight at the same size as on screen, so it's framed right.
+  await expectFullMap(coordinator);
+  const faded = coordinator.locator(`.post-marker.faded[aria-label="${FAR}"]`);
+  await expect(coordinator.locator('.post-marker.faded')).toHaveCount(0);
 
-  await view.click();
+  await coordinator.getByLabel('Route').selectOption({ label: '10 km' });
   await expect(faded).toHaveCSS('pointer-events', 'none');
   await expect(faded).toHaveCSS('opacity', '0.15');
 
-  await view.click();
-  await expect(page.locator('.post-marker.faded')).toHaveCount(0);
+  await coordinator.getByLabel('Route').selectOption({ label: 'Alle routes' });
+  await expect(coordinator.locator('.post-marker.faded')).toHaveCount(0);
 
   // The first screen explains the map with one entry per post type, and names no posts.
+  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
+  const page = await context.newPage();
+  await page.goto('/?browser=1');
   await expect(page.locator('.legend-item').filter({ hasText: 'Water' })).toHaveCount(1);
   await expect(page.locator('.legend').getByText(FAR)).toHaveCount(0);
   await context.close();
@@ -449,8 +454,7 @@ test('route page: details, posts in order, GPX download and the star', async ({ 
   const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
   const page = await context.newPage();
   await page.goto('/?browser=1');
-  await page.getByRole('button', { name: 'Toon 10 km op de kaart' }).click();
-  await page.getByRole('link', { name: 'Alles over 10 km' }).click();
+  await page.getByRole('link', { name: /^10 km/ }).click();
 
   await expect(page).toHaveURL(/\/route\/\d+$/);
   await expect(page.getByRole('heading', { name: '10 km', level: 1 })).toBeVisible();

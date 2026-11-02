@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Intro bij het openen zonder aanmelding: logo, naam en datum van het evenement, en het parcours dat zichzelf tekent.
-// Even sfeer (zo'n 5,5 s), dan vanzelf weg; elke aanraking of toets stopt hem meteen. Uit het evenementpakket, dus ook zonder bereik.
+// Even sfeer (4 s), dan vanzelf weg; elke aanraking of toets stopt hem meteen. Uit het evenementpakket, dus ook zonder bereik.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { formatDate } from '../format.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -41,9 +41,9 @@ function close() {
   leaving.value = true;
   timers.push(setTimeout(() => emit('done'), 200));
 }
-// Het parcours is na 1,5 s getekend; daarna blijft de intro nog 4 s staan.
+// Het parcours is na 1,5 s getekend; daarna blijft de intro nog 2,5 s staan.
 onMounted(() => {
-  timers.push(setTimeout(close, 5500));
+  timers.push(setTimeout(close, 4000));
   window.addEventListener('keydown', close);
 });
 onBeforeUnmount(() => {

@@ -20,7 +20,7 @@ const postsWithContacts = computed(() => store.pkg?.posts.filter((p) => p.contac
             <a href="tel:112" class="round urgent" aria-label="Bel 112"><Icon name="phone" :size="20" /></a>
           </div>
           <div v-for="n in store.pkg.emergencyNumbers" :key="n.label" class="list-row">
-            <span class="main"><span class="title-line">{{ n.label }}</span><span class="sub mono">{{ formatPhone(n.number) }}</span></span>
+            <span class="main"><span class="title-line">{{ n.label }}</span><span class="sub">{{ formatPhone(n.number) }}</span></span>
             <a :href="telHref(n.number)" class="round" :aria-label="`Bel ${n.label}`"><Icon name="phone" :size="20" /></a>
           </div>
         </div>

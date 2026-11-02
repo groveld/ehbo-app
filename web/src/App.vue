@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { startAlarm, stopAlarm, unlockAudio } from './alarm.ts';
 import { useLiveStore } from './stores/live.ts';
@@ -12,6 +12,8 @@ import OfflinePill from './components/OfflinePill.vue';
 import TabBar from './components/TabBar.vue';
 import { applyTheme } from './theme.ts';
 
+const KaartView = defineAsyncComponent(() => import('./views/overzicht/KaartView.vue'));
+
 const push = usePushStore();
 const pkg = usePackageStore();
 const session = useSessionStore();
@@ -23,6 +25,14 @@ const router = useRouter();
 // en niet op de afdrukpagina van het rapport.
 const NO_TABS = ['herkend', 'toestemmingen', 'beheer-rapport-afdrukken'];
 const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info' || route.name === 'route') && !NO_TABS.includes(String(route.name)));
+
+// The map tab is built once, in the background, and stays: going to it is instant. Just after the first screen, so that comes first.
+const MAP_DELAY_MS = 500;
+const mapMounted = ref(false);
+watch(() => Boolean(session.me), (staff) => {
+  if (!staff) mapMounted.value = false;
+  else setTimeout(() => { mapMounted.value = Boolean(session.me); }, route.name === 'kaart' ? 0 : MAP_DELAY_MS);
+}, { immediate: true });
 
 // Intro bij elk openen zonder aanmelding (deelnemers, en medewerkers voor het aanmelden); niet als je al aangemeld bent.
 const intro = ref(!session.me);
@@ -73,6 +83,7 @@ onMounted(() => {
   <div v-if="live.state?.testMode && route.name !== 'beheer-rapport-afdrukken'" class="test-banner" role="status">Testmodus · oproepen zijn proef</div>
   <div :class="{ 'with-tabs': tabs }">
     <RouterView />
+    <KaartView v-if="mapMounted" :class="{ 'map-waiting': route.name !== 'kaart' }" />
     <OfflinePill v-if="route.name !== 'beheer-rapport-afdrukken'" :tabs="tabs" />
   </div>
   <TabBar v-if="tabs" />
@@ -81,6 +92,8 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* Full size but out of sight: the map keeps its tiles drawn, ready for the tab. No fixed height: that would squeeze the map, and it would frame the route for the wrong size. */
+.map-waiting { position: fixed; top: 0; left: 0; right: 0; visibility: hidden; pointer-events: none; }
 .test-banner {
   position: sticky; top: 0; z-index: 50; padding: max(4px, env(safe-area-inset-top)) 12px 4px;
   background: var(--warn-line); color: var(--ink); font-size: 12px; font-weight: 700; text-align: center; letter-spacing: .02em;
