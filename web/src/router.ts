@@ -23,8 +23,12 @@ declare module 'vue-router' {
   }
 }
 
+/** How far each page was scrolled: going to a page shows it as you left it, or from the top. */
+const scrolled = new Map<string, number>();
+
 export const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior: (to) => ({ top: scrolled.get(to.fullPath) ?? 0 }),
   routes: [
     // Zonder aanmelding opent de app op de deelnemerspagina; daar kun je je als medewerker aanmelden.
     { path: '/', name: 'deelnemer', component: () => import('./views/DeelnemerView.vue') },
@@ -46,6 +50,10 @@ export const router = createRouter({
     { path: '/post/:id', name: 'post', component: () => import('./views/PostDetailView.vue'), props: true, meta: { staff: true } },
     // Post: startscherm (3.1/3.2), EHBO-verzoek (4.1) en de melding daarna (4.2/4.6).
     { path: '/post/:id/start', name: 'post-home', component: () => import('./views/PostHomeView.vue'), props: true, meta: { staff: true } },
+    // Eerder vandaag, met de melding of aanvraag eronder: de terugknop blijft in deze groep.
+    { path: '/post/:id/eerder', name: 'post-eerder', component: () => import('./views/PostEerderView.vue'), props: true, meta: { staff: true } },
+    { path: '/post/:postId/eerder/melding/:id', name: 'post-melding', component: () => import('./views/MeldingView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
+    { path: '/post/:postId/eerder/aanvraag/:id', name: 'post-aanvraag', component: () => import('./views/AanvraagView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
     { path: '/post/:id/ehbo', name: 'ehbo-verzoek', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
     { path: '/melding/:id', name: 'melding', component: () => import('./views/MeldingView.vue'), props: true, meta: { staff: true } },
     { path: '/aanvraag/:id', name: 'aanvraag', component: () => import('./views/AanvraagView.vue'), props: true, meta: { staff: true } },
@@ -83,6 +91,10 @@ router.onError((err, to) => {
   if (!/module|import/i.test((err as Error).message) || sessionStorage.getItem('ehbo.reloaded') === to.fullPath) return;
   sessionStorage.setItem('ehbo.reloaded', to.fullPath);
   location.assign(to.fullPath);
+});
+
+router.beforeEach((_to, from) => {
+  scrolled.set(from.fullPath, window.scrollY);
 });
 
 router.beforeEach((to) => {

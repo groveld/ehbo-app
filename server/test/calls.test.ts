@@ -77,6 +77,40 @@ const request = (details: Partial<NewIncident> = {}): NewIncident => ({
 const pushesTo = (phone: string) => pushes.filter((p) => p.phones.includes(phone));
 const incident = async (id: number) => (await ok(DEMO.coordinator, 'GET', '/api/live/state')).incidents.find((i) => i.id === id)!;
 
+test('a team that becomes available gets a waiting call at once, unless another available team has it', async () => {
+  await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: true });
+  const waiting = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  assert.equal(waiting.dispatches.length, 0, 'nobody on duty');
+  pushes.length = 0;
+
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'vrij' });
+  assert.deepEqual((await incident(waiting.id)).dispatches.map((d) => d.unitId), [TEAM2()]);
+  assert.ok(pushesTo(DEMO.mobileEhbo).some((p) => p.payload.urgent), 'with the alarm, straight away');
+
+  // Team 2 has it and can still react: Team 1 waits for the round to all teams.
+  pushes.length = 0;
+  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'vrij' });
+  assert.deepEqual((await incident(waiting.id)).dispatches.map((d) => d.unitId), [TEAM2()]);
+  assert.equal(pushesTo(DEMO.ehbo).length, 0);
+});
+
+test('a team that finishes a call gets the one that was waiting, and a team that said no gets asked again', async () => {
+  await onDuty();
+  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'pauze' });
+  const first = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${first.id}/accept`, { unitId: TEAM2() });
+  const second = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  assert.equal((await incident(second.id)).dispatches.length, 0, 'nobody free');
+
+  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${first.id}/close`, { outcome: 'geholpen', persons: '1', note: null, stayHere: false });
+  assert.deepEqual((await incident(second.id)).dispatches.map((d) => d.unitId), [TEAM2()]);
+
+  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${second.id}/decline`, { unitId: TEAM2() });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'pauze' });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'vrij' });
+  assert.equal((await incident(second.id)).dispatches.find((d) => d.unitId === TEAM2())?.declinedAt, null);
+});
+
 /** Waterpost open, beide eenheden in dienst. */
 async function onDuty() {
   await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: true });

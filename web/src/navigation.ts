@@ -48,6 +48,8 @@ export function upOf(route: RouteLocation): RouteLocationRaw | null {
   switch (name) {
     case 'ehbo-verzoek': return { name: 'post-home', params: { id: p.id } };
     case 'afronden': return { name: 'oproep', params: { id: p.id } };
+    case 'post-melding': case 'post-aanvraag': return { name: 'post-eerder', params: { id: p.postId } };
+    case 'post-eerder': return { name: 'post-home', params: { id: p.id } };
     case 'melding': return postOrQueue(live.incidentById(Number(p.id))?.postId);
     case 'aanvullen': return { name: 'melding', params: { id: p.incidentId } };
     case 'aanvraag': return postOrQueue(live.requestById(Number(p.id))?.postId);

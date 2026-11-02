@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 5.1 · Post: aanvraag verstuurd (water, verkeer, vrijwilliger). Geen spoed: de coördinator pakt hem op uit de wachtrij.
 import { computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { REQUEST_KINDS, telHref } from '@ehbo/shared';
 import ActivityLog from '../components/ActivityLog.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
@@ -17,6 +17,7 @@ const props = defineProps<{ id: string }>();
 const store = usePackageStore();
 const live = useLiveStore();
 const router = useRouter();
+const route = useRoute();
 const { busy, error, run } = useSave();
 
 const request = computed(() => live.requestById(Number(props.id)));
@@ -63,7 +64,7 @@ const atPost = computed(() => live.myPostIds.includes(request.value?.postId ?? -
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div class="stack gap-8 bottom">
         <a v-if="open && coordinator" :href="telHref(coordinator.phone)" class="btn">Bel evenementcoördinator</a>
-        <button class="btn primary" @click="router.back()">{{ atPost ? 'Terug naar mijn post' : 'Terug' }}</button>
+        <button class="btn primary" @click="router.back()">{{ atPost && route.name === 'aanvraag' ? 'Terug naar mijn post' : 'Terug' }}</button>
         <button v-if="open" class="btn link muted" :disabled="busy" @click="withdraw">Aanvraag intrekken</button>
       </div>
     </template>
