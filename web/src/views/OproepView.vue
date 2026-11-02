@@ -118,7 +118,7 @@ async function onSite() {
       </p>
 
       <div v-if="mode === 'call' && store.pkg" class="map">
-        <EventMap :pkg="store.pkg" :posts="[post]" :focus-post-id="post.id" :interactive="false" />
+        <EventMap :pkg="store.pkg" :posts="[post]" :focus-post-id="post.id" :alert-post-ids="[post.id]" whole-route :interactive="false" />
       </div>
 
       <div class="facts gap-top" :style="{ '--facts': mode === 'all' ? 2 : 3 }">
@@ -159,7 +159,7 @@ async function onSite() {
       <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar.</strong>{{ myUnit?.hasAed ? ' AED meenemen.' : '' }} Is 112 gebeld?</p>
       <p v-if="incident.note" class="note gap-top">{{ incident.note }}</p>
       <div v-if="store.pkg" class="map small-map">
-        <EventMap :pkg="store.pkg" :posts="[post]" :focus-post-id="post.id" :interactive="false" />
+        <EventMap :pkg="store.pkg" :posts="[post]" :focus-post-id="post.id" :alert-post-ids="[post.id]" whole-route />
       </div>
       <div v-if="post.accessRoute" class="card route">
         <span class="small">Aanrijroute</span>

@@ -475,6 +475,25 @@ test('map tab: quiet out of view, up to date the moment it opens', async ({ brow
   await coordinator.getByRole('link', { name: 'Kaart' }).click();
   await expect(coordinator.locator('.post-marker.alert')).toHaveCount(1);
 
+  // Dragged away from the route: on return the whole route is back in view.
+  const allInView = () => coordinator.evaluate(() => {
+    const frame = document.querySelector('.event-map')!.getBoundingClientRect();
+    return [...document.querySelectorAll('.event-map .post-marker')].every((m) => {
+      const r = m.getBoundingClientRect();
+      return r.left >= frame.left && r.right <= frame.right && r.top >= frame.top && r.bottom <= frame.bottom;
+    });
+  });
+  expect(await allInView()).toBe(true);
+  const box = (await coordinator.locator('.event-map').boundingBox())!;
+  await coordinator.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await coordinator.mouse.down();
+  await coordinator.mouse.move(box.x + box.width - 5, box.y + box.height / 2, { steps: 8 });
+  await coordinator.mouse.up();
+  await expect.poll(allInView).toBe(false);
+  await coordinator.getByRole('link', { name: 'Contacten' }).click();
+  await coordinator.getByRole('link', { name: 'Kaart' }).click();
+  await expect.poll(allInView).toBe(true);
+
   await post.getByRole('button', { name: 'Melding intrekken' }).click();
   await post.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
   await post.getByRole('button', { name: 'Post sluiten' }).click();

@@ -24,6 +24,8 @@ const props = withDefaults(defineProps<{
   highlightRunId?: number | null;
   /** Only the highlighted run, with its start and finish marked. */
   onlyHighlighted?: boolean;
+  /** Mark focusPostId, but frame the whole route: where a call is only means something in relation to the course. */
+  wholeRoute?: boolean;
   showUser?: boolean;
   /** Beheer: tik op de kaart om een punt te kiezen. */
   picking?: boolean;
@@ -37,7 +39,7 @@ const props = withDefaults(defineProps<{
   awayPostIds?: number[];
   /** Kept in memory but not in view: no location, and nothing happens until it's back. */
   paused?: boolean;
-}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], ambulances: () => [], awayPostIds: () => [], paused: false });
+}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, wholeRoute: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], ambulances: () => [], awayPostIds: () => [], paused: false });
 
 const emit = defineEmits<{ select: [postId: number]; pick: [lngLat: LngLat] }>();
 
@@ -218,20 +220,30 @@ function drawPicked() {
 }
 
 /** Het hele gebied in beeld, de gekozen route, of ingezoomd op één post. */
+/** The chosen run, or else everything on the map. The posts shown count too: a call can be at a post the package doesn't have yet. */
+function routeBounds() {
+  const run = focusRun();
+  const located = [...props.pkg.posts, ...(props.posts ?? [])].filter((p) => p.lat !== null && p.lng !== null).map((p) => [p.lng!, p.lat!] as LngLat);
+  const points: LngLat[] = run ? run.line! : [...props.pkg.runs.flatMap((r) => r.line ?? []), ...located];
+  return points.length ? points.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(points[0], points[0])) : null;
+}
+
+/** Zoomed in or moved away: on return the whole route comes back into view. */
+function showRouteAgain() {
+  const bounds = routeBounds();
+  const view = map?.getBounds();
+  if (bounds && view && !(view.contains(bounds.getNorthEast()) && view.contains(bounds.getSouthWest()))) frame(true);
+}
+
 function frame(animate = false) {
   if (!map) return;
   const duration = animate ? 500 : 0;
   const focus = props.focusPostId !== null ? props.pkg.posts.find((p) => p.id === props.focusPostId) : undefined;
-  if (focus?.lat != null && focus.lng != null) {
+  if (!props.wholeRoute && focus?.lat != null && focus.lng != null) {
     map.jumpTo({ center: [focus.lng, focus.lat], zoom: 15 });
     return;
   }
-  const run = focusRun();
-  const points: LngLat[] = run ? run.line! : [
-    ...props.pkg.runs.flatMap((r) => r.line ?? []),
-    ...props.pkg.posts.filter((p) => p.lat !== null && p.lng !== null).map((p) => [p.lng!, p.lat!] as LngLat),
-  ];
-  const bounds = points.length ? points.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(points[0], points[0])) : null;
+  const bounds = routeBounds();
   if (bounds) map.fitBounds(bounds, { padding: 32, maxZoom: 16, duration });
   else if (props.pkg.map) map.fitBounds(props.pkg.map.bbox as Bbox, { duration: 0 });
 }
@@ -366,6 +378,7 @@ watch(() => props.paused, (paused) => {
   }
   map?.resize();
   restoreMap();
+  showRouteAgain();
   void startUserLocation();
 });
 
