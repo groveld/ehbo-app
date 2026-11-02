@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { POST_CONTACT_ROLE_LABEL, REQUEST_KINDS, formatKm, formatPhone, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
 import Icon, { type IconName } from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
+import { confirmClosePost } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentSummary } from '../incidents.ts';
 import { coordinatorOf, kmLabel, nearestUnit } from '../posts.ts';
@@ -57,7 +58,7 @@ async function ask(kind: RequestKind) {
 
 async function setOpen(value: boolean) {
   if (!post.value) return;
-  if (!value && !confirm(`${post.value.name} sluiten? Dan kan de post geen verzoeken meer doen.`)) return;
+  if (!value && !await confirmClosePost(post.value.name)) return;
   await run(() => live.setPostOpen(post.value!.id, value));
 }
 </script>
@@ -82,7 +83,7 @@ async function setOpen(value: boolean) {
       <template v-if="!open">
         <div class="card closed">
           <span class="closed-chip"><span class="dot" />POST IS DICHT</span>
-          <p v-if="canOpen" class="lead center">Ben je op je plek en is alles klaar? Zet de post open. Dan ziet de evenementcoördinator dat je er bent en werkt de hulpknop.</p>
+          <p v-if="canOpen" class="lead center">Ben je op je plek en is alles klaar? Zet de post open. Dan ziet de evenementcoördinator dat je er bent en werkt de hulpknop. Je kunt de post zo vaak openen en sluiten als nodig.</p>
           <p v-else class="lead center">De postverantwoordelijke zet de post open. Daarna werkt de hulpknop ook voor jou.</p>
           <button v-if="canOpen" class="btn go" :disabled="busy" @click="setOpen(true)">Post openen</button>
         </div>

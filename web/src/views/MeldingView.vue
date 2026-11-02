@@ -6,6 +6,7 @@ import { OUTCOMES, formatKm, telHref } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
+import { confirmDialog } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
 import { coordinatorOf } from '../posts.ts';
@@ -57,7 +58,7 @@ const assignable = computed(() => (store.pkg?.units ?? []).filter((u) => {
 }));
 
 async function withdraw() {
-  if (!incident.value || !confirm('Melding intrekken? De EHBO hoeft dan niet meer te komen.')) return;
+  if (!incident.value || !await confirmDialog({ title: 'Melding intrekken?', text: 'De EHBO hoeft dan niet meer te komen.', confirm: 'Melding intrekken', cancel: 'Niet intrekken', tone: 'danger' })) return;
   if (await run(() => live.withdraw(incident.value!.id))) router.back();
 }
 // Eén stap omhoog: je post, Meldingen of EHBO (navigation.ts).
@@ -70,7 +71,7 @@ const back = () => router.back();
 
     <!-- 4.2 · Verstuurd: we zoeken een EHBO'er -->
     <template v-else-if="incident.status === 'verstuurd'">
-      <StatusBlock tone="orange" :label="`Melding verstuurd · ${clock(incident.sentAt)}`" title="We zoeken een EHBO'er" sub="Blijf bij de persoon. Je ziet hier zodra iemand komt." />
+      <StatusBlock tone="orange" :label="`Melding verstuurd · ${clock(incident.sentAt)}`" title="We zoeken een EHBO'er" />
       <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar: bel ook 112.</strong> De dichtstbijzijnde eenheid met AED is opgeroepen.</p>
 
       <div class="card steps">
@@ -103,7 +104,6 @@ const back = () => router.back();
         tone="green"
         :label="incident.status === 'ter_plaatse' ? `Ter plaatse · ${clock(incident.onSiteAt)}` : `Geaccepteerd · ${clock(incident.acceptedAt)}`"
         :title="incident.status === 'ter_plaatse' ? 'EHBO is er' : 'Hulp is onderweg'"
-        :sub="incident.status === 'ter_plaatse' ? incidentSummary(incident) : helper?.minutes ? `Verwacht over ± ${helper.minutes} min` : undefined"
       >
         <template #label><Icon name="check" :size="16" />{{ incident.status === 'ter_plaatse' ? `Ter plaatse · ${clock(incident.onSiteAt)}` : `Geaccepteerd · ${clock(incident.acceptedAt)}` }}</template>
       </StatusBlock>
@@ -112,7 +112,7 @@ const back = () => router.back();
         <span class="cross"><Icon name="ehbo" :size="24" /></span>
         <span class="stack grow">
           <span class="name">{{ helper.name }}</span>
-          <span class="small">{{ helper.detail }}</span>
+          <span class="small">{{ helper.detail }}<template v-if="helper.minutes && incident.status === 'geaccepteerd'"> · verwacht over ± {{ helper.minutes }} min</template></span>
         </span>
         <a v-if="helper.phone" :href="telHref(helper.phone)" class="round green" :aria-label="`Bel ${helper.name}`"><Icon name="phone" :size="18" /></a>
       </div>
@@ -121,6 +121,13 @@ const back = () => router.back();
         <a v-if="u!.members[0]" :href="telHref(u!.members[0].phone)" class="round green" :aria-label="`Bel ${u!.name}`"><Icon name="phone" :size="18" /></a>
       </div>
       <p v-if="incident.aed && !accepted.some((d) => unitOf(store.pkg, d.unitId)?.hasAed)" class="note warn gap-top">Nog geen eenheid met AED onderweg. Bel 112.</p>
+
+      <div class="card yours">
+        <span class="small">Melding</span>
+        <span class="summary">{{ incidentSummary(incident) }}</span>
+        <span v-if="incident.note" class="small">{{ incident.note }}</span>
+        <RouterLink v-if="canChange" :to="{ name: 'aanvullen', params: { incidentId: incident.id } }" class="add-link">Aanvullen</RouterLink>
+      </div>
 
       <div class="card timeline">
         <div class="row"><span class="dot on" /><span class="at">{{ clock(incident.sentAt) }}</span><span>Melding verstuurd</span></div>
@@ -143,8 +150,12 @@ const back = () => router.back();
         :tone="incident.status === 'afgerond' ? 'green' : 'dark'"
         :label="`${incident.status === 'afgerond' ? 'Afgerond' : 'Ingetrokken'} · ${clock(incident.closedAt)}`"
         :title="incident.status === 'afgerond' ? 'Klaar' : 'Melding ingetrokken'"
-        :sub="incident.outcome ? OUTCOMES[incident.outcome] : incidentSummary(incident)"
       />
+      <div class="card yours gap-top">
+        <span class="small">{{ incident.post.name }}</span>
+        <span class="summary">{{ incidentSummary(incident) }}</span>
+        <span v-if="incident.outcome" class="small">Afloop: {{ OUTCOMES[incident.outcome] }}</span>
+      </div>
       <div class="card timeline gap-top">
         <div v-for="(e, n) in incident.events" :key="n" class="row"><span class="at">{{ clock(e.at) }}</span><span>{{ e.text }}</span></div>
       </div>

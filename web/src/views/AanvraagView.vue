@@ -6,6 +6,7 @@ import { REQUEST_KINDS, telHref } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
+import { confirmDialog } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { clock } from '../incidents.ts';
 import { coordinatorOf } from '../posts.ts';
@@ -30,16 +31,10 @@ const title = computed(() => {
   if (r.status === 'ingetrokken') return 'Aanvraag ingetrokken';
   return `${kind.value.label} aangevraagd`;
 });
-const sub = computed(() => {
-  const r = request.value;
-  if (r?.status === 'opgepakt') return `${r.pickedBy?.name ?? 'De coördinator'} regelt het.`;
-  if (r?.status === 'aangevraagd') return 'Staat bij de coördinator in de wachtrij.';
-  return undefined;
-});
 
 const setDetail = (detail: string) => request.value && run(() => live.setRequestDetail(request.value!.id, request.value!.detail === detail ? null : detail));
 async function withdraw() {
-  if (!request.value || !confirm('Aanvraag intrekken?')) return;
+  if (!request.value || !await confirmDialog({ title: 'Aanvraag intrekken?', text: 'De coördinator hoeft er dan niets meer mee te doen.', confirm: 'Aanvraag intrekken', cancel: 'Niet intrekken', tone: 'danger' })) return;
   await run(() => live.withdrawRequest(request.value!.id));
 }
 const toPost = () => (request.value ? router.replace({ name: 'post-home', params: { id: request.value.postId } }) : router.back());
@@ -49,7 +44,7 @@ const toPost = () => (request.value ? router.replace({ name: 'post-home', params
   <main class="screen tight">
     <NotOnPhone v-if="!request || !kind" class="top-gap">Deze aanvraag staat (nog) niet op deze telefoon.</NotOnPhone>
     <template v-else>
-      <StatusBlock :tone="request.status === 'afgehandeld' ? 'green' : request.status === 'ingetrokken' ? 'dark' : 'blue'" :label="`Aanvraag · ${clock(request.createdAt)}`" :title="title" :sub="sub" />
+      <StatusBlock :tone="request.status === 'afgehandeld' ? 'green' : request.status === 'ingetrokken' ? 'dark' : 'blue'" :label="`Aanvraag · ${clock(request.createdAt)}`" :title="title" />
 
       <div v-if="open" class="stack gap-8 gap-top">
         <span class="section-title">{{ kind.ask }} (optioneel)</span>
@@ -62,7 +57,8 @@ const toPost = () => (request.value ? router.replace({ name: 'post-home', params
         <div class="step"><span class="mark done"><Icon name="check" :size="14" /></span><span>Ontvangen<template v-if="request.position"> · plek {{ request.position }} in de wachtrij</template></span></div>
         <div class="step" :class="{ later: !request.pickedAt }">
           <span class="mark" :class="{ done: request.pickedAt }"><Icon v-if="request.pickedAt" name="check" :size="14" /></span>
-          <span>Wordt geregeld<template v-if="request.pickedAt"> · {{ clock(request.pickedAt) }}</template></span>
+          <span v-if="request.pickedAt">{{ request.pickedBy?.name ?? 'De coördinator' }} regelt het · {{ clock(request.pickedAt) }}</span>
+          <span v-else>Wordt geregeld</span>
         </div>
         <div class="step" :class="{ later: request.status !== 'afgehandeld' }">
           <span class="mark" :class="{ done: request.status === 'afgehandeld' }"><Icon v-if="request.status === 'afgehandeld'" name="check" :size="14" /></span>

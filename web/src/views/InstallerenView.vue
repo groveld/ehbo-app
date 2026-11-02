@@ -54,23 +54,27 @@ onBeforeUnmount(() => {
 
     <p v-if="installed" class="note ok steps-gap">Geïnstalleerd. Open <strong>{{ appName }}</strong> nu vanaf je beginscherm.</p>
 
-    <div v-else-if="isIOS" class="card stack gap-14 steps-gap">
-      <div class="step"><span class="badge num">1</span><span class="grow">Tik onderin op <strong>Deel</strong></span><Icon name="share" :size="22" /></div>
-      <div class="divider" />
-      <div class="step"><span class="badge num">2</span><span class="grow">Kies <strong>Zet op beginscherm</strong></span><Icon name="addSquare" :size="22" /></div>
-      <div class="divider" />
-      <div class="step"><span class="badge num">3</span><span class="grow">Open <strong>{{ appName }}</strong> vanaf je beginscherm</span></div>
-    </div>
+    <template v-else-if="isIOS">
+      <p class="note warn steps-gap"><span><strong>Op deze pagina zit geen knop.</strong> De plaatjes zijn voorbeelden. Je tikt in de balk van Safari, onder in je scherm.</span></p>
+      <ol class="steps">
+        <li>Zoek in de balk van Safari het deel-icoon <Icon name="share" :size="18" class="example" />. Zie je het niet? Tik dan eerst op <strong class="example-text">•••</strong>.</li>
+        <li>Kies <strong>Zet op beginscherm</strong> <Icon name="addSquare" :size="18" class="example" />. Staat het er niet bij? Veeg de lijst omhoog of kies <strong>Meer</strong>.</li>
+        <li>Tik rechtsboven op <strong>Voeg toe</strong>.</li>
+        <li>Open <strong>{{ appName }}</strong> vanaf je beginscherm.</li>
+      </ol>
+      <p class="toolbar-hint" aria-hidden="true">In de balk hieronder<span class="arrow">↓</span></p>
+    </template>
 
     <div v-else-if="isAndroid" class="stack gap-12 steps-gap">
       <button v-if="installPrompt" class="btn primary" @click="install">Installeren</button>
-      <div v-else class="card stack gap-14">
-        <div class="step"><span class="badge num">1</span><span class="grow">Tik rechtsboven op het menu <strong>⋮</strong></span></div>
-        <div class="divider" />
-        <div class="step"><span class="badge num">2</span><span class="grow">Kies <strong>App installeren</strong> of <strong>Toevoegen aan startscherm</strong></span></div>
-        <div class="divider" />
-        <div class="step"><span class="badge num">3</span><span class="grow">Open <strong>{{ appName }}</strong> vanaf je startscherm</span></div>
-      </div>
+      <template v-else>
+        <p class="note warn"><span><strong>Op deze pagina zit geen knop.</strong> Je tikt in de balk van je browser, boven in je scherm.</span></p>
+        <ol class="steps">
+          <li>Tik rechtsboven in je browser op de drie puntjes <strong class="example-text">⋮</strong>.</li>
+          <li>Kies <strong>App installeren</strong> of <strong>Toevoegen aan startscherm</strong>.</li>
+          <li>Open <strong>{{ appName }}</strong> vanaf je startscherm.</li>
+        </ol>
+      </template>
     </div>
 
     <div v-else class="card steps-gap">
@@ -81,7 +85,7 @@ onBeforeUnmount(() => {
     <p v-else-if="!installed" class="note info hint">Daarna vraagt de app om meldingen en locatie toe te staan.</p>
 
     <div class="grow" />
-    <a href="/aanmelden?browser=1" class="small test-link">Alleen testen in de browser (voor beheer)</a>
+    <a href="/aanmelden?browser=1" class="small test-link" :class="{ 'above-hint': isIOS && !installed }">Alleen testen in de browser (voor beheer)</a>
   </main>
 </template>
 
@@ -90,7 +94,19 @@ onBeforeUnmount(() => {
 .square-logo { width: 64px; height: 64px; border-radius: 18px; }
 .steps-gap { margin-top: 22px; }
 .hint { margin-top: 14px; }
-.step { display: flex; gap: 14px; align-items: center; font-size: 15px; }
-.num { width: 32px; height: 32px; background: var(--primary); color: #FFFFFF; font-size: 14px; }
+/* Plain numbered text, with the icons inside the sentence: nothing here may look like a button. */
+.steps { margin: 16px 0 0; padding-left: 24px; display: flex; flex-direction: column; gap: 12px; font-size: 15px; line-height: 1.45; }
+.steps li::marker { font-weight: 700; }
+.example { display: inline-block; vertical-align: -3px; color: var(--muted); pointer-events: none; }
+.example-text { color: var(--muted); }
+/* Points out of the page, at the Safari toolbar under it. */
+.toolbar-hint {
+  position: fixed; left: 0; right: 0; bottom: 4px; display: flex; flex-direction: column; align-items: center;
+  font-size: 13px; font-weight: 600; color: var(--muted); pointer-events: none;
+}
+.arrow { font-size: 24px; line-height: 1; animation: nudge 1.2s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateY(5px); } }
+@media (prefers-reduced-motion: reduce) { .arrow { animation: none; } }
 .test-link { align-self: center; padding: 8px; color: var(--muted); }
+.above-hint { margin-bottom: 44px; }
 </style>

@@ -6,7 +6,7 @@
   /* Hoofd- en accentkleur: per evenement in te stellen (theme.ts). Op de hoofdkleur staat witte tekst, op het accent donkere. */
   --primary: #16181D; --accent: #F2C230;
   /* Signaalkleuren: vast, nooit per evenement aan te passen. */
-  --danger: #C8261E; --ok: #0A7D4F; --ok-text: #0A5C3B; --ok-bg: #E2EFE7;
+  --danger: #C8261E; --off: #16181D; --ok: #0A7D4F; --ok-text: #0A5C3B; --ok-bg: #E2EFE7;
   --warn: #7A3F06; --warn-bg: #FBE6D2; --warn-line: #D9781C;
   --info: #124A78; --info-bg: #E4EEF7; --info-icon: #1F6FB2;
   --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -80,6 +80,7 @@ h1, h2, p { margin: 0; }
 /* Status around an icon in a list: green is open or available, red is not. */
 .status-ring { outline: 2px solid var(--danger); outline-offset: 2px; margin: 4px; }
 .status-ring.on { outline-color: var(--ok); }
+.status-ring.off { outline-color: var(--off); }
 .icon-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: none; background: none; color: var(--ink); cursor: pointer; padding: 0; }
 .sos { margin-top: 18px; }
 

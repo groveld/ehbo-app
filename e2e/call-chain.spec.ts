@@ -87,11 +87,12 @@ test('zonder bereik: bellen, en de melding gaat vanzelf weg zodra er weer bereik
   await expect(post.getByText('Kramp / blessure')).toBeVisible();
 
   // Opruimen, en meteen intrekken getest.
-  post.once('dialog', (dialog) => void dialog.accept());
   await post.getByRole('button', { name: 'Melding intrekken' }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
   await expect(post.getByText('Wat heb je nodig?')).toBeVisible();
-  post.once('dialog', (dialog) => void dialog.accept());
   await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await expect(post.getByRole('dialog').getByText(/altijd weer openen/)).toBeVisible();
+  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
   await expect(post.getByText('POST IS DICHT')).toBeVisible();
 });
 
@@ -110,14 +111,15 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await expect(card).toContainText('bijna op');
   await card.getByRole('button', { name: 'Oppakken' }).click();
   await expect(card).toContainText('Opgepakt door jou');
-  await expect(post.getByText('Cor Coördinator regelt het.')).toBeVisible({ timeout: 10_000 });
+  await expect(post.getByText(/Cor Coördinator regelt het/)).toBeVisible({ timeout: 10_000 });
 
   await card.getByRole('button', { name: 'Afgehandeld' }).click();
   await expect(post.getByRole('heading', { name: 'Water: afgehandeld' })).toBeVisible({ timeout: 10_000 });
 
   await post.getByRole('button', { name: 'Terug naar mijn post' }).click();
-  post.once('dialog', (dialog) => void dialog.accept());
   await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await expect(post.getByRole('dialog').getByText(/altijd weer openen/)).toBeVisible();
+  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
   await expect(post.getByText('POST IS DICHT')).toBeVisible();
 });
 
@@ -138,8 +140,8 @@ test('rapport: cijfers, CSV, afdrukpagina en de testmodus', async ({ browser }) 
   await expect(admin.getByRole('cell', { name: 'Ter plaatse geholpen' }).first()).toBeVisible();
   await admin.getByRole('button', { name: 'Terug' }).click();
 
-  admin.once('dialog', (dialog) => void dialog.accept());
   await admin.getByRole('switch', { name: 'Testmodus' }).click();
+  await admin.getByRole('dialog').getByRole('button', { name: 'Testmodus aanzetten' }).click();
   await expect(admin.getByText('Testmodus · oproepen zijn proef')).toBeVisible({ timeout: 10_000 });
   await admin.getByRole('switch', { name: 'Testmodus' }).click();
   await expect(admin.getByText('Testmodus · oproepen zijn proef')).toBeHidden({ timeout: 10_000 });
@@ -162,12 +164,13 @@ test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ 
   await admin.getByRole('switch', { name: 'Post open' }).click();
   await expect(admin.getByText('Post is open')).toBeVisible();
   await admin.getByRole('switch', { name: 'Post open' }).click();
+  await admin.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
   await expect(admin.getByText('Post is dicht')).toBeVisible();
 
   // Terug naar de standaardtekst, zodat een volgende ronde hetzelfde begint.
   await admin.goto('/beheer/info');
-  admin.once('dialog', (dialog) => void dialog.accept());
   await admin.getByRole('button', { name: 'Terug naar de standaardtekst' }).click();
+  await admin.getByRole('dialog').getByRole('button', { name: 'Standaardtekst gebruiken' }).click();
   await expect(admin.getByText('Opgeslagen.')).toBeVisible();
 });
 

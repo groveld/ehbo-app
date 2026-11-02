@@ -34,7 +34,7 @@ export type Outcome = keyof typeof OUTCOMES;
 
 /** Wat de eenheid zelf instelt. "Bezet" volgt uit een lopende oproep. */
 export type UnitAvailability = 'vrij' | 'pauze' | 'uit_dienst';
-export const UNIT_AVAILABILITY = { vrij: 'Beschikbaar', pauze: 'Pauze', uit_dienst: 'Uit dienst' } as const;
+export const UNIT_AVAILABILITY = { vrij: 'Beschikbaar', pauze: 'Niet beschikbaar', uit_dienst: 'Uit dienst' } as const;
 
 export const NOTE_MAX = 500;
 
