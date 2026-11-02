@@ -42,7 +42,7 @@ h1, h2, p { margin: 0; }
 /* Met de tabbalk onderaan (TabBar.vue): ruimte vrijhouden; de tabbalk vangt de onderrand van de iPhone al op. */
 .with-tabs { --tabbar-only: calc(59px + max(6px, calc(env(safe-area-inset-bottom) - 18px))); --tabbar: var(--tabbar-only); padding-bottom: var(--tabbar); }
 /* The bar of a running call (LiveBar.vue) counts as part of the tab bar, so everything at the bottom of a screen moves up with it. */
-.with-tabs.with-live { --live-bar: 44px; --tabbar: calc(var(--tabbar-only) + var(--live-bar)); }
+.with-tabs.with-live { --live-bar: 58px; --tabbar: calc(var(--tabbar-only) + var(--live-bar)); }
 .with-tabs .screen { padding-bottom: 16px; }
 .with-tabs .form-footer { padding-bottom: 16px; }
 .grow { flex-grow: 1; }

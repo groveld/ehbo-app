@@ -155,9 +155,6 @@ async function onSite() {
         :label="incident.status === 'ter_plaatse' ? `Ter plaatse · sinds ${clock(incident.onSiteAt)}` : `Onderweg · sinds ${clock(myDispatch?.acceptedAt)}`"
         :title="post.name"
       />
-      <p class="card what gap-top"><strong>{{ incidentSummary(incident) }}</strong></p>
-      <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar.</strong>{{ myUnit?.hasAed ? ' AED meenemen.' : '' }} Is 112 gebeld?</p>
-      <p v-if="incident.note" class="note gap-top">{{ incident.note }}</p>
       <div v-if="store.pkg" class="map small-map">
         <EventMap :pkg="store.pkg" :posts="[post]" :focus-post-id="post.id" :alert-post-ids="[post.id]" whole-route />
       </div>
@@ -169,6 +166,9 @@ async function onSite() {
         <a v-if="navUrl" :href="navUrl" class="btn">Navigatie openen</a>
         <a v-if="contact" :href="telHref(contact.phone)" class="btn">Bel de post</a>
       </div>
+      <p class="card what gap-top"><strong>{{ incidentSummary(incident) }}</strong></p>
+      <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar.</strong>{{ myUnit?.hasAed ? ' AED meenemen.' : '' }} Is 112 gebeld?</p>
+      <p v-if="incident.note" class="note gap-top">{{ incident.note }}</p>
 
       <div class="grow" />
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
