@@ -8,7 +8,6 @@ defineProps<{ bar: LiveBar }>();
 
 <template>
   <RouterLink :to="bar.to" class="live-bar" :class="bar.tone">
-    <span class="dot" />
     <span class="texts"><strong>{{ bar.title }}</strong><span>{{ bar.sub }}</span></span>
     <span v-if="bar.more" class="more">+{{ bar.more }}</span>
     <Icon name="forward" :size="18" />
@@ -23,9 +22,8 @@ defineProps<{ bar: LiveBar }>();
 .red { background: var(--danger); }
 .green { background: var(--ok); }
 .orange { background: #FFA500; color: var(--ink); }
-.dot { width: 9px; height: 9px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
-.texts { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; font-size: 12px; line-height: 1.25; }
-.texts strong { font-size: 14px; }
+.texts { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13px; line-height: 1.3; }
+.texts strong { font-size: 16px; }
 .texts > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .more { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: rgba(0, 0, 0, .2); font: 700 12px var(--mono); }
 </style>
