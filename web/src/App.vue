@@ -2,12 +2,14 @@
 import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { startAlarm, stopAlarm, unlockAudio } from './alarm.ts';
+import { useLiveBar } from './composables/useLiveBar.ts';
 import { useLiveStore } from './stores/live.ts';
 import { usePackageStore } from './stores/package.ts';
 import { usePushStore } from './stores/push.ts';
 import { useSessionStore } from './stores/session.ts';
 import AppDialog from './components/AppDialog.vue';
 import IntroSplash from './components/IntroSplash.vue';
+import LiveBar from './components/LiveBar.vue';
 import OfflinePill from './components/OfflinePill.vue';
 import TabBar from './components/TabBar.vue';
 import { applyTheme } from './theme.ts';
@@ -25,6 +27,8 @@ const router = useRouter();
 // en niet op de afdrukpagina van het rapport.
 const NO_TABS = ['herkend', 'toestemmingen', 'beheer-rapport-afdrukken'];
 const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info' || route.name === 'route') && !NO_TABS.includes(String(route.name)));
+
+const liveBar = useLiveBar();
 
 // The map tab is built once, in the background, and stays in memory: going to it is instant. Out of view it does nothing and is brought up to date when it's opened. Just after the first screen, so that comes first.
 const MAP_DELAY_MS = 500;
@@ -81,9 +85,10 @@ onMounted(() => {
 <template>
   <!-- Testmodus: op elk scherm zichtbaar, zodat niemand een proefoproep voor echt aanziet. Niet op de afdrukpagina. -->
   <div v-if="live.state?.testMode && route.name !== 'beheer-rapport-afdrukken'" class="test-banner" role="status">Testmodus · oproepen zijn proef</div>
-  <div :class="{ 'with-tabs': tabs }">
+  <div :class="{ 'with-tabs': tabs, 'with-live': tabs && liveBar }">
     <RouterView />
     <KaartView v-if="mapMounted" :active="route.name === 'kaart'" :class="{ 'map-waiting': route.name !== 'kaart' }" />
+    <LiveBar v-if="tabs && liveBar" :bar="liveBar" />
     <OfflinePill v-if="route.name !== 'beheer-rapport-afdrukken'" :tabs="tabs" />
   </div>
   <TabBar v-if="tabs" />

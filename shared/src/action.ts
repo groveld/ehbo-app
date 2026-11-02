@@ -91,7 +91,7 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
       const { body, tempId, post, offPost, postId } = action;
       const name = context.units.find((u) => u.id === body.unitId)?.name ?? 'Eenheid';
       const incident: LiveIncident = {
-        id: tempId, isTest: state.testMode, selfStarted: true, offPost, postId, post, status: 'ter_plaatse', stage: 'dichtstbij', aed: body.responsive === 'nee',
+        id: tempId, isTest: state.testMode, selfStarted: true, offPost, postId, post, reportedBy: context.me?.phone ?? '', status: 'ter_plaatse', stage: 'dichtstbij', aed: body.responsive === 'nee',
         what: body.what, persons: body.persons, responsive: body.responsive, note: body.note, reportedAt: at, sentAt: at, escalatesAt: null,
         unitId: body.unitId, acceptedBy: context.me, acceptedAt: at, onSiteAt: at, closedAt: null, outcome: null,
         dispatches: [{ unitId: body.unitId, at, reason: 'handmatig', distanceKm: 0, declinedAt: null, acceptedAt: at }],

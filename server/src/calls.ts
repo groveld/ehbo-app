@@ -216,6 +216,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       id: row.id as number,
       postId: row.post_id as number,
       post: { typeId, name: place ?? name, km, lat: (row.place_lat as number | null) ?? lat, lng: (row.place_lng as number | null) ?? lng },
+      reportedBy: row.reported_by as string,
       selfStarted: row.self_started === 1,
       offPost: place !== null,
       status: row.status as LiveIncident['status'],
