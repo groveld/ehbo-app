@@ -440,7 +440,7 @@ export const useLiveStore = defineStore('live', () => {
     incidentById, unitState, postOpen, secondsLeft, needsAed, refresh, connect, report, checkData,
     /** "Opnieuw laden": everything at once. */
     reload: () => Promise.all([syncData(), refresh()]),
-    outbox, queue, delivered, refused, flush,
+    outbox, delivered, refused, flush,
     update: (incidentId: number, details: IncidentDetails) => act({ type: 'update', incidentId, details }),
     accept: (incidentId: number, unitId: number) => act({ type: 'accept', incidentId, unitId }),
     decline: (incidentId: number, unitId: number) => act({ type: 'decline', incidentId, unitId }),

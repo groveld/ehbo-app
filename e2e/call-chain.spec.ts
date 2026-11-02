@@ -153,12 +153,11 @@ test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later
   await installed(post);
   await ehbo.context().setOffline(true);
   await post.context().setOffline(true);
-  await expect(ehbo.getByRole('button', { name: /^Offline/ })).toBeVisible();
+  await expect(ehbo.locator('.offline-pill')).toBeVisible();
   await ehbo.getByRole('button', { name: 'Ik ben ter plaatse' }).click();
   await ehbo.getByRole('button', { name: 'Ter plaatse geholpen' }).click();
   await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
-  await expect(ehbo.getByRole('button', { name: 'Offline · 2' })).toBeVisible();
 
   await post.locator('.tabbar').getByRole('link', { name: 'Waterpost 3' }).click();
   await post.getByRole('button', { name: /^Water/ }).click();
@@ -173,8 +172,8 @@ test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later
   // Signal back: it all reaches the server, in order, and nothing is lost or done twice.
   await ehbo.context().setOffline(false);
   await post.context().setOffline(false);
-  await expect(ehbo.getByRole('button', { name: /^Offline/ })).toBeHidden({ timeout: 20_000 });
-  await expect(post.getByRole('button', { name: /^Offline/ })).toBeHidden({ timeout: 20_000 });
+  await expect(ehbo.locator('.offline-pill')).toBeHidden({ timeout: 20_000 });
+  await expect(post.locator('.offline-pill')).toBeHidden({ timeout: 20_000 });
   await expect(post.getByRole('button', { name: 'Flink' })).toHaveAttribute('aria-pressed', 'true');
   const coordinator = await staffPhone(browser, PHONE.coordinator);
   await coordinator.getByRole('link', { name: 'Meldingen' }).click();
