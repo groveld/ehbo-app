@@ -1,18 +1,21 @@
 <script setup lang="ts">
 // EHBO: 4.3 · oproep (aftellen), 4.4 · naar alle eenheden, 4.5 · al aangenomen, 4.7 · onderweg → ter plaatse.
-import { computed } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatKm, telHref } from '@ehbo/shared';
-import EventMap from '../components/EventMap.vue';
+import ActivityLog from '../components/ActivityLog.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentLog, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
 import { navigationUrl } from '../navigate.ts';
 import { primaryContact } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
+
+// The map library is large: the screen doesn't wait for it.
+const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue'));
 
 const props = defineProps<{ id: string }>();
 const store = usePackageStore();
@@ -75,7 +78,7 @@ async function decline() {
   await run(() => live.decline(incident.value!.id, myUnitId.value!));
 }
 const toEhbo = () => router.replace({ name: 'ehbo' });
-/** On site, the next step is closing the incident. Without signal you stay here, with the error. */
+/** On site, the next step is closing the incident; also without signal. */
 async function onSite() {
   if (incident.value && await run(() => live.onSite(incident.value!.id))) void router.replace({ name: 'afronden', params: { id: props.id } });
 }
@@ -93,7 +96,6 @@ async function onSite() {
     <template v-else-if="mode === 'call' || mode === 'all'">
       <StatusBlock
         tone="red" :label="mode === 'all' ? '' : aedCall ? 'AED nodig' : `Oproep · ${myUnit?.name ?? ''}`" :title="post.name"
-        :sub="mode === 'all' ? `${incidentSummary(incident)} · gemeld ${clock(incident.reportedAt)}` : incidentSummary(incident)"
       >
         <template v-if="mode === 'all'" #label><span class="all-chip">Alle eenheden</span></template>
         <div v-if="mode === 'call' && left !== null" class="ring">
@@ -108,6 +110,7 @@ async function onSite() {
         </div>
       </StatusBlock>
 
+      <p class="card what gap-top"><strong>{{ incidentSummary(incident) }}</strong><span class="small"> · gemeld {{ clock(incident.reportedAt) }}</span></p>
       <p v-if="incident.aed && myUnit?.hasAed" class="note warn gap-top"><strong>AED meenemen.</strong> De persoon is niet aanspreekbaar.</p>
       <p v-if="aedCall" class="note warn gap-top">{{ takenBy?.name }} is onderweg zonder AED. Breng de AED.</p>
       <p v-else-if="mode === 'all'" class="note warn gap-top">
@@ -124,11 +127,7 @@ async function onSite() {
         <div v-if="mode === 'call'" class="fact"><span class="label">Km-punt</span><span class="value">{{ post.km !== null ? formatKm(post.km) : '–' }}</span></div>
       </div>
 
-      <div v-if="mode === 'call'" class="card timeline gap-top">
-        <div v-for="(e, n) in incident.events" :key="n" class="row" :class="{ warn: e.type === 'geescaleerd' || e.type === 'herhaald' }">
-          <span class="at">{{ clock(e.at) }}</span><span>{{ e.text }}</span>
-        </div>
-      </div>
+      <ActivityLog v-if="mode === 'call'" :entries="incidentLog(incident)" />
       <div v-else class="list others gap-top">
         <span class="small others-label">Ook opgeroepen</span>
         <div v-for="o in others" :key="o.name" class="list-row">
@@ -152,10 +151,11 @@ async function onSite() {
     <!-- 4.7 · Onderweg → ter plaatse -->
     <template v-else-if="mode === 'enroute'">
       <StatusBlock
-        tone="dark"
+        tone="red"
         :label="incident.status === 'ter_plaatse' ? `Ter plaatse · sinds ${clock(incident.onSiteAt)}` : `Onderweg · sinds ${clock(myDispatch?.acceptedAt)}`"
-        :title="post.name" :sub="incidentSummary(incident)"
+        :title="post.name"
       />
+      <p class="card what gap-top"><strong>{{ incidentSummary(incident) }}</strong></p>
       <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar.</strong>{{ myUnit?.hasAed ? ' AED meenemen.' : '' }} Is 112 gebeld?</p>
       <p v-if="incident.note" class="note gap-top">{{ incident.note }}</p>
       <div v-if="store.pkg" class="map small-map">
@@ -218,6 +218,7 @@ async function onSite() {
 .ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
 .ring-text .mono { font-size: 22px; }
 .sec { font-size: 10px; margin-top: 2px; }
+.what { font-size: 15px; }
 .map { margin-top: 14px; height: 190px; border-radius: 16px; overflow: hidden; }
 .small-map { height: clamp(150px, 22dvh, 260px); }
 .route { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 14px; line-height: 1.45; }

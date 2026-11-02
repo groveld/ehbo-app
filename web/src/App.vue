@@ -6,7 +6,9 @@ import { useLiveStore } from './stores/live.ts';
 import { usePackageStore } from './stores/package.ts';
 import { usePushStore } from './stores/push.ts';
 import { useSessionStore } from './stores/session.ts';
+import AppDialog from './components/AppDialog.vue';
 import IntroSplash from './components/IntroSplash.vue';
+import OfflinePill from './components/OfflinePill.vue';
 import TabBar from './components/TabBar.vue';
 import { applyTheme } from './theme.ts';
 
@@ -69,9 +71,13 @@ onMounted(() => {
 <template>
   <!-- Testmodus: op elk scherm zichtbaar, zodat niemand een proefoproep voor echt aanziet. Niet op de afdrukpagina. -->
   <div v-if="live.state?.testMode && route.name !== 'beheer-rapport-afdrukken'" class="test-banner" role="status">Testmodus · oproepen zijn proef</div>
-  <div :class="{ 'with-tabs': tabs }"><RouterView /></div>
+  <div :class="{ 'with-tabs': tabs }">
+    <RouterView />
+    <OfflinePill v-if="route.name !== 'beheer-rapport-afdrukken'" :tabs="tabs" />
+  </div>
   <TabBar v-if="tabs" />
   <IntroSplash v-if="intro" @done="intro = false" />
+  <AppDialog />
 </template>
 
 <style scoped>

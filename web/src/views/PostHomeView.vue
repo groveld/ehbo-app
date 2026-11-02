@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { POST_CONTACT_ROLE_LABEL, REQUEST_KINDS, formatKm, formatPhone, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
 import Icon, { type IconName } from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
+import { confirmClosePost } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentSummary } from '../incidents.ts';
 import { coordinatorOf, kmLabel, nearestUnit } from '../posts.ts';
@@ -26,6 +27,15 @@ const canOpen = computed(() => myRole.value?.role === 'verantwoordelijke' || ses
 const coordinator = computed(() => coordinatorOf(store.pkg));
 const nearest = computed(() => (store.pkg && post.value ? nearestUnit(store.pkg, post.value) : null));
 const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id));
+/** Eerder vandaag: afgeronde meldingen en aanvragen, om terug te kijken. Nieuwste eerst. */
+const history = computed(() => [
+  ...live.incidents.filter((i) => i.postId === post.value?.id && (i.status === 'afgerond' || i.status === 'ingetrokken')).map((i) => ({
+    key: `i${i.id}`, at: i.reportedAt, text: `EHBO · ${incidentSummary(i)}`, state: i.status === 'afgerond' ? 'afgerond' : 'ingetrokken', to: { name: 'melding', params: { id: i.id } },
+  })),
+  ...live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'afgehandeld' || r.status === 'ingetrokken')).map((r) => ({
+    key: `r${r.id}`, at: r.createdAt, text: [REQUEST_KINDS[r.kind].label, requestDetailLabel(r.kind, r.detail)].filter(Boolean).join(' · '), state: r.status === 'afgehandeld' ? 'afgehandeld' : 'ingetrokken', to: { name: 'aanvraag', params: { id: r.id } },
+  })),
+].sort((a, b) => b.at.localeCompare(a.at)));
 /** Meldingen die zonder bereik op deze telefoon wachten. */
 const waiting = computed(() => live.outbox.filter((i) => i.postId === post.value?.id));
 
@@ -50,14 +60,14 @@ const openRequests = computed(() => live.requests.filter((r) => r.postId === pos
 async function ask(kind: RequestKind) {
   if (!post.value) return;
   let id: number | null = null;
-  // Zonder bereik lukt een aanvraag niet; dan bel je de coördinator (de foutmelding zegt dat).
+  // Zonder bereik gaat dit gewoon door: de aanvraag wacht op de telefoon tot er weer verbinding is.
   const ok = await run(async () => { id = (await live.request(post.value!.id, kind)).id; });
   if (ok && id !== null) router.push({ name: 'aanvraag', params: { id } });
 }
 
 async function setOpen(value: boolean) {
   if (!post.value) return;
-  if (!value && !confirm(`${post.value.name} sluiten? Dan kan de post geen verzoeken meer doen.`)) return;
+  if (!value && !await confirmClosePost(post.value.name)) return;
   await run(() => live.setPostOpen(post.value!.id, value));
 }
 </script>
@@ -82,7 +92,7 @@ async function setOpen(value: boolean) {
       <template v-if="!open">
         <div class="card closed">
           <span class="closed-chip"><span class="dot" />POST IS DICHT</span>
-          <p v-if="canOpen" class="lead center">Ben je op je plek en is alles klaar? Zet de post open. Dan ziet de evenementcoördinator dat je er bent en werkt de hulpknop.</p>
+          <p v-if="canOpen" class="lead center">Ben je op je plek en is alles klaar? Zet de post open. Dan ziet de evenementcoördinator dat je er bent en werkt de hulpknop. Je kunt de post zo vaak openen en sluiten als nodig.</p>
           <p v-else class="lead center">De postverantwoordelijke zet de post open. Daarna werkt de hulpknop ook voor jou.</p>
           <button v-if="canOpen" class="btn go" :disabled="busy" @click="setOpen(true)">Post openen</button>
         </div>
@@ -145,6 +155,18 @@ async function setOpen(value: boolean) {
             </RouterLink>
           </template>
           <div v-else-if="!waiting.length && !openRequests.length" class="request"><span class="grow muted">Open verzoeken van deze post</span><strong>geen</strong></div>
+        </div>
+      </template>
+
+      <template v-if="history.length">
+        <span class="section-label people-label">Eerder vandaag</span>
+        <div class="card requests">
+          <RouterLink v-for="h in history" :key="h.key" :to="h.to" class="request">
+            <span class="mono at">{{ clock(h.at) }}</span>
+            <span class="grow">{{ h.text }}</span>
+            <span class="muted">{{ h.state }}</span>
+            <Icon name="forward" :size="16" />
+          </RouterLink>
         </div>
       </template>
     </template>

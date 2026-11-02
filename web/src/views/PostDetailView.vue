@@ -1,19 +1,22 @@
 <script setup lang="ts">
 // 3.5 · Postdetail: waar is de post, hoe kom je er, wie bel je, en waar is de dichtstbijzijnde EHBO.
-import { computed } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatKm, formatPhone, telHref } from '@ehbo/shared';
-import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import KmPoints from '../components/KmPoints.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { navigationUrl } from '../navigate.ts';
+import { confirmClosePost } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { kmLabel, mobileUnits, nearestUnit, primaryContact, unitsAt } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
+
+// The map library is large: the screen doesn't wait for it.
+const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue'));
 
 const props = defineProps<{ id: string }>();
 const store = usePackageStore();
@@ -21,6 +24,9 @@ const live = useLiveStore();
 const session = useSessionStore();
 const router = useRouter();
 const toggle = useSave();
+async function setOpen(open: boolean) {
+  if (open || await confirmClosePost(post.value!.name)) await toggle.run(() => live.setPostOpen(post.value!.id, open));
+}
 
 const post = computed(() => store.postById.get(Number(props.id)) ?? null);
 const type = computed(() => (post.value ? store.typeById.get(post.value.typeId) : undefined));
@@ -102,7 +108,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
         <span class="grow"><strong>{{ isOpen ? 'Post is open' : 'Post is dicht' }}</strong></span>
         <button
           v-if="canToggle" class="switch" role="switch" :aria-checked="isOpen" aria-label="Post open"
-          :disabled="toggle.busy.value" @click="toggle.run(() => live.setPostOpen(post!.id, !isOpen))"
+          :disabled="toggle.busy.value" @click="setOpen(!isOpen)"
         />
       </div>
       <p v-if="toggle.error.value" class="error-text" role="alert">{{ toggle.error.value }}</p>

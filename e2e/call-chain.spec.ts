@@ -19,6 +19,12 @@ async function staffPhone(browser: Browser, phone: string): Promise<Page> {
   return page;
 }
 
+/** The service worker has everything: from here on the app works without a network. */
+const installed = (page: Page) => page.waitForFunction(async () => {
+  await navigator.serviceWorker.ready;
+  return Boolean(navigator.serviceWorker.controller);
+});
+
 test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter plaatse → afronden', async ({ browser }) => {
   const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
   await expect(ehbo.getByRole('heading', { name: /Uit dienst|Beschikbaar/ })).toBeVisible();
@@ -47,7 +53,7 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await ehbo.goBack();
 
   await expect(post.getByRole('heading', { name: 'Hulp is onderweg' })).toBeVisible({ timeout: 10_000 });
-  await expect(post.getByText('Mo Mobiel')).toBeVisible();
+  await expect(post.locator('.helper').getByText('Mo Mobiel')).toBeVisible();
 
   await expect(ehbo.getByText(/Onderweg · sinds/i)).toBeVisible();
   await ehbo.getByRole('button', { name: 'Ik ben ter plaatse' }).click();
@@ -87,11 +93,12 @@ test('zonder bereik: bellen, en de melding gaat vanzelf weg zodra er weer bereik
   await expect(post.getByText('Kramp / blessure')).toBeVisible();
 
   // Opruimen, en meteen intrekken getest.
-  post.once('dialog', (dialog) => void dialog.accept());
   await post.getByRole('button', { name: 'Melding intrekken' }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
   await expect(post.getByText('Wat heb je nodig?')).toBeVisible();
-  post.once('dialog', (dialog) => void dialog.accept());
   await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await expect(post.getByRole('dialog').getByText(/altijd weer openen/)).toBeVisible();
+  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
   await expect(post.getByText('POST IS DICHT')).toBeVisible();
 });
 
@@ -100,7 +107,7 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await post.getByRole('button', { name: 'Post openen' }).click();
   await post.getByRole('button', { name: /^Water/ }).click();
   await expect(post.getByRole('heading', { name: 'Water aangevraagd' })).toBeVisible();
-  await expect(post.getByText(/plek 1 in de wachtrij/)).toBeVisible();
+  await expect(post.getByText(/Plek 1 in de wachtrij/)).toBeVisible();
   await post.getByRole('button', { name: 'Bijna op' }).click();
   await expect(post.getByRole('button', { name: 'Bijna op' })).toHaveAttribute('aria-pressed', 'true');
 
@@ -115,9 +122,70 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await card.getByRole('button', { name: 'Afgehandeld' }).click();
   await expect(post.getByRole('heading', { name: 'Water: afgehandeld' })).toBeVisible({ timeout: 10_000 });
 
+  // Looked back at later: from the queue, and from the post.
+  await coordinator.locator('.request').filter({ hasText: 'Afgehandeld' }).filter({ hasText: 'Waterpost 3' }).first().getByRole('link').click();
+  await expect(coordinator.getByRole('heading', { name: 'Water: afgehandeld' })).toBeVisible();
+  await expect(coordinator.getByText('Opgepakt door Cor Coördinator')).toBeVisible();
+
   await post.getByRole('button', { name: 'Terug naar mijn post' }).click();
-  post.once('dialog', (dialog) => void dialog.accept());
+  await expect(post.getByRole('link', { name: /Water.*afgehandeld/ }).first()).toBeVisible();
   await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await expect(post.getByRole('dialog').getByText(/altijd weer openen/)).toBeVisible();
+  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
+  await expect(post.getByText('POST IS DICHT')).toBeVisible();
+});
+
+test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later door', async ({ browser }) => {
+  const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
+  const post = await staffPhone(browser, PHONE.postLead);
+  await ehbo.getByRole('button', { name: 'Beschikbaar', exact: true }).click();
+  await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
+  await post.getByRole('button', { name: 'Post openen' }).click();
+  await post.getByRole('link', { name: /EHBO/ }).first().click();
+  await post.getByRole('button', { name: 'EHBO-verzoek versturen' }).click();
+  await ehbo.getByRole('button', { name: 'Accepteren & navigeren' }).click();
+  await ehbo.waitForURL(/google\.com\/maps/);
+  await ehbo.goBack();
+  await expect(ehbo.getByRole('button', { name: 'Ik ben ter plaatse' })).toBeVisible();
+
+  // Signal gone: everything still goes on, and every screen says so.
+  await installed(ehbo);
+  await installed(post);
+  await ehbo.context().setOffline(true);
+  await post.context().setOffline(true);
+  await expect(ehbo.locator('.offline-pill')).toBeVisible();
+  await ehbo.getByRole('button', { name: 'Ik ben ter plaatse' }).click();
+  await ehbo.getByRole('button', { name: 'Ter plaatse geholpen' }).click();
+  await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
+  await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
+
+  await post.locator('.tabbar').getByRole('link', { name: 'Waterpost 3' }).click();
+  await post.getByRole('button', { name: /^Water/ }).click();
+  await expect(post.getByRole('heading', { name: 'Water aangevraagd' })).toBeVisible();
+  await post.getByRole('button', { name: 'Flink' }).click();
+  await expect(post.getByRole('button', { name: 'Flink' })).toHaveAttribute('aria-pressed', 'true');
+
+  // The app starts without any network too.
+  await ehbo.reload();
+  await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
+
+  // Signal back: it all reaches the server, in order, and nothing is lost or done twice.
+  await ehbo.context().setOffline(false);
+  await post.context().setOffline(false);
+  await expect(ehbo.locator('.offline-pill')).toBeHidden({ timeout: 20_000 });
+  await expect(post.locator('.offline-pill')).toBeHidden({ timeout: 20_000 });
+  await expect(post.getByRole('button', { name: 'Flink' })).toHaveAttribute('aria-pressed', 'true');
+  const coordinator = await staffPhone(browser, PHONE.coordinator);
+  await coordinator.getByRole('link', { name: 'Meldingen' }).click();
+  const card = coordinator.locator('.request').filter({ hasText: 'flink' });
+  await expect(card).toBeVisible();
+  await card.getByRole('button', { name: 'Oppakken' }).click();
+  await card.getByRole('button', { name: 'Afgehandeld' }).click();
+  await expect(coordinator.locator('.incident').filter({ hasText: 'afgerond' }).first()).toBeVisible();
+
+  await post.getByRole('button', { name: 'Terug naar mijn post' }).click();
+  await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
   await expect(post.getByText('POST IS DICHT')).toBeVisible();
 });
 
@@ -138,8 +206,8 @@ test('rapport: cijfers, CSV, afdrukpagina en de testmodus', async ({ browser }) 
   await expect(admin.getByRole('cell', { name: 'Ter plaatse geholpen' }).first()).toBeVisible();
   await admin.getByRole('button', { name: 'Terug' }).click();
 
-  admin.once('dialog', (dialog) => void dialog.accept());
   await admin.getByRole('switch', { name: 'Testmodus' }).click();
+  await admin.getByRole('dialog').getByRole('button', { name: 'Testmodus aanzetten' }).click();
   await expect(admin.getByText('Testmodus · oproepen zijn proef')).toBeVisible({ timeout: 10_000 });
   await admin.getByRole('switch', { name: 'Testmodus' }).click();
   await expect(admin.getByText('Testmodus · oproepen zijn proef')).toBeHidden({ timeout: 10_000 });
@@ -162,12 +230,13 @@ test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ 
   await admin.getByRole('switch', { name: 'Post open' }).click();
   await expect(admin.getByText('Post is open')).toBeVisible();
   await admin.getByRole('switch', { name: 'Post open' }).click();
+  await admin.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
   await expect(admin.getByText('Post is dicht')).toBeVisible();
 
   // Terug naar de standaardtekst, zodat een volgende ronde hetzelfde begint.
   await admin.goto('/beheer/info');
-  admin.once('dialog', (dialog) => void dialog.accept());
   await admin.getByRole('button', { name: 'Terug naar de standaardtekst' }).click();
+  await admin.getByRole('dialog').getByRole('button', { name: 'Standaardtekst gebruiken' }).click();
   await expect(admin.getByText('Opgeslagen.')).toBeVisible();
 });
 

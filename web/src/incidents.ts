@@ -1,5 +1,5 @@
 // Weergave van oproepen: korte omschrijving, tijden, reistijd.
-import { INCIDENT_WHAT, type EventPackage, type IncidentDetails, type IncidentPersons, type LiveIncident, type PackagePost, type PackageUnit, type UnitMobility } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type EventPackage, type IncidentDetails, type IncidentEventType, type IncidentPersons, type LiveIncident, type LiveRequest, type PackagePost, type PackageUnit, type UnitMobility } from '@ehbo/shared';
 
 const PERSONS: Record<IncidentPersons, string> = { '1': '1 persoon', '2': '2 personen', '3+': '3 of meer personen' };
 
@@ -28,3 +28,28 @@ export const unitOf = (pkg: EventPackage | null, id: number | null) => (id === n
 /** De inzetten van een eenheid: afgeronde of ingetrokken oproepen die ze had aangenomen, nieuwste eerst. */
 export const myDeployments = (incidents: LiveIncident[], unitId: number) =>
   incidents.filter((i) => (i.status === 'afgerond' || i.status === 'ingetrokken') && i.dispatches.some((d) => d.unitId === unitId && d.acceptedAt));
+
+/** One step in a log (ActivityLog.vue). */
+export interface LogEntry {
+  at: string | null;
+  text: string;
+  /** done: a step that happened. warn: something went wrong on the way. stop: withdrawn or refused. waiting: yet to come. */
+  tone?: 'done' | 'warn' | 'stop' | 'waiting';
+}
+
+const EVENT_TONE: Partial<Record<IncidentEventType, LogEntry['tone']>> = { geescaleerd: 'warn', herhaald: 'warn', geweigerd: 'warn', ingetrokken: 'stop' };
+
+export function incidentLog(incident: LiveIncident): LogEntry[] {
+  const log = incident.events.map((e): LogEntry => ({ at: e.at, text: e.text, tone: EVENT_TONE[e.type] ?? 'done' }));
+  if (incident.outcome) log.push({ at: incident.closedAt, text: `Afloop: ${OUTCOMES[incident.outcome]}` });
+  return log;
+}
+
+export function requestLog(request: LiveRequest): LogEntry[] {
+  const log: LogEntry[] = [{ at: request.createdAt, text: `${REQUEST_KINDS[request.kind].label} aangevraagd door ${request.postName}` }];
+  if (request.pickedAt) log.push({ at: request.pickedAt, text: `Opgepakt door ${request.pickedBy?.name ?? 'de coördinator'}` });
+  if (request.status === 'afgehandeld') log.push({ at: request.doneAt, text: 'Afgehandeld' });
+  else if (request.status === 'ingetrokken') log.push({ at: request.doneAt, text: 'Ingetrokken', tone: 'stop' });
+  else log.push({ at: null, text: request.pickedAt ? 'Nog af te handelen' : 'Wacht in de rij', tone: 'waiting' });
+  return log;
+}

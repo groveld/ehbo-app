@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { REQUEST_KINDS, type LiveRequest, type LiveState, type NewRequest } from '@ehbo/shared';
 import { requireMe } from '../auth.ts';
 import type { Calls } from '../calls.ts';
+import { actionHeaders } from './calls.ts';
 import type { Requests } from '../requests.ts';
 
 const idParams = { type: 'object', required: ['id'], properties: { id: { type: 'integer', minimum: 1 } } } as const;
@@ -26,19 +27,19 @@ export async function requestRoutes(app: FastifyInstance, { calls, requests }: {
         },
       },
     },
-  }, async (request, reply) => reply.code(201).send(requests.create(request.me!, request.body)));
+  }, async (request, reply) => reply.code(201).send(calls.at(actionHeaders(request)[1], () => requests.create(request.me!, request.body))));
 
   // Elke wijziging geeft de hele live stand terug, net als bij de oproepen.
   app.put<Id & { Body: { detail: string | null }; Reply: LiveState }>('/api/requests/:id', {
     schema: { params: idParams, body: { type: 'object', required: ['detail'], properties: { detail } } },
-  }, async (request) => {
+  }, async (request) => calls.once(...actionHeaders(request), () => {
     requests.setDetail(request.me!, request.params.id, request.body.detail);
     return calls.state();
-  });
+  }));
   for (const action of ['pick', 'done', 'withdraw'] as const) {
-    app.post<Id & { Reply: LiveState }>(`/api/requests/:id/${action}`, { schema: { params: idParams } }, async (request) => {
+    app.post<Id & { Reply: LiveState }>(`/api/requests/:id/${action}`, { schema: { params: idParams } }, async (request) => calls.once(...actionHeaders(request), () => {
       requests[action](request.me!, request.params.id);
       return calls.state();
-    });
+    }));
   }
 }

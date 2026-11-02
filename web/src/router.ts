@@ -74,6 +74,13 @@ export const router = createRouter({
   ],
 });
 
+// A new version removed the file of a screen this page still wanted: load the new version. Once, so it can't loop.
+router.onError((err, to) => {
+  if (!/module|import/i.test((err as Error).message) || sessionStorage.getItem('ehbo.reloaded') === to.fullPath) return;
+  sessionStorage.setItem('ehbo.reloaded', to.fullPath);
+  location.assign(to.fullPath);
+});
+
 router.beforeEach((to) => {
   const session = useSessionStore();
   if (to.meta.staff && !session.me) return { name: 'deelnemer' };

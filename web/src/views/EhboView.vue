@@ -32,11 +32,13 @@ const label = computed(() => {
 });
 
 const block = computed(() => {
-  if (active.value) return { tone: 'red' as const, title: 'Bezig met een oproep', sub: active.value.post.name };
-  if (availability.value === 'vrij') return { tone: 'green' as const, title: 'Beschikbaar', sub: 'Je krijgt oproepen uit de buurt.' };
-  if (availability.value === 'pauze') return { tone: 'red' as const, title: 'Niet beschikbaar', sub: 'Je krijgt geen oproepen.' };
-  return { tone: 'dark' as const, title: 'Uit dienst', sub: 'Je krijgt geen oproepen.' };
+  if (active.value) return { tone: 'red' as const, title: 'Bezig met een oproep' };
+  if (availability.value === 'vrij') return { tone: 'green' as const, title: 'Beschikbaar' };
+  if (availability.value === 'pauze') return { tone: 'red' as const, title: 'Niet beschikbaar' };
+  return { tone: 'dark' as const, title: 'Uit dienst' };
 });
+/** During a call you're there but not available, so the buttons say the same as the header. */
+const shown = computed<UnitAvailability>(() => (active.value ? 'pauze' : availability.value));
 
 /** Waar de eenheid voor "dichtstbij" telt. */
 const position = computed(() => {
@@ -71,10 +73,10 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
   <main class="screen tight">
     <p v-if="!unit" class="note warn top-gap">Je staat (nog) niet bij een EHBO-eenheid, of de gegevens van het evenement zijn nog niet geladen.</p>
     <template v-else>
-      <StatusBlock :tone="block.tone" :label="label" :title="block.title" :sub="block.sub" />
+      <StatusBlock :tone="block.tone" :label="label" :title="block.title" />
 
       <RouterLink v-if="active" :to="{ name: 'oproep', params: { id: active.id } }" class="btn danger gap-top">
-        Naar de oproep · {{ incidentSummary(active) }}
+        Naar de oproep · {{ active.post.name }} · {{ incidentSummary(active) }}
       </RouterLink>
       <RouterLink v-for="i in live.invitations" :key="i.id" :to="{ name: 'oproep', params: { id: i.id } }" class="btn danger gap-top">
         Oproep · {{ i.post.name }}
@@ -85,7 +87,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
         <div class="choice-grid">
           <button
             v-for="(text, key) in UNIT_AVAILABILITY" :key="key" class="option" :class="key"
-            :aria-pressed="availability === key" :disabled="busy" @click="setAvailability(key)"
+            :aria-pressed="shown === key" :disabled="busy" @click="setAvailability(key)"
           >{{ text }}</button>
         </div>
         <p v-if="error" class="error-text" role="alert">{{ error }}</p>
@@ -120,9 +122,11 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 .top-gap { margin-top: 24px; }
 .gap-top { margin-top: 14px; }
 .option[aria-pressed="true"] { font-weight: 700; }
-.option.vrij[aria-pressed="true"] { border-color: var(--ok); background: var(--ok-bg); color: #0A4D33; }
-.option.pauze[aria-pressed="true"] { border-color: var(--danger); background: #FBE3E1; color: #8A1A14; }
-.option.uit_dienst[aria-pressed="true"] { border-color: var(--ink); background: #E8E8EA; color: var(--ink); }
+/* Green is here and available, red is here but not available, dark is not here. Fixed colors, not the event's. */
+.option[aria-pressed="true"] { color: #FFFFFF; }
+.option.vrij[aria-pressed="true"] { border-color: var(--ok); background: var(--ok); }
+.option.pauze[aria-pressed="true"] { border-color: var(--danger); background: var(--danger); }
+.option.uit_dienst[aria-pressed="true"] { border-color: var(--off); background: var(--off); }
 .facts-list { margin-top: 14px; }
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
 .history { margin-top: 10px; }

@@ -33,7 +33,7 @@ watch(() => live.delivered[props.clientId], (id) => {
 
 <template>
   <main class="screen tight">
-    <StatusBlock tone="dark" label="Geen internet" title="Bel de EHBO direct" sub="De automatische oproep wacht op bereik. Bellen werkt wel." class="grey">
+    <StatusBlock tone="dark" label="Geen internet" title="Bel de EHBO direct" class="grey">
       <template #label><Icon name="warning" :size="16" />Geen internet</template>
     </StatusBlock>
 
@@ -66,7 +66,6 @@ watch(() => live.delivered[props.clientId], (id) => {
 <style scoped>
 .grey { background: #3E434B; }
 .grey :deep(.label) { color: #FFFFFF; }
-.grey :deep(.sub) { color: #DCDDE0; }
 .calls { padding-top: 16px; }
 .call { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
 .call.nearest { background: var(--ok); border-color: var(--ok); color: #FFFFFF; }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Intro bij het openen zonder aanmelding: logo, naam en datum van het evenement, en het parcours dat zichzelf tekent.
-// Even sfeer (zo'n 5,5 s), dan vanzelf weg (of eerder, met een tik). Uit het evenementpakket, dus ook zonder bereik.
+// Even sfeer (zo'n 5,5 s), dan vanzelf weg; elke aanraking of toets stopt hem meteen. Uit het evenementpakket, dus ook zonder bereik.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { formatDate } from '../format.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -39,15 +39,21 @@ let timers: ReturnType<typeof setTimeout>[] = [];
 function close() {
   if (leaving.value) return;
   leaving.value = true;
-  timers.push(setTimeout(() => emit('done'), 350));
+  timers.push(setTimeout(() => emit('done'), 200));
 }
 // Het parcours is na 1,5 s getekend; daarna blijft de intro nog 4 s staan.
-onMounted(() => timers.push(setTimeout(close, 5500)));
-onBeforeUnmount(() => timers.forEach(clearTimeout));
+onMounted(() => {
+  timers.push(setTimeout(close, 5500));
+  window.addEventListener('keydown', close);
+});
+onBeforeUnmount(() => {
+  timers.forEach(clearTimeout);
+  window.removeEventListener('keydown', close);
+});
 </script>
 
 <template>
-  <div class="intro" :class="{ leaving }" role="dialog" :aria-label="name || 'Intro'" @click="close">
+  <div class="intro" :class="{ leaving }" role="dialog" :aria-label="name || 'Intro'" @pointerdown="close" @wheel.passive="close">
     <!-- Fixed colours: the intro has its own look, apart from the event's theme. -->
     <svg class="art" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <path d="M-40 560C60 470 150 520 240 450S380 300 460 340V900H-40Z" fill="#F2C230" />
@@ -81,7 +87,7 @@ onBeforeUnmount(() => timers.forEach(clearTimeout));
 .intro {
   position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; gap: 24px; overflow: hidden;
   padding: max(48px, env(safe-area-inset-top)) 24px max(64px, env(safe-area-inset-bottom));
-  background: #FF5C9E; color: var(--ink); cursor: pointer; transition: opacity .35s;
+  background: #FF5C9E; color: var(--ink); cursor: pointer; touch-action: none; transition: opacity .2s;
 }
 .intro.leaving { opacity: 0; }
 .art { position: absolute; inset: 0; width: 100%; height: 100%; }

@@ -1,25 +1,37 @@
 // Live stand: oproepen, eenheden en open/dicht van posten. Via SSE zolang de app open is; de laatste stand blijft bewaard voor zonder bereik.
+// Every change happens on the phone first and goes into a queue, so the app never waits for the network (shared/src/action.ts).
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import type {
   CloseIncident,
   IncidentDetails,
+  LiveAction,
   LiveIncident,
   LiveRequest,
   LiveState,
   NewIncident,
-  NewRequest,
+  QueuedAction,
   RequestKind,
   UnitAvailability,
 } from '@ehbo/shared';
-import { POSITION_SHARE_MS } from '@ehbo/shared';
-import { api, ApiRequestError } from '../api.ts';
+import { ACTION_AT_HEADER, ACTION_ID_HEADER, LIVE_HEARTBEAT_MS, POSITION_SHARE_MS, actionRequest, applyAction } from '@ehbo/shared';
+import { api, ApiRequestError, noAnswer } from '../api.ts';
+import { messageDialog } from '../composables/useDialog.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
 import { useSessionStore } from './session.ts';
 
 /** Zonder bericht (ook geen hartslag) in deze tijd is de verbinding stuk: opnieuw verbinden. */
-const STALE_MS = 75_000;
+const STALE_MS = LIVE_HEARTBEAT_MS + 15_000;
+/** A dropped connection often comes back by itself; only after this long does the phone count as offline. */
+const OFFLINE_AFTER_MS = 4_000;
+/** How long an action waits for the server before the screen moves on; the change is already on the phone and stays in the queue. */
+const ACTION_WAIT_MS = 1_500;
+/** Bad signal: don't wait for an answer, try again later. */
+const SEND_TIMEOUT_MS = 8_000;
+/** An EHBO request without an answer in this time goes straight to calling; it keeps being sent. */
+const REPORT_TIMEOUT_MS = 4_000;
+const RETRY_MS = 10_000;
 /** After a change in admin: wait a moment, spread over the phones, so a series of edits doesn't fetch the package every time. */
 const SYNC_DELAY_MS = 3_000;
 const SYNC_SPREAD_MS = 5_000;
@@ -42,11 +54,30 @@ export const useLiveStore = defineStore('live', () => {
   const pkg = usePackageStore();
   // A state saved by an older version of the app lacks what the screens expect; the server sends a new one right away.
   const stored = load<LiveState>('ehbo.live');
-  const state = ref<LiveState | null>(stored?.dataVersion ? stored : null);
+  /** The last state from the server. */
+  const base = ref<LiveState | null>(stored?.dataVersion ? stored : null);
+  /** Changes made on this phone that the server doesn't have yet, oldest first. */
+  const queue = ref<QueuedAction[]>(load('ehbo.queue') ?? []);
+  watch(queue, (value) => save('ehbo.queue', value.length ? value : null), { deep: true });
+  /** A request made without signal has a temporary id; this maps it to the real one, so its screen keeps working. */
+  const requestIds = ref<Record<number, number>>(load('ehbo.requestIds') ?? {});
+  watch(requestIds, (value) => save('ehbo.requestIds', Object.keys(value).length ? value : null), { deep: true });
+  /** What every screen shows: the server's state with this phone's own changes on top, so nothing ever waits for the network. */
+  const state = computed<LiveState | null>(() => {
+    if (!queue.value.length) return base.value;
+    const context = { me: session.me, units: pkg.pkg?.units ?? [] };
+    return queue.value.reduce((s, item) => applyAction(s, item, context), base.value ?? {
+      version: 0, dataVersion: '', serverTime: new Date().toISOString(), incidents: [], units: [], posts: [], requests: [], testMode: false,
+    });
+  });
   /** Nog niet bij de server aangekomen. De server telt dezelfde clientId maar één keer, dus opnieuw versturen kan altijd. */
   const outbox = ref<NewIncident[]>(load('ehbo.outbox') ?? []);
   watch(outbox, (value) => save('ehbo.outbox', value.length ? value : null), { deep: true });
   const connected = ref(false);
+  const browserOnline = ref(navigator.onLine);
+  /** The server can't be reached, although the phone may think it has a network. */
+  const serverLost = ref(false);
+  const offline = computed(() => !browserOnline.value || serverLost.value);
   /** Verschil tussen de klok van de server en die van de telefoon, voor de aftelring. */
   const clockOffset = ref(0);
   /** Tikt elke seconde, zodat aftellen en "sinds" bijwerken. */
@@ -62,8 +93,8 @@ export const useLiveStore = defineStore('live', () => {
 
   function setState(value: LiveState) {
     // Een oudere stand (bijv. een antwoord dat later binnenkomt dan een SSE-bericht) overschrijft een nieuwere niet.
-    if (state.value && value.version < state.value.version && value.serverTime <= state.value.serverTime) return;
-    state.value = value;
+    if (base.value && value.version < base.value.version && value.serverTime <= base.value.serverTime) return;
+    base.value = value;
     clockOffset.value = new Date(value.serverTime).getTime() - Date.now();
     save('ehbo.live', value);
     checkData(value.dataVersion);
@@ -94,7 +125,7 @@ export const useLiveStore = defineStore('live', () => {
       connected.value = true;
       setState(JSON.parse((e as MessageEvent<string>).data) as LiveState);
     });
-    // De hartslag is een commentaarregel; die komt niet als gebeurtenis binnen, maar houdt de verbinding wel open.
+    source.addEventListener('ping', () => { lastMessage = Date.now(); });
     source.addEventListener('open', () => {
       lastMessage = Date.now();
       connected.value = true;
@@ -102,8 +133,10 @@ export const useLiveStore = defineStore('live', () => {
     });
     source.addEventListener('error', () => { connected.value = false; });
     watchdog = setInterval(() => {
-      if (Date.now() - lastMessage > STALE_MS) void refresh().then(connect);
-    }, 30_000);
+      if (Date.now() - lastMessage <= STALE_MS) return;
+      connected.value = false;
+      void refresh().then(connect);
+    }, 10_000);
   }
 
   function disconnect() {
@@ -117,7 +150,7 @@ export const useLiveStore = defineStore('live', () => {
   async function refresh() {
     if (!session.me) return;
     try {
-      setState(await api<LiveState>('/api/live/state'));
+      setState(await api<LiveState>('/api/live/state', { timeoutMs: SEND_TIMEOUT_MS }));
       lastMessage = Date.now();
     } catch {
       // Geen bereik: de bewaarde stand blijft staan.
@@ -129,13 +162,48 @@ export const useLiveStore = defineStore('live', () => {
     if (phone) connect();
     else {
       disconnect();
-      state.value = null;
+      base.value = null;
       save('ehbo.live', null);
       outbox.value = [];
+      queue.value = [];
+      requestIds.value = {};
     }
   }, { immediate: true });
+
+  // Offline only after a moment: a connection that is back within seconds doesn't count.
+  let lostTimer: ReturnType<typeof setTimeout> | undefined;
+  function watchLink() {
+    clearTimeout(lostTimer);
+    serverLost.value = false;
+    if (session.me && !connected.value) lostTimer = setTimeout(() => { serverLost.value = true; }, OFFLINE_AFTER_MS);
+  }
+  watch([connected, () => session.me?.phone], watchLink, { immediate: true });
+
+  // Without a session there is no live connection: ask now and then whether the server is there.
+  async function ping() {
+    if (session.me || document.visibilityState !== 'visible') return;
+    try {
+      await api('/api/ehbo-status', { timeoutMs: SEND_TIMEOUT_MS });
+      serverLost.value = false;
+    } catch {
+      serverLost.value = true;
+    }
+  }
+  void ping();
+  setInterval(() => void ping(), 30_000);
+
+  window.addEventListener('online', () => { browserOnline.value = true; void flush(); });
+  window.addEventListener('offline', () => { browserOnline.value = false; });
+
+  // Back in the app: don't wait for the watchdog. A connection can look open while it died in the background.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && session.me && (!source || source.readyState === EventSource.CLOSED)) connect();
+    if (document.visibilityState !== 'visible') return;
+    void ping();
+    if (!session.me) return;
+    watchLink();
+    if (!source || source.readyState === EventSource.CLOSED || Date.now() - lastMessage > STALE_MS) connect();
+    void refresh();
+    void flush();
   });
 
   // ---- Afgeleid ----
@@ -207,15 +275,81 @@ export const useLiveStore = defineStore('live', () => {
     navigator.geolocation.getCurrentPosition(({ coords }) => sendPosition(unitId, coords), () => {}, { enableHighAccuracy: true, maximumAge: 15_000, timeout: 15_000 });
   });
 
+  const requestById = (id: number) => {
+    const real = requestIds.value[id] ?? id;
+    return state.value?.requests?.find((r) => r.id === real) ?? null;
+  };
+
   const secondsLeft = (incident: LiveIncident) =>
     incident.escalatesAt ? Math.max(0, Math.ceil((new Date(incident.escalatesAt).getTime() - serverNow.value) / 1000)) : null;
 
   // ---- Acties: elk antwoord is de nieuwe stand ----
 
-  const act = async (path: string, method: 'POST' | 'PUT', body?: object) => {
-    setState(await api<LiveState>(path, { method, body }));
-    return state.value!;
-  };
+  /** Actions that a screen is still waiting for: a refusal goes to that screen, otherwise it gets its own dialog. */
+  const waitedFor = new Map<string, string | null>();
+
+  /** Happens on the phone right away and goes to the server as soon as it can; only a refusal by the server is an error. */
+  async function act(action: LiveAction) {
+    const item: QueuedAction = { id: crypto.randomUUID(), at: new Date(serverNow.value).toISOString(), action };
+    queue.value.push(item);
+    waitedFor.set(item.id, null);
+    await sendQueueBriefly(offline.value ? 0 : ACTION_WAIT_MS);
+    const refusal = waitedFor.get(item.id);
+    waitedFor.delete(item.id);
+    startRetrying();
+    if (refusal) throw new Error(refusal);
+  }
+
+  async function sendAction(item: QueuedAction) {
+    const { method, path, body } = actionRequest(item.action);
+    const headers = { [ACTION_ID_HEADER]: item.id, [ACTION_AT_HEADER]: item.at };
+    const answer = await api<LiveState | LiveRequest>(path, { method, body, headers, timeoutMs: SEND_TIMEOUT_MS });
+    if (item.action.type !== 'requestNew') {
+      setState(answer as LiveState);
+      return;
+    }
+    const created = answer as LiveRequest;
+    const { tempId } = item.action;
+    requestIds.value[tempId] = created.id;
+    for (const { action } of queue.value) if ('requestId' in action && action.requestId === tempId) action.requestId = created.id;
+    // Until the next state from the server, so the screen of this request doesn't lose it for a moment.
+    if (base.value && !base.value.requests.some((r) => r.id === created.id)) base.value = { ...base.value, requests: [created, ...base.value.requests] };
+  }
+
+  const incidentOf = (action: LiveAction) => ('incidentId' in action ? action.incidentId : null);
+
+  function refuse(item: QueuedAction, reason: string) {
+    // What came after it on the same incident can't work any more, and one message is enough.
+    const incidentId = incidentOf(item.action);
+    queue.value = queue.value.filter((q) => q.id !== item.id && (incidentId === null || incidentOf(q.action) !== incidentId));
+    if (waitedFor.has(item.id)) waitedFor.set(item.id, reason);
+    else void messageDialog({ title: 'Wijziging niet doorgevoerd', text: `Je wijziging kon niet worden verwerkt: ${reason}`, confirm: 'Begrepen' });
+  }
+
+  /** In order, one at a time: a later change can depend on an earlier one. Stops at the first that doesn't get through. */
+  let sending: Promise<void> | null = null;
+  async function drainQueue() {
+    while (queue.value.length && session.me) {
+      const item = queue.value[0]!;
+      try {
+        await sendAction(item);
+        queue.value = queue.value.filter((q) => q.id !== item.id);
+      } catch (err) {
+        if (noAnswer(err)) return;
+        if (err instanceof ApiRequestError && err.status === 401) {
+          await session.refresh();
+          return;
+        }
+        refuse(item, (err as Error).message);
+      }
+    }
+  }
+  function sendQueue() {
+    sending ??= drainQueue().finally(() => { sending = null; });
+    return sending;
+  }
+  /** The queue gets a moment, but never holds up the caller for long. */
+  const sendQueueBriefly = (ms: number) => Promise.race([sendQueue(), new Promise((resolve) => { setTimeout(resolve, ms); })]);
 
   // ---- Melding zonder bereik: blijft op de telefoon staan en gaat vanzelf weg zodra er bereik is ----
 
@@ -226,7 +360,7 @@ export const useLiveStore = defineStore('live', () => {
   async function post(item: NewIncident) {
     // Slecht bereik: niet eindeloos wachten. Komt hij toch aan, dan telt de server hem bij de volgende poging niet dubbel.
     const res = await fetch('/api/incidents', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item), signal: AbortSignal.timeout(10_000),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item), signal: AbortSignal.timeout(REPORT_TIMEOUT_MS),
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new ApiRequestError(res.status, body);
@@ -239,34 +373,43 @@ export const useLiveStore = defineStore('live', () => {
   async function report(request: Omit<NewIncident, 'clientId' | 'reportedAt'>) {
     const item: NewIncident = { ...request, clientId: crypto.randomUUID(), reportedAt: new Date(serverNow.value).toISOString() };
     outbox.value.push(item);
+    // No connection: straight to calling. Every second counts, so don't try first.
+    if (offline.value) {
+      startRetrying();
+      throw new OfflineError(item.clientId);
+    }
     try {
+      // A post opened without signal has to be open on the server before it can ask for help.
+      await sendQueueBriefly(ACTION_WAIT_MS);
       const incident = await post(item);
       drop(item.clientId);
       delivered.value[item.clientId] = incident.id;
       await refresh();
       return incident;
     } catch (err) {
-      if (err instanceof ApiRequestError) {
+      if (!noAnswer(err)) {
         drop(item.clientId);
         throw err;
       }
-      startFlushing();
+      startRetrying();
       throw new OfflineError(item.clientId);
     }
   }
 
   let flushing = false;
+  /** Everything that's waiting: first the changes, then the EHBO requests (a post opened without signal must be open first). */
   async function flush() {
     if (flushing || !session.me) return;
     flushing = true;
     try {
+      await sendQueue();
       for (const item of [...outbox.value]) {
         try {
           delivered.value[item.clientId] = (await post(item)).id;
           drop(item.clientId);
         } catch (err) {
-          if (!(err instanceof ApiRequestError)) break; // nog geen bereik: later opnieuw
-          refused.value[item.clientId] = err.message;
+          if (noAnswer(err)) break; // nog geen bereik: later opnieuw
+          refused.value[item.clientId] = (err as Error).message;
           drop(item.clientId);
         }
       }
@@ -276,51 +419,49 @@ export const useLiveStore = defineStore('live', () => {
     }
   }
 
-  let flushTimer: ReturnType<typeof setInterval> | null = null;
-  function startFlushing() {
-    flushTimer ??= setInterval(() => {
-      if (!outbox.value.length) {
-        clearInterval(flushTimer!);
-        flushTimer = null;
+  let retryTimer: ReturnType<typeof setInterval> | null = null;
+  function startRetrying() {
+    retryTimer ??= setInterval(() => {
+      if (!outbox.value.length && !queue.value.length) {
+        clearInterval(retryTimer!);
+        retryTimer = null;
         return;
       }
       void flush();
-    }, 10_000);
+    }, RETRY_MS);
   }
-  window.addEventListener('online', () => void flush());
-  if (outbox.value.length) {
-    startFlushing();
+  if (outbox.value.length || queue.value.length) {
+    startRetrying();
     void flush();
   }
 
   return {
-    state, connected, syncing, serverNow, sharingUnit, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
+    state, connected, offline, syncing, serverNow, sharingUnit, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
     incidentById, unitState, postOpen, secondsLeft, needsAed, refresh, connect, report, checkData,
     /** "Opnieuw laden": everything at once. */
     reload: () => Promise.all([syncData(), refresh()]),
     outbox, delivered, refused, flush,
-    update: (id: number, details: IncidentDetails) => act(`/api/incidents/${id}`, 'PUT', details),
-    accept: (id: number, unitId: number) => act(`/api/incidents/${id}/accept`, 'POST', { unitId }),
-    decline: (id: number, unitId: number) => act(`/api/incidents/${id}/decline`, 'POST', { unitId }),
-    assign: (id: number, unitId: number) => act(`/api/incidents/${id}/assign`, 'POST', { unitId }),
-    onSite: (id: number) => act(`/api/incidents/${id}/on-site`, 'POST'),
-    close: (id: number, body: CloseIncident) => act(`/api/incidents/${id}/close`, 'POST', body),
-    withdraw: (id: number) => act(`/api/incidents/${id}/withdraw`, 'POST'),
-    setAvailability: (unitId: number, availability: UnitAvailability) => act(`/api/units/${unitId}/availability`, 'PUT', { availability }),
-    setPostOpen: (postId: number, open: boolean) => act(`/api/posts/${postId}/open`, 'PUT', { open }),
-    // Aanvragen (water, verkeer, vrijwilliger): geen spoed, dus zonder outbox; zonder bereik bel je de coördinator.
+    update: (incidentId: number, details: IncidentDetails) => act({ type: 'update', incidentId, details }),
+    accept: (incidentId: number, unitId: number) => act({ type: 'accept', incidentId, unitId }),
+    decline: (incidentId: number, unitId: number) => act({ type: 'decline', incidentId, unitId }),
+    assign: (incidentId: number, unitId: number) => act({ type: 'assign', incidentId, unitId }),
+    onSite: (incidentId: number) => act({ type: 'onSite', incidentId }),
+    close: (incidentId: number, body: CloseIncident) => act({ type: 'close', incidentId, body }),
+    withdraw: (incidentId: number) => act({ type: 'withdraw', incidentId }),
+    setAvailability: (unitId: number, availability: UnitAvailability) => act({ type: 'availability', unitId, availability }),
+    setPostOpen: (postId: number, open: boolean) => act({ type: 'postOpen', postId, open }),
+    // Aanvragen (water, verkeer, vrijwilliger) gaan ook zonder bereik door: ze wachten in de wachtrij.
     requests: computed(() => state.value?.requests ?? []),
-    requestById: (id: number) => state.value?.requests?.find((r) => r.id === id) ?? null,
+    requestById,
+    /** Gives the id to open the request with; without signal that's a temporary one, which keeps working afterwards. */
     async request(postId: number, kind: RequestKind) {
-      const created = await api<LiveRequest>('/api/requests', {
-        method: 'POST', body: { postId, kind, detail: null, clientId: crypto.randomUUID() } satisfies NewRequest,
-      });
-      await refresh();
-      return created;
+      const tempId = -Date.now();
+      await act({ type: 'requestNew', tempId, clientId: crypto.randomUUID(), postId, postName: pkg.postById.get(postId)?.name ?? 'Post', kind });
+      return { id: requestIds.value[tempId] ?? tempId };
     },
-    setRequestDetail: (id: number, detail: string | null) => act(`/api/requests/${id}`, 'PUT', { detail }),
-    pickRequest: (id: number) => act(`/api/requests/${id}/pick`, 'POST'),
-    finishRequest: (id: number) => act(`/api/requests/${id}/done`, 'POST'),
-    withdrawRequest: (id: number) => act(`/api/requests/${id}/withdraw`, 'POST'),
+    setRequestDetail: (requestId: number, detail: string | null) => act({ type: 'requestDetail', requestId, detail }),
+    pickRequest: (requestId: number) => act({ type: 'requestPick', requestId }),
+    finishRequest: (requestId: number) => act({ type: 'requestDone', requestId }),
+    withdrawRequest: (requestId: number) => act({ type: 'requestWithdraw', requestId }),
   };
 });

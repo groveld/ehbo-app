@@ -5,6 +5,7 @@ import { DEFAULT_INFO, INFO_SECTIONS_MAX, type InfoSection } from '@ehbo/shared'
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 import { useDirty } from '../../composables/useDirty.ts';
+import { confirmDialog } from '../../composables/useDialog.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 
@@ -38,7 +39,7 @@ async function save() {
   if (saved.value) markClean();
 }
 async function reset() {
-  if (!confirm('Terug naar de standaardtekst? Je eigen teksten gaan verloren.')) return;
+  if (!await confirmDialog({ title: 'Terug naar de standaardtekst?', text: 'Je eigen teksten gaan verloren.', confirm: 'Standaardtekst gebruiken', tone: 'danger' })) return;
   if (await run(() => admin.saveInfo({ sections: null, policy: form.policy || null, contact: form.contact || null }))) {
     form.sections = DEFAULT_INFO.map((s) => ({ ...s }));
     markClean();

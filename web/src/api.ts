@@ -11,12 +11,16 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** The server didn't really answer (gateway error, overloaded): try again later. Anything else with a status is its answer. */
+export const noAnswer = (err: unknown) => !(err instanceof ApiRequestError) || err.status === 408 || err.status === 429 || err.status > 500;
+
 /** JSON naar en van de server; gooit ApiRequestError bij een foutstatus. */
-export async function api<T>(path: string, init: { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: object } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: object; headers?: Record<string, string>; timeoutMs?: number } = {}): Promise<T> {
   const res = await fetch(path, {
     method: init.method ?? 'GET',
-    headers: init.body ? { 'Content-Type': 'application/json' } : undefined,
+    headers: { ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
     body: init.body ? JSON.stringify(init.body) : undefined,
+    signal: init.timeoutMs ? AbortSignal.timeout(init.timeoutMs) : undefined,
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiRequestError(res.status, body);
