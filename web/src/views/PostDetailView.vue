@@ -1,9 +1,8 @@
 <script setup lang="ts">
 // 3.5 · Postdetail: waar is de post, hoe kom je er, wie bel je, en waar is de dichtstbijzijnde EHBO.
-import { computed } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatKm, formatPhone, telHref } from '@ehbo/shared';
-import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import KmPoints from '../components/KmPoints.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
@@ -14,6 +13,9 @@ import { kmLabel, mobileUnits, nearestUnit, primaryContact, unitsAt } from '../p
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
+
+// The map library is large: the screen doesn't wait for it.
+const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue'));
 
 const props = defineProps<{ id: string }>();
 const store = usePackageStore();

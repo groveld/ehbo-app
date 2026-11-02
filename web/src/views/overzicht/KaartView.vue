@@ -1,9 +1,8 @@
 <script setup lang="ts">
 // 3.4 · Overzicht & kaart: alle posten en EHBO-teams, filter per soort en route, zoeken op naam of km, tellers voor de coördinator, en de lijst met bel- en navigeerknoppen.
-import { computed, ref } from 'vue';
+import { computed, defineAsyncComponent, ref } from 'vue';
 import { isDueOpen, lacksPosition, type PackagePost } from '@ehbo/shared';
 import { useRouter } from 'vue-router';
-import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
 import TeamRow from '../../components/TeamRow.vue';
@@ -12,6 +11,9 @@ import { coordinatorOf, isOnRun, mobileUnits } from '../../posts.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 import { useSessionStore } from '../../stores/session.ts';
+
+// The map library is large: the screen doesn't wait for it.
+const EventMap = defineAsyncComponent(() => import('../../components/EventMap.vue'));
 
 const store = usePackageStore();
 const live = useLiveStore();

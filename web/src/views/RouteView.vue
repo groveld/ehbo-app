@@ -1,10 +1,9 @@
 <script setup lang="ts">
 // A page per run: details, a map with only this route, the GPX to download, and the posts along it in order.
-import { computed } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatKm } from '@ehbo/shared';
 import CallEhbo from '../components/CallEhbo.vue';
-import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import PostBadge from '../components/PostBadge.vue';
@@ -13,6 +12,9 @@ import { formatDate } from '../format.ts';
 import { routeStops } from '../posts.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
+
+// The map library is large: the screen doesn't wait for it.
+const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue'));
 
 const props = defineProps<{ id: string }>();
 const store = usePackageStore();

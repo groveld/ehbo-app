@@ -46,6 +46,7 @@ let ambulanceMarkers: maplibregl.Marker[] = [];
 let userMarker: maplibregl.Marker | null = null;
 let pickedMarker: maplibregl.Marker | null = null;
 let watchId: number | null = null;
+let contextLost = false;
 
 const GREY = '#9A9CA3';
 const CROSS = iconSvg('ehbo', 16);
@@ -251,7 +252,7 @@ async function startUserLocation() {
   }, () => {}, { enableHighAccuracy: true, maximumAge: 10_000 });
 }
 
-onMounted(() => {
+function createMap() {
   map = new maplibregl.Map({
     container: container.value!,
     style: style(),
@@ -265,6 +266,8 @@ onMounted(() => {
     pitchWithRotate: false,
     dragRotate: false,
   });
+  map.on('webglcontextlost', () => { contextLost = true; });
+  map.on('webglcontextrestored', () => { contextLost = false; });
   map.touchZoomRotate.disableRotation();
   map.keyboard.disableRotation();
   map.on('load', () => {
@@ -316,7 +319,27 @@ onMounted(() => {
   drawAmbulances();
   drawPicked();
   frame();
+}
+
+// A phone can take the graphics memory of an app in the background, which leaves the map black. It usually comes back by itself; if not, start the map again.
+function restoreMap() {
+  if (document.visibilityState !== 'visible' || !contextLost) return;
+  setTimeout(() => {
+    if (!contextLost || !map) return;
+    contextLost = false;
+    map.remove();
+    markers = [];
+    ambulanceMarkers = [];
+    pickedMarker = null;
+    userMarker = null;
+    createMap();
+  }, 500);
+}
+
+onMounted(() => {
+  createMap();
   void startUserLocation();
+  document.addEventListener('visibilitychange', restoreMap);
 });
 
 watch(() => [props.posts, props.pkg, props.focusPostId, props.highlightRunId, props.alertPostIds], drawPosts);
@@ -330,6 +353,7 @@ watch(() => props.highlightRunId, () => frame(true));
 watch(() => [props.highlightRunId, props.pkg], () => (map?.getSource('lopen') as GeoJSONSource | undefined)?.setData(runFeatures()));
 
 onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', restoreMap);
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   map?.remove();
   map = null;

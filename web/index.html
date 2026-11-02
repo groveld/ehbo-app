@@ -13,6 +13,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="EHBO-app">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <!-- The page background before any stylesheet has loaded, so opening the app never shows a black screen. -->
+  <style>html, body { margin: 0; background: #F6F5F1; }</style>
 </head>
 <body>
   <div id="app"></div>

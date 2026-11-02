@@ -1,17 +1,19 @@
 <script setup lang="ts">
 // 2.8 · Deelnemer, en het beginscherm van de app zonder aanmelding: naam van het evenement, route, starttijden met favoriete loop
 // vooraan, een legenda van de soorten posten, Bel EHBO en rechtsboven Aanmelden voor medewerkers.
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { EhboStatus } from '@ehbo/shared';
 import { api } from '../api.ts';
 import CallEhbo from '../components/CallEhbo.vue';
-import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import PostBadge from '../components/PostBadge.vue';
 import { useFavorites } from '../composables/useFavorites.ts';
 import { canUseAsStaff } from '../platform.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
+
+// The map library is large: the screen doesn't wait for it.
+const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue'));
 
 const store = usePackageStore();
 const { favorites, toggleFavorite } = useFavorites();

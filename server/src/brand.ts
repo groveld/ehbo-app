@@ -82,7 +82,8 @@ export function buildManifest(db: EventDb) {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: style.primaryColor,
+    // Fills the screen while the app opens: the page background, not the (usually dark) primary color.
+    background_color: '#F6F5F1',
     theme_color: style.primaryColor,
     icons: [icon('icon-192', 192, 'any'), icon('icon-512', 512, 'any'), icon('icon-maskable-512', 512, 'maskable')],
   };

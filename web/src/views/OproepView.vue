@@ -1,9 +1,8 @@
 <script setup lang="ts">
 // EHBO: 4.3 · oproep (aftellen), 4.4 · naar alle eenheden, 4.5 · al aangenomen, 4.7 · onderweg → ter plaatse.
-import { computed } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatKm, telHref } from '@ehbo/shared';
-import EventMap from '../components/EventMap.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
@@ -13,6 +12,9 @@ import { navigationUrl } from '../navigate.ts';
 import { primaryContact } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
+
+// The map library is large: the screen doesn't wait for it.
+const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue'));
 
 const props = defineProps<{ id: string }>();
 const store = usePackageStore();

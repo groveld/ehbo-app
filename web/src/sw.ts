@@ -49,8 +49,9 @@ self.addEventListener('fetch', (event) => {
   }
   if (DEV) return;
   if (event.request.mode === 'navigate') {
-    // Pagina: eerst netwerk, zonder bereik de bewaarde versie.
-    event.respondWith(fetch(event.request).catch(async () => (await caches.match('/index.html')) ?? Response.error()));
+    // The app itself comes from this phone, always: it starts at once, with bad signal or a broken server too. Never wait for the network here.
+    // A new version arrives as a new service worker, with its own index.html and files.
+    event.respondWith((async () => (await (await caches.open(CACHE)).match('/index.html')) ?? fetch(event.request))());
     return;
   }
   // Overige bestanden: direct uit de cache, op de achtergrond verversen.
