@@ -123,6 +123,13 @@ function arrowImage() {
   return ctx.getImageData(0, 0, size, size);
 }
 
+/** One round of the dashes along the line, so they move from the team towards the call. */
+const DASH_STEPS = [
+  [0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0],
+  [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5],
+];
+const DASH_STEP_MS = 90;
+
 const lineFeatures = () => ({
   type: 'FeatureCollection' as const,
   features: props.lines.map((coordinates) => ({ type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates } })),
@@ -316,8 +323,7 @@ function createMap() {
       id: 'oproeplijnen',
       type: 'line',
       source: 'oproeplijnen',
-      layout: { 'line-cap': 'round' },
-      paint: { 'line-color': '#C8261E', 'line-width': 3, 'line-dasharray': [1.5, 2] },
+      paint: { 'line-color': '#C8261E', 'line-width': 3, 'line-dasharray': DASH_STEPS[0]! },
     });
     map!.addImage('route-arrow', arrowImage(), { pixelRatio: 2 });
     map!.addLayer({
@@ -381,6 +387,19 @@ watch(() => props.picked, drawPicked);
 watch(() => props.ambulances, drawAmbulances);
 // Recalculated every second; only redraw when a line really moved.
 watch(() => JSON.stringify(props.lines), () => (map?.getSource('oproeplijnen') as GeoJSONSource | undefined)?.setData(lineFeatures()));
+
+// Only while there's a line to see: every step redraws the map.
+let dashTimer: ReturnType<typeof setInterval> | undefined;
+watch(() => props.lines.length > 0 && !props.paused, (moving) => {
+  clearInterval(dashTimer);
+  if (!moving || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let step = 0;
+  dashTimer = setInterval(() => {
+    if (document.visibilityState !== 'visible' || !map?.getLayer('oproeplijnen')) return;
+    step = (step + 1) % DASH_STEPS.length;
+    map.setPaintProperty('oproeplijnen', 'line-dasharray', DASH_STEPS[step]);
+  }, DASH_STEP_MS);
+}, { immediate: true });
 // Naar een andere post (bijv. vanaf de postpagina): de kaart gaat mee.
 watch(() => props.focusPostId, () => frame());
 watch(() => props.highlightRunId, () => frame(true));
@@ -403,6 +422,7 @@ watch(() => props.paused, (paused) => {
 });
 
 onBeforeUnmount(() => {
+  clearInterval(dashTimer);
   document.removeEventListener('visibilitychange', restoreMap);
   stopUserLocation();
   map?.remove();
