@@ -7,6 +7,7 @@ import type {
   CloseSummary,
   IncidentDetails,
   LiveAction,
+  LngLat,
   LiveIncident,
   LiveRequest,
   LiveState,
@@ -15,7 +16,7 @@ import type {
   RequestKind,
   UnitAvailability,
 } from '@ehbo/shared';
-import { ACTION_AT_HEADER, ACTION_ID_HEADER, LIVE_HEARTBEAT_MS, POSITION_SHARE_MS, actionRequest, applyAction } from '@ehbo/shared';
+import { ACTION_AT_HEADER, ACTION_ID_HEADER, LIVE_HEARTBEAT_MS, POSITION_SHARE_MS, actionRequest, applyAction, placeOf } from '@ehbo/shared';
 import { api, ApiRequestError, noAnswer } from '../api.ts';
 import { messageDialog } from '../composables/useDialog.ts';
 import { load, save } from '../storage.ts';
@@ -63,6 +64,9 @@ export const useLiveStore = defineStore('live', () => {
   /** A request made without signal has a temporary id; this maps it to the real one, so its screen keeps working. */
   const requestIds = ref<Record<number, number>>(load('ehbo.requestIds') ?? {});
   watch(requestIds, (value) => save('ehbo.requestIds', Object.keys(value).length ? value : null), { deep: true });
+  /** The same for an incident an EHBO team started without signal. */
+  const incidentIds = ref<Record<number, number>>(load('ehbo.incidentIds') ?? {});
+  watch(incidentIds, (value) => save('ehbo.incidentIds', Object.keys(value).length ? value : null), { deep: true });
   /** What every screen shows: the server's state with this phone's own changes on top, so nothing ever waits for the network. */
   const state = computed<LiveState | null>(() => {
     if (!queue.value.length) return base.value;
@@ -168,6 +172,7 @@ export const useLiveStore = defineStore('live', () => {
       outbox.value = [];
       queue.value = [];
       requestIds.value = {};
+      incidentIds.value = {};
     }
   }, { immediate: true });
 
@@ -212,7 +217,10 @@ export const useLiveStore = defineStore('live', () => {
   const serverNow = computed(() => now.value + clockOffset.value);
   const incidents = computed(() => state.value?.incidents ?? []);
   const openIncidents = computed(() => incidents.value.filter(isOpen));
-  const incidentById = (id: number) => incidents.value.find((i) => i.id === id) ?? null;
+  const incidentById = (id: number) => {
+    const real = incidentIds.value[id] ?? id;
+    return incidents.value.find((i) => i.id === real) ?? null;
+  };
   const unitState = (id: number) => state.value?.units.find((u) => u.id === id) ?? null;
   /** Live open/dicht; zonder live stand wat in het evenementpakket staat. */
   const postOpen = (postId: number, fallback = false) => state.value?.posts.find((p) => p.id === postId)?.isOpen ?? fallback;
@@ -305,7 +313,16 @@ export const useLiveStore = defineStore('live', () => {
   async function sendAction(item: QueuedAction) {
     const { method, path, body } = actionRequest(item.action);
     const headers = { [ACTION_ID_HEADER]: item.id, [ACTION_AT_HEADER]: item.at };
-    const answer = await api<LiveState | LiveRequest>(path, { method, body, headers, timeoutMs: SEND_TIMEOUT_MS });
+    const answer = await api<LiveState | LiveRequest | LiveIncident>(path, { method, body, headers, timeoutMs: SEND_TIMEOUT_MS });
+    if (item.action.type === 'selfStart') {
+      const created = answer as LiveIncident;
+      const { tempId } = item.action;
+      incidentIds.value[tempId] = created.id;
+      for (const { action } of queue.value) if ('incidentId' in action && action.incidentId === tempId) action.incidentId = created.id;
+      // Until the next state from the server, so the screen of this incident doesn't lose it for a moment.
+      if (base.value && !base.value.incidents.some((i) => i.id === created.id)) base.value = { ...base.value, incidents: [created, ...base.value.incidents] };
+      return;
+    }
     if (item.action.type !== 'requestNew') {
       setState(answer as LiveState);
       return;
@@ -318,7 +335,7 @@ export const useLiveStore = defineStore('live', () => {
     if (base.value && !base.value.requests.some((r) => r.id === created.id)) base.value = { ...base.value, requests: [created, ...base.value.requests] };
   }
 
-  const incidentOf = (action: LiveAction) => ('incidentId' in action ? action.incidentId : null);
+  const incidentOf = (action: LiveAction) => (action.type === 'selfStart' ? action.tempId : 'incidentId' in action ? action.incidentId : null);
 
   function refuse(item: QueuedAction, reason: string) {
     // What came after it on the same incident can't work any more, and one message is enough.
@@ -450,6 +467,22 @@ export const useLiveStore = defineStore('live', () => {
     onSite: (incidentId: number) => act({ type: 'onSite', incidentId }),
     close: (incidentId: number, body: CloseIncident) => act({ type: 'close', incidentId, body }),
     withdraw: (incidentId: number) => act({ type: 'withdraw', incidentId }),
+    /** Someone came to the team. Gives the id to open it with; without signal that's a temporary one, which keeps working afterwards. */
+    async selfStart({ unitId, postId, position, ...details }: IncidentDetails & { unitId: number; postId: number; position: LngLat | null }) {
+      const tempId = -Date.now();
+      const known = pkg.postById.get(postId);
+      const place = position ? placeOf(pkg.pkg?.posts ?? [], position) : null;
+      const shown = place ? pkg.postById.get(place.postId) ?? known : known;
+      await act({
+        type: 'selfStart', tempId, postId: shown?.id ?? postId, offPost: place !== null && !place.atPost,
+        post: {
+          typeId: shown?.typeId ?? 0, name: place?.name ?? shown?.name ?? 'Post', km: shown?.km ?? null,
+          lat: place && !place.atPost ? position![1] : shown?.lat ?? null, lng: place && !place.atPost ? position![0] : shown?.lng ?? null,
+        },
+        body: { clientId: crypto.randomUUID(), unitId, postId, lat: position?.[1] ?? null, lng: position?.[0] ?? null, ...details },
+      });
+      return incidentIds.value[tempId] ?? tempId;
+    },
     setAvailability: (unitId: number, availability: UnitAvailability) => act({ type: 'availability', unitId, availability }),
     setPostOpen: (postId: number, open: boolean) => act({ type: 'postOpen', postId, open }),
     keepPost: (postId: number) => act({ type: 'keepPost', postId }),

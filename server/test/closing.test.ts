@@ -159,6 +159,29 @@ test('coordinator: everything at once, and not while a call is open', () => {
   assert.ok(calls.state().posts.every((p) => !p.isOpen));
 });
 
+test('a team starts an incident itself: on site at once, the place by GPS, and no call to anyone else', () => {
+  const mo = (): Me => ({ phone: DEMO.mobileEhbo, name: 'Mo', isAdmin: false, assignments: [{ kind: 'ehbo', unitId: TEAM2(), title: '', letter: '+', color: '' }], home: 'ehbo' }) as Me;
+  const [lat, lng] = [53.1512, 5.8344];
+  const body = { clientId: 'self-start-1', unitId: TEAM2(), postId: WATER(), what: 'kramp' as const, persons: '1' as const, responsive: null, note: null };
+
+  // Within the radius of the post: the post itself.
+  const atPost = calls.selfStart(mo(), { ...body, lat: lat + 0.0002, lng });
+  assert.deepEqual([atPost.status, atPost.post.name, atPost.offPost, atPost.selfStarted, atPost.unitId], ['ter_plaatse', 'Waterpost 3 · brug', false, true, TEAM2()]);
+  assert.equal(team().incidentId, atPost.id);
+  assert.equal(calls.state().incidents.length, 1);
+  assert.equal(calls.selfStart(mo(), { ...body, lat, lng }).id, atPost.id, 'sent twice counts once');
+  assert.throws(() => calls.selfStart(mo(), { ...body, clientId: 'self-start-2', lat, lng }), /al bezig/);
+  assert.ok(!pushes.some((p) => p.payload.urgent), 'no alarm for anyone');
+  assert.ok(pushes.some((p) => p.phones.includes(DEMO.coordinator) && p.payload.body.includes('zelf een incident')));
+  set("UPDATE incidents SET status = 'afgerond'");
+
+  // Further away: the distance to the nearest post, and that post only for the report.
+  const away = calls.selfStart(mo(), { ...body, clientId: 'self-start-3', lat: lat + 0.002, lng });
+  assert.equal(away.offPost, true);
+  assert.match(away.post.name, /^\d+ m van /);
+  assert.equal(away.post.lat, lat + 0.002);
+});
+
 test('last contact is only for the coordinator, and only of what is open', () => {
   assert.throws(() => calls.lastSeen(lead()), /coördinator/);
   set("INSERT INTO sessions (token_hash, phone, user_agent, expires_at, last_seen_at) VALUES ('h', ?, 'x', '2099-01-01 00:00:00', '2026-12-31 11:00:00')", DEMO.postLead);

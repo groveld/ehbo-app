@@ -1,6 +1,6 @@
 // EHBO-oproepen: van verzoek tot afronden, en de live stand die alle medewerkers zien.
 import type { UnitKind } from './event.ts';
-import { distanceKm } from './geo.ts';
+import { distanceKm, formatKm } from './geo.ts';
 import type { LiveRequest } from './request.ts';
 
 /** Gemeld (op de telefoon) → verstuurd → geaccepteerd → ter plaatse → afgerond, of ingetrokken. */
@@ -55,6 +55,17 @@ export interface NewIncident extends IncidentDetails {
   reportedAt?: string;
 }
 
+/** POST /api/incidents/self: someone came to an EHBO team, which is already there. */
+export interface NewSelfIncident extends IncidentDetails {
+  clientId: string;
+  unitId: number;
+  /** The post the team chose, or its own; with a position only the fallback. */
+  postId: number;
+  /** GPS of the team, when there is one and no post was chosen by hand. */
+  lat: number | null;
+  lng: number | null;
+}
+
 export interface CloseIncident {
   outcome: Outcome;
   persons: IncidentPersons | null;
@@ -104,6 +115,10 @@ export interface LiveIncident extends IncidentDetails {
   id: number;
   /** Gedaan in de testmodus: telt niet mee in het rapport. */
   isTest: boolean;
+  /** Started by the team that was there, not reported by a post. */
+  selfStarted: boolean;
+  /** Not at its post: post then says where it was, and postId is only the nearest post, for the report. */
+  offPost: boolean;
   postId: number;
   post: IncidentPost;
   status: IncidentStatus;
@@ -242,6 +257,18 @@ export function plannedClose(plan: { timeTo: string | null }, event: { startDate
   if (today < event.startDate) return null;
   if (plan.timeTo) return eventInstant(today > last ? last : today, plan.timeTo) + AUTO_CLOSE_AFTER_MIN * 60_000;
   return today > last ? eventInstant(last, '23:59') : null;
+}
+
+/**
+ * Where a position is: the post itself within the same radius as a mobile team and its standplaats, otherwise a distance from the nearest post.
+ * Null without any post with a position.
+ */
+export function placeOf(posts: { id: number; name: string; lat: number | null; lng: number | null }[], at: [number, number]) {
+  const nearest = posts.flatMap((p) => (p.lat != null && p.lng != null ? [{ post: p, km: distanceKm(at, [p.lng, p.lat]) }] : [])).sort((a, b) => a.km - b.km)[0];
+  if (!nearest) return null;
+  const { post, km } = nearest;
+  if (km <= HOME_RADIUS_KM) return { postId: post.id, atPost: true, name: post.name };
+  return { postId: post.id, atPost: false, name: `${km < 1 ? `${Math.round(km * 1000)} m` : `${formatKm(km)} km`} van ${post.name}` };
 }
 
 /** Should this post be open by now? Within its time slot, on a day of the event, in Dutch time. */

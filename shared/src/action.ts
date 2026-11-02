@@ -1,10 +1,12 @@
 // Changes a phone makes to the live state. The phone applies each one to its own state at once and queues it for the server,
 // so nothing ever waits for the network; the queue goes out in order as soon as there is a connection.
-import type { CloseIncident, Dispatch, IncidentDetails, IncidentEventType, LiveIncident, LiveState, LiveUnit, UnitAvailability } from './incident.ts';
+import type { CloseIncident, Dispatch, IncidentDetails, IncidentEventType, IncidentPost, LiveIncident, LiveState, LiveUnit, NewSelfIncident, UnitAvailability } from './incident.ts';
 import type { LiveRequest, NewRequest, RequestKind } from './request.ts';
 
 export type LiveAction =
   | { type: 'accept' | 'decline' | 'assign'; incidentId: number; unitId: number }
+  /** tempId: a negative id until the server has given the real one. post: how it shows meanwhile. */
+  | { type: 'selfStart'; tempId: number; body: NewSelfIncident; post: IncidentPost; offPost: boolean; postId: number }
   | { type: 'onSite' | 'withdraw'; incidentId: number }
   | { type: 'close'; incidentId: number; body: CloseIncident }
   | { type: 'update'; incidentId: number; details: IncidentDetails }
@@ -85,6 +87,18 @@ function take(state: LiveState, at: string, incidentId: number, unitId: number, 
 /** The state as this phone should show it after the action, the same way the server will do it. An unknown incident or request changes nothing. */
 export function applyAction(state: LiveState, { at, action }: QueuedAction, context: ActionContext): LiveState {
   switch (action.type) {
+    case 'selfStart': {
+      const { body, tempId, post, offPost, postId } = action;
+      const name = context.units.find((u) => u.id === body.unitId)?.name ?? 'Eenheid';
+      const incident: LiveIncident = {
+        id: tempId, isTest: state.testMode, selfStarted: true, offPost, postId, post, status: 'ter_plaatse', stage: 'dichtstbij', aed: body.responsive === 'nee',
+        what: body.what, persons: body.persons, responsive: body.responsive, note: body.note, reportedAt: at, sentAt: at, escalatesAt: null,
+        unitId: body.unitId, acceptedBy: context.me, acceptedAt: at, onSiteAt: at, closedAt: null, outcome: null,
+        dispatches: [{ unitId: body.unitId, at, reason: 'handmatig', distanceKm: 0, declinedAt: null, acceptedAt: at }],
+        events: [{ at, type: 'gemeld', unitId: body.unitId, text: `Zelf gestart door ${name} · ${post.name}` }],
+      };
+      return changeUnit({ ...state, incidents: [incident, ...state.incidents] }, body.unitId, (u) => ({ ...u, availability: 'vrij', stayPostId: null, incidentId: tempId }));
+    }
     case 'accept': return take(state, at, action.incidentId, action.unitId, false, context);
     case 'assign': return take(state, at, action.incidentId, action.unitId, true, context);
     case 'decline': {
@@ -158,6 +172,7 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
 /** The API call that carries out an action. */
 export function actionRequest(action: LiveAction): { method: 'POST' | 'PUT'; path: string; body?: object } {
   switch (action.type) {
+    case 'selfStart': return { method: 'POST', path: '/api/incidents/self', body: action.body };
     case 'accept': return { method: 'POST', path: `/api/incidents/${action.incidentId}/accept`, body: { unitId: action.unitId } };
     case 'decline': return { method: 'POST', path: `/api/incidents/${action.incidentId}/decline`, body: { unitId: action.unitId } };
     case 'assign': return { method: 'POST', path: `/api/incidents/${action.incidentId}/assign`, body: { unitId: action.unitId } };

@@ -50,6 +50,8 @@ const position = computed(() => {
   return base ? [base.name, kmLabel(base)].filter(Boolean).join(' · ') : '–';
 });
 const shift = computed(() => shiftText(unit.value));
+/** Someone comes to you: possible while you're there and not busy. */
+const canStart = computed(() => availability.value !== 'uit_dienst' && !active.value);
 const teammates = computed(() => unit.value?.members.filter((m) => m.phone !== session.me?.phone) ?? []);
 const othersFree = computed(() => {
   const others = (live.state?.units ?? []).filter((u) => u.id !== unitId.value);
@@ -113,6 +115,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
       <div class="grow" />
       <!-- De belknoppen blijven onderaan in beeld, ook als de pagina scrolt. -->
       <div class="form-footer">
+        <RouterLink v-if="canStart" :to="{ name: 'eigen-incident' }" class="btn go"><Icon name="ehbo" :size="20" />Incident starten</RouterLink>
         <a v-if="callNext" :href="telHref(callNext.phone)" class="btn"><Icon name="phone" :size="20" />{{ callNext.label }}</a>
         <a href="tel:112" class="btn danger"><Icon name="phone" :size="20" />Bel 112</a>
       </div>

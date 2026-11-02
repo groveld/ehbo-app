@@ -284,6 +284,13 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   ALTER TABLE posts ADD COLUMN closes_at TEXT;
   ALTER TABLE posts ADD COLUMN auto_closed_at TEXT;
   `,
+  // 16: an EHBO team can start an incident itself. Away from a post it keeps where that was; post_id is then the nearest post, for the report.
+  `
+  ALTER TABLE incidents ADD COLUMN self_started INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE incidents ADD COLUMN place_name TEXT;
+  ALTER TABLE incidents ADD COLUMN place_lat REAL;
+  ALTER TABLE incidents ADD COLUMN place_lng REAL;
+  `,
 ];
 
 export interface EventRow {

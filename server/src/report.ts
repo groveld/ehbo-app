@@ -16,7 +16,7 @@ export function buildReport(db: EventDb, now = new Date()): Report {
   const event = db.getEvent();
 
   const incidents: ReportIncident[] = all(`
-    SELECT i.*, p.name AS post_name, p.km, u.name AS unit_name FROM incidents i
+    SELECT i.*, COALESCE(i.place_name, p.name) AS post_name, p.km, u.name AS unit_name FROM incidents i
     JOIN posts p ON p.id = i.post_id LEFT JOIN ehbo_units u ON u.id = i.unit_id
     WHERE i.is_test = 0 ORDER BY i.reported_at, i.id`).map((r, n) => ({
     number: n + 1,
@@ -30,10 +30,12 @@ export function buildReport(db: EventDb, now = new Date()): Report {
     acceptedAt: r.accepted_at as string | null,
     onSiteAt: r.on_site_at as string | null,
     closedAt: r.closed_at as string | null,
-    responseSeconds: seconds(r.reported_at, r.accepted_at),
-    travelSeconds: seconds(r.accepted_at, r.on_site_at),
+    // Started by the team that was there: nothing to measure, and a zero would flatter the averages.
+    responseSeconds: r.self_started === 1 ? null : seconds(r.reported_at, r.accepted_at),
+    travelSeconds: r.self_started === 1 ? null : seconds(r.accepted_at, r.on_site_at),
     unitName: r.unit_name as string | null,
     escalated: r.stage === 'alle',
+    selfStarted: r.self_started === 1,
     outcome: r.outcome as Outcome | null,
     note: r.outcome_note as string | null,
   }));
@@ -99,11 +101,11 @@ export function reportCsv(report: Report) {
   };
   const STATUS = { verstuurd: 'open', geaccepteerd: 'onderweg', ter_plaatse: 'ter plaatse', afgerond: 'afgerond', ingetrokken: 'ingetrokken' } as const;
   const header = ['Nr', 'Post', 'Km', 'Melding', 'Personen', 'AED', 'Status', 'Gemeld', 'Geaccepteerd', 'Ter plaatse', 'Afgerond',
-    'Reactietijd (m:ss)', 'Aanrijtijd (m:ss)', 'Eenheid', 'Naar alle eenheden', 'Afloop', 'Notitie'];
+    'Reactietijd (m:ss)', 'Aanrijtijd (m:ss)', 'Eenheid', 'Naar alle eenheden', 'Zelf gestart', 'Afloop', 'Notitie'];
   const rows = report.incidents.map((i) => [
     i.number, i.postName, i.km === null ? null : formatKm(i.km), i.what ? INCIDENT_WHAT[i.what] : null, i.persons,
     i.aed ? 'ja' : 'nee', STATUS[i.status], localTime(i.reportedAt), localTime(i.acceptedAt), localTime(i.onSiteAt), localTime(i.closedAt),
-    minutesSeconds(i.responseSeconds), minutesSeconds(i.travelSeconds), i.unitName, i.escalated ? 'ja' : 'nee', i.outcome ? OUTCOMES[i.outcome] : null, i.note,
+    minutesSeconds(i.responseSeconds), minutesSeconds(i.travelSeconds), i.unitName, i.escalated ? 'ja' : 'nee', i.selfStarted ? 'ja' : 'nee', i.outcome ? OUTCOMES[i.outcome] : null, i.note,
   ]);
   const requests = Object.entries(report.totals.requestsByKind).map(([kind, n]) => [`Aanvragen ${REQUEST_KINDS[kind as RequestKind].label.toLowerCase()}`, n]);
   const lines = [header, ...rows, [], ['Totaal'], ['Incidenten', report.totals.incidents], ['Ingetrokken', report.totals.withdrawn],

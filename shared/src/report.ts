@@ -22,6 +22,8 @@ export interface ReportIncident {
   unitName: string | null;
   /** Ging naar alle eenheden. */
   escalated: boolean;
+  /** Someone came to the team; no response or travel time. */
+  selfStarted: boolean;
   outcome: Outcome | null;
   note: string | null;
 }

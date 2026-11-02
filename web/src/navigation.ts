@@ -12,7 +12,7 @@ import { useSessionStore } from './stores/session.ts';
 /** Vaste ouders: de terugknop bovenaan dezelfde schermen. */
 const PARENT: Record<string, string> = {
   post: 'kaart', route: 'kaart',
-  oproep: 'ehbo', inzetten: 'ehbo', inzet: 'inzetten',
+  oproep: 'ehbo', 'eigen-incident': 'ehbo', inzetten: 'ehbo', inzet: 'inzetten',
   info: 'menu', controle: 'menu', beheer: 'menu', sturing: 'menu',
   'beheer-post': 'beheer-posten', 'beheer-eenheid': 'beheer-eenheden',
   'beheer-loop': 'beheer-evenement', 'beheer-app-icoon': 'beheer-evenement', 'beheer-rapport-afdrukken': 'beheer-rapport',
