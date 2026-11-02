@@ -43,7 +43,7 @@ Where the main pieces live:
 - **Screens for calls and requests:** post home 3.1/3.2 (`PostHomeView`), EHBO request 4.1 (`EhboVerzoekView`), follow-up 4.2/4.6 with manual assign (`MeldingView`), EHBO screen 3.3 (`EhboView`), call 4.3–4.7 (`OproepView`), closing 4.8 (`AfrondenView`), no signal 4.9 (`GeenBereikView`), request 5.1 (`AanvraagView`), queue 5.2 in the Meldingen tab (`MeldingenTab`). Navigation is one tab bar on every staff page (`components/TabBar.vue`, mounted in `App.vue`); the rest lives in `MenuView`. `components/StatusBlock.vue` is the 140 px header.
 - **Km points:** `passages` and `recomputePassages` in `server/src/gpx.ts`, table `post_passages`. They're recalculated after every change to a GPX, a run or a post. `posts.km` is derived (first pass on the longest run), never entered; `kmLabel(post)` in `web/src/posts.ts` shows it.
 - **Route page:** `views/RouteView.vue` at `/route/:id`, public. `GET /gpx/<id>.gpx` serves a clean GPX (`cleanGpx` in `gpx.ts`), kept in the `ehbo-gpx` cache for offline use. `routeStops` in `web/src/posts.ts` gives the posts in order.
-- **Live state on the phone:** `web/src/stores/live.ts`: SSE with a watchdog, all actions, the outbox for EHBO requests without signal (resent with the same `clientId`), GPS sharing for mobile units. `web/src/alarm.ts` is the repeating sound and vibration.
+- **Live state on the phone:** `web/src/stores/live.ts`: SSE with a watchdog (the heartbeat is a real `ping` event), the queue of changes, the outbox for EHBO requests without signal (resent with the same `clientId`), GPS sharing for mobile units. `web/src/alarm.ts` is the repeating sound and vibration.
 - **End-to-end:** `e2e/` with Playwright; `e2e/server.ts` starts a seeded server on 3090. One worker; tests clean up after themselves.
 
 ## Chosen stack (decided 28 Oct 2026)
@@ -53,7 +53,7 @@ Where the main pieces live:
 - **server:** Node 26 (LTS; same version in CI, Docker and `@types/node`) and Fastify 5, in one container. Node runs the `.ts` files directly (type stripping), so there is no server build step: use only erasable syntax (no enums, namespaces or parameter properties) and import with `.ts` extensions. `tsconfig.base.json` enforces this. It holds the API, call logic, escalation timers and report. **SQLite with one file per event**, WAL mode, behind a single data-access layer so Postgres stays possible.
 - **Live updates:** Server-Sent Events with a heartbeat every 30 s. Cloudflare drops idle connections after 100 s.
 - **Push:** our own Web Push module (VAPID ES256 and aes128gcm) in `server/src/webpush.ts`, tested against the RFC 8291 vector. Reuse it; don't add `web-push`.
-- **Service worker:** our own, no Workbox. In dev (`BUILD_ID === 'dev'`) it handles push but not fetches, so Vite always serves fresh code.
+- **Service worker:** our own, no Workbox. Pages always come from the cache of the installed version and never wait for the network; a new version arrives as a new service worker. In dev (`BUILD_ID === 'dev'`) it handles push but not fetches, so Vite always serves fresh code.
 - **TypeScript 6**, not 7: vue-tsc still needs the JavaScript-based compiler. Upgrading breaks `npm run typecheck` for `web/` (`ERR_PACKAGE_PATH_NOT_EXPORTED ./lib/tsc`). Dependabot ignores TypeScript, Node and `@types/node` majors; move those deliberately, together.
 - **Tests:** `node:test` for units, Playwright end-to-end in CI for the call chain (login → request → call → close).
 - **Report:** CSV, plus a print-friendly page saved as PDF.
@@ -71,7 +71,10 @@ Where the main pieces live:
 - **Theme:** neutral event theme. Anthracite `#16181D` with yellow accent `#F2C230`, background `#F6F5F1`, font IBM Plex Sans (Plex Mono for numbers).
   - The theme can be configured per event: large logo, square logo used as app icon, and colors.
 - **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and icon (`web/src/icons.ts`: flag, drop, stamp, cone, ehbo, more); a custom type without an icon shows its letter.
-- **Colored header blocks** (call, sent, en route, EHBO screen, no signal): always 140 px tall, text top-aligned, title 26 px.
+- **Colored header blocks** (call, sent, en route, EHBO screen, no signal): always 104 px tall, text top-aligned, title 26 px, no subtext.
+- **EHBO status colors** are fixed, never the event's primary color: dark (`--off`) is not here, red is here but not available (also during a call), green is here and available.
+- **Dialogs:** never the browser's `confirm()`; use `confirmDialog`/`messageDialog` (`composables/useDialog.ts`, shown by `components/AppDialog.vue`).
+- **Offline pill** (`components/OfflinePill.vue`): on every screen, on the edge of the tab bar (bottom left without one), with the number of changes waiting. Online shows nothing.
 - **No page titles on tab screens** (map, requests, contacts, menu): the tab bar already says where you are. Screens reached from a tab (post detail, admin) keep their header.
 - **Buttons:**
   - Primary: 56 px tall, 16 px bold.
@@ -80,7 +83,7 @@ Where the main pieces live:
   - Icon button: 44 × 44.
   - Two buttons side by side are always the same height.
 - **112** is only shown where it matters: the EHBO screens (request, follow-up, EHBO screen, call, no signal), Overzicht › Contacten. Where it is shown it sits at the bottom, in the same place. The participant screen has "Bel EHBO" instead: a floating red button with a cross and that text, anchored bottom right and growing to the left (says "Bel 112" and calls 112 when no number is set). The app never replaces 112.
-- **Start screen:** without a session the app opens with a short intro (`components/IntroSplash.vue`: fixed pink and yellow shapes, apart from the event theme; all runs drawn alike as one course; logo, event name, date and place centered; about 5.5 s, tap to skip), then the participant page (`/`), with "Aanmelden" at the top right. There is no staff/participant choice screen. The tab bar is hidden during login (Herkend, Toestemmingen) until "Klaar, naar mijn startscherm".
+- **Start screen:** without a session the app opens with a short intro (`components/IntroSplash.vue`: fixed pink and yellow shapes, apart from the event theme; all runs drawn alike as one course; logo, event name, date and place centered; about 5.5 s, any touch or key ends it), then the participant page (`/`), with "Aanmelden" at the top right. There is no staff/participant choice screen. The tab bar is hidden during login (Herkend, Toestemmingen) until "Klaar, naar mijn startscherm".
 - **Save only when needed:** a form shows its save button only after a change (`composables/useDirty.ts`: snapshot on load and after saving). A new item (post, unit, run) can always be saved. A new EHBO request can always be sent; adding details only after a change.
 - The request tiles on the post home screen are deliberately large; this is the one exception to the button sizes.
 - **"Post sluiten"** is a small, subtle red button at the top right, so it can't be confused with closing the screen.
@@ -107,7 +110,8 @@ Where the main pieces live:
   - Mobile unit: last GPS fix (shared every minute while on duty), otherwise its standplaats post.
 - **AED rule:** when the person is not responsive, the call goes to the nearest free unit and the nearest free AED unit at once.
 - **Statuses:** reported → sent → accepted → on site (one tap) → closed, or withdrawn. Every step is timestamped.
-- **No signal:** maps, contacts, calling and navigating all work offline. The help button falls back to calling the nearest EHBO unit and the coordinator directly.
+- **No signal:** maps, contacts, calling and navigating all work offline. The help button goes straight to calling the nearest EHBO unit and the coordinator (with bad signal after 4 s), while the request keeps being sent.
+- **Changes never wait for the network:** every action in `stores/live.ts` is applied to the phone's own state at once (`applyAction` in `shared/src/action.ts`, the same result as the server; change both together) and queued in order in `ehbo.queue`, surviving a restart. `state` is the server's state with the queue on top. The server runs each `X-Action-Id` once (`calls.once`, table `client_actions`) and logs `X-Action-At`, the time on the phone. A refusal shows a dialog. A request made offline has a negative id until the real one arrives (`requestIds`).
 - **Back and forward** (`web/src/navigation.ts`): swiping is off. Every navigation replaces the current history entry, so the phone never has a previous or next page to swipe to or preview (a cancelled or redirected gesture always flashes the wrong page). On Android the device back button therefore closes the app. The in-app back arrow (`router.back()`) goes one step up via `upOf`: post detail → map, admin page → its parent, a tab → the start screen.
 - **Home or away:** a mobile unit within 50 m of its standplaats is home (`isAway`/`awayPostIds` in `shared/src/incident.ts`). Away, staff see the ambulance; everyone, participants too, sees the cross at the standplaats grey. Participants poll the public `GET /api/ehbo-status`, which returns only those post ids, never positions.
 - **Privacy:** no casualty names or medical details are stored. Positions are not stored: a mobile unit's last GPS fix lives only in server memory and is shown live to staff on the map (as an ambulance) while it is fresh (3 min).

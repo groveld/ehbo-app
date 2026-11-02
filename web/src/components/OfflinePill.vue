@@ -14,7 +14,7 @@ const waiting = computed(() => live.queue.length + live.outbox.length);
 
 function explain() {
   const staff = session.me
-    ? `Je kunt gewoon doorwerken. ${waiting.value ? `${waiting.value} ${waiting.value === 1 ? 'wijziging wacht' : 'wijzigingen wachten'} op verbinding en ${waiting.value === 1 ? 'gaat' : 'gaan'} vanzelf weg.` : 'Wat je wijzigt, gaat vanzelf weg zodra er weer verbinding is.'} Je ziet de laatst bekende stand. Bellen en de kaart werken gewoon.`
+    ? `Je kunt gewoon doorwerken. ${waiting.value ? `${waiting.value} ${waiting.value === 1 ? 'wijziging wacht' : 'wijzigingen wachten'} op verbinding en ${waiting.value === 1 ? 'wordt' : 'worden'} daarna vanzelf verstuurd.` : 'Wat je wijzigt, wordt vanzelf verstuurd zodra er weer verbinding is.'} Je ziet de laatst bekende stand. Bellen en de kaart werken gewoon.`
     : 'Je ziet de laatst bekende gegevens. Bellen en de kaart werken gewoon.';
   void messageDialog({ title: 'Geen verbinding', text: staff, confirm: 'Begrepen' });
 }

@@ -101,12 +101,12 @@ onBeforeUnmount(() => {
 .example-text { color: var(--muted); }
 /* Points out of the page, at the Safari toolbar under it. */
 .toolbar-hint {
-  position: fixed; left: 0; right: 0; bottom: 4px; display: flex; flex-direction: column; align-items: center;
+  position: fixed; left: 0; right: 0; bottom: 0; padding: 6px 0 4px; background: var(--bg); display: flex; flex-direction: column; align-items: center;
   font-size: 13px; font-weight: 600; color: var(--muted); pointer-events: none;
 }
 .arrow { font-size: 24px; line-height: 1; animation: nudge 1.2s ease-in-out infinite; }
 @keyframes nudge { 50% { transform: translateY(5px); } }
 @media (prefers-reduced-motion: reduce) { .arrow { animation: none; } }
 .test-link { align-self: center; padding: 8px; color: var(--muted); }
-.above-hint { margin-bottom: 44px; }
+.above-hint { margin-bottom: 56px; }
 </style>

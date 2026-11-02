@@ -267,7 +267,7 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   },
   // 13: km points to the metre, so posts close together keep their order. They're shown with one decimal.
   (db) => recomputePassages(db),
-  // Changes from a phone's queue that have been carried out: sending one again after a lost answer does nothing.
+  // 14: changes from a phone's queue that have been carried out: sending one again after a lost answer does nothing.
   `
   CREATE TABLE client_actions (
     id TEXT PRIMARY KEY,
