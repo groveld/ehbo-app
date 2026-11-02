@@ -3,6 +3,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, formatDuration, type Report, type RequestKind } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
+import { confirmDialog } from '../../composables/useDialog.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { clock } from '../../incidents.ts';
 import { useAdminStore } from '../../stores/admin.ts';
@@ -31,11 +32,11 @@ const requests = computed(() => Object.entries(report.value?.totals.requestsByKi
 const OUTCOME_SHORT = { geholpen: 'geholpen', gestopt: 'gestopt', ambulance: 'ambulance', doorverwezen: 'doorverwezen', geweigerd: 'geweigerd', loos: 'loos alarm' } as const;
 
 async function toggleTestMode(on: boolean) {
-  if (on && !confirm('Testmodus aanzetten? Alle oproepen en aanvragen tellen dan als proef en komen niet in het rapport. Zet hem uit voordat het evenement begint.')) return;
+  if (on && !await confirmDialog({ title: 'Testmodus aanzetten?', text: 'Alle oproepen en aanvragen tellen dan als proef en komen niet in het rapport. Zet hem uit voordat het evenement begint.', confirm: 'Testmodus aanzetten' })) return;
   await testing.run(() => admin.setTestMode(on));
 }
 async function deleteTestData() {
-  if (!report.value || !confirm(`${report.value.testItems} proefoproepen en -aanvragen wissen? Dit kan niet ongedaan worden.`)) return;
+  if (!report.value || !await confirmDialog({ title: `${report.value.testItems} proefoproepen en -aanvragen wissen?`, text: 'Dit kan niet ongedaan worden.', confirm: 'Wissen', tone: 'danger' })) return;
   if (await testing.run(() => admin.deleteTestData())) await load();
 }
 </script>

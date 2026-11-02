@@ -6,6 +6,7 @@ import { useLiveStore } from './stores/live.ts';
 import { usePackageStore } from './stores/package.ts';
 import { usePushStore } from './stores/push.ts';
 import { useSessionStore } from './stores/session.ts';
+import AppDialog from './components/AppDialog.vue';
 import IntroSplash from './components/IntroSplash.vue';
 import TabBar from './components/TabBar.vue';
 import { applyTheme } from './theme.ts';
@@ -72,6 +73,7 @@ onMounted(() => {
   <div :class="{ 'with-tabs': tabs }"><RouterView /></div>
   <TabBar v-if="tabs" />
   <IntroSplash v-if="intro" @done="intro = false" />
+  <AppDialog />
 </template>
 
 <style scoped>

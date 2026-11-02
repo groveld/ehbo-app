@@ -9,6 +9,7 @@ import Icon from '../../components/Icon.vue';
 import KmPoints from '../../components/KmPoints.vue';
 import { useGpsFix } from '../../composables/useGpsFix.ts';
 import { useDirty } from '../../composables/useDirty.ts';
+import { confirmDialog } from '../../composables/useDialog.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 import { usePackageStore } from '../../stores/package.ts';
@@ -89,7 +90,7 @@ async function submit() {
 }
 
 async function remove() {
-  if (!confirm(`${form.name} verwijderen? De contactpersonen kunnen zich dan niet meer via deze post aanmelden.`)) return;
+  if (!await confirmDialog({ title: `${form.name} verwijderen?`, text: 'De contactpersonen kunnen zich dan niet meer via deze post aanmelden.', confirm: 'Verwijderen', tone: 'danger' })) return;
   if (await save.run(() => admin.deletePost(Number(props.id)))) router.push({ name: 'beheer-posten' });
 }
 </script>

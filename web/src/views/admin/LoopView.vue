@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import type { RunData } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import { useDirty } from '../../composables/useDirty.ts';
+import { confirmDialog } from '../../composables/useDialog.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 
@@ -42,7 +43,7 @@ async function submit() {
 }
 
 async function remove() {
-  if (!confirm(`${form.name} verwijderen, met het parcours?`)) return;
+  if (!await confirmDialog({ title: `${form.name} verwijderen?`, text: 'Het parcours gaat ook weg.', confirm: 'Verwijderen', tone: 'danger' })) return;
   if (await save.run(() => admin.deleteRun(Number(props.id)))) router.push({ name: 'beheer-evenement' });
 }
 

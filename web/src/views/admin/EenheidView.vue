@@ -6,6 +6,7 @@ import { formatPhone, type UnitData, type UnitMobility } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 import { useDirty } from '../../composables/useDirty.ts';
+import { confirmDialog } from '../../composables/useDialog.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 
@@ -62,7 +63,7 @@ async function submit() {
 }
 
 async function remove() {
-  if (!confirm(`${form.name} verwijderen? De leden krijgen dan geen oproepen meer.`)) return;
+  if (!await confirmDialog({ title: `${form.name} verwijderen?`, text: 'De leden krijgen dan geen oproepen meer.', confirm: 'Verwijderen', tone: 'danger' })) return;
   if (await save.run(() => admin.deleteUnit(Number(props.id)))) router.push({ name: 'beheer-eenheden' });
 }
 </script>

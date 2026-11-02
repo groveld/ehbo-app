@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import { formatPhone } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
+import { confirmDialog } from '../../composables/useDialog.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { useAdminStore } from '../../stores/admin.ts';
 import { useSessionStore } from '../../stores/session.ts';
@@ -18,7 +19,7 @@ async function add() {
   if (await save.run(() => admin.addAdmin({ phone: newAdmin.value }))) newAdmin.value = '';
 }
 async function remove(phone: string, name: string) {
-  if (confirm(`${name || formatPhone(phone)} is dan geen beheerder meer. Doorgaan?`)) await save.run(() => admin.removeAdmin(phone));
+  if (await confirmDialog({ title: 'Beheerder verwijderen?', text: `${name || formatPhone(phone)} is dan geen beheerder meer.`, confirm: 'Verwijderen', tone: 'danger' })) await save.run(() => admin.removeAdmin(phone));
 }
 function done() {
   editing.value = false;
