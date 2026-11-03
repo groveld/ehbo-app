@@ -100,7 +100,7 @@ export function reportCsv(report: Report) {
     return /[;"\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
   };
   const STATUS = { verstuurd: 'open', geaccepteerd: 'onderweg', ter_plaatse: 'ter plaatse', afgerond: 'afgerond', ingetrokken: 'ingetrokken' } as const;
-  const header = ['Nr', 'Post', 'Km', 'Melding', 'Personen', 'AED', 'Status', 'Gemeld', 'Geaccepteerd', 'Ter plaatse', 'Afgerond',
+  const header = ['Nr', 'Locatie', 'Km', 'Melding', 'Personen', 'AED', 'Status', 'Gemeld', 'Geaccepteerd', 'Ter plaatse', 'Afgerond',
     'Reactietijd (m:ss)', 'Aanrijtijd (m:ss)', 'Eenheid', 'Naar alle eenheden', 'Zelf gestart', 'Afloop', 'Notitie'];
   const rows = report.incidents.map((i) => [
     i.number, i.postName, i.km === null ? null : formatKm(i.km), i.what ? INCIDENT_WHAT[i.what] : null, i.persons,
@@ -110,7 +110,7 @@ export function reportCsv(report: Report) {
   const requests = Object.entries(report.totals.requestsByKind).map(([kind, n]) => [`Aanvragen ${REQUEST_KINDS[kind as RequestKind].label.toLowerCase()}`, n]);
   const lines = [header, ...rows, [], ['Totaal'], ['Incidenten', report.totals.incidents], ['Ingetrokken', report.totals.withdrawn],
     ['Naar alle eenheden', report.totals.escalated], ...requests,
-    [], ['Km-punten per post'], ['Post', 'Loop', 'Km-punten'],
+    [], ['Km-punten per locatie'], ['Post', 'Loop', 'Km-punten'],
     ...report.passages.flatMap((p) => p.runs.map((r) => [p.postName, r.runName, formatKmList(r.km)])),
   ];
   return `﻿${lines.map((line) => line.map(cell).join(';')).join('\r\n')}\r\n`;

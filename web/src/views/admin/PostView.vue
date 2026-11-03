@@ -102,7 +102,7 @@ async function submit() {
 }
 
 async function remove() {
-  if (!await confirmDialog({ title: `${form.name} verwijderen?`, text: 'De contactpersonen kunnen zich dan niet meer via deze post aanmelden.', confirm: 'Verwijderen', tone: 'danger' })) return;
+  if (!await confirmDialog({ title: `${form.name} verwijderen?`, text: 'De contactpersonen kunnen zich dan niet meer via deze locatie aanmelden.', confirm: 'Verwijderen', tone: 'danger' })) return;
   if (await save.run(() => admin.deletePost(Number(props.id)))) router.push({ name: 'beheer-posten' });
 }
 </script>
@@ -129,7 +129,7 @@ async function remove() {
         </div>
 
         <div class="form-field">
-          <span class="section-label">Locatie</span>
+          <span class="section-label">Positie</span>
           <button class="btn primary gps" :disabled="gps.measuring.value" @click="captureGps">
             <Icon name="gps" :size="20" />
             {{ gps.measuring.value ? `Meten…${gps.best.value ? ` ± ${gps.best.value.accuracyM} m` : ''}` : 'Huidige GPS-positie vastleggen' }}
@@ -138,7 +138,7 @@ async function remove() {
             <span class="mono">{{ form.lat.toFixed(5) }}, {{ form.lng?.toFixed(5) }}</span>
             <span v-if="form.accuracyM !== null" class="tag" :class="form.accuracyM <= 15 ? 'ok' : 'warn'">± {{ form.accuracyM }} m</span>
           </div>
-          <span v-else class="small">Nog geen locatie. Leg hem vast als je bij de post staat.</span>
+          <span v-else class="small">Nog geen positie. Leg die vast als je op de locatie staat.</span>
           <p v-if="gps.error.value" class="error-text" role="alert">{{ gps.error.value }}</p>
           <div class="alternatives">
             <button v-if="pkg.pkg" class="add-link" :aria-expanded="picking" @click="picking = !picking">Of: punt op de kaart prikken</button>
@@ -151,7 +151,7 @@ async function remove() {
               @pick="([lng, lat]) => Object.assign(form, { lat, lng, accuracyM: null })"
             />
           </div>
-          <span v-if="picking" class="small">Tik op de plek van de post. Zoom in voor een precieze plek.</span>
+          <span v-if="picking" class="small">Tik op de plek van de locatie. Zoom in voor een precieze plek.</span>
           <div v-if="showCoords" class="paste">
             <input v-model="coordsText" class="input" inputmode="decimal" aria-label="Coördinaten" placeholder="53.14066, 5.81012">
             <button class="btn apply" @click="applyCoords">Gebruiken</button>
@@ -200,7 +200,7 @@ async function remove() {
               <input v-model="c.phone" class="input" type="tel" inputmode="tel" aria-label="Telefoon contactpersoon" placeholder="+31 6 …">
             </div>
             <div class="contact-role">
-              <select v-model="c.role" class="input" aria-label="Rol bij de post">
+              <select v-model="c.role" class="input" aria-label="Rol op de locatie">
                 <option v-for="r in ROLES" :key="r.value" :value="r.value" :disabled="r.value === 'verantwoordelijke' && leadTaken(i)">{{ r.label }}</option>
               </select>
               <button class="icon-btn" aria-label="Contactpersoon verwijderen" @click="form.contacts.splice(i, 1)"><Icon name="trash" :size="20" /></button>
@@ -214,8 +214,8 @@ async function remove() {
 
     <template #footer>
       <p v-if="save.error.value" class="error-text" role="alert">{{ save.error.value }}</p>
-      <button v-if="canSave" class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !post)" @click="submit">Post opslaan</button>
-      <button v-if="!isNew && post" class="btn link danger-link" @click="remove">Post verwijderen</button>
+      <button v-if="canSave" class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !post)" @click="submit">Locatie opslaan</button>
+      <button v-if="!isNew && post" class="btn link danger-link" @click="remove">Locatie verwijderen</button>
     </template>
   </AdminPage>
 </template>

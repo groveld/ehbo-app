@@ -38,7 +38,7 @@ async function act(action: 'open-all' | 'close-all' | 'close-day') {
 async function openAll() {
   const { posts, openPosts, units, onDuty } = counts.value;
   if (await confirmDialog({
-    title: `${posts - openPosts} posten en ${units - onDuty} EHBO-eenheden openen?`,
+    title: `${posts - openPosts} locaties en ${units - onDuty} EHBO-eenheden openen?`,
     text: 'Alleen waar iemand is aangemeld. Eenheden gaan op Beschikbaar, ook als de EHBO\'er er misschien nog niet is. Wie Niet beschikbaar staat, blijft zo staan. Iedereen krijgt een melding.',
     confirm: 'Alles openen',
   })) await act('open-all');
@@ -47,7 +47,7 @@ async function openAll() {
 async function closeAll() {
   const { openPosts, onDuty } = counts.value;
   if (await confirmDialog({
-    title: `${openPosts} posten en ${onDuty} EHBO-eenheden sluiten?`,
+    title: `${openPosts} locaties en ${onDuty} EHBO-eenheden sluiten?`,
     text: 'Bijvoorbeeld voor een lange pauze in het programma. Wat met een oproep bezig is, blijft open.',
     reassure: 'Je kunt daarna alles weer openen.',
     confirm: 'Alles sluiten',
@@ -58,7 +58,7 @@ async function closeAll() {
 async function closeDay() {
   if (await confirmDialog({
     title: 'Dag sluiten?',
-    text: 'Alle posten gaan dicht, alle eenheden uit dienst en open aanvragen worden afgehandeld. Iedereen krijgt een melding.',
+    text: 'Alle locaties gaan dicht, alle eenheden uit dienst en open aanvragen worden afgehandeld. Iedereen krijgt een melding.',
     reassure: 'Iedereen blijft aangemeld, en je kunt morgen alles weer openen.',
     confirm: 'Dag sluiten',
     tone: 'danger',
@@ -78,7 +78,7 @@ async function closeDay() {
       <div class="fact"><span class="value mono">{{ counts.onDuty }}/{{ counts.units }}</span><span class="label">EHBO in dienst</span></div>
     </div>
 
-    <p class="note top">Na de geplande eindtijd sluiten posten en eenheden vanzelf, 10 minuten na een waarschuwing. Nooit tijdens een open melding. Meldt de laatste van een post of eenheid zich af, dan gaat die ook dicht.</p>
+    <p class="note top">Na de geplande eindtijd sluiten locaties en eenheden vanzelf, 10 minuten na een waarschuwing. Nooit tijdens een open melding. Meldt de laatste van een locatie of eenheid zich af, dan gaat die ook dicht.</p>
     <p v-if="live.offline" class="note warn top">Dit kan alleen met verbinding.</p>
     <p v-if="error" class="error-text top" role="alert">{{ error }}</p>
 

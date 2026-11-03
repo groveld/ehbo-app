@@ -76,7 +76,7 @@ function sheets(state: AdminState): Sheet[] {
         { key: 'name', header: 'Naam', width: 20, required: true },
         { key: 'kind', header: 'Soort', width: 10, list: ['vast', 'mobiel'], required: true },
         { key: 'mobility', header: 'Vervoer', width: 12, list: Object.keys(MOBILITY) },
-        { key: 'post', header: 'Post of standplaats', width: 28, list: posts },
+        { key: 'post', header: 'Locatie of standplaats', width: 28, list: posts },
         { key: 'aed', header: 'AED', width: 7, list: YES_NO },
         { key: 'timeFrom', header: 'Dienst vanaf', width: 13, text: true },
         { key: 'timeTo', header: 'Tot', width: 9, text: true },

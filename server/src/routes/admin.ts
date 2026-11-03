@@ -346,19 +346,19 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
     return admin.getState();
   });
   app.put<{ Params: { id: number }; Body: PostData; Reply: AdminState }>('/api/admin/posts/:id', { schema: { params: idParams, body: postSchema } }, async (request) => {
-    if (admin.savePost(request.params.id, checkPost(request.body)) === null) throw notFound('Post niet gevonden');
+    if (admin.savePost(request.params.id, checkPost(request.body)) === null) throw notFound('Locatie niet gevonden');
     return admin.getState();
   });
   app.delete<{ Params: { id: number }; Reply: AdminState }>('/api/admin/posts/:id', { schema: { params: idParams } }, async (request) => {
-    if (admin.postHasHistory(request.params.id)) throw conflict('Deze post heeft oproepen of aanvragen en kan daarom niet weg. Zet hem dicht, of wis eerst de proefgegevens in het rapport.');
-    if (!admin.deletePost(request.params.id)) throw notFound('Post niet gevonden');
+    if (admin.postHasHistory(request.params.id)) throw conflict('Deze locatie heeft oproepen of aanvragen en kan daarom niet weg. Zet haar dicht, of wis eerst de proefgegevens in het rapport.');
+    if (!admin.deletePost(request.params.id)) throw notFound('Locatie niet gevonden');
     return admin.getState();
   });
 
   // EHBO-eenheden
   const checkUnit = (body: UnitData): UnitData => {
     if (body.kind === 'vast' && body.postId === null) throw badRequest('Kies de EHBO-post van deze vaste eenheid');
-    if (body.postId !== null && !admin.postExists(body.postId)) throw badRequest('Onbekende post');
+    if (body.postId !== null && !admin.postExists(body.postId)) throw badRequest('Onbekende locatie');
     return { ...body, members: body.members.map((m) => ({ name: m.name.trim(), phone: phoneOf(m.phone, m.name) })) };
   };
   app.post<{ Body: UnitData; Reply: AdminState }>('/api/admin/units', { schema: { body: unitSchema } }, async (request) => {

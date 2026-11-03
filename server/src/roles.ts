@@ -34,7 +34,7 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
       role: r.role,
     });
   }
-  if (isAdmin) assignments.push({ kind: 'beheerder', title: 'Beheerder', detail: 'Evenement, posten en mensen beheren', letter: 'B', color: '#3E434B' });
+  if (isAdmin) assignments.push({ kind: 'beheerder', title: 'Beheerder', detail: 'Evenement, locaties en mensen beheren', letter: 'B', color: '#3E434B' });
 
   if (assignments.length === 0) return undefined;
 

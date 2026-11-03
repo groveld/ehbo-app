@@ -37,7 +37,7 @@ export interface MapSource {
 
 /** Gebied rond alle punten, met een marge in km aan elke kant. */
 export function areaBbox(points: LngLat[], paddingKm = PADDING_KM): Bbox {
-  if (!points.length) throw new Error('Geen parcours of posten met een locatie; voeg eerst een GPX-bestand of een post met GPS toe');
+  if (!points.length) throw new Error('Geen parcours of locaties met een positie; voeg eerst een GPX-bestand of een locatie met GPS toe');
   let [west, south, east, north] = [180, 90, -180, -90];
   for (const [lng, lat] of points) {
     west = Math.min(west, lng);
@@ -119,7 +119,7 @@ export function eventPoints(db: EventDb): LngLat[] {
 export async function prepareMap(db: EventDb, source: MapSource, progress: (done: number, total: number) => void = () => {}): Promise<MapMeta> {
   const bbox = areaBbox(eventPoints(db));
   const coords = tilesForBbox(bbox);
-  if (coords.length > MAX_TILES) throw new Error(`Het gebied is te groot (${coords.length} tegels). Controleer of alle posten en GPX-bestanden in de buurt liggen.`);
+  if (coords.length > MAX_TILES) throw new Error(`Het gebied is te groot (${coords.length} tegels). Controleer of alle locaties en GPX-bestanden in de buurt liggen.`);
   const assets = assetPaths();
   const total = coords.length + assets.length;
   let done = 0;

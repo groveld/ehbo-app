@@ -39,7 +39,7 @@ async function submit() {
       <div class="stack gap-6 intro">
         <span class="eyebrow">Medewerker / vrijwilliger</span>
         <h1 class="title">Aanmelden</h1>
-        <p class="lead">Vul het telefoonnummer in waarmee je bij de organisatie bekend bent. De app zoekt dan zelf je functie en post op.</p>
+        <p class="lead">Vul het telefoonnummer in waarmee je bij de organisatie bekend bent. De app zoekt dan zelf je functie en locatie op.</p>
       </div>
     </div>
 

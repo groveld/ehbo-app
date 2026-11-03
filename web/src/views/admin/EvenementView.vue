@@ -146,12 +146,12 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
       </div>
 
       <div class="card escalation at-post">
-        <span class="grow"><strong>Op de post binnen:</strong></span>
+        <span class="grow"><strong>Op de locatie binnen:</strong></span>
         <button class="step" aria-label="Kleiner" @click="stepAtPost(-AT_POST_STEP_M)">−</button>
         <span class="mono seconds">{{ form.atPostM }} m</span>
         <button class="step" aria-label="Groter" @click="stepAtPost(AT_POST_STEP_M)">+</button>
       </div>
-      <p class="small">Zo dichtbij telt een plek als de post zelf: een mobiele EHBO-eenheid is thuis bij haar standplaats, en een incident of hulpvraag daar hoort bij die post. GPS op een telefoon wijkt vaak 10–30 m af; te klein, en een eenheid die stilstaat springt heen en weer tussen thuis en onderweg.</p>
+      <p class="small">Zo dichtbij telt een plek als de locatie zelf: een mobiele EHBO-eenheid is thuis bij haar standplaats, en een incident of hulpvraag daar hoort bij die locatie. GPS op een telefoon wijkt vaak 10–30 m af; te klein, en een eenheid die stilstaat springt heen en weer tussen thuis en onderweg.</p>
     </template>
 
     <!-- Opslaan alleen als er iets gewijzigd is. -->

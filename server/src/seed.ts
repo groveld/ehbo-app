@@ -5,7 +5,7 @@ import { openEventDb } from './event-db.ts';
 
 const db = openEventDb(config.dataDir, config.event, { name: 'Silvesterloop 2026' });
 if (db.raw.prepare('SELECT 1 FROM posts').get()) {
-  console.log(`${config.event} heeft al posten; er is niets toegevoegd. Verwijder data/events/${config.event}.sqlite om opnieuw te beginnen.`);
+  console.log(`${config.event} heeft al locaties; er is niets toegevoegd. Verwijder data/events/${config.event}.sqlite om opnieuw te beginnen.`);
 } else {
   seedDemo(db);
   console.log(`Testgegevens toegevoegd aan ${config.event}. Aanmelden kan met:`);

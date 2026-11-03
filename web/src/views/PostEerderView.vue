@@ -46,7 +46,7 @@ const history = computed(() => [
         <Icon name="forward" :size="16" />
       </RouterLink>
     </div>
-    <p v-else class="note">Nog niets. Wat deze post vraagt en afgerond is, staat hier.</p>
+    <p v-else class="note">Nog niets. Wat deze locatie vraagt en afgerond is, staat hier.</p>
   </main>
 </template>
 

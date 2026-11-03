@@ -157,7 +157,7 @@ async function onSite() {
       <div class="stack gap-10 bottom">
         <button class="btn go" :disabled="busy" @click="accept"><Icon name="navigate" :size="20" />{{ mode === 'all' ? 'Ik ga · accepteren' : 'Accepteren & navigeren' }}</button>
         <div class="btn-pair">
-          <a v-if="contact" :href="telHref(contact.phone)" class="btn">Bel de post</a>
+          <a v-if="contact" :href="telHref(contact.phone)" class="btn">Bel locatie</a>
           <button class="btn" :disabled="busy" @click="decline">Kan niet</button>
         </div>
       </div>
@@ -179,7 +179,7 @@ async function onSite() {
       </div>
       <!-- The same pair as on the post details: call on the left, navigate on the right. -->
       <div class="actions gap-top">
-        <a v-if="contact" :href="telHref(contact.phone)" class="btn big"><Icon name="phone" :size="20" />Bel post</a>
+        <a v-if="contact" :href="telHref(contact.phone)" class="btn big"><Icon name="phone" :size="20" />Bel locatie</a>
         <a v-if="navUrl" :href="navUrl" class="btn primary"><Icon name="navigate" :size="20" />Navigeer</a>
       </div>
       <!-- Everything the post entered, also on site. -->

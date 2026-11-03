@@ -54,7 +54,7 @@ test('kaartgebied: alle punten met 2 km marge', () => {
   assert.ok(Math.abs((53.14 - south) * 111.32 - 2) < 0.01, 'zuid 2 km');
   assert.ok(Math.abs((north - 53.16) * 111.32 - 2) < 0.01, 'noord 2 km');
   assert.ok(west < 5.80 - 0.029 && east > 5.84 + 0.029, 'oost en west ± 2 km (breder op deze breedte)');
-  assert.throws(() => areaBbox([]), /Geen parcours of posten/);
+  assert.throws(() => areaBbox([]), /Geen parcours of locaties/);
 });
 
 test('tegels per zoom: één wereldtegel op zoom 0, het gebied op zoom 15', () => {
