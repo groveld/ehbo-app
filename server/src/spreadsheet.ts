@@ -18,6 +18,7 @@ import {
   type PostContactRole,
   type PostData,
   type UnitData,
+  type UnitKind,
   type UnitMobility,
 } from '@ehbo/shared';
 import type { AdminDb } from './admin-db.ts';
@@ -27,8 +28,12 @@ export const SHEET_KEYS = ['locaties', 'contactpersonen', 'eenheden', 'leden', '
 export type SheetKey = (typeof SHEET_KEYS)[number];
 
 const FUNCTIONS = 4;
-const ROLES: PostContactRole[] = ['verantwoordelijke', 'lid', 'reserve'];
-const MOBILITY: Record<string, UnitMobility> = { 'te voet': 'te_voet', fiets: 'fiets', auto: 'auto', anders: 'anders' };
+/** As written in the sheet, and the value it stands for. */
+const ROLES: Record<string, PostContactRole> = { verantwoordelijke: 'lead', lid: 'member', reserve: 'reserve' };
+const ROLE_TEXT = Object.fromEntries(Object.entries(ROLES).map(([text, value]) => [value, text])) as Record<PostContactRole, string>;
+const KINDS: Record<string, UnitKind> = { vast: 'fixed', mobiel: 'mobile' };
+const KIND_TEXT: Record<UnitKind, string> = { fixed: 'vast', mobile: 'mobiel' };
+const MOBILITY: Record<string, UnitMobility> = { 'te voet': 'on_foot', fiets: 'bike', auto: 'car', anders: 'other' };
 const MOBILITY_TEXT = Object.fromEntries(Object.entries(MOBILITY).map(([text, value]) => [value, text])) as Record<UnitMobility, string>;
 const YES_NO = ['ja', 'nee'];
 
@@ -64,7 +69,7 @@ function sheets(state: AdminState): Sheet[] {
         { key: 'post', header: 'Locatie', width: 28, list: posts, required: true },
         { key: 'name', header: 'Naam', width: 24 },
         { key: 'phone', header: 'Telefoon', width: 16, text: true, required: true },
-        { key: 'role', header: 'Rol', width: 18, list: ROLES },
+        { key: 'role', header: 'Rol', width: 18, list: Object.keys(ROLES) },
         { key: 'timeFrom', header: 'Vanaf', width: 9, text: true },
         { key: 'timeTo', header: 'Tot', width: 9, text: true },
       ],
@@ -74,7 +79,7 @@ function sheets(state: AdminState): Sheet[] {
       note: 'Vast: de EHBO-post waar de eenheid staat. Mobiel: het vervoer, en eventueel een standplaats.',
       columns: [
         { key: 'name', header: 'Naam', width: 20, required: true },
-        { key: 'kind', header: 'Soort', width: 10, list: ['vast', 'mobiel'], required: true },
+        { key: 'kind', header: 'Soort', width: 10, list: Object.keys(KINDS), required: true },
         { key: 'mobility', header: 'Vervoer', width: 12, list: Object.keys(MOBILITY) },
         { key: 'post', header: 'Locatie of standplaats', width: 28, list: posts },
         { key: 'aed', header: 'AED', width: 7, list: YES_NO },
@@ -122,8 +127,8 @@ function exportRows(state: AdminState): Record<SheetKey, (string | number | null
   return {
     locaties: state.posts.map((p) => [p.name, ...Array.from({ length: FUNCTIONS }, (_, i) => (p.functionIds[i] !== undefined ? typeName(p.functionIds[i]!) : null)),
       p.lat, p.lng, p.address, p.accessRoute, p.timeFrom, p.timeTo, p.runId === null ? null : state.runs.find((r) => r.id === p.runId)?.name ?? null]),
-    contactpersonen: state.posts.flatMap((p) => p.contacts.map((c) => [p.name, c.name, phoneText(c.phone), c.role, c.timeFrom, c.timeTo])),
-    eenheden: state.units.map((u) => [u.name, u.kind, u.mobility ? MOBILITY_TEXT[u.mobility] : null, postName(u.postId), u.hasAed ? 'ja' : 'nee', u.timeFrom, u.timeTo]),
+    contactpersonen: state.posts.flatMap((p) => p.contacts.map((c) => [p.name, c.name, phoneText(c.phone), ROLE_TEXT[c.role], c.timeFrom, c.timeTo])),
+    eenheden: state.units.map((u) => [u.name, KIND_TEXT[u.kind], u.mobility ? MOBILITY_TEXT[u.mobility] : null, postName(u.postId), u.hasAed ? 'ja' : 'nee', u.timeFrom, u.timeTo]),
     leden: state.units.flatMap((u) => u.members.map((m) => [u.name, m.name, phoneText(m.phone)])),
     kernteam: state.coreTeam.map((c) => [c.function, c.name, phoneText(c.phone), c.isCoordinator ? 'ja' : 'nee']),
     noodnummers: state.emergencyNumbers.map((n) => [n.label, n.number]),
@@ -324,13 +329,13 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
       const phone = phoneOf(values.phone!);
       if (!phone) problem('contactpersonen', row, `Ongeldig telefoonnummer bij ${values.name || 'deze persoon'}: ${values.phone}`);
       const roleText = norm(values.role || 'lid');
-      const role = ROLES.find((r) => r === roleText || norm(POST_CONTACT_ROLE_LABEL[r]) === roleText);
+      const role = ROLES[roleText] ?? (Object.values(ROLES).find((r) => r === roleText || norm(POST_CONTACT_ROLE_LABEL[r]) === roleText));
       if (!role) problem('contactpersonen', row, `Onbekende rol: ${values.role}. Kies verantwoordelijke, lid of reserve`);
       const [timeFrom, timeTo] = [timeOf(values.timeFrom!), timeOf(values.timeTo!)];
       if (timeFrom === undefined || timeTo === undefined) problem('contactpersonen', row, 'Tijden als uu:mm, bijvoorbeeld 09:30');
       if (!phone || !role) continue;
       const list = byPost.get(postKey(values.post!)) ?? [];
-      if (role === 'verantwoordelijke' && list.some((c) => c.role === 'verantwoordelijke')) problem('contactpersonen', row, `${plan.name}: kies één locatieverantwoordelijke`);
+      if (role === 'lead' && list.some((c) => c.role === 'lead')) problem('contactpersonen', row, `${plan.name}: kies één locatieverantwoordelijke`);
       list.push({ name: values.name ?? '', phone, role, timeFrom: timeFrom ?? null, timeTo: timeTo ?? null });
       byPost.set(postKey(values.post!), list);
     }
@@ -392,18 +397,18 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
         problem('eenheden', row, `${values.name} staat er twee keer in`);
         continue;
       }
-      const kind = norm(values.kind!) === 'vast' ? 'vast' : norm(values.kind!) === 'mobiel' ? 'mobiel' : null;
+      const kind = KINDS[norm(values.kind!)] ?? null;
       if (!kind) problem('eenheden', row, `Soort is vast of mobiel, niet ${values.kind}`);
       const mobility = values.mobility ? MOBILITY[norm(values.mobility)] : undefined;
       if (values.mobility && !mobility) problem('eenheden', row, `Onbekend vervoer: ${values.mobility}`);
       const post = values.post ? postAfter(values.post) : null;
       if (values.post && !post) problem('eenheden', row, `Locatie ${values.post} bestaat niet`);
-      if (kind === 'vast' && !values.post) problem('eenheden', row, 'Kies de EHBO-post van deze vaste eenheid');
-      if (kind === 'vast' && post && !post.ehbo) problem('eenheden', row, `${values.post} heeft geen EHBO-functie`);
+      if (kind === 'fixed' && !values.post) problem('eenheden', row, 'Kies de EHBO-post van deze vaste eenheid');
+      if (kind === 'fixed' && post && !post.ehbo) problem('eenheden', row, `${values.post} heeft geen EHBO-functie`);
       const [timeFrom, timeTo] = [timeOf(values.timeFrom!), timeOf(values.timeTo!)];
       if (timeFrom === undefined || timeTo === undefined) problem('eenheden', row, 'Tijden als uu:mm, bijvoorbeeld 09:30');
       plan.data = {
-        name: values.name!.trim(), kind: kind ?? 'mobiel', mobility: kind === 'mobiel' ? mobility ?? 'anders' : null, post: values.post || null,
+        name: values.name!.trim(), kind: kind ?? 'mobile', mobility: kind === 'mobile' ? mobility ?? 'other' : null, post: values.post || null,
         hasAed: yes(values.aed ?? ''), timeFrom: timeFrom ?? null, timeTo: timeTo ?? null,
       };
       unitPlans.set(key, plan);

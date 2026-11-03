@@ -61,7 +61,7 @@ type Row = Record<string, string | number | null>;
 interface Unit {
   id: number;
   name: string;
-  kind: 'vast' | 'mobiel';
+  kind: 'fixed' | 'mobile';
   postId: number | null;
   hasAed: boolean;
   availability: UnitAvailability;
@@ -179,23 +179,23 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** A mobile team's position: the freshest of its members. */
   function unitFix(unit: Unit) {
-    if (unit.kind !== 'mobiel') return undefined;
+    if (unit.kind !== 'mobile') return undefined;
     return unit.members.map((m) => positions.get(m)).filter((f) => f !== undefined).sort((a, b) => b.at - a.at)[0];
   }
 
   /** A team goes off duty: its members stop sharing, unless they're on another mobile team on duty. */
   function forgetPositions(unit: Unit) {
-    const sharing = new Set(units().filter((u) => u.id !== unit.id && u.kind === 'mobiel' && u.availability !== 'uit_dienst').flatMap((u) => u.members));
+    const sharing = new Set(units().filter((u) => u.id !== unit.id && u.kind === 'mobile' && u.availability !== 'off_duty').flatMap((u) => u.members));
     for (const member of unit.members) if (!sharing.has(member)) positions.delete(member);
   }
 
   /** Waar een eenheid nu is: vast = eigen post (of waar ze bleef), mobiel = recente GPS, anders de standplaats. */
   function unitPosition(unit: Unit, postMap: Map<number, Post>): [number, number] | null {
-    if (unit.kind === 'mobiel') {
+    if (unit.kind === 'mobile') {
       const fix = unitFix(unit);
       if (fix && now().getTime() - fix.at <= POSITION_MAX_AGE_MS) return [fix.lng, fix.lat];
     }
-    const post = postMap.get((unit.kind === 'vast' ? unit.stayPostId : null) ?? unit.postId ?? -1);
+    const post = postMap.get((unit.kind === 'fixed' ? unit.stayPostId : null) ?? unit.postId ?? -1);
     return post?.lat != null && post.lng != null ? [post.lng, post.lat] : null;
   }
 
@@ -204,7 +204,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const busy = busyUnits();
     const postMap = posts();
     return units()
-      .filter((u) => u.availability === 'vrij' && !busy.has(u.id))
+      .filter((u) => u.availability === 'available' && !busy.has(u.id))
       .map((unit) => {
         const position = unitPosition(unit, postMap);
         const km = position && post.lat != null && post.lng != null ? Math.round(distanceKm(position, [post.lng, post.lat]) * 10) / 10 : null;
@@ -544,7 +544,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       unit.id, me.phone, at, at, db.testMode() ? 1 : 0, offPost ? place.name : null, offPost ? position![1] : null, offPost ? position![0] : null).lastInsertRowid);
       addDispatch(incidentId, unit.id, 'handmatig', 0);
       run('UPDATE incident_dispatches SET accepted_at = ? WHERE incident_id = ? AND unit_id = ?', at, incidentId, unit.id);
-      run("UPDATE ehbo_units SET availability = 'vrij', stay_post_id = NULL WHERE id = ?", unit.id);
+      run("UPDATE ehbo_units SET availability = 'available', stay_post_id = NULL WHERE id = ?", unit.id);
       log(incidentId, 'gemeld', `Zelf gestart door ${unit.name} · ${offPost ? place.name : post.name}`, unit.id);
       return incidentId;
     });
@@ -633,7 +633,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       addDispatch(id, unit.id, manual ? 'handmatig' : 'alle', km);
       run('UPDATE incident_dispatches SET accepted_at = ?, declined_at = NULL WHERE incident_id = ? AND unit_id = ?', at, id, unit.id);
       // Wie aanneemt, is in dienst; een vaste eenheid gaat na afloop terug naar haar eigen post.
-      run("UPDATE ehbo_units SET availability = 'vrij', stay_post_id = NULL WHERE id = ?", unit.id);
+      run("UPDATE ehbo_units SET availability = 'available', stay_post_id = NULL WHERE id = ?", unit.id);
       if (row.status === 'verstuurd') {
         run("UPDATE incidents SET status = 'geaccepteerd', unit_id = ?, accepted_by = ?, accepted_at = ?, escalates_at = NULL WHERE id = ?",
           unit.id, manual ? null : by.phone, at, id);
@@ -712,10 +712,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       run(`UPDATE incidents SET status = 'afgerond', closed_at = ?, outcome = ?, outcome_persons = ?, outcome_note = ?, on_site_at = COALESCE(on_site_at, ?)
            WHERE id = ?`, stamp(), body.outcome, body.persons, body.note?.trim() || null, stamp(), id);
       // Alleen een vaste eenheid "blijft hier"; een mobiele eenheid geeft haar positie zelf door.
-      const stay = body.stayHere && unit.kind === 'vast' && row.post_id !== unit.postId ? (row.post_id as number) : null;
+      const stay = body.stayHere && unit.kind === 'fixed' && row.post_id !== unit.postId ? (row.post_id as number) : null;
       run('UPDATE ehbo_units SET stay_post_id = ? WHERE id = ?', stay, unitId);
       // In dezelfde stap op pauze, zodat er tussendoor geen oproep binnenkomt.
-      if (body.pause) run("UPDATE ehbo_units SET availability = 'pauze' WHERE id = ?", unitId);
+      if (body.pause) run("UPDATE ehbo_units SET availability = 'unavailable' WHERE id = ?", unitId);
       log(id, 'afgerond', `Afgerond door ${unit.name}${body.pause ? ', daarna pauze' : ''}`, unitId);
     });
     copyToCoordinator(incidentRow(id), `Afgerond door ${unit.name}.`);
@@ -748,23 +748,23 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     db.transaction(() => {
       run('UPDATE ehbo_units SET availability = ? WHERE id = ?', availability, unit.id);
       // Vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde (functioneel ontwerp, "Post open of dicht"), zolang er geen andere dienst staat.
-      if (unit.kind === 'vast' && unit.postId !== null && availability === 'vrij') setPost(unit.postId, true);
-      if (unit.kind === 'vast' && unit.postId !== null && availability === 'uit_dienst' && !otherShiftOnDuty(unit)) setPost(unit.postId, false);
-      if (availability === 'uit_dienst') {
+      if (unit.kind === 'fixed' && unit.postId !== null && availability === 'available') setPost(unit.postId, true);
+      if (unit.kind === 'fixed' && unit.postId !== null && availability === 'off_duty' && !otherShiftOnDuty(unit)) setPost(unit.postId, false);
+      if (availability === 'off_duty') {
         run('UPDATE ehbo_units SET stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?', unit.id);
         forgetPositions(unit);
-      } else if (unit.availability === 'uit_dienst') {
+      } else if (unit.availability === 'off_duty') {
         run('UPDATE ehbo_units SET keep_until = ?, closes_at = NULL WHERE id = ?', keepAfterOpening(planOf(unit)), unit.id);
       }
     });
-    if (availability === 'vrij') offerOpenCalls([unit.id]);
+    if (availability === 'available') offerOpenCalls([unit.id]);
     changed();
     return state();
   }
 
   /** Sharing belongs to a person (#101), but only when there's a reason: being on a mobile team on duty. Nobody else is tracked. */
   function setPosition(me: Me, position: { lat: number; lng: number }) {
-    if (!units().some((u) => u.kind === 'mobiel' && u.availability !== 'uit_dienst' && u.members.includes(me.phone))) {
+    if (!units().some((u) => u.kind === 'mobile' && u.availability !== 'off_duty' && u.members.includes(me.phone))) {
       throw httpError(409, 'Alleen een mobiele EHBO-eenheid in dienst deelt haar positie');
     }
     positions.set(me.phone, { lat: position.lat, lng: position.lng, at: now().getTime() });
@@ -776,10 +776,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const post = posts().get(postId);
     if (!post) throw httpError(404, 'Locatie niet gevonden');
     if (!post.manned) throw httpError(409, 'Op deze locatie staat niemand: hij gaat niet open of dicht');
-    const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
-    const ownEhboPost = post.isEhbo && units().some((u) => u.kind === 'vast' && u.postId === postId && memberOf(me, u.id));
+    const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'lead');
+    const ownEhboPost = post.isEhbo && units().some((u) => u.kind === 'fixed' && u.postId === postId && memberOf(me, u.id));
     if (!lead && !ownEhboPost && !me.isAdmin) throw httpError(403, 'Alleen de locatieverantwoordelijke kan de locatie open of dicht zetten');
-    const fixed = units().filter((u) => u.kind === 'vast' && u.postId === postId);
+    const fixed = units().filter((u) => u.kind === 'fixed' && u.postId === postId);
     // Openen: je eigen eenheid, als je daarbij hoort; een andere dienst op dezelfde post blijft zoals hij is.
     // On a location with more than EHBO (#83), someone else opening or closing it doesn't make the team available or take it off duty.
     const mine = fixed.filter((u) => memberOf(me, u.id));
@@ -788,7 +788,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       setPost(postId, open);
       // Een vaste eenheid op deze EHBO-post gaat mee in dienst of uit dienst.
       for (const unit of teams) {
-        if (unit.availability !== 'pauze') run('UPDATE ehbo_units SET availability = ? WHERE id = ?', open ? 'vrij' : 'uit_dienst', unit.id);
+        if (unit.availability !== 'unavailable') run('UPDATE ehbo_units SET availability = ? WHERE id = ?', open ? 'available' : 'off_duty', unit.id);
       }
     });
     if (open) offerOpenCalls(teams.map((u) => u.id));
@@ -807,7 +807,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   const clockText = (at: number) => new Date(at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
   const postPlan = (postId: number | null) => (postId === null ? null : posts().get(postId)?.timeTo ?? null);
   /** A fixed team without its own end time follows its post. */
-  const planOf = (unit: Unit) => unit.timeTo ?? (unit.kind === 'vast' ? postPlan(unit.postId) : null);
+  const planOf = (unit: Unit) => unit.timeTo ?? (unit.kind === 'fixed' ? postPlan(unit.postId) : null);
 
   /** Opened again around or after the planned end: don't close it straight away. */
   function keepAfterOpening(timeTo: string | null) {
@@ -820,7 +820,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     run('UPDATE posts SET is_open = ?, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', open ? 1 : 0, open ? keepAfterOpening(postPlan(postId)) : null, postId);
   }
 
-  const otherShiftOnDuty = (unit: Unit) => units().some((u) => u.id !== unit.id && u.kind === 'vast' && u.postId === unit.postId && u.availability !== 'uit_dienst');
+  const otherShiftOnDuty = (unit: Unit) => units().some((u) => u.id !== unit.id && u.kind === 'fixed' && u.postId === unit.postId && u.availability !== 'off_duty');
 
   /** A phone without signal didn't see its post close by time: what it asks for still counts, and the post is open again. */
   function reopenAutoClosed(postId: number) {
@@ -831,7 +831,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function closeUnitAuto(unit: Unit) {
     takeOffDuty(unit);
-    if (unit.kind === 'vast' && unit.postId !== null && !otherShiftOnDuty(unit)) {
+    if (unit.kind === 'fixed' && unit.postId !== null && !otherShiftOnDuty(unit)) {
       run('UPDATE posts SET is_open = 0, keep_until = NULL, closes_at = NULL, auto_closed_at = ? WHERE id = ?', iso(), unit.postId);
     }
   }
@@ -850,13 +850,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const postMap = posts();
     const allUnits = units();
     const busy = busyUnits();
-    const fixedPosts = new Set(allUnits.filter((u) => u.kind === 'vast').map((u) => u.postId));
+    const fixedPosts = new Set(allUnits.filter((u) => u.kind === 'fixed').map((u) => u.postId));
     const inUsePosts = new Set(all(`SELECT post_id FROM incidents WHERE status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse')
                                     UNION SELECT post_id FROM requests WHERE status IN ('aangevraagd', 'opgepakt')`).map((r) => r.post_id as number));
     const closed: string[] = [];
     let touched = sweepLeft();
 
-    for (const unit of allUnits.filter((u) => u.availability !== 'uit_dienst')) {
+    for (const unit of allUnits.filter((u) => u.availability !== 'off_duty')) {
       const step = nextStep(unit, planOf(unit), busy.has(unit.id), at);
       if (!step) continue;
       touched = true;
@@ -894,7 +894,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function keepPost(me: Me, postId: number) {
     const post = posts().get(postId);
     if (!post) throw httpError(404, 'Locatie niet gevonden');
-    const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
+    const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'lead');
     if (!lead && !isLead(me)) throw httpError(403, 'Alleen de locatieverantwoordelijke of de coördinator kan de locatie open houden');
     const until = new Date(now().getTime() + KEEP_OPEN_MIN * 60_000).toISOString();
     run('UPDATE posts SET is_open = 1, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', until, postId);
@@ -925,7 +925,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const latest = (phones: string[]) => phones.map((p) => seen.get(p)).filter((t) => t !== undefined).sort().at(-1) ?? null;
     const result: LastSeen = { posts: {}, units: {} };
     for (const post of posts().values()) if (post.isOpen) result.posts[post.id] = latest(postPhones(post.id));
-    for (const unit of units()) if (unit.availability !== 'uit_dienst') result.units[unit.id] = latest(unit.members);
+    for (const unit of units()) if (unit.availability !== 'off_duty') result.units[unit.id] = latest(unit.members);
     return result;
   }
 
@@ -936,13 +936,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const allUnits = units();
     const here = (people: string[]) => people.some((p) => present.has(p));
     const closedPosts = [...posts().values()].filter((p) => !p.isOpen && p.manned);
-    const off = allUnits.filter((u) => u.availability === 'uit_dienst');
+    const off = allUnits.filter((u) => u.availability === 'off_duty');
     const openPosts = closedPosts.filter((p) => here(postPeople(p.id, allUnits)));
     const onDuty = off.filter((u) => here(u.members));
     const skipped = [...closedPosts.filter((p) => !openPosts.includes(p)).map((p) => p.name), ...off.filter((u) => !onDuty.includes(u)).map((u) => u.name)];
     db.transaction(() => {
       for (const post of openPosts) setPost(post.id, true);
-      for (const unit of onDuty) run("UPDATE ehbo_units SET availability = 'vrij', keep_until = ?, closes_at = NULL WHERE id = ?", keepAfterOpening(planOf(unit)), unit.id);
+      for (const unit of onDuty) run("UPDATE ehbo_units SET availability = 'available', keep_until = ?, closes_at = NULL WHERE id = ?", keepAfterOpening(planOf(unit)), unit.id);
     });
     for (const post of openPosts) notify(postPhones(post.id), { title: `${post.name} is geopend`, body: 'De coördinator heeft je locatie geopend.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
     offerOpenCalls(onDuty.map((u) => u.id));
@@ -993,7 +993,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** Everyone who counts as being at a post: its contacts, and at an EHBO post the members of its fixed teams. */
   function postPeople(postId: number, allUnits = units()) {
-    return [...postPhones(postId), ...allUnits.filter((u) => u.kind === 'vast' && u.postId === postId).flatMap((u) => u.members)];
+    return [...postPhones(postId), ...allUnits.filter((u) => u.kind === 'fixed' && u.postId === postId).flatMap((u) => u.members)];
   }
 
   /** Posts and teams of these people that nobody is logged in for. */
@@ -1006,7 +1006,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   }
 
   function takeOffDuty(unit: Unit) {
-    run("UPDATE ehbo_units SET availability = 'uit_dienst', stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", unit.id);
+    run("UPDATE ehbo_units SET availability = 'off_duty', stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", unit.id);
     forgetPositions(unit);
   }
 
@@ -1020,7 +1020,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
         setPost(post.id, false);
         closed.push(post.name);
       }
-      for (const unit of idle.filter((u) => u.availability !== 'uit_dienst')) {
+      for (const unit of idle.filter((u) => u.availability !== 'off_duty')) {
         if (busy.has(unit.id)) {
           leftDuringCall.add(unit.id);
           continue;
@@ -1055,7 +1055,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       if (busy.has(id)) continue;
       leftDuringCall.delete(id);
       const unit = unitById(id);
-      if (!unit || unit.availability === 'uit_dienst' || unit.members.some((p) => present.has(p))) continue;
+      if (!unit || unit.availability === 'off_duty' || unit.members.some((p) => present.has(p))) continue;
       takeOffDuty(unit);
       touched = true;
     }

@@ -108,7 +108,7 @@ const counters = computed(() => {
   if (!pkg || !isLead.value) return null;
   const free = pkg.units.filter((u) => {
     const state = live.unitState(u.id);
-    return state?.availability === 'vrij' && state.incidentId === null;
+    return state?.availability === 'available' && state.incidentId === null;
   });
   return [
     { label: 'Locaties', value: `${mannedPosts.value.length - closedIds.value.length}/${mannedPosts.value.length}`, full: 'Locaties open' },

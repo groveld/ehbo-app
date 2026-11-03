@@ -146,7 +146,7 @@ const postSchema = {
         required: ['name', 'phone', 'role', 'timeFrom', 'timeTo'],
         properties: {
           ...personSchema.properties,
-          role: { enum: ['verantwoordelijke', 'lid', 'reserve'] },
+          role: { enum: ['lead', 'member', 'reserve'] },
           timeFrom: time,
           timeTo: time,
         },
@@ -160,8 +160,8 @@ const unitSchema = {
   required: ['name', 'kind', 'mobility', 'postId', 'hasAed', 'members'],
   properties: {
     name: { type: 'string', minLength: 1, maxLength: 60 },
-    kind: { enum: ['vast', 'mobiel'] },
-    mobility: { enum: ['te_voet', 'fiets', 'auto', 'anders', null] },
+    kind: { enum: ['fixed', 'mobile'] },
+    mobility: { enum: ['on_foot', 'bike', 'car', 'other', null] },
     postId: { type: ['integer', 'null'] },
     hasAed: { type: 'boolean' },
     timeFrom: time,
@@ -337,7 +337,7 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
     if (!body.functionIds.every((id) => admin.postTypeExists(id))) throw badRequest('Onbekende functie');
     if (body.runId !== null && !admin.runExists(body.runId)) throw badRequest('Onbekende loop');
     // One lead per location (#83): two people responsible apart from each other means two locations.
-    if (body.contacts.filter((c) => c.role === 'verantwoordelijke').length > 1) throw badRequest(`${body.name.trim()}: kies één locatieverantwoordelijke`);
+    if (body.contacts.filter((c) => c.role === 'lead').length > 1) throw badRequest(`${body.name.trim()}: kies één locatieverantwoordelijke`);
     if ((body.lat === null) !== (body.lng === null)) throw badRequest('Vul zowel breedte- als lengtegraad in');
     return { ...body, contacts: body.contacts.map((c) => ({ ...c, name: c.name.trim(), phone: phoneOf(c.phone, c.name) })) };
   };
@@ -357,7 +357,7 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
 
   // EHBO-eenheden
   const checkUnit = (body: UnitData): UnitData => {
-    if (body.kind === 'vast' && body.postId === null) throw badRequest('Kies de EHBO-post van deze vaste eenheid');
+    if (body.kind === 'fixed' && body.postId === null) throw badRequest('Kies de EHBO-post van deze vaste eenheid');
     if (body.postId !== null && !admin.postExists(body.postId)) throw badRequest('Onbekende locatie');
     return { ...body, members: body.members.map((m) => ({ name: m.name.trim(), phone: phoneOf(m.phone, m.name) })) };
   };

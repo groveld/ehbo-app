@@ -21,7 +21,7 @@ const post = computed(() => (incident.value ? postOf(store.postById, incident.va
 const myUnit = computed(() => unitOf(store.pkg, incident.value?.dispatches.find((d) => d.acceptedAt && live.myUnitIds.includes(d.unitId))?.unitId ?? null));
 const ownPost = computed(() => (myUnit.value?.postId != null ? store.postById.get(myUnit.value.postId) : undefined));
 /** Alleen een vaste eenheid die niet op haar eigen post is, kan "even blijven". */
-const canStay = computed(() => myUnit.value?.kind === 'vast' && ownPost.value && ownPost.value.id !== post.value?.id);
+const canStay = computed(() => myUnit.value?.kind === 'fixed' && ownPost.value && ownPost.value.id !== post.value?.id);
 
 const outcome = ref<Outcome | null>(null);
 const note = ref('');

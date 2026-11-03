@@ -18,10 +18,10 @@ const save = useSave();
 const isNew = computed(() => props.id === 'nieuw');
 const unit = computed(() => admin.state?.units.find((u) => u.id === Number(props.id)) ?? null);
 const MOBILITY: { value: UnitMobility; label: string }[] = [
-  { value: 'te_voet', label: 'Te voet' }, { value: 'fiets', label: 'Fiets' }, { value: 'auto', label: 'Auto' }, { value: 'anders', label: 'Anders' },
+  { value: 'on_foot', label: 'Te voet' }, { value: 'bike', label: 'Fiets' }, { value: 'car', label: 'Auto' }, { value: 'other', label: 'Anders' },
 ];
 
-const form = reactive<UnitData>({ name: '', kind: 'vast', mobility: null, postId: null, hasAed: false, timeFrom: null, timeTo: null, members: [] });
+const form = reactive<UnitData>({ name: '', kind: 'fixed', mobility: null, postId: null, hasAed: false, timeFrom: null, timeTo: null, members: [] });
 const loaded = ref(false);
 // Een nieuwe post, eenheid of loop is nog niet opgeslagen; een bestaande alleen als er iets gewijzigd is.
 const { dirty, markClean } = useDirty(() => form);
@@ -43,20 +43,20 @@ const ehboPosts = computed(() => {
   const ehboType = admin.state?.postTypes.find((t) => t.key === 'ehbo')?.id;
   return admin.state?.posts.filter((p) => ehboType !== undefined && p.functionIds.includes(ehboType)) ?? [];
 });
-const postChoices = computed(() => (form.kind === 'vast' ? ehboPosts.value : admin.state?.posts ?? []));
+const postChoices = computed(() => (form.kind === 'fixed' ? ehboPosts.value : admin.state?.posts ?? []));
 const selectedPost = computed(() => (form.postId !== null ? admin.postById.get(form.postId) : undefined));
 
 function setKind(kind: UnitData['kind']) {
   form.kind = kind;
-  if (kind === 'mobiel') form.mobility ??= 'fiets';
+  if (kind === 'mobile') form.mobility ??= 'bike';
   // Een standplaats die geen EHBO-post is, kan niet de eigen post van een vaste eenheid zijn.
-  if (kind === 'vast' && form.postId !== null && !ehboPosts.value.some((p) => p.id === form.postId)) form.postId = null;
+  if (kind === 'fixed' && form.postId !== null && !ehboPosts.value.some((p) => p.id === form.postId)) form.postId = null;
 }
 
 async function submit() {
   const data: UnitData = {
     ...form,
-    mobility: form.kind === 'mobiel' ? form.mobility : null,
+    mobility: form.kind === 'mobile' ? form.mobility : null,
     timeFrom: form.timeFrom || null,
     timeTo: form.timeTo || null,
     members: form.members.filter((m) => m.phone.trim()),
@@ -83,29 +83,29 @@ async function remove() {
         <div class="form-field">
           <span class="section-label">Soort</span>
           <div class="choice-grid two">
-            <button class="option tall" :aria-pressed="form.kind === 'vast'" @click="setKind('vast')">Vast<span class="hint">eigen EHBO-post</span></button>
-            <button class="option tall" :aria-pressed="form.kind === 'mobiel'" @click="setKind('mobiel')">Mobiel<span class="hint">rijdt of loopt rond</span></button>
+            <button class="option tall" :aria-pressed="form.kind === 'fixed'" @click="setKind('fixed')">Vast<span class="hint">eigen EHBO-post</span></button>
+            <button class="option tall" :aria-pressed="form.kind === 'mobile'" @click="setKind('mobile')">Mobiel<span class="hint">rijdt of loopt rond</span></button>
           </div>
-          <div v-if="form.kind === 'mobiel'" class="choice-grid four">
+          <div v-if="form.kind === 'mobile'" class="choice-grid four">
             <button v-for="m in MOBILITY" :key="m.value" class="option" :aria-pressed="form.mobility === m.value" @click="form.mobility = m.value">{{ m.label }}</button>
           </div>
         </div>
 
         <div class="form-field">
-          <label for="post">{{ form.kind === 'vast' ? 'EHBO-post' : 'Standplaats (optioneel)' }}</label>
+          <label for="post">{{ form.kind === 'fixed' ? 'EHBO-post' : 'Standplaats (optioneel)' }}</label>
           <select id="post" v-model="form.postId" class="input">
-            <option :value="null">{{ form.kind === 'vast' ? 'Kies de EHBO-post' : 'Geen standplaats (niet op de kaart)' }}</option>
+            <option :value="null">{{ form.kind === 'fixed' ? 'Kies de EHBO-post' : 'Geen standplaats (niet op de kaart)' }}</option>
             <option v-for="p in postChoices" :key="p.id" :value="p.id">
               {{ p.name }}{{ p.km !== null ? ` · km ${p.km.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}` : '' }}
             </option>
           </select>
-          <span v-if="form.kind === 'vast' && !ehboPosts.length" class="note warn">
+          <span v-if="form.kind === 'fixed' && !ehboPosts.length" class="note warn">
             Er is nog geen EHBO-post. Voeg die eerst toe bij Posten, met soort "EHBO-post".
           </span>
-          <span v-else-if="form.kind === 'mobiel' && selectedPost" class="small">
+          <span v-else-if="form.kind === 'mobile' && selectedPost" class="small">
             Staat als klein kruisje bij deze post op de kaart. Het team kan onderweg zijn; de post houdt een oogje in het zeil.
           </span>
-          <span v-else-if="form.kind === 'vast'" class="small">De eenheid zit op deze locatie; zo staat ze op de kaart.</span>
+          <span v-else-if="form.kind === 'fixed'" class="small">De eenheid zit op deze locatie; zo staat ze op de kaart.</span>
         </div>
 
         <section class="stack gap-8">

@@ -145,7 +145,7 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
   }, async (request) => calls.once(...actionHeaders(request), () => calls.close(request.me!, request.params.id, request.body)));
 
   app.put<Id & { Body: { availability: UnitAvailability }; Reply: LiveState }>('/api/units/:id/availability', {
-    schema: { params: idParams, body: { type: 'object', required: ['availability'], properties: { availability: { enum: ['vrij', 'pauze', 'uit_dienst'] } } } },
+    schema: { params: idParams, body: { type: 'object', required: ['availability'], properties: { availability: { enum: ['available', 'unavailable', 'off_duty'] } } } },
   }, async (request) => calls.once(...actionHeaders(request), () => calls.setAvailability(request.me!, request.params.id, request.body.availability)));
 
   // Members of a mobile team on duty share their position every minute; the server keeps only the last one, in memory.

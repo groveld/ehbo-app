@@ -22,7 +22,7 @@ const counts = computed(() => {
     posts: posts.length,
     openPosts: posts.filter((p) => live.postOpen(p.id, p.isOpen)).length,
     units: units.length,
-    onDuty: units.filter((u) => (live.unitState(u.id)?.availability ?? 'uit_dienst') !== 'uit_dienst').length,
+    onDuty: units.filter((u) => (live.unitState(u.id)?.availability ?? 'off_duty') !== 'off_duty').length,
   };
 });
 

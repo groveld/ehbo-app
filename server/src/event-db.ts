@@ -8,7 +8,7 @@ import { DEFAULT_CORE_TEAM, DEFAULT_POST_TYPES, normalizeEmergencyNumber, type P
 
 // Elke stap draait één keer; PRAGMA user_version onthoudt tot waar het bestand is bijgewerkt.
 // Een stap is SQL, of een functie als de gegevens zelf omgezet moeten worden.
-const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
+export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   `
   CREATE TABLE event (
     id                 INTEGER PRIMARY KEY CHECK (id = 1),
@@ -326,6 +326,46 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
                             SELECT ?, ?, ?, ?, 0, (SELECT COALESCE(MAX(sort), 0) + 1 FROM post_types) WHERE NOT EXISTS (SELECT 1 FROM post_types WHERE key = ?)`);
     for (const t of DEFAULT_POST_TYPES.filter((t) => !t.manned)) add.run(t.key, t.name, t.letter, t.color, t.key);
   },
+  // 21: team and contact values in English (docs/begrippen.md). A CHECK can't be altered, so both tables are rebuilt.
+  `
+  CREATE TABLE ehbo_units_new (
+    id           INTEGER PRIMARY KEY,
+    name         TEXT NOT NULL,
+    kind         TEXT NOT NULL CHECK (kind IN ('fixed', 'mobile')),
+    mobility     TEXT CHECK (mobility IN ('on_foot', 'bike', 'car', 'other')),
+    post_id      INTEGER REFERENCES posts(id) ON DELETE SET NULL,
+    has_aed      INTEGER NOT NULL DEFAULT 0,
+    sort         INTEGER NOT NULL DEFAULT 0,
+    availability TEXT NOT NULL DEFAULT 'off_duty' CHECK (availability IN ('available', 'unavailable', 'off_duty')),
+    stay_post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
+    time_from    TEXT,
+    time_to      TEXT,
+    keep_until   TEXT,
+    closes_at    TEXT
+  );
+  INSERT INTO ehbo_units_new (id, name, kind, mobility, post_id, has_aed, sort, availability, stay_post_id, time_from, time_to, keep_until, closes_at)
+    SELECT id, name, CASE kind WHEN 'vast' THEN 'fixed' ELSE 'mobile' END,
+           CASE mobility WHEN 'te_voet' THEN 'on_foot' WHEN 'fiets' THEN 'bike' WHEN 'auto' THEN 'car' WHEN 'anders' THEN 'other' END,
+           post_id, has_aed, sort, CASE availability WHEN 'vrij' THEN 'available' WHEN 'pauze' THEN 'unavailable' ELSE 'off_duty' END,
+           stay_post_id, time_from, time_to, keep_until, closes_at
+    FROM ehbo_units;
+  DROP TABLE ehbo_units;
+  ALTER TABLE ehbo_units_new RENAME TO ehbo_units;
+
+  CREATE TABLE post_contacts_new (
+    id        INTEGER PRIMARY KEY,
+    post_id   INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    phone     TEXT NOT NULL REFERENCES people(phone) ON UPDATE CASCADE,
+    role      TEXT NOT NULL CHECK (role IN ('lead', 'member', 'reserve')),
+    time_from TEXT,
+    time_to   TEXT
+  );
+  INSERT INTO post_contacts_new (id, post_id, phone, role, time_from, time_to)
+    SELECT id, post_id, phone, CASE role WHEN 'verantwoordelijke' THEN 'lead' WHEN 'lid' THEN 'member' ELSE 'reserve' END, time_from, time_to
+    FROM post_contacts;
+  DROP TABLE post_contacts;
+  ALTER TABLE post_contacts_new RENAME TO post_contacts;
+  `,
 ];
 
 export interface EventRow {
@@ -410,6 +450,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
   };
 
   const version = (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+  if (version < MIGRATIONS.length) db.exec('PRAGMA foreign_keys = OFF');
   for (let i = version; i < MIGRATIONS.length; i++) {
     transaction(() => {
       const step = MIGRATIONS[i]!;
@@ -417,6 +458,11 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
       else step(db);
       db.exec(`PRAGMA user_version = ${i + 1}`);
     });
+  }
+  if (version < MIGRATIONS.length) {
+    const broken = db.prepare('PRAGMA foreign_key_check').all();
+    if (broken.length) throw new Error(`Migratie laat verwijzingen achter die niet kloppen: ${JSON.stringify(broken.slice(0, 5))}`);
+    db.exec('PRAGMA foreign_keys = ON');
   }
 
   // Nieuw evenement: standaardsoorten posten en het voorgestelde kernteam.

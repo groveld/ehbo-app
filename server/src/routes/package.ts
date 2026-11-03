@@ -8,7 +8,7 @@ import { cleanGpx, type GpxWaypoint } from '../gpx.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
-const PACKAGE_FORMAT = 8;
+const PACKAGE_FORMAT = 9;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();

@@ -26,8 +26,8 @@ const isNew = computed(() => props.id === 'nieuw');
 const post = computed(() => admin.postById.get(Number(props.id)) ?? null);
 
 const ROLES: { value: PostContactRole; label: string }[] = [
-  { value: 'verantwoordelijke', label: 'Verantwoordelijke' },
-  { value: 'lid', label: 'Lid' },
+  { value: 'lead', label: 'Verantwoordelijke' },
+  { value: 'member', label: 'Lid' },
   { value: 'reserve', label: 'Reserve' },
 ];
 
@@ -41,7 +41,7 @@ const loaded = ref(false);
 const { dirty, markClean } = useDirty(() => form);
 const canSave = computed(() => isNew.value || dirty.value);
 
-const emptyContact = (): ContactData => ({ name: '', phone: '', role: form.contacts.some((c) => c.role === 'verantwoordelijke') ? 'lid' : 'verantwoordelijke', timeFrom: null, timeTo: null });
+const emptyContact = (): ContactData => ({ name: '', phone: '', role: form.contacts.some((c) => c.role === 'lead') ? 'member' : 'lead', timeFrom: null, timeTo: null });
 
 watchEffect(() => {
   if (loaded.value || !admin.state) return;
@@ -65,7 +65,7 @@ const hasPeople = computed(() => isManned(form, admin.state?.postTypes ?? []));
 const turnaround = computed(() => form.functionIds.some((id) => admin.postTypeById.get(id)?.key === 'keerpunt'));
 
 /** One lead per location (#83): once someone is, the others can't be chosen as lead. */
-const leadTaken = (i: number) => form.contacts.some((c, j) => j !== i && c.role === 'verantwoordelijke');
+const leadTaken = (i: number) => form.contacts.some((c, j) => j !== i && c.role === 'lead');
 
 async function captureGps() {
   const fix = await gps.start();
@@ -201,7 +201,7 @@ async function remove() {
             </div>
             <div class="contact-role">
               <select v-model="c.role" class="input" aria-label="Rol op de locatie">
-                <option v-for="r in ROLES" :key="r.value" :value="r.value" :disabled="r.value === 'verantwoordelijke' && leadTaken(i)">{{ r.label }}</option>
+                <option v-for="r in ROLES" :key="r.value" :value="r.value" :disabled="r.value === 'lead' && leadTaken(i)">{{ r.label }}</option>
               </select>
               <button class="icon-btn" aria-label="Contactpersoon verwijderen" @click="form.contacts.splice(i, 1)"><Icon name="trash" :size="20" /></button>
             </div>

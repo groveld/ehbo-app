@@ -25,9 +25,9 @@ test('only a mobile team on duty can lack a position', () => {
   const live = (availability: LiveUnit['availability'], minutesAgo: number | null) => ({
     availability, position: minutesAgo === null ? null : { lat: 53, lng: 5, at: new Date(now - minutesAgo * 60_000).toISOString() },
   }) as LiveUnit;
-  assert.equal(lacksPosition({ kind: 'mobiel' }, live('vrij', null), now), true);
-  assert.equal(lacksPosition({ kind: 'mobiel' }, live('vrij', 4), now), true);
-  assert.equal(lacksPosition({ kind: 'mobiel' }, live('vrij', 2), now), false);
-  assert.equal(lacksPosition({ kind: 'mobiel' }, live('uit_dienst', null), now), false);
-  assert.equal(lacksPosition({ kind: 'vast' }, live('vrij', null), now), false);
+  assert.equal(lacksPosition({ kind: 'mobile' }, live('available', null), now), true);
+  assert.equal(lacksPosition({ kind: 'mobile' }, live('available', 4), now), true);
+  assert.equal(lacksPosition({ kind: 'mobile' }, live('available', 2), now), false);
+  assert.equal(lacksPosition({ kind: 'mobile' }, live('off_duty', null), now), false);
+  assert.equal(lacksPosition({ kind: 'fixed' }, live('available', null), now), false);
 });

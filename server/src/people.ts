@@ -54,8 +54,8 @@ export function peopleOverview(db: EventDb): PeopleOverview {
 
   const gaps: PeopleOverview['gaps'] = [
     // An EHBO post with a fixed team is run by that team, so it needs no lead.
-    ...all(`SELECT id, name FROM posts p WHERE NOT EXISTS (SELECT 1 FROM post_contacts c WHERE c.post_id = p.id AND c.role = 'verantwoordelijke')
-              AND NOT EXISTS (SELECT 1 FROM ehbo_units u WHERE u.post_id = p.id AND u.kind = 'vast') ORDER BY sort, id`)
+    ...all(`SELECT id, name FROM posts p WHERE NOT EXISTS (SELECT 1 FROM post_contacts c WHERE c.post_id = p.id AND c.role = 'lead')
+              AND NOT EXISTS (SELECT 1 FROM ehbo_units u WHERE u.post_id = p.id AND u.kind = 'fixed') ORDER BY sort, id`)
       .map((p): PersonLink => ({ kind: 'post', id: p.id as number, label: `${p.name as string}: nog geen locatieverantwoordelijke` })),
     ...all('SELECT id, name FROM ehbo_units u WHERE NOT EXISTS (SELECT 1 FROM ehbo_unit_members m WHERE m.unit_id = u.id) ORDER BY sort, id')
       .map((u): PersonLink => ({ kind: 'unit', id: u.id as number, label: `${u.name as string}: nog geen leden` })),

@@ -85,7 +85,7 @@ test('a new location with people, and a changed one, saved in one go', async () 
       rows.push(['Waterpost 7 · molen', 'Waterpost', 'Toiletten', '', '', '53.155', '5.84', 'Bij de molen', '', '0.4375', '13:00', '']);
       rows.find((r) => r[0] === 'Kruising 4')![8] = 'Fietspad achter de boerderij';
     },
-    Contactpersonen: (rows) => { rows.push(['Waterpost 7 · molen', 'Mia Molen', '612345678', 'verantwoordelijke', '', '']); },
+    Contactpersonen: (rows) => { rows.push(['Waterpost 7 · molen', 'Mia Molen', '612345678', 'lead', '', '']); },
   });
   const preview = await check([{ name: 'evenement.xlsx', data: file }]);
   assert.deepEqual(preview.problems, []);
@@ -97,7 +97,7 @@ test('a new location with people, and a changed one, saved in one go', async () 
   const after = (await state()).posts;
   const mill = after.find((p) => p.name === 'Waterpost 7 · molen')!;
   assert.deepEqual([mill.timeFrom, mill.timeTo, mill.functionIds.length], ['10:30', '13:00', 2], 'a time as Excel writes it');
-  assert.deepEqual(mill.contacts.map((c) => [c.name, c.phone, c.role]), [['Mia Molen', '+31612345678', 'verantwoordelijke']], 'the 0 Excel dropped comes back');
+  assert.deepEqual(mill.contacts.map((c) => [c.name, c.phone, c.role]), [['Mia Molen', '+31612345678', 'lead']], 'the 0 Excel dropped comes back');
   assert.equal(after.find((p) => p.name === 'Kruising 4')!.accessRoute, 'Fietspad achter de boerderij');
 });
 
@@ -105,9 +105,9 @@ test('problems by row, and then nothing is saved at all', async () => {
   const file = edited(await exported(), {
     Locaties: (rows) => { rows.push(['Nieuwe post', 'Zwembad', '', '', '', '53', '', '', '', '25:00', '', '']); },
     Contactpersonen: (rows) => {
-      rows.push(['Waterpost 3 · brug', 'Tweede Baas', '0612345679', 'verantwoordelijke', '', '']);
-      rows.push(['Bestaat niet', 'Iemand', '0612345670', 'lid', '', '']);
-      rows.push(['Kruising 4', 'Fout Nummer', '12345', 'lid', '', '']);
+      rows.push(['Waterpost 3 · brug', 'Tweede Baas', '0612345679', 'lead', '', '']);
+      rows.push(['Bestaat niet', 'Iemand', '0612345670', 'member', '', '']);
+      rows.push(['Kruising 4', 'Fout Nummer', '12345', 'member', '', '']);
     },
   });
   const preview = await check([{ name: 'evenement.xlsx', data: file }]);

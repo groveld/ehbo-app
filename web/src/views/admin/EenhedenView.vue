@@ -11,7 +11,7 @@ function describe(u: AdminUnit) {
   const post = u.postId !== null ? admin.postById.get(u.postId) : undefined;
   const km = post?.km != null ? ` · km ${post.km.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}` : '';
   const members = u.members.length === 1 ? '1 lid' : `${u.members.length} leden`;
-  if (u.kind === 'vast') return post ? `${post.name}${km} · ${members}` : `Geen EHBO-post gekozen · ${members}`;
+  if (u.kind === 'fixed') return post ? `${post.name}${km} · ${members}` : `Geen EHBO-post gekozen · ${members}`;
   return post ? `Standplaats: ${post.name} · ${members}` : 'Geen standplaats · niet op de kaart';
 }
 </script>
@@ -25,10 +25,10 @@ function describe(u: AdminUnit) {
           <span class="main">
             <span class="title-line">
               {{ u.name }}
-              <span class="tag">{{ u.kind === 'vast' ? 'VAST' : mobilityLabel(u.mobility).toUpperCase() }}</span>
+              <span class="tag">{{ u.kind === 'fixed' ? 'VAST' : mobilityLabel(u.mobility).toUpperCase() }}</span>
               <span v-if="u.hasAed" class="tag ok">AED</span>
             </span>
-            <span class="sub" :class="{ warn: u.kind === 'vast' && u.postId === null }">{{ describe(u) }}</span>
+            <span class="sub" :class="{ warn: u.kind === 'fixed' && u.postId === null }">{{ describe(u) }}</span>
           </span>
           <Icon name="forward" :size="18" />
         </RouterLink>
@@ -44,7 +44,7 @@ function describe(u: AdminUnit) {
 <style scoped>
 .unit { display: flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; }
 .cross { width: 40px; height: 40px; border-radius: 12px; background: var(--ok); color: #FFFFFF; }
-.cross.mobiel { background: var(--ok-bg); color: var(--ok); }
+.cross.mobile { background: var(--ok-bg); color: var(--ok); }
 .main { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; }
 .title-line { font-size: 15px; font-weight: 700; }
 .sub { font-size: 13px; color: var(--muted); }

@@ -1,13 +1,13 @@
 // Evenement, rollen en aanmelden.
 import type { ApiError } from './index.ts';
 
-export type PostContactRole = 'verantwoordelijke' | 'lid' | 'reserve';
-export type UnitKind = 'vast' | 'mobiel';
-export type UnitMobility = 'te_voet' | 'fiets' | 'auto' | 'anders';
+export type PostContactRole = 'lead' | 'member' | 'reserve';
+export type UnitKind = 'fixed' | 'mobile';
+export type UnitMobility = 'on_foot' | 'bike' | 'car' | 'other';
 
 export const POST_CONTACT_ROLE_LABEL: Record<PostContactRole, string> = {
-  verantwoordelijke: 'Locatieverantwoordelijke',
-  lid: 'Posthouder',
+  lead: 'Locatieverantwoordelijke',
+  member: 'Lid',
   reserve: 'Reserve',
 };
 
@@ -152,17 +152,17 @@ export interface PublicEvent {
 }
 
 /** Eén plek of functie waarop iemand is ingepland. */
-const MOBILITY_LABEL: Record<UnitMobility, string | null> = { te_voet: 'te voet', fiets: 'fiets', auto: 'auto', anders: null };
+const MOBILITY_LABEL: Record<UnitMobility, string | null> = { on_foot: 'te voet', bike: 'fiets', car: 'auto', other: null };
 
 /** "mobiel (auto)", or just "mobiel" when it's nothing in particular. */
 export const mobilityLabel = (mobility: UnitMobility | null) => {
-  const how = MOBILITY_LABEL[mobility ?? 'anders'];
+  const how = MOBILITY_LABEL[mobility ?? 'other'];
   return how ? `mobiel (${how})` : 'mobiel';
 };
 
 export interface Assignment {
   kind: 'post' | 'ehbo' | 'kernteam' | 'beheerder';
-  /** Bijv. "Posthouder", "EHBO Team 3", "Evenementcoördinator". */
+  /** Bijv. "Lid", "EHBO Team 3", "Evenementcoördinator". */
   title: string;
   /** Bijv. "Waterpost 3 · brug · km 21,1". */
   detail?: string;

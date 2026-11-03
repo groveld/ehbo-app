@@ -1,5 +1,5 @@
 // Posten in het evenementpakket: contactpersoon, eenheden, dichtstbijzijnde EHBO.
-import { DEFAULT_AT_POST_M, POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, isManned, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, sameFunction } from '@ehbo/shared';
+import { DEFAULT_AT_POST_M, POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, isManned, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, type PostContactRole, sameFunction } from '@ehbo/shared';
 
 /** "km 2,1", and "+1" when the longest run comes by more often. */
 export function kmLabel(post: Pick<PackagePost, 'km' | 'passages'>) {
@@ -24,9 +24,12 @@ export function routeStops(pkg: EventPackage, runId: number) {
     .sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity));
 }
 
+/** A contact's role as a word in a list: verantwoordelijke, lid, reserve. */
+export const ROLE_TEXT: Record<PostContactRole, string> = { lead: 'verantwoordelijke', member: 'lid', reserve: 'reserve' };
+
 /** Wie je belt voor een post: de verantwoordelijke, anders de eerste contactpersoon. */
 export const primaryContact = (post: PackagePost) =>
-  post.contacts?.find((c) => c.role === 'verantwoordelijke') ?? post.contacts?.[0] ?? null;
+  post.contacts?.find((c) => c.role === 'lead') ?? post.contacts?.[0] ?? null;
 
 /** EHBO-eenheden die bij deze post horen: vast op deze post, of mobiel met deze post als standplaats. */
 export const unitsAt = (pkg: EventPackage, postId: number) => pkg.units.filter((u) => u.postId === postId);
@@ -75,7 +78,7 @@ export function mobileUnits(pkg: EventPackage | null, units: LiveUnit[], now: nu
     const unit = pkg.units.find((x) => x.id === u.id);
     if (!unit || !u.position || !isAway(unit, u, pkg.posts.find((p) => p.id === unit.postId), now, atPostM(pkg))) return [];
     const busy = u.incidentId !== null;
-    return [{ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'vrij' }];
+    return [{ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'available' }];
   });
   return { ambulances, awayPostIds: awayPostIds(pkg.units, units, pkg.posts, now, atPostM(pkg)) };
 }

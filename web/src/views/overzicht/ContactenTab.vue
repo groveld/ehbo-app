@@ -3,6 +3,7 @@
 import { computed } from 'vue';
 import { formatPhone, telHref } from '@ehbo/shared';
 import Icon from '../../components/Icon.vue';
+import { ROLE_TEXT } from '../../posts.ts';
 import { usePackageStore } from '../../stores/package.ts';
 
 const store = usePackageStore();
@@ -61,7 +62,7 @@ const postsWithContacts = computed(() => store.pkg?.posts.filter((p) => p.contac
             <div v-for="c in p.contacts" :key="`${p.id}-${c.phone}`" class="list-row">
               <span class="main">
                 <span class="title-line">{{ c.name || formatPhone(c.phone) }}</span>
-                <span class="sub">{{ p.name }} · {{ c.role }}</span>
+                <span class="sub">{{ p.name }} · {{ ROLE_TEXT[c.role] }}</span>
               </span>
               <a :href="telHref(c.phone)" class="round" :aria-label="`Bel ${c.name || p.name}`"><Icon name="phone" :size="20" /></a>
             </div>

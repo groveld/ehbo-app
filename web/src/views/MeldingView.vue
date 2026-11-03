@@ -45,7 +45,7 @@ const helper = computed(() => {
   return {
     name: i.acceptedBy?.name ?? unit.members[0]?.name ?? unit.name,
     phone: i.acceptedBy?.phone ?? unit.members[0]?.phone ?? null,
-    detail: [unit.name, from ? `vanaf ${from}` : unit.kind === 'mobiel' ? 'mobiel' : null].filter(Boolean).join(' · '),
+    detail: [unit.name, from ? `vanaf ${from}` : unit.kind === 'mobile' ? 'mobile' : null].filter(Boolean).join(' · '),
     minutes: travelMinutes(dispatch?.distanceKm ?? null, unit),
   };
 });
@@ -164,7 +164,7 @@ const back = () => router.back();
           <span class="main">
             <span class="title-line">{{ u.name }}</span>
             <span class="sub">
-              {{ live.unitState(u.id)?.availability === 'vrij' ? 'beschikbaar' : live.unitState(u.id)?.availability === 'pauze' ? 'niet beschikbaar' : 'uit dienst' }}<template
+              {{ live.unitState(u.id)?.availability === 'available' ? 'beschikbaar' : live.unitState(u.id)?.availability === 'unavailable' ? 'niet beschikbaar' : 'uit dienst' }}<template
                 v-if="incident.dispatches.find((d) => d.unitId === u.id)?.distanceKm != null"
               > · {{ formatKm(incident.dispatches.find((d) => d.unitId === u.id)!.distanceKm!) }} km</template>
             </span>

@@ -25,7 +25,7 @@ const open = computed(() => (post.value ? live.postOpen(post.value.id, post.valu
 const closing = computed(() => (post.value ? live.postState(post.value.id)?.closesAt : null));
 const autoClosed = computed(() => (post.value ? live.postState(post.value.id)?.autoClosedAt : null));
 const myRole = computed(() => session.me?.assignments.find((a) => a.kind === 'post' && a.postId === post.value?.id));
-const canOpen = computed(() => myRole.value?.role === 'verantwoordelijke' || session.me?.isAdmin);
+const canOpen = computed(() => myRole.value?.role === 'lead' || session.me?.isAdmin);
 const coordinator = computed(() => coordinatorOf(store.pkg));
 const nearest = computed(() => (store.pkg && post.value ? nearestUnit(store.pkg, post.value) : null));
 const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id && !i.offPost));

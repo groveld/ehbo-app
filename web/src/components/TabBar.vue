@@ -25,7 +25,7 @@ const live = useLiveStore();
 const COLORS = { ehbo: '#C8261E', kaart: '#0E7C86', meldingen: '#A16207', contacten: '#3F51B5', menu: '#3E434B' };
 
 /** Het kruis van de EHBO-tab in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
-const STATUS = { vrij: '#0A7D4F', pauze: '#C8261E', uit_dienst: 'var(--ink)' } as const;
+const STATUS = { available: '#0A7D4F', unavailable: '#C8261E', off_duty: 'var(--ink)' } as const;
 
 const EHBO = ['ehbo', 'eigen-incident', 'inzetten', 'inzet', 'oproep', 'afronden'];
 const MENU = ['menu', 'info', 'controle', 'sturing'];
@@ -46,7 +46,7 @@ const routePostId = computed(() => {
 
 const ehboColor = computed(() => {
   const state = live.myUnitIds[0] !== undefined ? live.unitState(live.myUnitIds[0]) : null;
-  return state?.incidentId || live.myActive ? STATUS.pauze : STATUS[state?.availability ?? 'uit_dienst'];
+  return state?.incidentId || live.myActive ? STATUS.unavailable : STATUS[state?.availability ?? 'off_duty'];
 });
 
 const tabs = computed<Tab[]>(() => {

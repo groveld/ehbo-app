@@ -42,7 +42,7 @@ const placeText = computed(() => {
 
 let stopped = false;
 onMounted(() => {
-  if (unit.value?.kind === 'vast' || !('geolocation' in navigator)) return;
+  if (unit.value?.kind === 'fixed' || !('geolocation' in navigator)) return;
   locating.value = true;
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => { if (!stopped) gps.value = [coords.longitude, coords.latitude]; locating.value = false; },
@@ -76,7 +76,7 @@ async function start() {
         <label for="plek" class="q">Waar ben je?</label>
         <p class="card where"><Icon name="pin" :size="18" /><span>{{ placeText ?? (locating ? 'Locatie bepalen…' : 'Kies hieronder een plek') }}</span></p>
         <select id="plek" v-model="chosen" class="input">
-          <option :value="null">{{ unit?.kind === 'vast' ? 'Eigen locatie' : 'Automatisch' }}</option>
+          <option :value="null">{{ unit?.kind === 'fixed' ? 'Eigen locatie' : 'Automatisch' }}</option>
           <option v-for="p in posts" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
       </div>
