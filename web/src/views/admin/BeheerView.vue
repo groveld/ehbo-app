@@ -4,6 +4,14 @@ import type { AdminState } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 
+/** Everyone with a number somewhere: posts, teams, core team and admins. */
+const peopleCount = (state: AdminState) => new Set([
+  ...state.posts.flatMap((p) => p.contacts.map((c) => c.phone)),
+  ...state.units.flatMap((u) => u.members.map((m) => m.phone)),
+  ...state.coreTeam.flatMap((c) => (c.phone ? [c.phone] : [])),
+  ...state.admins.map((a) => a.phone),
+]).size;
+
 /** "5 functies · coördinator: Cor" */
 function teamSummary(state: AdminState) {
   const coordinator = state.coreTeam.find((c) => c.isCoordinator);
@@ -28,6 +36,11 @@ function teamSummary(state: AdminState) {
         <RouterLink :to="{ name: 'beheer-eenheden' }" class="list-row">
           <Icon name="ehbo" :size="20" />
           <span class="main"><span class="title-line">EHBO-eenheden</span><span class="sub">{{ state.units.length }} eenheden</span></span>
+          <Icon name="forward" :size="18" />
+        </RouterLink>
+        <RouterLink :to="{ name: 'beheer-mensen' }" class="list-row">
+          <Icon name="people" :size="20" />
+          <span class="main"><span class="title-line">Mensen</span><span class="sub">{{ peopleCount(state) }} mensen · namen, nummers en waar ze staan</span></span>
           <Icon name="forward" :size="18" />
         </RouterLink>
         <RouterLink :to="{ name: 'beheer-kernteam' }" class="list-row">

@@ -173,6 +173,8 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | POST | `/api/requests` | post | Aanvraag water, verkeer of vrijwilliger `{ postId, kind, detail, clientId }` |
 | PUT | `/api/requests/:id` | post | Aanvullen `{ detail }` |
 | POST | `/api/requests/:id/pick`, `/done`, `/withdraw` | coördinator, post | Oppakken, afhandelen (coördinator, kernteam, beheerder) of intrekken (post) |
+| GET | `/api/admin/people`, `/api/admin/people.csv` | beheerder | Iedereen met nummer, naam, waar die staat, aangemeld en meldingen; en wat nog ontbreekt |
+| PUT | `/api/admin/people/:telefoon` | beheerder | Naam van een persoon `{ name }` |
 | GET | `/api/admin/report`, `/api/admin/report.csv` | beheerder | Rapport als JSON (scherm en afdrukpagina) of als CSV-download |
 | PUT | `/api/admin/test-mode` | beheerder | Testmodus aan of uit `{ on }`; in de testmodus lopen sessies tot middernacht |
 | POST | `/api/admin/logout-all` | beheerder | Iedereen afmelden behalve jezelf, ook hun meldingen |

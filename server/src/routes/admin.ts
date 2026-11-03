@@ -15,6 +15,7 @@ import {
   normalizePhone,
   styleProblem,
   type AddAdminRequest,
+  type PeopleOverview,
   type AdminState,
   type CoreTeamEntry,
   type EmergencyNumber,
@@ -33,6 +34,7 @@ import type { Calls } from '../calls.ts';
 import { nextMidnight, requireAdmin, sessionsEnded, sqliteTime } from '../auth.ts';
 import type { EventDb } from '../event-db.ts';
 import { parseGpx } from '../gpx.ts';
+import { peopleCsv, peopleOverview } from '../people.ts';
 import { buildReport, reportCsv } from '../report.ts';
 
 const GPX_LIMIT = 10 * 1024 * 1024;
@@ -174,6 +176,20 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
     const day = report.event.startDate ?? report.generatedAt.slice(0, 10);
     reply.header('Content-Disposition', `attachment; filename="rapport-${day}.csv"`).type('text/csv; charset=utf-8');
     return reportCsv(report);
+  });
+
+  // Beheer › Mensen: everyone at once, to see who's missing or listed twice. Only the name can be changed here.
+  app.get<{ Reply: PeopleOverview }>('/api/admin/people', async () => peopleOverview(db));
+  app.get('/api/admin/people.csv', async (_request, reply) => {
+    reply.header('Content-Disposition', 'attachment; filename="mensen.csv"').type('text/csv; charset=utf-8');
+    return peopleCsv(peopleOverview(db));
+  });
+  app.put<{ Params: { phone: string }; Body: { name: string }; Reply: PeopleOverview }>('/api/admin/people/:phone', {
+    schema: { body: { type: 'object', required: ['name'], properties: { name: { type: 'string', maxLength: 80 } } } },
+  }, async (request) => {
+    const phone = normalizePhone(request.params.phone);
+    if (!phone || db.raw.prepare('UPDATE people SET name = ? WHERE phone = ?').run(request.body.name.trim(), phone).changes === 0) throw notFound('Persoon niet gevonden');
+    return peopleOverview(db);
   });
 
   // Testmodus: proefoproepen en -aanvragen komen niet in het rapport. Na afloop kun je ze wissen.

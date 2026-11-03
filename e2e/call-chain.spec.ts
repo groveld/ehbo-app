@@ -655,3 +655,15 @@ test('help to where you are: from the map tab, with the position, and the report
   await vera.getByRole('button', { name: 'Melding intrekken' }).click();
   await vera.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
 });
+
+test('Beheer › Mensen: everyone with where they are, and what is still missing', async ({ browser }) => {
+  const admin = await staffPhone(browser, PHONE.admin);
+  await admin.goto('/beheer');
+  await admin.getByRole('link', { name: /^Mensen/ }).click();
+  const wim = admin.locator('.person').filter({ hasText: 'Wim Water' });
+  await expect(wim.getByRole('link', { name: 'Waterpost 3 · brug · postverantwoordelijke' })).toBeVisible();
+  await expect(admin.getByText('Kruising 4: nog geen postverantwoordelijke')).toBeVisible();
+  if (process.env.SHOTS) await admin.screenshot({ path: `${process.env.SHOTS}/mensen.png`, fullPage: true });
+  await wim.getByRole('link', { name: 'Waterpost 3 · brug · postverantwoordelijke' }).click();
+  await expect(admin).toHaveURL(/\/beheer\/posten\/\d+/);
+});
