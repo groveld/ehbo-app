@@ -68,7 +68,7 @@ const others = computed(() => (incident.value?.dispatches ?? []).filter((d) => d
   km: d.distanceKm,
 })));
 /** From this team to the call, on the map. */
-const lines = computed(() => callLines(store.pkg, (live.state?.units ?? []).filter((u) => u.id === myUnitId.value), live.incidents, live.serverNow));
+const lines = computed(() => callLines(store.pkg, live.units.filter((u) => u.id === myUnitId.value), live.incidents, live.serverNow));
 const navUrl = computed(() => (post.value?.lat != null && post.value.lng != null ? navigationUrl(post.value.lat, post.value.lng, post.value.name) : null));
 
 async function accept() {

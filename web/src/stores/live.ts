@@ -262,6 +262,8 @@ export const useLiveStore = defineStore('live', () => {
     pkg.pkg?.units.find((u) => u.id === id)?.kind === 'mobiel' && (unitState(id)?.availability ?? 'uit_dienst') !== 'uit_dienst') ?? null);
   let geoWatch: number | null = null;
   let lastSent = 0;
+  /** This phone's own position while it shares: every fix, not once a minute. It stays on the phone; the server gets one a minute. */
+  const ownFix = ref<{ lat: number; lng: number; at: string } | null>(null);
   const sendPosition = (coords: GeolocationCoordinates) => {
     lastSent = Date.now();
     fetch('/api/position', {
@@ -273,11 +275,15 @@ export const useLiveStore = defineStore('live', () => {
   watch(sharingUnit, (unitId) => {
     if (geoWatch !== null) navigator.geolocation.clearWatch(geoWatch);
     geoWatch = null;
+    ownFix.value = null;
     if (unitId === null || !('geolocation' in navigator)) return;
     geoWatch = navigator.geolocation.watchPosition(({ coords }) => {
+      ownFix.value = { lat: coords.latitude, lng: coords.longitude, at: new Date(serverNow.value).toISOString() };
       if (Date.now() - lastSent >= POSITION_SHARE_MS) sendPosition(coords);
-    }, () => {}, { enableHighAccuracy: true, maximumAge: 30_000 });
+    }, () => {}, { enableHighAccuracy: true, maximumAge: 5_000 });
   }, { immediate: true });
+  /** The teams as the server has them, with my own mobile team at my live position: on my own map I don't lag behind myself. */
+  const units = computed(() => (state.value?.units ?? []).map((u) => (u.id === sharingUnit.value && ownFix.value ? { ...u, position: ownFix.value } : u)));
   // Status gewijzigd (bijv. van pauze naar beschikbaar): de positie meteen sturen, niet pas na een minuut.
   watch(() => (sharingUnit.value !== null ? unitState(sharingUnit.value)?.availability : null), (availability, before) => {
     const unitId = sharingUnit.value;
@@ -455,7 +461,7 @@ export const useLiveStore = defineStore('live', () => {
   }
 
   return {
-    state, connected, offline, syncing, serverNow, sharingUnit, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
+    state, units, connected, offline, syncing, serverNow, sharingUnit, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
     incidentById, unitState, postOpen, postState, secondsLeft, needsAed, refresh, connect, report, checkData,
     /** "Opnieuw laden": everything at once. */
     reload: () => Promise.all([syncData(), refresh()]),
