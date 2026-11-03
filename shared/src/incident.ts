@@ -185,8 +185,8 @@ export interface LastSeen {
   units: Record<number, string | null>;
 }
 
-/** Closing everything: the new state, and what stayed open because of a call. */
-export interface CloseSummary {
+/** Opening or closing everything: the new state, and what was skipped (closing: busy with a call; opening: nobody logged in). */
+export interface ControlResult {
   state: LiveState;
   skipped: string[];
 }

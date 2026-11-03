@@ -2,6 +2,7 @@
 import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { ApiError, Me } from '@ehbo/shared';
+import type { Calls } from './calls.ts';
 import type { EventDb } from './event-db.ts';
 import { resolveMe } from './roles.ts';
 
@@ -21,11 +22,22 @@ export const hashSessionToken = (token: string) => crypto.createHash('sha256').u
 /** SQLite-tijd ("jjjj-mm-dd uu:mm:ss", UTC), zodat vergelijken met datetime('now') klopt. */
 export const sqliteTime = (date: Date) => date.toISOString().replace('T', ' ').slice(0, 19);
 
+/** The coming midnight in Dutch time. */
+export function nextMidnight(now = new Date()): Date {
+  const zone = { timeZone: 'Europe/Amsterdam' } as const;
+  const [y, m, d] = now.toLocaleDateString('en-CA', zone).split('-').map(Number) as [number, number, number];
+  const guess = Date.UTC(y, m - 1, d + 1);
+  // The clock in Amsterdam at that moment, read as UTC, is ahead by the offset (1 or 2 hours). Clocks never change at midnight here.
+  const wall = new Date(new Date(guess).toLocaleString('en-US', zone) + ' UTC').getTime();
+  return new Date(guess - (wall - guess));
+}
+
 /**
  * Aangemeld blijven tot het einde van het evenement: tot de dag ná de einddatum voorbij is.
- * Zonder einddatum 60 dagen; altijd minstens één dag.
+ * Zonder einddatum 60 dagen; altijd minstens één dag. In the test mode until midnight, so testers are logged out after a test day.
  */
-export function sessionExpiry(endDate: string | null, now = new Date()): Date {
+export function sessionExpiry(endDate: string | null, now = new Date(), testMode = false): Date {
+  if (testMode) return nextMidnight(now);
   const minimum = new Date(now.getTime() + 24 * 3600 * 1000);
   if (!endDate) return new Date(now.getTime() + 60 * 24 * 3600 * 1000);
   const end = new Date(`${endDate}T00:00:00Z`);
@@ -54,6 +66,14 @@ export function registerSessions(app: FastifyInstance, db: EventDb) {
     request.me = me;
     request.sessionHash = hash;
   });
+}
+
+/** Sessions of these numbers ended: a number logged in nowhere gets no pushes any more, and what nobody is logged in for closes. */
+export function sessionsEnded(db: EventDb, calls: Calls, phones: Iterable<string>) {
+  const unique = new Set(phones);
+  if (!unique.size) return;
+  for (const phone of unique) if (!db.hasSession(phone)) db.deleteSubscriptionsFor(phone);
+  calls.leave(unique);
 }
 
 /** preHandler voor routes die alleen voor medewerkers zijn. */

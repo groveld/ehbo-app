@@ -12,7 +12,7 @@ import {
   placeOf,
   plannedClose,
   type CloseIncident,
-  type CloseSummary,
+  type ControlResult,
   type Dispatch,
   type EhboStatus,
   type DispatchReason,
@@ -105,6 +105,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** Laatste GPS-positie per mobiele eenheid; bewust niet in de database. */
   const positions = new Map<number, { lng: number; lat: number; at: number }>();
+  /** Teams whose last member logged out during a call: they go off duty once the call is over. */
+  const leftDuringCall = new Set<number>();
   const timers = new Map<number, () => void>();
   const listeners = new Set<(state: LiveState) => void>();
   let version = 0;
@@ -763,8 +765,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   }
 
   function closeUnitAuto(unit: Unit) {
-    run("UPDATE ehbo_units SET availability = 'uit_dienst', stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", unit.id);
-    positions.delete(unit.id);
+    takeOffDuty(unit);
     if (unit.kind === 'vast' && unit.postId !== null && !otherShiftOnDuty(unit)) {
       run('UPDATE posts SET is_open = 0, keep_until = NULL, closes_at = NULL, auto_closed_at = ? WHERE id = ?', iso(), unit.postId);
     }
@@ -788,7 +789,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const inUsePosts = new Set(all(`SELECT post_id FROM incidents WHERE status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse')
                                     UNION SELECT post_id FROM requests WHERE status IN ('aangevraagd', 'opgepakt')`).map((r) => r.post_id as number));
     const closed: string[] = [];
-    let touched = false;
+    let touched = sweepLeft();
 
     for (const unit of allUnits.filter((u) => u.availability !== 'uit_dienst')) {
       const step = nextStep(unit, planOf(unit), busy.has(unit.id), at);
@@ -863,32 +864,37 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     return result;
   }
 
-  function openAll(me: Me) {
+  function openAll(me: Me): ControlResult {
     requireLead(me);
+    // Nobody logged in can't receive a call or a question, so that stays closed and is named.
+    const present = db.loggedIn();
+    const allUnits = units();
+    const here = (people: string[]) => people.some((p) => present.has(p));
     const closedPosts = [...posts().values()].filter((p) => !p.isOpen);
-    const off = units().filter((u) => u.availability === 'uit_dienst');
+    const off = allUnits.filter((u) => u.availability === 'uit_dienst');
+    const openPosts = closedPosts.filter((p) => here(postPeople(p.id, allUnits)));
+    const onDuty = off.filter((u) => here(u.members));
+    const skipped = [...closedPosts.filter((p) => !openPosts.includes(p)).map((p) => p.name), ...off.filter((u) => !onDuty.includes(u)).map((u) => u.name)];
     db.transaction(() => {
-      for (const post of closedPosts) setPost(post.id, true);
-      for (const unit of off) run("UPDATE ehbo_units SET availability = 'vrij', keep_until = ?, closes_at = NULL WHERE id = ?", keepAfterOpening(planOf(unit)), unit.id);
+      for (const post of openPosts) setPost(post.id, true);
+      for (const unit of onDuty) run("UPDATE ehbo_units SET availability = 'vrij', keep_until = ?, closes_at = NULL WHERE id = ?", keepAfterOpening(planOf(unit)), unit.id);
     });
-    for (const post of closedPosts) notify(postPhones(post.id), { title: `${post.name} is geopend`, body: 'De coördinator heeft je post geopend.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
-    offerOpenCalls(off.map((u) => u.id));
-    for (const unit of off) notify(unit.members, { title: 'Je staat op Beschikbaar', body: 'De coördinator heeft je op Beschikbaar gezet.', tag: `dienst-${unit.id}`, url: '/ehbo' });
+    for (const post of openPosts) notify(postPhones(post.id), { title: `${post.name} is geopend`, body: 'De coördinator heeft je post geopend.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+    offerOpenCalls(onDuty.map((u) => u.id));
+    for (const unit of onDuty) notify(unit.members, { title: 'Je staat op Beschikbaar', body: 'De coördinator heeft je op Beschikbaar gezet.', tag: `dienst-${unit.id}`, url: '/ehbo' });
     changed();
-    return state();
+    return { state: state(), skipped };
   }
 
   /** Everything except what's in the middle of a call: that says so instead. */
-  function closeEverything(): CloseSummary {
+  function closeEverything(): ControlResult {
     const busy = busyUnits();
     const openPosts = new Set(all("SELECT post_id FROM incidents WHERE status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse')").map((r) => r.post_id as number));
     const skipped = [...units().filter((u) => busy.has(u.id)).map((u) => u.name), ...[...posts().values()].filter((p) => openPosts.has(p.id)).map((p) => p.name)];
     db.transaction(() => {
       for (const post of posts().values()) if (!openPosts.has(post.id)) setPost(post.id, false);
       for (const unit of units()) {
-        if (busy.has(unit.id)) continue;
-        run("UPDATE ehbo_units SET availability = 'uit_dienst', stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", unit.id);
-        positions.delete(unit.id);
+        if (!busy.has(unit.id)) takeOffDuty(unit);
       }
     });
     return { state: state(), skipped };
@@ -914,6 +920,81 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     notify(everyone, { title: 'Dag gesloten', body: 'Alle posten zijn dicht. Tot morgen.', tag: 'dag-gesloten', url: '/' });
     changed();
     return result;
+  }
+
+  // ---- Logged in or not (functioneel ontwerp, "Openen en sluiten") ----
+  // A post or team with nobody logged in is closed: when the last one logs out, and as the first one logs in.
+  // Logging out is something a person does, so this is no "closing on lost connection".
+
+  /** Everyone who counts as being at a post: its contacts, and at an EHBO post the members of its fixed teams. */
+  function postPeople(postId: number, allUnits = units()) {
+    return [...postPhones(postId), ...allUnits.filter((u) => u.kind === 'vast' && u.postId === postId).flatMap((u) => u.members)];
+  }
+
+  /** Posts and teams of these people that nobody is logged in for. */
+  function unattended(phones: Iterable<string>) {
+    const present = db.loggedIn();
+    const concerned = new Set(phones);
+    const allUnits = units();
+    const nobody = (people: string[]) => people.some((p) => concerned.has(p)) && !people.some((p) => present.has(p));
+    return { posts: [...posts().values()].filter((p) => nobody(postPeople(p.id, allUnits))), units: allUnits.filter((u) => nobody(u.members)) };
+  }
+
+  function takeOffDuty(unit: Unit) {
+    run("UPDATE ehbo_units SET availability = 'uit_dienst', stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", unit.id);
+    positions.delete(unit.id);
+  }
+
+  /** Closes what nobody is logged in for; a team in the middle of a call waits until it's over. Gives the names of what closed. */
+  function closeUnattended(phones: Iterable<string>) {
+    const { posts: empty, units: idle } = unattended(phones);
+    const busy = busyUnits();
+    const closed: string[] = [];
+    db.transaction(() => {
+      for (const post of empty.filter((p) => p.isOpen)) {
+        setPost(post.id, false);
+        closed.push(post.name);
+      }
+      for (const unit of idle.filter((u) => u.availability !== 'uit_dienst')) {
+        if (busy.has(unit.id)) {
+          leftDuringCall.add(unit.id);
+          continue;
+        }
+        takeOffDuty(unit);
+        closed.push(unit.name);
+      }
+    });
+    return closed;
+  }
+
+  /** These people logged out, or their sessions ended. */
+  function leave(phones: Iterable<string>) {
+    const closed = closeUnattended(phones);
+    if (!closed.length) return;
+    const phone = coordinator();
+    if (phone) notify([phone], { title: 'Gesloten: niemand meer aangemeld', body: closed.join(', '), tag: 'afgemeld', url: '/sturing' });
+    changed();
+  }
+
+  /** Just before this person logs in: who is first at a post or team finds it closed, whatever it said, so the start is always the same. */
+  function arrive(phone: string) {
+    if (closeUnattended([phone]).length) changed();
+  }
+
+  /** In the sweep: a team whose last member left during a call, now that the call is over. */
+  function sweepLeft() {
+    const busy = busyUnits();
+    const present = db.loggedIn();
+    let touched = false;
+    for (const id of leftDuringCall) {
+      if (busy.has(id)) continue;
+      leftDuringCall.delete(id);
+      const unit = unitById(id);
+      if (!unit || unit.availability === 'uit_dienst' || unit.members.some((p) => present.has(p))) continue;
+      takeOffDuty(unit);
+      touched = true;
+    }
+    return touched;
   }
 
   /** Carries out a change with the time it happened on the phone, when that time can be believed. */
@@ -963,7 +1044,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       return () => { listeners.delete(listener); };
     },
     report, selfStart, update, accept, assign, decline, onSite, close, withdraw, setAvailability, setPosition, setPostOpen, resume, stop, at, once, moment,
-    sweep, keepPost, keepUnit, reopenAutoClosed, lastSeen, openAll, closeAll, closeDay,
+    sweep, keepPost, keepUnit, reopenAutoClosed, lastSeen, openAll, closeAll, closeDay, leave, arrive,
     /** The live connection is a contact with the phone too. */
     seen: (sessionHash: string) => db.touchSession(sessionHash),
     /** Wijziging van buitenaf (bijv. beheer): iedereen de nieuwe stand sturen. */

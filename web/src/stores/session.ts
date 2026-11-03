@@ -7,6 +7,27 @@ import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
 
 const RANK = { beheerder: 0, kernteam: 1, ehbo: 2, post: 3 } as const;
+const LOGOUT_KEY = 'ehbo.logout';
+
+/** This device's push endpoint, so the server stops sending calls here after logging out. */
+async function pushEndpoint() {
+  try {
+    const registration = await navigator.serviceWorker?.getRegistration();
+    return (await registration?.pushManager.getSubscription())?.endpoint;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Logging out has to reach the server: a post or team only closes when the last one is gone. Gives false without signal. */
+async function sendLogout(endpoint: string | undefined) {
+  try {
+    await api('/api/session', { method: 'DELETE', body: endpoint ? { endpoint } : undefined });
+    return true;
+  } catch (err) {
+    return err instanceof ApiRequestError;
+  }
+}
 
 export const useSessionStore = defineStore('session', () => {
   const stored = load<Omit<PublicEvent, 'style' | 'brand'> & Partial<PublicEvent>>('ehbo.event');
@@ -18,6 +39,14 @@ export const useSessionStore = defineStore('session', () => {
 
   watch(event, (value) => save('ehbo.event', value));
   watch(me, (value) => save('ehbo.me', value));
+
+  /** Logged out without signal: the cookie is still on the phone, so tell the server as soon as there is a connection. */
+  async function finishLogout() {
+    const pending = load<{ endpoint?: string }>(LOGOUT_KEY);
+    if (pending && await sendLogout(pending.endpoint)) save(LOGOUT_KEY, null);
+  }
+  void finishLogout();
+  window.addEventListener('online', () => void finishLogout());
 
   const firstName = computed(() => me.value?.name.split(' ')[0] ?? '');
   /** Je functies, belangrijkste bovenaan: beheer, dan kernteam, dan EHBO en posten. Zo in het menu en na het aanmelden. */
@@ -47,6 +76,8 @@ export const useSessionStore = defineStore('session', () => {
   async function login(phone: string): Promise<'ok' | 'unknown'> {
     try {
       me.value = await api<Me>('/api/session', { method: 'POST', body: { phone } });
+      // Logging in replaces the old session on the server, so a logout still waiting is done.
+      save(LOGOUT_KEY, null);
       unknown.value = null;
       // Medewerkers krijgen het pakket met namen en nummers.
       void usePackageStore().refresh();
@@ -61,7 +92,8 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   async function logout() {
-    await api('/api/session', { method: 'DELETE' }).catch(() => {});
+    const endpoint = await pushEndpoint();
+    if (!await sendLogout(endpoint)) save(LOGOUT_KEY, { endpoint });
     me.value = null;
     usePackageStore().clearStaffData();
     void usePackageStore().refresh();
