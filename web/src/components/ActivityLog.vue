@@ -33,6 +33,6 @@ li:not(:last-child)::before { content: ''; position: absolute; left: 6px; top: 1
 .warn .text { color: var(--warn); font-weight: 600; }
 .stop .dot { background: var(--danger); }
 .stop .text { font-weight: 600; }
-.waiting .dot { background: var(--card); box-shadow: inset 0 0 0 2px #A8A59C, 0 0 0 3px var(--card); }
+.waiting .dot { background: var(--card); box-shadow: inset 0 0 0 2px var(--dot), 0 0 0 3px var(--card); }
 .waiting .text { color: var(--muted); }
 </style>

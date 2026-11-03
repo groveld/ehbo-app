@@ -22,7 +22,7 @@ const pkg = usePackageStore();
 const live = useLiveStore();
 
 /** Vaste kleuren van de tabbladen als ze actief zijn; EHBO in het rood. */
-const COLORS = { firstAid: '#C8261E', map: '#0E7C86', requests: '#A16207', contacts: '#3F51B5', menu: '#3E434B' };
+const COLORS = { firstAid: '#C8261E', map: '#0E7C86', requests: '#A16207', contacts: '#3F51B5', menu: 'var(--ink-2)' };
 
 /** Het kruis van de EHBO-tab in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
 const STATUS = { available: '#0A7D4F', unavailable: '#C8261E', off_duty: 'var(--ink)' } as const;

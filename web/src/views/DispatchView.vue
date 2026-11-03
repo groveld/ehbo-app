@@ -267,7 +267,7 @@ async function onSite() {
 .others-label { display: block; padding-top: 10px; }
 .others .list-row { padding: 0; min-height: 44px; font-size: 14px; }
 .dot { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--warn-line); }
-.dot.declined { background: #A8A59C; }
+.dot.declined { background: var(--dot); }
 .dot.accepted { background: var(--ok); }
 .dot.coordinator { background: var(--primary); }
 .bottom { padding-top: 12px; }

@@ -89,10 +89,10 @@ async function finish(then: TeamAvailability) {
 <style scoped>
 .fields { padding-top: 4px; }
 .q { font-size: 14px; font-weight: 600; }
-.where { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid #D4D1C7; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.where { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--field-line); background: var(--field); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
 .where[aria-pressed="true"] { border: 2px solid var(--ink); }
 .where strong { font-size: 14px; }
-.radio { width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; border: 2px solid #A8A59C; }
+.radio { width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--dot); }
 .where[aria-pressed="true"] .radio { border: 6px solid var(--ink); }
 .center { text-align: center; }
 .footer { margin-top: 8px; }

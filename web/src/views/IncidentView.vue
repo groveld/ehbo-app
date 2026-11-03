@@ -197,7 +197,7 @@ const back = () => router.back();
 .steps { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; font-size: 14px; }
 .step { display: flex; gap: 12px; align-items: center; }
 .step.later { color: var(--muted); }
-.mark { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; border: 2px solid #A8A59C; display: flex; align-items: center; justify-content: center; }
+.mark { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--dot); display: flex; align-items: center; justify-content: center; }
 .mark.done { border: none; background: var(--ok); color: #FFFFFF; }
 .mark.busy { border: 3px solid var(--warn-line); }
 .countdown { font-size: 13px; color: var(--warn); }

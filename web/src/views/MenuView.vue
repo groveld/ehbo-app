@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { formatPhone } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import LocationBadge from '../components/LocationBadge.vue';
+import { APPEARANCES, appearance, setAppearance } from '../colorScheme.ts';
 import { confirmDialog } from '../composables/useDialog.ts';
 import { getNavApp, NAV_APPS, setNavApp, type NavApp } from '../navigate.ts';
 import { isIOS } from '../platform.ts';
@@ -74,6 +75,13 @@ async function logout() {
       </select>
     </div>
 
+    <div class="form-field appearance">
+      <span class="section-label">Weergave</span>
+      <div class="choice-grid" role="group" aria-label="Weergave">
+        <button v-for="a in APPEARANCES" :key="a.value" class="option" :aria-pressed="appearance === a.value" @click="setAppearance(a.value)">{{ a.label }}</button>
+      </div>
+    </div>
+
     <div class="card awake">
       <span class="stack grow">
         <strong>Scherm aan houden</strong>
@@ -103,6 +111,7 @@ async function logout() {
 .detail { font-size: 14px; color: var(--ink-2); }
 .menu { margin-top: 18px; }
 .nav-app { margin: 18px 0 6px; }
+.appearance { margin-top: 12px; }
 .awake { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
 select.input { appearance: auto; }
 </style>

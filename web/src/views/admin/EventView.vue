@@ -165,7 +165,7 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
 
 <style scoped>
 .escalation { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.step { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; border: 1px solid #D4D1C7; background: #FFFFFF; font: 600 16px var(--sans); color: var(--ink); cursor: pointer; }
+.step { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--field-line); background: var(--field); font: 600 16px var(--sans); color: var(--ink); cursor: pointer; }
 .seconds { min-width: 44px; text-align: center; font-size: 15px; }
 .tag { margin-left: 0; flex-shrink: 0; }
 .logos { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }

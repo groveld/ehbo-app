@@ -120,8 +120,8 @@ async function setOpen(value: boolean) {
             <span class="tile-text"><span class="tile-label">EHBO</span><span class="tile-sub">Eerste hulp nodig</span></span>
           </RouterLink>
           <button
-            v-for="t in tiles" :key="t.key" class="tile" :disabled="busy"
-            :style="{ background: t.colors.bg, borderColor: t.colors.line }" @click="ask(t.key)"
+            v-for="t in tiles" :key="t.key" class="tile typed" :disabled="busy"
+            :style="{ '--tile-bg': t.colors.bg, '--tile-line': t.colors.line, '--tile-icon': t.colors.icon }" @click="ask(t.key)"
           >
             <span class="tile-icon" :style="{ background: t.colors.icon, color: t.colors.iconText }"><Icon :name="iconOf(t.icon)" :size="22" /></span>
             <span class="tile-text"><span class="tile-label">{{ t.name }}</span><span v-if="t.sub" class="tile-sub">{{ t.sub }}</span></span>
@@ -177,13 +177,13 @@ async function setOpen(value: boolean) {
 h1 { font-size: 24px; font-weight: 700; line-height: 1.2; }
 .open { color: var(--ok-text); }
 .close-post {
-  flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #EDB9B4; background: #FDF1F0; color: #A61F18;
+  flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--danger-line); background: var(--danger-soft); color: var(--danger-text);
   font: 600 13px var(--sans); display: flex; align-items: center; gap: 6px; cursor: pointer; margin-top: 4px;
 }
 .icon-btn { margin: -2px -10px 0 -6px; }
 .closed { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 14px; padding: 18px; border-radius: 20px; }
 .closed-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); background: var(--soft); padding: 6px 12px; border-radius: 999px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #8A8780; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dot); }
 .center { text-align: center; }
 .people-label { margin: 14px 4px 6px; }
 .round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--ink); }
@@ -195,8 +195,11 @@ h1 { font-size: 24px; font-weight: 700; line-height: 1.2; }
   height: 128px; border-radius: 18px; border: 1px solid; color: var(--ink); text-decoration: none;
   display: flex; flex-direction: column; justify-content: space-between; padding: 16px; -webkit-touch-callout: none;
 }
-.tile.ehbo { background: #FBE3E1; border: 2px solid var(--danger); }
-.tile.other { grid-column: 1 / -1; height: 72px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; background: var(--card); border-color: #D4D1C7; }
+.tile.ehbo { background: var(--danger-bg); border: 2px solid var(--danger); }
+.tile.other { grid-column: 1 / -1; height: 72px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; background: var(--card); border-color: var(--field-line); }
+/* A help request type's own colours; in dark its icon colour on the card, so a light tile doesn't glare. */
+.tile.typed { background: var(--tile-bg); border-color: var(--tile-line); }
+:root[data-theme="dark"] .tile.typed { background: color-mix(in srgb, var(--tile-icon) 18%, var(--card)); border-color: color-mix(in srgb, var(--tile-icon) 55%, var(--card)); }
 .tile-icon { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #FFFFFF; }
 .tile-text { display: flex; flex-direction: column; gap: 2px; }
 .tile-label { font-size: 18px; font-weight: 700; }

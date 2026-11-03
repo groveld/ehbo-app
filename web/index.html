@@ -14,7 +14,9 @@
   <meta name="apple-mobile-web-app-title" content="EHBO-app">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <!-- The page background before any stylesheet has loaded, so opening the app never shows a black screen. -->
-  <style>html, body { margin: 0; background: #F6F5F1; }</style>
+  <style>html, body { margin: 0; background: #F6F5F1; } html[data-theme="dark"], html[data-theme="dark"] body { background: #121317; }</style>
+  <!-- Light or dark before anything shows, as colorScheme.ts decides it later. -->
+  <script>try { var a = JSON.parse(localStorage.getItem('app.appearance') || '"system"'); document.documentElement.dataset.theme = a === 'dark' || (a !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; } catch (e) {}</script>
 </head>
 <body>
   <div id="app"></div>
