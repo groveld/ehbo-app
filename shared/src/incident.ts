@@ -202,24 +202,24 @@ export interface ControlResult {
 export const LIVE_HEARTBEAT_MS = 30_000;
 /** Een mobiele eenheid deelt elke minuut haar positie; ouder dan dit telt niet meer. */
 export const POSITION_MAX_AGE_MS = 3 * 60_000;
-/** Binnen deze afstand van haar standplaats is een mobiele eenheid thuis. */
-export const HOME_RADIUS_KM = 0.05;
+/** At a post: within this distance, unless the admin set another (event.at_post_m, #63). The same as a post's distance to a route in the GPX. */
+export const DEFAULT_AT_POST_M = 30;
 
 /**
- * Onderweg: een mobiele eenheid in dienst met een recente GPS-positie, verder dan 50 m van haar standplaats (of zonder standplaats).
+ * Onderweg: een mobiele eenheid in dienst met een recente GPS-positie, verder dan atPostM van haar standplaats (of zonder standplaats).
  * Zonder recente positie telt ze als thuis. Een vaste eenheid is altijd op haar post.
  */
-export function isAway(unit: { kind: UnitKind }, live: LiveUnit | undefined, base: { lat: number | null; lng: number | null } | undefined, now: number) {
+export function isAway(unit: { kind: UnitKind }, live: LiveUnit | undefined, base: { lat: number | null; lng: number | null } | undefined, now: number, atPostM: number) {
   if (unit.kind !== 'mobiel' || !live?.position || live.availability === 'uit_dienst') return false;
   if (now - new Date(live.position.at).getTime() > POSITION_MAX_AGE_MS) return false;
-  return !(base?.lat != null && base.lng != null && distanceKm([live.position.lng, live.position.lat], [base.lng, base.lat]) <= HOME_RADIUS_KM);
+  return !(base?.lat != null && base.lng != null && distanceKm([live.position.lng, live.position.lat], [base.lng, base.lat]) * 1000 <= atPostM);
 }
 
 /** Posten waar EHBO hoort maar nu niemand is: elke eenheid met die post als standplaats is onderweg. Voor een grijs kruisje. */
 export function awayPostIds(
-  units: { id: number; kind: UnitKind; postId: number | null }[], live: LiveUnit[], posts: { id: number; lat: number | null; lng: number | null }[], now: number,
+  units: { id: number; kind: UnitKind; postId: number | null }[], live: LiveUnit[], posts: { id: number; lat: number | null; lng: number | null }[], now: number, atPostM: number,
 ): number[] {
-  const away = new Set(units.filter((u) => isAway(u, live.find((l) => l.id === u.id), posts.find((p) => p.id === u.postId), now)).map((u) => u.id));
+  const away = new Set(units.filter((u) => isAway(u, live.find((l) => l.id === u.id), posts.find((p) => p.id === u.postId), now, atPostM)).map((u) => u.id));
   const postIds = new Set(units.flatMap((u) => (u.postId !== null ? [u.postId] : [])));
   return [...postIds].filter((id) => units.filter((u) => u.postId === id).every((u) => away.has(u.id)));
 }
@@ -272,11 +272,11 @@ export function plannedClose(plan: { timeTo: string | null }, event: { startDate
  * Where a position is: the post itself within the same radius as a mobile team and its standplaats, otherwise a distance from the nearest post.
  * Null without any post with a position.
  */
-export function placeOf(posts: { id: number; name: string; lat: number | null; lng: number | null }[], at: [number, number]) {
+export function placeOf(posts: { id: number; name: string; lat: number | null; lng: number | null }[], at: [number, number], atPostM: number) {
   const nearest = posts.flatMap((p) => (p.lat != null && p.lng != null ? [{ post: p, km: distanceKm(at, [p.lng, p.lat]) }] : [])).sort((a, b) => a.km - b.km)[0];
   if (!nearest) return null;
   const { post, km } = nearest;
-  if (km <= HOME_RADIUS_KM) return { postId: post.id, atPost: true, name: post.name };
+  if (km * 1000 <= atPostM) return { postId: post.id, atPost: true, name: post.name };
   return { postId: post.id, atPost: false, name: `${km < 1 ? `${Math.round(km * 1000)} m` : `${formatKm(km)} km`} van ${post.name}` };
 }
 

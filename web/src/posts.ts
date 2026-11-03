@@ -1,5 +1,5 @@
 // Posten in het evenementpakket: contactpersoon, eenheden, dichtstbijzijnde EHBO.
-import { POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, sameFunction } from '@ehbo/shared';
+import { DEFAULT_AT_POST_M, POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, sameFunction } from '@ehbo/shared';
 
 /** "km 2,1", and "+1" when the longest run comes by more often. */
 export function kmLabel(post: Pick<PackagePost, 'km' | 'passages'>) {
@@ -62,15 +62,18 @@ export interface Ambulance { id: number; name: string; lng: number; lat: number;
  * Mobiele EHBO-eenheden op de kaart. Onderweg (verder dan 50 m van haar standplaats) staat ze er als ambulance op;
  * thuis niet, dan zegt het kruisje bij de post genoeg. awayPostIds: standplaatsen waar nu niemand is, voor een grijs kruisje.
  */
+/** How close counts as at a post, as the admin set it. A package from before the setting has the default. */
+export const atPostM = (pkg: EventPackage | null) => pkg?.event.atPostM ?? DEFAULT_AT_POST_M;
+
 export function mobileUnits(pkg: EventPackage | null, units: LiveUnit[], now: number): { ambulances: Ambulance[]; awayPostIds: number[] } {
   if (!pkg) return { ambulances: [], awayPostIds: [] };
   const ambulances = units.flatMap((u) => {
     const unit = pkg.units.find((x) => x.id === u.id);
-    if (!unit || !u.position || !isAway(unit, u, pkg.posts.find((p) => p.id === unit.postId), now)) return [];
+    if (!unit || !u.position || !isAway(unit, u, pkg.posts.find((p) => p.id === unit.postId), now, atPostM(pkg))) return [];
     const busy = u.incidentId !== null;
     return [{ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'vrij' }];
   });
-  return { ambulances, awayPostIds: awayPostIds(pkg.units, units, pkg.posts, now) };
+  return { ambulances, awayPostIds: awayPostIds(pkg.units, units, pkg.posts, now, atPostM(pkg)) };
 }
 
 /**

@@ -8,7 +8,7 @@ import { cleanGpx, type GpxWaypoint } from '../gpx.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
-const PACKAGE_FORMAT = 5;
+const PACKAGE_FORMAT = 6;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
@@ -27,7 +27,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   return {
     version: `${db.dataVersion()}.${staff ? 's' : 'p'}${PACKAGE_FORMAT}`,
     staff,
-    event: { name: state.event.name, startDate: state.event.startDate, endDate: state.event.endDate, startLocation: state.event.startLocation },
+    event: { name: state.event.name, startDate: state.event.startDate, endDate: state.event.endDate, startLocation: state.event.startLocation, atPostM: state.event.atPostM },
     postTypes: state.postTypes,
     posts: state.posts.map((p) => ({
       id: p.id, typeId: p.typeId, name: p.name, km: p.km, passages: p.passages, lat: p.lat, lng: p.lng, isOpen: p.isOpen, timeFrom: p.timeFrom, timeTo: p.timeTo,

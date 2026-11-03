@@ -413,7 +413,7 @@ test('the data version in the live state and for participants follows changes in
   assert.ok(pkg.version.startsWith(`${before.dataVersion}.`), 'the package version starts with it');
 
   await ok(DEMO.admin, 'PUT', '/api/admin/event', {
-    name: 'Nieuwe naam', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30,
+    name: 'Nieuwe naam', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atPostM: 30,
     style: (await ok<AdminState>(DEMO.admin, 'GET', '/api/admin')).event.style,
   });
 
@@ -467,7 +467,19 @@ test('help from where you are: the nearest team from that position, the place ke
   assert.ok(pushesTo(DEMO.postMember).some((p) => p.payload.title === 'Hulp is onderweg'), 'the reporter hears it');
   await ok(DEMO.postMember, 'POST', `/api/incidents/${inc.id}/withdraw`);
 
-  // Within 50 m of a post it counts as that post, which needn't be open.
+  // Within 30 m of a post (the default) it counts as that post, which needn't be open.
   const atPost = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request({ postId: null, lat: 53.1512, lng: 5.8345, accuracyM: 30 }));
   assert.deepEqual([atPost.offPost, atPost.postId, atPost.post.name], [false, WATER(), 'Waterpost 3 · brug']);
+});
+
+test('how close counts as at a post follows the setting', async () => {
+  await onDuty();
+  // About 80 m north of the water post.
+  const near = { postId: null, lat: 53.15192, lng: 5.8344, accuracyM: 10 };
+  const off = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request(near));
+  assert.equal(off.offPost, true, 'outside the default 30 m');
+  await ok(DEMO.postMember, 'POST', `/api/incidents/${off.id}/withdraw`);
+  db.raw.prepare('UPDATE event SET at_post_m = 100').run();
+  const at = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request(near));
+  assert.deepEqual([at.offPost, at.postId], [false, WATER()]);
 });

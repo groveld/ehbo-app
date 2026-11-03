@@ -7,6 +7,7 @@ import { INCIDENT_PERSONS, INCIDENT_WHAT, RESPONSIVE, placeOf, type IncidentDeta
 import Icon from '../components/Icon.vue';
 import { useSave } from '../composables/useSave.ts';
 import { unitOf } from '../incidents.ts';
+import { atPostM } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -30,7 +31,7 @@ const locating = ref(false);
 /** Chosen by hand; that goes above the GPS. */
 const chosen = ref<number | null>(null);
 
-const place = computed(() => (gps.value ? placeOf(posts.value, gps.value) : null));
+const place = computed(() => (gps.value ? placeOf(posts.value, gps.value, atPostM(store.pkg)) : null));
 /** Without GPS the place of the team: where it stayed, or its own post or standplaats. */
 const homePostId = computed(() => (unitId.value !== null ? live.unitState(unitId.value)?.stayPostId : null) ?? unit.value?.postId ?? null);
 const postId = computed(() => chosen.value ?? place.value?.postId ?? homePostId.value);

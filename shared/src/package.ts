@@ -70,7 +70,7 @@ export interface EventPackage {
   /** Verandert bij elke wijziging; de server antwoordt 304 als de telefoon deze al heeft. */
   version: string;
   staff: boolean;
-  event: { name: string; startDate: string | null; endDate: string | null; startLocation: string | null };
+  event: { name: string; startDate: string | null; endDate: string | null; startLocation: string | null; atPostM: number };
   postTypes: PostTypeInfo[];
   posts: PackagePost[];
   runs: PackageRun[];

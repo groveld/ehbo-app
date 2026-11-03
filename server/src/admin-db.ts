@@ -39,13 +39,14 @@ export function adminDb(events: EventDb) {
   );
 
   function getState(): AdminState {
-    const e = db.prepare('SELECT name, start_location, start_date, end_date, escalation_seconds FROM event WHERE id = 1').get() as Row;
+    const e = db.prepare('SELECT name, start_location, start_date, end_date, escalation_seconds, at_post_m FROM event WHERE id = 1').get() as Row;
     const event: EventSettings = {
       name: e.name as string,
       startLocation: e.start_location as string | null,
       startDate: e.start_date as string | null,
       endDate: e.end_date as string | null,
       escalationSeconds: e.escalation_seconds as number,
+      atPostM: e.at_post_m as number,
       style: getStyle(events),
     };
 
@@ -142,8 +143,8 @@ export function adminDb(events: EventDb) {
 
   function saveEvent(e: EventSettings) {
     events.transaction(() => {
-      run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ? WHERE id = 1',
-        e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds);
+      run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ?, at_post_m = ? WHERE id = 1',
+        e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds, e.atPostM);
       saveStyle(events, e.style);
     });
   }
