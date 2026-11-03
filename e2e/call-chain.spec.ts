@@ -408,7 +408,7 @@ test('a new post in admin: open phones get it by themselves, and a call works be
 
   // With signal back, the rest of the post's data arrives too.
   await ehbo.unroute('**/api/package');
-  await expect(ehbo.getByRole('link', { name: 'Bel de post' })).toBeVisible({ timeout: 15_000 });
+  await expect(ehbo.getByRole('link', { name: 'Bel post' })).toBeVisible({ timeout: 15_000 });
 
   expect((await post.request.post(`/api/incidents/${id}/withdraw`)).ok()).toBe(true);
 });
