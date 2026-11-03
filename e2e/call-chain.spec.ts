@@ -693,3 +693,25 @@ test('an AED on the map: for participants in the legend, and no open or closed',
 
   expect((await admin.request.delete(`/api/admin/posts/${aed.id}`)).ok()).toBe(true);
 });
+
+test('import and export: the export comes back unchanged, and a CSV adds what is in it', async ({ browser }) => {
+  const admin = await staffPhone(browser, PHONE.admin);
+  await admin.goto('/beheer');
+  await admin.getByRole('link', { name: /Importeren en exporteren/ }).click();
+  const download = admin.waitForEvent('download');
+  await admin.getByRole('link', { name: 'Excel-bestand downloaden' }).click();
+  const file = await (await download).path();
+
+  await admin.locator('input[type=file]').setInputFiles(file);
+  await expect(admin.getByText('Het bestand is hetzelfde als wat er nu staat.')).toBeVisible();
+
+  await admin.locator('input[type=file]').setInputFiles({ name: 'noodnummers.csv', mimeType: 'text/csv', buffer: Buffer.from('Omschrijving;Nummer\r\nTandarts;0900 7654321\r\n') });
+  await expect(admin.locator('.sheet').filter({ hasText: 'Noodnummers' })).toContainText('1 nieuw');
+  await admin.getByRole('button', { name: 'Importeren' }).click();
+  await expect(admin.getByText(/Geïmporteerd/)).toBeVisible();
+  const { emergencyNumbers } = await (await admin.request.get('/api/admin')).json() as { emergencyNumbers: { label: string; number: string }[] };
+  expect(emergencyNumbers.some((n) => n.label === 'Tandarts')).toBe(true);
+
+  // Clean up: back to the numbers from before.
+  await admin.request.put('/api/admin/emergency-numbers', { data: emergencyNumbers.filter((n) => n.label !== 'Tandarts') });
+});

@@ -109,6 +109,10 @@ Belangrijk voor installeren en meldingen:
 - De server moet **uitgaand** internet hebben naar de push-diensten (`web.push.apple.com`, `fcm.googleapis.com`, `updates.push.services.mozilla.com`), en voor het ophalen van de kaart naar `build-metadata.protomaps.dev`, `build.protomaps.com` en `protomaps.github.io`. Dit loopt niet via de tunnel.
 - `/map/*` (kaarttegels) mag bij Cloudflare in de cache: de versie zit in het adres en de server stuurt `immutable`. Laat de bestaande regel voor `/sw.js`, het manifest en `/api/*` staan.
 
+## Evenement voorbereiden in Excel
+
+Beheer › **Importeren en exporteren**: download het Excel-bestand (alles wat er nu staat, met keuzelijsten), vul het aan en importeer het weer. Per tabblad kan het ook als CSV. Voor het opslaan zie je per tabblad wat er nieuw, gewijzigd of weg is, en elke fout met de regel; er wordt pas iets opgeslagen als je op *Importeren* tikt, en dan alles of niets. Locaties, eenheden en functies worden op naam herkend; wat niet in het bestand staat, blijft staan, tenzij je *Ontbrekende onderdelen verwijderen* aanvinkt. Lopen met GPX, de kaart, stijl en logo's blijven in de app.
+
 ## 4. Testen op een telefoon
 
 Volg [docs/testprocedure.md](docs/testprocedure.md): wat je nodig hebt (toestellen, mensen, nummers), de voorbereiding in beheer, en per blok welke stap op welk toestel, met wat je moet zien. Doe het met minstens twee iPhones en twee Android-toestellen, in de testmodus.
@@ -173,6 +177,8 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | POST | `/api/requests` | post | Aanvraag water, verkeer of vrijwilliger `{ postId, kind, detail, clientId }` |
 | PUT | `/api/requests/:id` | post | Aanvullen `{ detail }` |
 | POST | `/api/requests/:id/pick`, `/done`, `/withdraw` | coördinator, post | Oppakken, afhandelen (coördinator, kernteam, beheerder) of intrekken (post) |
+| GET | `/api/admin/export.xlsx`, `/api/admin/export/<tabblad>.csv` | beheerder | Export en sjabloon: locaties, contactpersonen, EHBO-eenheden en -leden, kernteam, noodnummers |
+| POST | `/api/admin/import/check`, `/api/admin/import` | beheerder | Controleren (verandert niets) en importeren `{ files: [{ name, data (base64) }], removeMissing }`; alles of niets |
 | GET | `/api/admin/people`, `/api/admin/people.csv` | beheerder | Iedereen met nummer, naam, waar die staat, aangemeld en meldingen; en wat nog ontbreekt |
 | PUT | `/api/admin/people/:telefoon` | beheerder | Naam van een persoon `{ name }` |
 | GET | `/api/admin/report`, `/api/admin/report.csv` | beheerder | Rapport als JSON (scherm en afdrukpagina) of als CSV-download |
