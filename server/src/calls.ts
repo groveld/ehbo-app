@@ -7,6 +7,7 @@ import {
   KEEP_OPEN_MIN,
   POSITION_MAX_AGE_MS,
   awayPostIds,
+  incidentsOf,
   distanceKm,
   formatKm,
   placeOf,
@@ -249,6 +250,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const place = row.place_name as string | null;
     return {
       id: row.id as number,
+      type: 'first_aid',
+      handling: 'dispatch',
       postId: row.post_id as number,
       post: { typeId, name: place ?? name, km, lat: (row.place_lat as number | null) ?? lat, lng: (row.place_lng as number | null) ?? lng },
       reportedBy: row.reported_by as string,
@@ -302,10 +305,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       version,
       dataVersion: db.dataVersion(),
       serverTime: iso(),
-      incidents: all('SELECT * FROM incidents ORDER BY id DESC').map((row) => toLive(row, eventsById, postMap)),
+      helpRequests: [...all('SELECT * FROM incidents').map((row) => toLive(row, eventsById, postMap)), ...requests()].sort((a, b) => b.id - a.id),
       teams: liveTeams(),
       posts: [...postMap.values()].map((p) => ({ id: p.id, isOpen: p.isOpen, closesAt: p.closesAt, autoClosedAt: p.autoClosedAt })),
-      requests: requests(),
       testMode: db.testMode(),
     };
   }
@@ -481,7 +483,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function report(me: Me, body: NewIncident): LiveIncident {
     const existing = get('SELECT id FROM incidents WHERE client_id = ?', body.clientId);
-    if (existing) return state().incidents.find((i) => i.id === existing.id)!;
+    if (existing) return incidentsOf(state()).find((i) => i.id === existing.id)!;
 
     // From a post, or from where you are (#102): anyone on staff, with a GPS position. That place is kept for the report;
     // within the radius of a post it counts as that post.
@@ -535,13 +537,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       // Geen beschikbare eenheid met bekende positie: meteen naar iedereen die vrij is.
       escalate(id, 'Geen beschikbare eenheid in de buurt bekend');
     }
-    return state().incidents.find((i) => i.id === id)!;
+    return incidentsOf(state()).find((i) => i.id === id)!;
   }
 
   /** Someone came to the team: no call, the team is already there. Only a person who isn't responsive still brings an AED. */
   function selfStart(me: Me, body: NewSelfIncident): LiveIncident {
     const existing = get('SELECT id FROM incidents WHERE client_id = ?', body.clientId);
-    if (existing) return state().incidents.find((i) => i.id === existing.id)!;
+    if (existing) return incidentsOf(state()).find((i) => i.id === existing.id)!;
     const team = requireTeamMember(me, body.teamId);
     if (busyTeams().has(team.id)) throw httpError(409, `${team.name} is al bezig met een andere oproep`);
 
@@ -579,7 +581,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     }
     copyToCoordinator(row, `${team.name} is zelf een incident gestart: ${summary(row)}${offPost ? `, ${place.name}` : ''}.`);
     changed();
-    return state().incidents.find((i) => i.id === id)!;
+    return incidentsOf(state()).find((i) => i.id === id)!;
   }
 
   /** What an addition changes, in words for a push. Never the note itself: that doesn't belong on a lock screen. */
@@ -1117,8 +1119,12 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     listeners.clear();
   }
 
+  /** How a help request is handled, or null when there's none with this id. */
+  const handlingOf = (id: number) => (get('SELECT t.handling FROM help_requests h JOIN help_request_types t ON t.id = h.type_id WHERE h.id = ?', id)?.handling as 'dispatch' | 'queue' | undefined) ?? null;
+
   return {
     state,
+    handlingOf,
     ehboStatus,
     subscribe(listener: (state: LiveState) => void) {
       listeners.add(listener);

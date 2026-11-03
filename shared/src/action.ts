@@ -1,5 +1,6 @@
 // Changes a phone makes to the live state. The phone applies each one to its own state at once and queues it for the server,
 // so nothing ever waits for the network; the queue goes out in order as soon as there is a connection.
+import { incidentsOf, requestsOf } from './incident.ts';
 import type { CloseIncident, Dispatch, IncidentDetails, IncidentEventType, IncidentPost, LiveIncident, LiveState, LiveTeam, NewSelfIncident, TeamAvailability } from './incident.ts';
 import type { LiveRequest, NewRequest, RequestKind } from './request.ts';
 
@@ -43,7 +44,7 @@ export interface ActionContext {
 const OPEN_REQUEST = ['sent', 'accepted'];
 
 const changeIncident = (state: LiveState, id: number, change: (incident: LiveIncident) => LiveIncident): LiveState =>
-  ({ ...state, incidents: state.incidents.map((i) => (i.id === id ? change(i) : i)) });
+  ({ ...state, helpRequests: state.helpRequests.map((h) => (h.id === id && h.handling === 'dispatch' ? change(h) : h)) });
 
 /** A team or post the state doesn't list yet (a phone that never had a connection) is added. */
 function changeTeam(state: LiveState, id: number, change: (team: LiveTeam) => LiveTeam): LiveState {
@@ -58,7 +59,7 @@ function setPostOpen(state: LiveState, id: number, isOpen: boolean): LiveState {
 }
 
 const changeRequest = (state: LiveState, id: number, change: (request: LiveRequest) => LiveRequest): LiveState =>
-  ({ ...state, requests: state.requests.map((r) => (r.id === id ? change(r) : r)) });
+  ({ ...state, helpRequests: state.helpRequests.map((h) => (h.id === id && h.handling === 'queue' ? change(h) : h)) });
 
 /** The same line as the server's, once: the server's own may already be in the state while the action is still on its way. */
 const logged = (incident: LiveIncident, at: string, type: IncidentEventType, text: string, teamId: number | null = null): LiveIncident =>
@@ -91,13 +92,13 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
       const { body, tempId, post, offPost, postId } = action;
       const name = context.teams.find((u) => u.id === body.teamId)?.name ?? 'Eenheid';
       const incident: LiveIncident = {
-        id: tempId, isTest: state.testMode, selfStarted: true, offPost, accuracyM: null, postId, post, reportedBy: context.me?.phone ?? '', status: 'on_site', stage: 'nearest', aed: body.responsive === 'no',
+        id: tempId, type: 'first_aid', handling: 'dispatch', isTest: state.testMode, selfStarted: true, offPost, accuracyM: null, postId, post, reportedBy: context.me?.phone ?? '', status: 'on_site', stage: 'nearest', aed: body.responsive === 'no',
         what: body.what, persons: body.persons, responsive: body.responsive, note: body.note, reportedAt: at, sentAt: at, escalatesAt: null,
         teamId: body.teamId, acceptedBy: context.me, acceptedAt: at, onSiteAt: at, closedAt: null, outcome: null,
         dispatches: [{ teamId: body.teamId, at, reason: 'manual', distanceKm: 0, declinedAt: null, acceptedAt: at }],
         events: [{ at, type: 'reported', teamId: body.teamId, text: `Zelf gestart door ${name} · ${post.name}` }],
       };
-      return changeTeam({ ...state, incidents: [incident, ...state.incidents] }, body.teamId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId: tempId }));
+      return changeTeam({ ...state, helpRequests: [incident, ...state.helpRequests] }, body.teamId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId: tempId }));
     }
     case 'accept': return take(state, at, action.incidentId, action.teamId, false, context);
     case 'assign': return take(state, at, action.incidentId, action.teamId, true, context);
@@ -115,7 +116,7 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
       return logged({ ...i, status: 'on_site', onSiteAt: i.onSiteAt ?? at }, at, 'on_site', `${team?.name ?? 'Eenheid'} is ter plaatse`, team?.id ?? null);
     });
     case 'close': {
-      const incident = state.incidents.find((i) => i.id === action.incidentId);
+      const incident = incidentsOf(state).find((i) => i.id === action.incidentId);
       if (!incident) return state;
       const team = myAcceptedTeam(incident, context);
       const { outcome, pause, stayHere } = action.body;
@@ -157,40 +158,40 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
     }
     case 'requestNew': return {
       ...state,
-      requests: [{
-        id: action.tempId, isTest: state.testMode, postId: action.postId, postName: action.postName, kind: action.kind, detail: null, status: 'sent',
-        createdAt: at, pickedAt: null, pickedBy: null, doneAt: null, position: state.requests.filter((r) => OPEN_REQUEST.includes(r.status)).length + 1,
-      }, ...state.requests],
+      helpRequests: [{
+        id: action.tempId, handling: 'queue', type: action.kind, isTest: state.testMode, postId: action.postId, postName: action.postName, detail: null, status: 'sent',
+        reportedAt: at, acceptedAt: null, acceptedBy: null, closedAt: null, position: requestsOf(state).filter((r) => OPEN_REQUEST.includes(r.status)).length + 1,
+      }, ...state.helpRequests],
     };
     case 'requestDetail': return changeRequest(state, action.requestId, (r) => ({ ...r, detail: action.detail }));
-    case 'requestPick': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'accepted', pickedAt: at, pickedBy: context.me }));
-    case 'requestDone': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'closed', doneAt: at, position: null, pickedAt: r.pickedAt ?? at, pickedBy: r.pickedBy ?? context.me }));
-    case 'requestWithdraw': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'withdrawn', doneAt: at, position: null }));
+    case 'requestPick': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'accepted', acceptedAt: at, acceptedBy: context.me }));
+    case 'requestDone': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'closed', closedAt: at, position: null, acceptedAt: r.acceptedAt ?? at, acceptedBy: r.acceptedBy ?? context.me }));
+    case 'requestWithdraw': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'withdrawn', closedAt: at, position: null }));
   }
 }
 
 /** The API call that carries out an action. */
 export function actionRequest(action: LiveAction): { method: 'POST' | 'PUT'; path: string; body?: object } {
   switch (action.type) {
-    case 'selfStart': return { method: 'POST', path: '/api/incidents/self', body: action.body };
-    case 'accept': return { method: 'POST', path: `/api/incidents/${action.incidentId}/accept`, body: { teamId: action.teamId } };
-    case 'decline': return { method: 'POST', path: `/api/incidents/${action.incidentId}/decline`, body: { teamId: action.teamId } };
-    case 'assign': return { method: 'POST', path: `/api/incidents/${action.incidentId}/assign`, body: { teamId: action.teamId } };
-    case 'onSite': return { method: 'POST', path: `/api/incidents/${action.incidentId}/on-site` };
-    case 'withdraw': return { method: 'POST', path: `/api/incidents/${action.incidentId}/withdraw` };
-    case 'close': return { method: 'POST', path: `/api/incidents/${action.incidentId}/close`, body: action.body };
-    case 'update': return { method: 'PUT', path: `/api/incidents/${action.incidentId}`, body: action.details };
+    case 'selfStart': return { method: 'POST', path: '/api/help-requests/self', body: action.body };
+    case 'accept': return { method: 'POST', path: `/api/help-requests/${action.incidentId}/accept`, body: { teamId: action.teamId } };
+    case 'decline': return { method: 'POST', path: `/api/help-requests/${action.incidentId}/decline`, body: { teamId: action.teamId } };
+    case 'assign': return { method: 'POST', path: `/api/help-requests/${action.incidentId}/assign`, body: { teamId: action.teamId } };
+    case 'onSite': return { method: 'POST', path: `/api/help-requests/${action.incidentId}/on-site` };
+    case 'withdraw': return { method: 'POST', path: `/api/help-requests/${action.incidentId}/withdraw` };
+    case 'close': return { method: 'POST', path: `/api/help-requests/${action.incidentId}/close`, body: action.body };
+    case 'update': return { method: 'PUT', path: `/api/help-requests/${action.incidentId}`, body: action.details };
     case 'availability': return { method: 'PUT', path: `/api/teams/${action.teamId}/availability`, body: { availability: action.availability } };
     case 'postOpen': return { method: 'PUT', path: `/api/posts/${action.postId}/open`, body: { open: action.open } };
     case 'keepPost': return { method: 'POST', path: `/api/posts/${action.postId}/keep-open` };
     case 'keepTeam': return { method: 'POST', path: `/api/teams/${action.teamId}/keep-on-duty` };
     case 'requestNew': return {
-      method: 'POST', path: '/api/requests',
-      body: { postId: action.postId, kind: action.kind, detail: null, clientId: action.clientId } satisfies NewRequest,
+      method: 'POST', path: '/api/help-requests',
+      body: { type: action.kind, postId: action.postId, detail: null, clientId: action.clientId } satisfies NewRequest,
     };
-    case 'requestDetail': return { method: 'PUT', path: `/api/requests/${action.requestId}`, body: { detail: action.detail } };
-    case 'requestPick': return { method: 'POST', path: `/api/requests/${action.requestId}/pick` };
-    case 'requestDone': return { method: 'POST', path: `/api/requests/${action.requestId}/done` };
-    case 'requestWithdraw': return { method: 'POST', path: `/api/requests/${action.requestId}/withdraw` };
+    case 'requestDetail': return { method: 'PUT', path: `/api/help-requests/${action.requestId}`, body: { detail: action.detail } };
+    case 'requestPick': return { method: 'POST', path: `/api/help-requests/${action.requestId}/pick` };
+    case 'requestDone': return { method: 'POST', path: `/api/help-requests/${action.requestId}/done` };
+    case 'requestWithdraw': return { method: 'POST', path: `/api/help-requests/${action.requestId}/withdraw` };
   }
 }

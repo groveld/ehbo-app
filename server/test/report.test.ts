@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { AdminState, LiveIncident, LiveState, PushPayload, Report } from '@ehbo/shared';
+import { incidentsOf, type AdminState, type LiveIncident, type LiveState, type PushPayload, type Report } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
 import { openEventDb, type EventDb } from '../src/event-db.ts';
@@ -36,15 +36,15 @@ let n = 0;
 
 /** Melding van de waterpost; Team 2 accepteert na `accept` s, is na `travel` s ter plaatse en rondt af. */
 async function incident(accept: number, travel: number, outcome = 'treated') {
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', {
-    postId: id('posts', 'Waterpost 3 · brug'), clientId: `rapport-${++n}-abcdef`, what: 'unwell', persons: '1', responsive: null, note: null,
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', {
+    type: 'first_aid', postId: id('posts', 'Waterpost 3 · brug'), clientId: `rapport-${++n}-abcdef`, what: 'unwell', persons: '1', responsive: null, note: null,
   });
   later(accept);
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: id('teams', 'Team 2') });
+  await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: id('teams', 'Team 2') });
   later(travel);
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/on-site`);
+  await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/on-site`);
   later(300);
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/close`, { outcome, persons: '1', note: 'Gekoeld; "drinken" gegeven', stayHere: false });
+  await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/close`, { outcome, persons: '1', note: 'Gekoeld; "drinken" gegeven', stayHere: false });
   return inc;
 }
 
@@ -76,7 +76,7 @@ test('rapport: tijden per incident en totalen; alleen voor beheerders', async ()
   assert.equal((await call(DEMO.coordinator, 'GET', '/api/admin/report')).statusCode, 403);
   await incident(40, 240);
   await incident(60, 360, 'ambulance');
-  await ok(DEMO.postLead, 'POST', '/api/requests', { postId: id('posts', 'Waterpost 3 · brug'), kind: 'water', detail: null, clientId: 'water-1-abcdef' });
+  await ok(DEMO.postLead, 'POST', '/api/help-requests', { type: 'water', postId: id('posts', 'Waterpost 3 · brug'), detail: null, clientId: 'water-1-abcdef' });
 
   const report = await ok<Report>(DEMO.admin, 'GET', '/api/admin/report');
   assert.equal(report.event.name, 'Silvesterloop 2026');
@@ -114,7 +114,7 @@ test('testmodus: proefoproepen met "Test" in de melding, niet in het rapport, da
   pushes.length = 0;
   const proef = await incident(30, 120);
   assert.ok(pushes.every((p) => p.title.startsWith('Test · ')), 'elke melding begint met Test');
-  assert.equal((await ok(DEMO.coordinator, 'GET', '/api/live/state')).incidents.find((i) => i.id === proef.id)?.isTest, true);
+  assert.equal(incidentsOf(await ok(DEMO.coordinator, 'GET', '/api/live/state')).find((i) => i.id === proef.id)?.isTest, true);
 
   await ok(DEMO.admin, 'PUT', '/api/admin/test-mode', { on: false });
   await incident(45, 200);
@@ -124,13 +124,13 @@ test('testmodus: proefoproepen met "Test" in de melding, niet in het rapport, da
 
   state = await ok<AdminState>(DEMO.admin, 'DELETE', '/api/admin/test-data');
   assert.equal((await ok<Report>(DEMO.admin, 'GET', '/api/admin/report')).testItems, 0);
-  assert.equal((await ok(DEMO.coordinator, 'GET', '/api/live/state')).incidents.length, 1);
+  assert.equal(incidentsOf(await ok(DEMO.coordinator, 'GET', '/api/live/state')).length, 1);
 });
 
 test('testgegevens wissen kan niet zolang er een proefoproep loopt', async () => {
   await ok(DEMO.admin, 'PUT', '/api/admin/test-mode', { on: true });
-  await ok(DEMO.postLead, 'POST', '/api/incidents', {
-    postId: id('posts', 'Waterpost 3 · brug'), clientId: 'open-proef-abcdef', what: null, persons: null, responsive: null, note: null,
+  await ok(DEMO.postLead, 'POST', '/api/help-requests', {
+    type: 'first_aid', postId: id('posts', 'Waterpost 3 · brug'), clientId: 'open-proef-abcdef', what: null, persons: null, responsive: null, note: null,
   });
   const res = await call(DEMO.admin, 'DELETE', '/api/admin/test-data');
   assert.equal(res.statusCode, 409);

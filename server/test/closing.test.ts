@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { plannedClose, type Me, type PushPayload } from '@ehbo/shared';
+import { incidentsOf, plannedClose, type Me, type PushPayload } from '@ehbo/shared';
 import { createCalls, type Calls } from '../src/calls.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
 import { openEventDb, type EventDb } from '../src/event-db.ts';
@@ -126,7 +126,7 @@ test('a team closes by its own shift, and a call keeps it on', () => {
 test('a phone that missed the closing can still ask for help; a post closed by a person cannot', () => {
   sweepAt('13:50');
   sweepAt('14:00');
-  const report = { postId: WATER(), clientId: 'close-report-1', what: null, persons: null, responsive: null, note: null };
+  const report = { type: 'first_aid' as const, postId: WATER(), clientId: 'close-report-1', what: null, persons: null, responsive: null, note: null };
   assert.equal(calls.report(lead(), report).postId, WATER());
   assert.equal(post().isOpen, true);
   assert.equal(post().autoClosedAt, null);
@@ -202,7 +202,7 @@ test('a team starts an incident itself: on site at once, the place by GPS, and n
   const atPost = calls.selfStart(mo(), { ...body, lat: lat + 0.0002, lng });
   assert.deepEqual([atPost.status, atPost.post.name, atPost.offPost, atPost.selfStarted, atPost.teamId], ['on_site', 'Waterpost 3 · brug', false, true, TEAM2()]);
   assert.equal(teamNow().incidentId, atPost.id);
-  assert.equal(calls.state().incidents.length, 1);
+  assert.equal(incidentsOf(calls.state()).length, 1);
   assert.equal(calls.selfStart(mo(), { ...body, lat, lng }).id, atPost.id, 'sent twice counts once');
   assert.throws(() => calls.selfStart(mo(), { ...body, clientId: 'self-start-2', lat, lng }), /al bezig/);
   assert.ok(!pushes.some((p) => p.payload.urgent), 'no alarm for anyone');

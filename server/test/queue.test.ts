@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { applyAction, type ActionContext, type LiveAction, type LiveIncident, type LiveState, type NewIncident } from '@ehbo/shared';
+import { incidentsOf, requestsOf, applyAction, type ActionContext, type LiveAction, type LiveIncident, type LiveState, type NewIncident } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
 import { openEventDb } from '../src/event-db.ts';
@@ -20,14 +20,14 @@ const context: ActionContext = {
 };
 
 const incident = (changes: Partial<LiveIncident> = {}): LiveIncident => ({
-  id: 7, isTest: false, selfStarted: false, offPost: false, accuracyM: null, reportedBy: '0600000004', postId: 20, post: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'sent', stage: 'nearest', aed: false,
+  id: 7, type: 'first_aid', handling: 'dispatch', isTest: false, selfStarted: false, offPost: false, accuracyM: null, reportedBy: '0600000004', postId: 20, post: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'sent', stage: 'nearest', aed: false,
   reportedAt: AT, sentAt: AT, escalatesAt: AT, teamId: null, acceptedBy: null, acceptedAt: null, onSiteAt: null, closedAt: null, outcome: null,
   dispatches: [{ teamId: 2, at: AT, reason: 'nearest', distanceKm: 1, declinedAt: null, acceptedAt: null }], events: [],
   what: 'unwell', persons: '1', responsive: null, note: null, ...changes,
 });
 
 const state = (changes: Partial<LiveState> = {}): LiveState => ({
-  version: 1, dataVersion: '1.1', serverTime: AT, incidents: [incident()], testMode: false, requests: [], posts: [{ id: 10, isOpen: false, closesAt: null, autoClosedAt: null }],
+  version: 1, dataVersion: '1.1', serverTime: AT, helpRequests: [incident()], testMode: false, posts: [{ id: 10, isOpen: false, closesAt: null, autoClosedAt: null }],
   teams: [{ id: 1, availability: 'off_duty', incidentId: null, stayPostId: null, position: null, closesAt: null }, { id: 2, availability: 'available', incidentId: null, stayPostId: null, position: null, closesAt: null }],
   ...changes,
 });
@@ -36,24 +36,24 @@ const apply = (start: LiveState, ...actions: LiveAction[]) => actions.reduce((s,
 
 test('accept, on site and close on the phone: the team is free again', () => {
   const after = apply(state(), { type: 'accept', incidentId: 7, teamId: 2 }, { type: 'onSite', incidentId: 7 });
-  assert.equal(after.incidents[0]?.status, 'on_site');
+  assert.equal(incidentsOf(after)[0]?.status, 'on_site');
   assert.equal(after.teams[1]?.incidentId, 7, 'busy with the call');
 
   const closed = apply(after, { type: 'close', incidentId: 7, body: { outcome: 'treated', persons: '1', note: null, stayHere: false } });
-  assert.equal(closed.incidents[0]?.status, 'closed');
+  assert.equal(incidentsOf(closed)[0]?.status, 'closed');
   assert.deepEqual([closed.teams[1]?.incidentId, closed.teams[1]?.availability], [null, 'available']);
-  assert.deepEqual(closed.incidents[0]?.events.map((e) => e.type), ['accepted', 'on_site', 'closed']);
+  assert.deepEqual(incidentsOf(closed)[0]?.events.map((e) => e.type), ['accepted', 'on_site', 'closed']);
 });
 
 test('applying is pure, and an action already in the state adds no second log line', () => {
   const start = state();
   const once = apply(start, { type: 'onSite', incidentId: 7 });
-  assert.equal(start.incidents[0]?.status, 'sent');
-  assert.equal(apply(once, { type: 'onSite', incidentId: 7 }).incidents[0]?.events.length, 1);
+  assert.equal(incidentsOf(start)[0]?.status, 'sent');
+  assert.equal(incidentsOf(apply(once, { type: 'onSite', incidentId: 7 }))[0]?.events.length, 1);
 });
 
 test('closing and taking a break; a fixed team can stay where it was', () => {
-  const fixed = state({ incidents: [incident({ status: 'on_site', dispatches: [{ teamId: 1, at: AT, reason: 'all', distanceKm: 1, declinedAt: null, acceptedAt: AT }] })] });
+  const fixed = state({ helpRequests: [incident({ status: 'on_site', dispatches: [{ teamId: 1, at: AT, reason: 'all', distanceKm: 1, declinedAt: null, acceptedAt: AT }] })] });
   const after = applyAction(fixed, { id: 'x', at: AT, action: { type: 'close', incidentId: 7, body: { outcome: 'false_alarm', persons: null, note: null, stayHere: true, pause: true } } }, { ...context, me: { name: 'Eva', phone: '0600000005' } });
   assert.deepEqual([after.teams[0]?.availability, after.teams[0]?.stayPostId], ['unavailable', 20]);
 });
@@ -67,17 +67,17 @@ test('a fixed team and its post go together; a phone with no state yet still sho
 
 test('a request made without signal is there at once, and follows its steps', () => {
   const after = apply(state(), { type: 'requestNew', tempId: -5, clientId: 'abc', postId: 20, postName: 'Waterpost', kind: 'water' }, { type: 'requestDetail', requestId: -5, detail: 'lots' }, { type: 'requestWithdraw', requestId: -5 });
-  assert.deepEqual([after.requests[0]?.id, after.requests[0]?.detail, after.requests[0]?.status], [-5, 'lots', 'withdrawn']);
+  assert.deepEqual([requestsOf(after)[0]?.id, requestsOf(after)[0]?.detail, requestsOf(after)[0]?.status], [-5, 'lots', 'withdrawn']);
 });
 
 test('an incident started without signal is there at once, on site, and can be closed', () => {
-  const started = apply(state({ incidents: [] }), {
+  const started = apply(state({ helpRequests: [] }), {
     type: 'selfStart', tempId: -9, postId: 20, offPost: true, post: { typeId: 1, name: '120 m van Waterpost', km: 3, lat: 53, lng: 5 },
     body: { clientId: 'abcdefgh', teamId: 2, postId: 20, lat: 53, lng: 5, what: 'cramp', persons: '1', responsive: null, note: null },
   });
-  assert.deepEqual([started.incidents[0]?.status, started.incidents[0]?.teamId, started.teams[1]?.incidentId], ['on_site', 2, -9]);
+  assert.deepEqual([incidentsOf(started)[0]?.status, incidentsOf(started)[0]?.teamId, started.teams[1]?.incidentId], ['on_site', 2, -9]);
   const closed = apply(started, { type: 'close', incidentId: -9, body: { outcome: 'treated', persons: '1', note: null, stayHere: false } });
-  assert.equal(closed.incidents[0]?.status, 'closed');
+  assert.equal(incidentsOf(closed)[0]?.status, 'closed');
   assert.equal(closed.teams[1]?.incidentId, null);
 });
 
@@ -101,28 +101,28 @@ test('the server carries out a queued change once, with the time it happened', a
 
   await send(lead, 'PUT', `/api/posts/${post}/open`, { open: true });
   await send(ehbo, 'PUT', `/api/teams/${team}/availability`, { availability: 'available' });
-  const report: NewIncident = { postId: post, clientId: 'queue-test-1', what: 'unwell', persons: '1', responsive: null, note: null };
-  const created = (await send(lead, 'POST', '/api/incidents', report)).json<LiveIncident>();
-  await send(ehbo, 'POST', `/api/incidents/${created.id}/accept`, { teamId: team });
+  const report: NewIncident = { type: 'first_aid', postId: post, clientId: 'queue-test-1', what: 'unwell', persons: '1', responsive: null, note: null };
+  const created = (await send(lead, 'POST', '/api/help-requests', report)).json<LiveIncident>();
+  await send(ehbo, 'POST', `/api/help-requests/${created.id}/accept`, { teamId: team });
 
   const body = { outcome: 'treated', persons: '1', note: null, stayHere: false };
   const queued = { 'x-action-id': 'action-close-1', 'x-action-at': '2026-12-31T11:40:00.000Z' };
-  const first = await send(ehbo, 'POST', `/api/incidents/${created.id}/close`, body, queued);
+  const first = await send(ehbo, 'POST', `/api/help-requests/${created.id}/close`, body, queued);
   assert.equal(first.statusCode, 200, first.body);
-  const closed = first.json<LiveState>().incidents.find((i) => i.id === created.id)!;
+  const closed = incidentsOf(first.json<LiveState>()).find((i) => i.id === created.id)!;
   assert.equal(closed.closedAt, queued['x-action-at'], 'the time on the phone, not of arrival');
   assert.equal(closed.events.at(-1)?.at, queued['x-action-at']);
   assert.equal(first.json<LiveState>().serverTime, clock.toISOString(), 'the state itself still has the real time');
 
   // The answer got lost, so the phone sends it again: no error, and nothing happens twice.
-  const again = await send(ehbo, 'POST', `/api/incidents/${created.id}/close`, body, queued);
+  const again = await send(ehbo, 'POST', `/api/help-requests/${created.id}/close`, body, queued);
   assert.equal(again.statusCode, 200, again.body);
-  assert.equal(again.json<LiveState>().incidents.find((i) => i.id === created.id)?.events.filter((e) => e.type === 'closed').length, 1);
+  assert.equal(incidentsOf(again.json<LiveState>()).find((i) => i.id === created.id)?.events.filter((e) => e.type === 'closed').length, 1);
 
   // A time that can't be right is not believed.
-  const second = (await send(lead, 'POST', '/api/incidents', { ...report, clientId: 'queue-test-2' })).json<LiveIncident>();
-  const future = await send(lead, 'POST', `/api/incidents/${second.id}/withdraw`, undefined, { 'x-action-at': '2027-01-01T00:00:00.000Z' });
-  assert.equal(future.json<LiveState>().incidents.find((i) => i.id === second.id)?.closedAt, clock.toISOString());
+  const second = (await send(lead, 'POST', '/api/help-requests', { ...report, clientId: 'queue-test-2' })).json<LiveIncident>();
+  const future = await send(lead, 'POST', `/api/help-requests/${second.id}/withdraw`, undefined, { 'x-action-at': '2027-01-01T00:00:00.000Z' });
+  assert.equal(incidentsOf(future.json<LiveState>()).find((i) => i.id === second.id)?.closedAt, clock.toISOString());
 
   await app.close();
   db.close();

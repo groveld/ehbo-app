@@ -100,6 +100,23 @@ const STORAGE_STEPS: ((read: <T>(key: string) => T | null, write: (key: string, 
     const ids = read<Record<string, number>>('ehbo.requestIds');
     if (ids) write('ehbo.requestIds', Object.fromEntries(Object.entries(ids).map(([temp, id]) => [temp, requestId(id) as number])));
   },
+  // 4: one list of help requests in the live state, a request's fields named as an incident's, and an incident waiting says its type.
+  (read, write) => {
+    type Any = Record<string, any>;
+    const live = read<Any>('ehbo.live');
+    if (live && !live.helpRequests) {
+      const { incidents = [], requests = [], ...rest } = live;
+      const request = ({ kind, createdAt, pickedAt, pickedBy, doneAt, ...r }: Any) => ({
+        ...r, handling: 'queue', type: kind, reportedAt: createdAt, acceptedAt: pickedAt, acceptedBy: pickedBy, closedAt: doneAt,
+      });
+      write('ehbo.live', {
+        ...rest,
+        helpRequests: [...incidents.map((i: Any) => ({ ...i, type: 'first_aid', handling: 'dispatch' })), ...requests.map(request)].sort((a, b) => b.id - a.id),
+      });
+    }
+    const outbox = read<Any[]>('ehbo.outbox');
+    if (outbox) write('ehbo.outbox', outbox.map((item) => ({ type: 'first_aid', ...item })));
+  },
 ];
 
 export function upgradeStorage() {

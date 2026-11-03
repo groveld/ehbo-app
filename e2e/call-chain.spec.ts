@@ -420,7 +420,7 @@ test('a new post in admin: open phones get it by themselves, and a call works be
   await ehbo.unroute('**/api/package');
   await expect(ehbo.getByRole('link', { name: 'Bel locatie' })).toBeVisible({ timeout: 15_000 });
 
-  expect((await post.request.post(`/api/incidents/${id}/withdraw`)).ok()).toBe(true);
+  expect((await post.request.post(`/api/help-requests/${id}/withdraw`)).ok()).toBe(true);
 });
 
 test('choosing a route: what is not on it steps back, and choosing it again undoes that', async ({ browser }) => {

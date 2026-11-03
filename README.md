@@ -165,18 +165,16 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | POST | `/api/test-push` | medewerker | Testmelding naar je eigen toestel `{ endpoint, delaySeconds }` |
 | GET | `/api/live` | medewerker | Live stand (SSE): oproepen, eenheden en open/dicht van posten; bij elke wijziging een nieuw bericht, hartslag elke 30 s |
 | GET | `/api/live/state` | medewerker | Dezelfde stand in één antwoord |
-| POST | `/api/incidents` | post, medewerker | EHBO-verzoek `{ postId, clientId, what, persons, responsive, note }`; dezelfde `clientId` telt één keer. Vanaf je plek: `postId: null` met `lat`, `lng`, `accuracyM` |
-| PUT | `/api/incidents/:id` | post | Melding aanvullen |
-| POST | `/api/incidents/:id/accept`, `/decline` | EHBO-eenheid | Accepteren of "kan niet" `{ teamId }` |
-| POST | `/api/incidents/:id/on-site`, `/close` | EHBO-eenheid | Ter plaatse; afronden `{ outcome, persons, note, stayHere }` |
-| POST | `/api/incidents/:id/withdraw` | post | Melding intrekken |
-| POST | `/api/incidents/:id/assign` | coördinator | Oproep toewijzen aan een eenheid `{ teamId }` |
+| POST | `/api/help-requests` | post, medewerker | Hulpvraag met een soort `{ type, postId, clientId, … }`: `first_aid` (EHBO, met `what`, `persons`, `responsive`, `note`; vanaf je plek `postId: null` met `lat`, `lng`, `accuracyM`) of `water`, `traffic`, `volunteer` (met `detail`). Dezelfde `clientId` telt één keer |
+| POST | `/api/help-requests/self` | EHBO-eenheid | Zelf een incident starten |
+| PUT | `/api/help-requests/:id` | post | Aanvullen: een incident met zijn gegevens, een aanvraag met `{ detail }` |
+| POST | `/api/help-requests/:id/withdraw` | post | Intrekken |
+| POST | `/api/help-requests/:id/accept`, `/decline`, `/assign` | EHBO-eenheid, coördinator | Alleen een incident: accepteren, "kan niet", toewijzen `{ teamId }` |
+| POST | `/api/help-requests/:id/on-site`, `/close` | EHBO-eenheid | Alleen een incident: ter plaatse; afronden `{ outcome, persons, note, stayHere }` |
+| POST | `/api/help-requests/:id/pick`, `/done` | coördinator | Alleen een aanvraag: oppakken, afhandelen |
 | PUT | `/api/teams/:id/availability` | EHBO-eenheid | Beschikbaar, pauze of uit dienst |
 | PUT | `/api/position` | mobiele EHBO in dienst | Eigen positie `{ lat, lng }` (alleen in het geheugen van de server); van anderen geweigerd |
 | PUT | `/api/posts/:id/open` | postverantwoordelijke | Post open of dicht `{ open }` |
-| POST | `/api/requests` | post | Aanvraag water, verkeer of vrijwilliger `{ postId, kind, detail, clientId }` |
-| PUT | `/api/requests/:id` | post | Aanvullen `{ detail }` |
-| POST | `/api/requests/:id/pick`, `/done`, `/withdraw` | coördinator, post | Oppakken, afhandelen (coördinator, kernteam, beheerder) of intrekken (post) |
 | GET | `/api/admin/export.xlsx`, `/api/admin/export/<tabblad>.csv` | beheerder | Export en sjabloon: locaties, contactpersonen, EHBO-eenheden en -leden, kernteam, noodnummers |
 | POST | `/api/admin/import/check`, `/api/admin/import` | beheerder | Controleren (verandert niets) en importeren `{ files: [{ name, data (base64) }], removeMissing }`; alles of niets |
 | GET | `/api/admin/people`, `/api/admin/people.csv` | beheerder | Iedereen met nummer, naam, waar die staat, aangemeld en meldingen; en wat nog ontbreekt |

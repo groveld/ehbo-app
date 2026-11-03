@@ -51,10 +51,10 @@ export function incidentLog(incident: LiveIncident): LogEntry[] {
 }
 
 export function requestLog(request: LiveRequest): LogEntry[] {
-  const log: LogEntry[] = [{ at: request.createdAt, text: `${REQUEST_KINDS[request.kind].label} aangevraagd door ${request.postName}` }];
-  if (request.pickedAt) log.push({ at: request.pickedAt, text: `Opgepakt door ${request.pickedBy?.name ?? 'de coördinator'}` });
-  if (request.status === 'closed') log.push({ at: request.doneAt, text: 'Afgehandeld' });
-  else if (request.status === 'withdrawn') log.push({ at: request.doneAt, text: 'Ingetrokken', tone: 'stop' });
-  else log.push({ at: null, text: request.pickedAt ? 'Nog af te handelen' : 'Wacht in de rij', tone: 'waiting' });
+  const log: LogEntry[] = [{ at: request.reportedAt, text: `${REQUEST_KINDS[request.type].label} aangevraagd door ${request.postName}` }];
+  if (request.acceptedAt) log.push({ at: request.acceptedAt, text: `Opgepakt door ${request.acceptedBy?.name ?? 'de coördinator'}` });
+  if (request.status === 'closed') log.push({ at: request.closedAt, text: 'Afgehandeld' });
+  else if (request.status === 'withdrawn') log.push({ at: request.closedAt, text: 'Ingetrokken', tone: 'stop' });
+  else log.push({ at: null, text: request.acceptedAt ? 'Nog af te handelen' : 'Wacht in de rij', tone: 'waiting' });
   return log;
 }
