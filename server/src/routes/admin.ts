@@ -251,11 +251,10 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
     return admin.getState();
   });
   app.delete<{ Reply: AdminState }>('/api/admin/test-data', async () => {
-    const open = db.raw.prepare("SELECT COUNT(*) AS n FROM incidents WHERE is_test = 1 AND status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse')").get() as { n: number };
+    const open = db.raw.prepare("SELECT COUNT(*) AS n FROM incidents WHERE is_test = 1 AND status IN ('sent', 'accepted', 'on_site')").get() as { n: number };
     if (open.n) throw Object.assign(new Error('Er lopen nog proefoproepen. Rond ze eerst af of trek ze in.'), { statusCode: 409 });
     db.transaction(() => {
-      db.raw.prepare('DELETE FROM incidents WHERE is_test = 1').run();
-      db.raw.prepare('DELETE FROM requests WHERE is_test = 1').run();
+      db.raw.prepare('DELETE FROM help_requests WHERE is_test = 1').run();
     });
     return admin.getState();
   });

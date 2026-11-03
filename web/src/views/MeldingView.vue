@@ -72,13 +72,13 @@ const back = () => router.back();
     <NotOnPhone v-if="!incident || !post" class="top-gap">Deze melding staat (nog) niet op deze telefoon.</NotOnPhone>
 
     <!-- 4.2 · Verstuurd: we zoeken een EHBO'er -->
-    <template v-else-if="incident.status === 'verstuurd'">
+    <template v-else-if="incident.status === 'sent'">
       <StatusBlock tone="orange" :label="`Melding verstuurd · ${clock(incident.sentAt)}`" title="We zoeken een EHBO'er" />
       <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar: bel ook 112.</strong> De dichtstbijzijnde eenheid met AED is opgeroepen.</p>
 
       <div class="card steps">
         <div class="step"><span class="mark done"><Icon name="check" :size="14" /></span><span class="grow">Melding ontvangen door de server</span></div>
-        <template v-if="incident.stage === 'dichtstbij'">
+        <template v-if="incident.stage === 'nearest'">
           <div v-for="d in pending" :key="d.teamId" class="step">
             <span class="mark busy" /><span class="grow"><strong>{{ teamName(d.teamId) }}</strong> ({{ d.reason === 'aed' ? 'AED' : 'dichtstbij' }}) wordt opgeroepen</span>
             <span v-if="left !== null" class="mono countdown">nog {{ left }} s</span>
@@ -89,7 +89,7 @@ const back = () => router.back();
           <span class="mark busy" />
           <span class="grow">{{ pending.length ? `Alle beschikbare eenheden worden opgeroepen (${pending.length})` : 'Geen beschikbare eenheid gevonden; de coördinator is gewaarschuwd' }}</span>
         </div>
-        <div class="step" :class="{ later: incident.stage === 'dichtstbij' }"><span class="mark" :class="{ done: incident.stage === 'alle' }" /><span class="grow">Evenementcoördinator heeft een kopie</span></div>
+        <div class="step" :class="{ later: incident.stage === 'nearest' }"><span class="mark" :class="{ done: incident.stage === 'all' }" /><span class="grow">Evenementcoördinator heeft een kopie</span></div>
       </div>
 
       <div class="card yours">
@@ -101,20 +101,20 @@ const back = () => router.back();
     </template>
 
     <!-- 4.6 · Geaccepteerd: hulp is onderweg -->
-    <template v-else-if="incident.status === 'geaccepteerd' || incident.status === 'ter_plaatse'">
+    <template v-else-if="incident.status === 'accepted' || incident.status === 'on_site'">
       <StatusBlock
         tone="green"
-        :label="incident.status === 'ter_plaatse' ? `Ter plaatse · ${clock(incident.onSiteAt)}` : `Geaccepteerd · ${clock(incident.acceptedAt)}`"
-        :title="incident.status === 'ter_plaatse' ? 'EHBO is er' : 'Hulp is onderweg'"
+        :label="incident.status === 'on_site' ? `Ter plaatse · ${clock(incident.onSiteAt)}` : `Geaccepteerd · ${clock(incident.acceptedAt)}`"
+        :title="incident.status === 'on_site' ? 'EHBO is er' : 'Hulp is onderweg'"
       >
-        <template #label><Icon name="check" :size="16" />{{ incident.status === 'ter_plaatse' ? `Ter plaatse · ${clock(incident.onSiteAt)}` : `Geaccepteerd · ${clock(incident.acceptedAt)}` }}</template>
+        <template #label><Icon name="check" :size="16" />{{ incident.status === 'on_site' ? `Ter plaatse · ${clock(incident.onSiteAt)}` : `Geaccepteerd · ${clock(incident.acceptedAt)}` }}</template>
       </StatusBlock>
 
       <div v-if="helper" class="card helper">
         <span class="cross"><Icon name="ehbo" :size="24" /></span>
         <span class="stack grow">
           <span class="name">{{ helper.name }}</span>
-          <span class="small">{{ helper.detail }}<template v-if="helper.minutes && incident.status === 'geaccepteerd'"> · verwacht over ± {{ helper.minutes }} min</template></span>
+          <span class="small">{{ helper.detail }}<template v-if="helper.minutes && incident.status === 'accepted'"> · verwacht over ± {{ helper.minutes }} min</template></span>
         </span>
         <a v-if="helper.phone" :href="telHref(helper.phone)" class="round green" :aria-label="`Bel ${helper.name}`"><Icon name="phone" :size="18" /></a>
       </div>
@@ -145,9 +145,9 @@ const back = () => router.back();
     <!-- Afgerond of ingetrokken -->
     <template v-else>
       <StatusBlock
-        :tone="incident.status === 'afgerond' ? 'green' : 'dark'"
-        :label="`${incident.status === 'afgerond' ? 'Afgerond' : 'Ingetrokken'} · ${clock(incident.closedAt)}`"
-        :title="incident.status === 'afgerond' ? 'Klaar' : 'Melding ingetrokken'"
+        :tone="incident.status === 'closed' ? 'green' : 'dark'"
+        :label="`${incident.status === 'closed' ? 'Afgerond' : 'Ingetrokken'} · ${clock(incident.closedAt)}`"
+        :title="incident.status === 'closed' ? 'Klaar' : 'Melding ingetrokken'"
       />
       <div class="card yours gap-top">
         <span class="small">{{ incident.post.name }}</span>
@@ -157,8 +157,8 @@ const back = () => router.back();
     </template>
 
     <!-- Coördinator: zelf een eenheid inzetten (na telefonisch overleg) -->
-    <section v-if="incident && isCoordinator && incident.status !== 'afgerond' && incident.status !== 'ingetrokken'" class="stack gap-8 assign">
-      <span class="section-title">{{ incident.status === 'verstuurd' ? 'Zelf een eenheid inzetten' : 'Extra eenheid inzetten' }}</span>
+    <section v-if="incident && isCoordinator && incident.status !== 'closed' && incident.status !== 'withdrawn'" class="stack gap-8 assign">
+      <span class="section-title">{{ incident.status === 'sent' ? 'Zelf een eenheid inzetten' : 'Extra eenheid inzetten' }}</span>
       <div class="list">
         <div v-for="u in assignable" :key="u.id" class="list-row">
           <span class="main">
@@ -179,14 +179,14 @@ const back = () => router.back();
     <div class="grow" />
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <div class="stack gap-8 bottom">
-      <template v-if="incident && (incident.status === 'verstuurd')">
+      <template v-if="incident && (incident.status === 'sent')">
         <a href="tel:112" class="btn danger">Erger geworden? Bel 112</a>
       </template>
-      <a v-if="coordinator && !isCoordinator && incident && incident.status !== 'afgerond' && incident.status !== 'ingetrokken'" :href="telHref(coordinator.phone)" class="btn">Bel evenementcoördinator</a>
-      <button v-if="incident && canChange && ['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(incident.status)" class="btn link muted" :disabled="busy" @click="withdraw">
-        {{ incident.status === 'verstuurd' ? 'Melding intrekken' : 'Melding intrekken (niet meer nodig)' }}
+      <a v-if="coordinator && !isCoordinator && incident && incident.status !== 'closed' && incident.status !== 'withdrawn'" :href="telHref(coordinator.phone)" class="btn">Bel evenementcoördinator</a>
+      <button v-if="incident && canChange && ['sent', 'accepted', 'on_site'].includes(incident.status)" class="btn link muted" :disabled="busy" @click="withdraw">
+        {{ incident.status === 'sent' ? 'Melding intrekken' : 'Melding intrekken (niet meer nodig)' }}
       </button>
-      <button v-if="!incident || incident.status === 'afgerond' || incident.status === 'ingetrokken'" class="btn primary" @click="back">Terug</button>
+      <button v-if="!incident || incident.status === 'closed' || incident.status === 'withdrawn'" class="btn primary" @click="back">Terug</button>
     </div>
   </main>
 </template>

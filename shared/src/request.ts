@@ -2,13 +2,13 @@
 // Functioneel ontwerp, "Modulair en opschalen": aangevraagd → opgepakt → afgehandeld.
 
 export const REQUEST_KINDS = {
-  water: { label: 'Water', sub: 'Bijvullen', details: { beetje: 'Beetje', flink: 'Flink', bijna_op: 'Bijna op' }, ask: 'Hoeveel?' },
-  verkeer: { label: 'Verkeer', sub: 'Hulp bij regelen', details: { druk: 'Druk', onveilig: 'Onveilig', afzetting: 'Afzetting nodig' }, ask: 'Wat is er?' },
-  vrijwilliger: { label: 'Vrijwilliger', sub: 'Aflossing, uitval', details: { aflossing: 'Aflossing nodig', uitval: 'Iemand valt uit', extra: 'Extra hulp' }, ask: 'Wat is er nodig?' },
+  water: { label: 'Water', sub: 'Bijvullen', details: { little: 'Beetje', lots: 'Flink', almost_empty: 'Bijna op' }, ask: 'Hoeveel?' },
+  traffic: { label: 'Verkeer', sub: 'Hulp bij regelen', details: { busy: 'Druk', unsafe: 'Onveilig', closure: 'Afzetting nodig' }, ask: 'Wat is er?' },
+  volunteer: { label: 'Vrijwilliger', sub: 'Aflossing, uitval', details: { relief: 'Aflossing nodig', dropout: 'Iemand valt uit', extra: 'Extra hulp' }, ask: 'Wat is er nodig?' },
 } as const;
 export type RequestKind = keyof typeof REQUEST_KINDS;
 
-export type RequestStatus = 'aangevraagd' | 'opgepakt' | 'afgehandeld' | 'ingetrokken';
+export type RequestStatus = 'sent' | 'accepted' | 'closed' | 'withdrawn';
 
 /** POST /api/requests */
 export interface NewRequest {

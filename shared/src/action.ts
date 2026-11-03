@@ -40,7 +40,7 @@ export interface ActionContext {
   teams: { id: number; name: string; kind: 'fixed' | 'mobile'; postId: number | null; members?: { phone: string }[] }[];
 }
 
-const OPEN_REQUEST = ['aangevraagd', 'opgepakt'];
+const OPEN_REQUEST = ['sent', 'accepted'];
 
 const changeIncident = (state: LiveState, id: number, change: (incident: LiveIncident) => LiveIncident): LiveState =>
   ({ ...state, incidents: state.incidents.map((i) => (i.id === id ? change(i) : i)) });
@@ -75,11 +75,11 @@ function take(state: LiveState, at: string, incidentId: number, teamId: number, 
   const accepted = changeIncident(state, incidentId, (i) => {
     const dispatches: Dispatch[] = i.dispatches.some((d) => d.teamId === teamId)
       ? i.dispatches.map((d) => (d.teamId === teamId ? { ...d, acceptedAt: at, declinedAt: null } : d))
-      : [...i.dispatches, { teamId, at, reason: manual ? 'handmatig' : 'alle', distanceKm: null, declinedAt: null, acceptedAt: at }];
-    const first = i.status === 'verstuurd'
-      ? { status: 'geaccepteerd' as const, teamId, acceptedBy: manual ? null : context.me, acceptedAt: at, escalatesAt: null }
+      : [...i.dispatches, { teamId, at, reason: manual ? 'manual' : 'all', distanceKm: null, declinedAt: null, acceptedAt: at }];
+    const first = i.status === 'sent'
+      ? { status: 'accepted' as const, teamId, acceptedBy: manual ? null : context.me, acceptedAt: at, escalatesAt: null }
       : {};
-    return logged({ ...i, dispatches, ...first }, at, manual ? 'toegewezen' : 'geaccepteerd', manual ? `Toegewezen aan ${name}` : `Geaccepteerd door ${name} (${context.me?.name})`, teamId);
+    return logged({ ...i, dispatches, ...first }, at, manual ? 'assigned' : 'accepted', manual ? `Toegewezen aan ${name}` : `Geaccepteerd door ${name} (${context.me?.name})`, teamId);
   });
   return changeTeam(accepted, teamId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId }));
 }
@@ -91,11 +91,11 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
       const { body, tempId, post, offPost, postId } = action;
       const name = context.teams.find((u) => u.id === body.teamId)?.name ?? 'Eenheid';
       const incident: LiveIncident = {
-        id: tempId, isTest: state.testMode, selfStarted: true, offPost, accuracyM: null, postId, post, reportedBy: context.me?.phone ?? '', status: 'ter_plaatse', stage: 'dichtstbij', aed: body.responsive === 'nee',
+        id: tempId, isTest: state.testMode, selfStarted: true, offPost, accuracyM: null, postId, post, reportedBy: context.me?.phone ?? '', status: 'on_site', stage: 'nearest', aed: body.responsive === 'no',
         what: body.what, persons: body.persons, responsive: body.responsive, note: body.note, reportedAt: at, sentAt: at, escalatesAt: null,
         teamId: body.teamId, acceptedBy: context.me, acceptedAt: at, onSiteAt: at, closedAt: null, outcome: null,
-        dispatches: [{ teamId: body.teamId, at, reason: 'handmatig', distanceKm: 0, declinedAt: null, acceptedAt: at }],
-        events: [{ at, type: 'gemeld', teamId: body.teamId, text: `Zelf gestart door ${name} · ${post.name}` }],
+        dispatches: [{ teamId: body.teamId, at, reason: 'manual', distanceKm: 0, declinedAt: null, acceptedAt: at }],
+        events: [{ at, type: 'reported', teamId: body.teamId, text: `Zelf gestart door ${name} · ${post.name}` }],
       };
       return changeTeam({ ...state, incidents: [incident, ...state.incidents] }, body.teamId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId: tempId }));
     }
@@ -106,13 +106,13 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
       return changeIncident(state, action.incidentId, (i) => {
         const dispatches: Dispatch[] = i.dispatches.some((d) => d.teamId === action.teamId)
           ? i.dispatches.map((d) => (d.teamId === action.teamId ? { ...d, declinedAt: at } : d))
-          : [...i.dispatches, { teamId: action.teamId, at, reason: 'alle', distanceKm: null, declinedAt: at, acceptedAt: null }];
-        return logged({ ...i, dispatches }, at, 'geweigerd', `${name}: kan niet`, action.teamId);
+          : [...i.dispatches, { teamId: action.teamId, at, reason: 'all', distanceKm: null, declinedAt: at, acceptedAt: null }];
+        return logged({ ...i, dispatches }, at, 'declined', `${name}: kan niet`, action.teamId);
       });
     }
     case 'onSite': return changeIncident(state, action.incidentId, (i) => {
       const team = myAcceptedTeam(i, context);
-      return logged({ ...i, status: 'ter_plaatse', onSiteAt: i.onSiteAt ?? at }, at, 'ter_plaatse', `${team?.name ?? 'Eenheid'} is ter plaatse`, team?.id ?? null);
+      return logged({ ...i, status: 'on_site', onSiteAt: i.onSiteAt ?? at }, at, 'on_site', `${team?.name ?? 'Eenheid'} is ter plaatse`, team?.id ?? null);
     });
     case 'close': {
       const incident = state.incidents.find((i) => i.id === action.incidentId);
@@ -120,7 +120,7 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
       const team = myAcceptedTeam(incident, context);
       const { outcome, pause, stayHere } = action.body;
       const closed = changeIncident(state, action.incidentId, (i) => logged(
-        { ...i, status: 'afgerond', closedAt: at, outcome, onSiteAt: i.onSiteAt ?? at }, at, 'afgerond',
+        { ...i, status: 'closed', closedAt: at, outcome, onSiteAt: i.onSiteAt ?? at }, at, 'closed',
         `Afgerond door ${team?.name ?? 'Eenheid'}${pause ? ', daarna pauze' : ''}`, team?.id ?? null,
       ));
       if (!team) return closed;
@@ -129,11 +129,11 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
     }
     case 'withdraw': {
       const withdrawn = changeIncident(state, action.incidentId, (i) => logged(
-        { ...i, status: 'ingetrokken', closedAt: at, escalatesAt: null }, at, 'ingetrokken', `Ingetrokken door ${context.me?.name}`,
+        { ...i, status: 'withdrawn', closedAt: at, escalatesAt: null }, at, 'withdrawn', `Ingetrokken door ${context.me?.name}`,
       ));
       return { ...withdrawn, teams: withdrawn.teams.map((u) => (u.incidentId === action.incidentId ? { ...u, incidentId: null } : u)) };
     }
-    case 'update': return changeIncident(state, action.incidentId, (i) => ({ ...i, ...action.details, aed: i.aed || action.details.responsive === 'nee' }));
+    case 'update': return changeIncident(state, action.incidentId, (i) => ({ ...i, ...action.details, aed: i.aed || action.details.responsive === 'no' }));
     case 'availability': {
       const { availability, teamId } = action;
       const changed = changeTeam(state, teamId, (u) => (availability === 'off_duty' ? { ...u, availability, stayPostId: null, position: null, closesAt: null } : { ...u, availability }));
@@ -158,14 +158,14 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
     case 'requestNew': return {
       ...state,
       requests: [{
-        id: action.tempId, isTest: state.testMode, postId: action.postId, postName: action.postName, kind: action.kind, detail: null, status: 'aangevraagd',
+        id: action.tempId, isTest: state.testMode, postId: action.postId, postName: action.postName, kind: action.kind, detail: null, status: 'sent',
         createdAt: at, pickedAt: null, pickedBy: null, doneAt: null, position: state.requests.filter((r) => OPEN_REQUEST.includes(r.status)).length + 1,
       }, ...state.requests],
     };
     case 'requestDetail': return changeRequest(state, action.requestId, (r) => ({ ...r, detail: action.detail }));
-    case 'requestPick': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'opgepakt', pickedAt: at, pickedBy: context.me }));
-    case 'requestDone': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'afgehandeld', doneAt: at, position: null, pickedAt: r.pickedAt ?? at, pickedBy: r.pickedBy ?? context.me }));
-    case 'requestWithdraw': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'ingetrokken', doneAt: at, position: null }));
+    case 'requestPick': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'accepted', pickedAt: at, pickedBy: context.me }));
+    case 'requestDone': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'closed', doneAt: at, position: null, pickedAt: r.pickedAt ?? at, pickedBy: r.pickedBy ?? context.me }));
+    case 'requestWithdraw': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'withdrawn', doneAt: at, position: null }));
   }
 }
 

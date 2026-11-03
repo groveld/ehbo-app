@@ -202,7 +202,7 @@ test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later
   await expect(post.getByRole('button', { name: 'Flink' })).toHaveAttribute('aria-pressed', 'true');
   const coordinator = await staffPhone(browser, PHONE.coordinator);
   await coordinator.getByRole('link', { name: 'Meldingen' }).click();
-  const card = coordinator.locator('.request').filter({ hasText: 'flink' });
+  const card = coordinator.locator('.request').filter({ hasText: 'Flink' });
   await expect(card).toBeVisible();
   await card.getByRole('button', { name: 'Oppakken' }).click();
   await card.getByRole('button', { name: 'Afgehandeld' }).click();

@@ -4,31 +4,31 @@ import { distanceKm, formatKm } from './geo.ts';
 import type { LiveRequest } from './request.ts';
 
 /** Gemeld (op de telefoon) → verstuurd → geaccepteerd → ter plaatse → afgerond, of ingetrokken. */
-export type IncidentStatus = 'verstuurd' | 'geaccepteerd' | 'ter_plaatse' | 'afgerond' | 'ingetrokken';
+export type IncidentStatus = 'sent' | 'accepted' | 'on_site' | 'closed' | 'withdrawn';
 /** Eerst de dichtstbijzijnde beschikbare eenheid (en bij niet aanspreekbaar ook de dichtstbijzijnde met AED), daarna alle beschikbare eenheden. */
-export type IncidentStage = 'dichtstbij' | 'alle';
+export type IncidentStage = 'nearest' | 'all';
 
 export const INCIDENT_WHAT = {
-  onwel: 'Onwel / flauw',
-  letsel: 'Gevallen / letsel',
-  kramp: 'Kramp / blessure',
-  onbekend: 'Weet ik niet',
+  unwell: 'Onwel / flauw',
+  injury: 'Gevallen / letsel',
+  cramp: 'Kramp / blessure',
+  unknown: 'Weet ik niet',
 } as const;
 export type IncidentWhat = keyof typeof INCIDENT_WHAT;
 
 export const INCIDENT_PERSONS = ['1', '2', '3+'] as const;
 export type IncidentPersons = (typeof INCIDENT_PERSONS)[number];
 
-export const RESPONSIVE = { ja: 'Ja', nee: 'Nee', onbekend: 'Weet niet' } as const;
+export const RESPONSIVE = { yes: 'Ja', no: 'Nee', unknown: 'Weet niet' } as const;
 export type Responsive = keyof typeof RESPONSIVE;
 
 export const OUTCOMES = {
-  geholpen: 'Ter plaatse geholpen',
-  gestopt: 'Gestopt, naar finish',
+  treated: 'Ter plaatse geholpen',
+  stopped: 'Gestopt, naar finish',
   ambulance: 'Ambulance (112)',
-  doorverwezen: 'Doorverwezen SEH/arts',
-  geweigerd: 'Hulp geweigerd',
-  loos: 'Loos alarm',
+  referred: 'Doorverwezen SEH/arts',
+  refused: 'Hulp geweigerd',
+  false_alarm: 'Loos alarm',
 } as const;
 export type Outcome = keyof typeof OUTCOMES;
 
@@ -81,7 +81,7 @@ export interface CloseIncident {
   pause?: boolean;
 }
 
-export type DispatchReason = 'dichtstbij' | 'aed' | 'alle' | 'handmatig';
+export type DispatchReason = 'nearest' | 'aed' | 'all' | 'manual';
 
 /** Een eenheid die deze oproep heeft gekregen. */
 export interface Dispatch {
@@ -96,8 +96,8 @@ export interface Dispatch {
 }
 
 export type IncidentEventType =
-  | 'gemeld' | 'verstuurd' | 'aangevuld' | 'geweigerd' | 'geescaleerd' | 'herhaald'
-  | 'geaccepteerd' | 'toegewezen' | 'ter_plaatse' | 'afgerond' | 'ingetrokken';
+  | 'reported' | 'sent' | 'added' | 'declined' | 'escalated' | 'repeated'
+  | 'accepted' | 'assigned' | 'on_site' | 'closed' | 'withdrawn';
 
 /** Eén regel in de tijdlijn (scherm en rapport). */
 export interface IncidentEvent {

@@ -20,10 +20,10 @@ const context: ActionContext = {
 };
 
 const incident = (changes: Partial<LiveIncident> = {}): LiveIncident => ({
-  id: 7, isTest: false, selfStarted: false, offPost: false, accuracyM: null, reportedBy: '0600000004', postId: 20, post: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'verstuurd', stage: 'dichtstbij', aed: false,
+  id: 7, isTest: false, selfStarted: false, offPost: false, accuracyM: null, reportedBy: '0600000004', postId: 20, post: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'sent', stage: 'nearest', aed: false,
   reportedAt: AT, sentAt: AT, escalatesAt: AT, teamId: null, acceptedBy: null, acceptedAt: null, onSiteAt: null, closedAt: null, outcome: null,
-  dispatches: [{ teamId: 2, at: AT, reason: 'dichtstbij', distanceKm: 1, declinedAt: null, acceptedAt: null }], events: [],
-  what: 'onwel', persons: '1', responsive: null, note: null, ...changes,
+  dispatches: [{ teamId: 2, at: AT, reason: 'nearest', distanceKm: 1, declinedAt: null, acceptedAt: null }], events: [],
+  what: 'unwell', persons: '1', responsive: null, note: null, ...changes,
 });
 
 const state = (changes: Partial<LiveState> = {}): LiveState => ({
@@ -36,25 +36,25 @@ const apply = (start: LiveState, ...actions: LiveAction[]) => actions.reduce((s,
 
 test('accept, on site and close on the phone: the team is free again', () => {
   const after = apply(state(), { type: 'accept', incidentId: 7, teamId: 2 }, { type: 'onSite', incidentId: 7 });
-  assert.equal(after.incidents[0]?.status, 'ter_plaatse');
+  assert.equal(after.incidents[0]?.status, 'on_site');
   assert.equal(after.teams[1]?.incidentId, 7, 'busy with the call');
 
-  const closed = apply(after, { type: 'close', incidentId: 7, body: { outcome: 'geholpen', persons: '1', note: null, stayHere: false } });
-  assert.equal(closed.incidents[0]?.status, 'afgerond');
+  const closed = apply(after, { type: 'close', incidentId: 7, body: { outcome: 'treated', persons: '1', note: null, stayHere: false } });
+  assert.equal(closed.incidents[0]?.status, 'closed');
   assert.deepEqual([closed.teams[1]?.incidentId, closed.teams[1]?.availability], [null, 'available']);
-  assert.deepEqual(closed.incidents[0]?.events.map((e) => e.type), ['geaccepteerd', 'ter_plaatse', 'afgerond']);
+  assert.deepEqual(closed.incidents[0]?.events.map((e) => e.type), ['accepted', 'on_site', 'closed']);
 });
 
 test('applying is pure, and an action already in the state adds no second log line', () => {
   const start = state();
   const once = apply(start, { type: 'onSite', incidentId: 7 });
-  assert.equal(start.incidents[0]?.status, 'verstuurd');
+  assert.equal(start.incidents[0]?.status, 'sent');
   assert.equal(apply(once, { type: 'onSite', incidentId: 7 }).incidents[0]?.events.length, 1);
 });
 
 test('closing and taking a break; a fixed team can stay where it was', () => {
-  const fixed = state({ incidents: [incident({ status: 'ter_plaatse', dispatches: [{ teamId: 1, at: AT, reason: 'alle', distanceKm: 1, declinedAt: null, acceptedAt: AT }] })] });
-  const after = applyAction(fixed, { id: 'x', at: AT, action: { type: 'close', incidentId: 7, body: { outcome: 'loos', persons: null, note: null, stayHere: true, pause: true } } }, { ...context, me: { name: 'Eva', phone: '0600000005' } });
+  const fixed = state({ incidents: [incident({ status: 'on_site', dispatches: [{ teamId: 1, at: AT, reason: 'all', distanceKm: 1, declinedAt: null, acceptedAt: AT }] })] });
+  const after = applyAction(fixed, { id: 'x', at: AT, action: { type: 'close', incidentId: 7, body: { outcome: 'false_alarm', persons: null, note: null, stayHere: true, pause: true } } }, { ...context, me: { name: 'Eva', phone: '0600000005' } });
   assert.deepEqual([after.teams[0]?.availability, after.teams[0]?.stayPostId], ['unavailable', 20]);
 });
 
@@ -66,18 +66,18 @@ test('a fixed team and its post go together; a phone with no state yet still sho
 });
 
 test('a request made without signal is there at once, and follows its steps', () => {
-  const after = apply(state(), { type: 'requestNew', tempId: -5, clientId: 'abc', postId: 20, postName: 'Waterpost', kind: 'water' }, { type: 'requestDetail', requestId: -5, detail: 'flink' }, { type: 'requestWithdraw', requestId: -5 });
-  assert.deepEqual([after.requests[0]?.id, after.requests[0]?.detail, after.requests[0]?.status], [-5, 'flink', 'ingetrokken']);
+  const after = apply(state(), { type: 'requestNew', tempId: -5, clientId: 'abc', postId: 20, postName: 'Waterpost', kind: 'water' }, { type: 'requestDetail', requestId: -5, detail: 'lots' }, { type: 'requestWithdraw', requestId: -5 });
+  assert.deepEqual([after.requests[0]?.id, after.requests[0]?.detail, after.requests[0]?.status], [-5, 'lots', 'withdrawn']);
 });
 
 test('an incident started without signal is there at once, on site, and can be closed', () => {
   const started = apply(state({ incidents: [] }), {
     type: 'selfStart', tempId: -9, postId: 20, offPost: true, post: { typeId: 1, name: '120 m van Waterpost', km: 3, lat: 53, lng: 5 },
-    body: { clientId: 'abcdefgh', teamId: 2, postId: 20, lat: 53, lng: 5, what: 'kramp', persons: '1', responsive: null, note: null },
+    body: { clientId: 'abcdefgh', teamId: 2, postId: 20, lat: 53, lng: 5, what: 'cramp', persons: '1', responsive: null, note: null },
   });
-  assert.deepEqual([started.incidents[0]?.status, started.incidents[0]?.teamId, started.teams[1]?.incidentId], ['ter_plaatse', 2, -9]);
-  const closed = apply(started, { type: 'close', incidentId: -9, body: { outcome: 'geholpen', persons: '1', note: null, stayHere: false } });
-  assert.equal(closed.incidents[0]?.status, 'afgerond');
+  assert.deepEqual([started.incidents[0]?.status, started.incidents[0]?.teamId, started.teams[1]?.incidentId], ['on_site', 2, -9]);
+  const closed = apply(started, { type: 'close', incidentId: -9, body: { outcome: 'treated', persons: '1', note: null, stayHere: false } });
+  assert.equal(closed.incidents[0]?.status, 'closed');
   assert.equal(closed.teams[1]?.incidentId, null);
 });
 
@@ -101,11 +101,11 @@ test('the server carries out a queued change once, with the time it happened', a
 
   await send(lead, 'PUT', `/api/posts/${post}/open`, { open: true });
   await send(ehbo, 'PUT', `/api/teams/${team}/availability`, { availability: 'available' });
-  const report: NewIncident = { postId: post, clientId: 'queue-test-1', what: 'onwel', persons: '1', responsive: null, note: null };
+  const report: NewIncident = { postId: post, clientId: 'queue-test-1', what: 'unwell', persons: '1', responsive: null, note: null };
   const created = (await send(lead, 'POST', '/api/incidents', report)).json<LiveIncident>();
   await send(ehbo, 'POST', `/api/incidents/${created.id}/accept`, { teamId: team });
 
-  const body = { outcome: 'geholpen', persons: '1', note: null, stayHere: false };
+  const body = { outcome: 'treated', persons: '1', note: null, stayHere: false };
   const queued = { 'x-action-id': 'action-close-1', 'x-action-at': '2026-12-31T11:40:00.000Z' };
   const first = await send(ehbo, 'POST', `/api/incidents/${created.id}/close`, body, queued);
   assert.equal(first.statusCode, 200, first.body);
@@ -117,7 +117,7 @@ test('the server carries out a queued change once, with the time it happened', a
   // The answer got lost, so the phone sends it again: no error, and nothing happens twice.
   const again = await send(ehbo, 'POST', `/api/incidents/${created.id}/close`, body, queued);
   assert.equal(again.statusCode, 200, again.body);
-  assert.equal(again.json<LiveState>().incidents.find((i) => i.id === created.id)?.events.filter((e) => e.type === 'afgerond').length, 1);
+  assert.equal(again.json<LiveState>().incidents.find((i) => i.id === created.id)?.events.filter((e) => e.type === 'closed').length, 1);
 
   // A time that can't be right is not believed.
   const second = (await send(lead, 'POST', '/api/incidents', { ...report, clientId: 'queue-test-2' })).json<LiveIncident>();

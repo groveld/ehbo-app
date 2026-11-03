@@ -21,9 +21,9 @@ const handles = computed(() => {
   const me = session.me;
   return Boolean(me && (me.isAdmin || me.assignments.some((a) => a.kind === 'kernteam')));
 });
-const openRequests = computed(() => live.requests.filter((r) => r.status === 'aangevraagd' || r.status === 'opgepakt').slice().reverse());
-const doneRequests = computed(() => live.requests.filter((r) => r.status === 'afgehandeld' || r.status === 'ingetrokken'));
-const KIND_STYLE = { water: ['#E4EEF7', '#124A78'], verkeer: ['#FBE6D2', '#7A3F06'], vrijwilliger: ['#EDE4F7', '#4E2A82'] } as const;
+const openRequests = computed(() => live.requests.filter((r) => r.status === 'sent' || r.status === 'accepted').slice().reverse());
+const doneRequests = computed(() => live.requests.filter((r) => r.status === 'closed' || r.status === 'withdrawn'));
+const KIND_STYLE = { water: ['#E4EEF7', '#124A78'], traffic: ['#FBE6D2', '#7A3F06'], volunteer: ['#EDE4F7', '#4E2A82'] } as const;
 const line = (r: LiveRequest) => {
   const post = store.postById.get(r.postId);
   return [r.postName, post ? kmLabel(post) : null, requestDetailLabel(r.kind, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
@@ -32,11 +32,11 @@ const postPhone = (r: LiveRequest) => {
   const post = store.postById.get(r.postId);
   return post ? primaryContact(post)?.phone ?? null : null;
 };
-const pickedText = (r: LiveRequest) => (r.status === 'opgepakt'
+const pickedText = (r: LiveRequest) => (r.status === 'accepted'
   ? (r.pickedBy?.phone === session.me?.phone ? 'Opgepakt door jou' : `Opgepakt door ${r.pickedBy?.name}`)
-  : r.status === 'afgehandeld' ? 'Afgehandeld' : r.status === 'ingetrokken' ? 'Ingetrokken' : '');
+  : r.status === 'closed' ? 'Afgehandeld' : r.status === 'withdrawn' ? 'Ingetrokken' : '');
 
-const STATUS = { verstuurd: 'zoekt EHBO', geaccepteerd: 'onderweg', ter_plaatse: 'ter plaatse', afgerond: 'afgerond', ingetrokken: 'ingetrokken' } as const;
+const STATUS = { sent: 'zoekt EHBO', accepted: 'onderweg', on_site: 'ter plaatse', closed: 'afgerond', withdrawn: 'ingetrokken' } as const;
 const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
 </script>
 
@@ -55,7 +55,7 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
         <span class="request-line">{{ i.post.name }} · {{ incidentSummary(i) }}{{ i.aed ? ' · AED' : '' }}</span>
       </RouterLink>
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-      <div v-for="r in openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'opgepakt' && r.pickedBy?.phone === session.me?.phone }">
+      <div v-for="r in openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'accepted' && r.pickedBy?.phone === session.me?.phone }">
         <div class="request-top">
           <span class="kind" :style="{ background: KIND_STYLE[r.kind][0], color: KIND_STYLE[r.kind][1] }">{{ REQUEST_KINDS[r.kind].label }}</span>
           <span class="picked grow">{{ pickedText(r) }}</span>
@@ -64,7 +64,7 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
         <RouterLink :to="{ name: 'aanvraag', params: { id: r.id } }" class="request-line open-link">{{ line(r) }}<Icon name="forward" :size="16" /></RouterLink>
         <div v-if="handles" class="request-actions">
           <a v-if="postPhone(r)" :href="telHref(postPhone(r)!)" class="btn call" :aria-label="`Bel ${r.postName}`"><Icon name="phone" :size="20" /></a>
-          <button v-if="r.status === 'aangevraagd'" class="btn primary-ish" :disabled="busy" @click="run(() => live.pickRequest(r.id))">Oppakken</button>
+          <button v-if="r.status === 'sent'" class="btn primary-ish" :disabled="busy" @click="run(() => live.pickRequest(r.id))">Oppakken</button>
           <button v-else class="btn done" :disabled="busy" @click="run(() => live.finishRequest(r.id))">Afgehandeld</button>
         </div>
       </div>

@@ -30,7 +30,7 @@ export function useLiveBar() {
 
   function teamBar(incident: LiveIncident): LiveBar {
     const name = postOf(store.postById, incident).name;
-    if (incident.status === 'ter_plaatse') {
+    if (incident.status === 'on_site') {
       return { tone: 'red', title: `Ter plaatse · ${name}`, sub: 'Tik om af te ronden', to: { name: 'afronden', params: { id: incident.id } }, more: 0 };
     }
     const since = incident.dispatches.find((d) => live.myTeamIds.includes(d.teamId))?.acceptedAt;
@@ -40,13 +40,13 @@ export function useLiveBar() {
   function postBar(incident: LiveIncident, more: number): LiveBar {
     const to: RouteLocationRaw = more ? { name: 'post-home', params: { id: incident.postId } } : { name: 'melding', params: { id: incident.id } };
     const last = live.offline ? 'Laatst bekende stand' : null;
-    if (incident.status === 'verstuurd') {
+    if (incident.status === 'sent') {
       const left = live.secondsLeft(incident);
       return { tone: 'orange', title: "We zoeken een EHBO'er", sub: last ?? (left !== null ? `Nog ${left} s tot alle eenheden` : 'Alle eenheden zijn opgeroepen'), to, more };
     }
     const team = teamOf(store.pkg, incident.teamId);
     const helper = [incident.acceptedBy?.name, team ? `EHBO ${team.name}` : null].filter(Boolean).join(' · ');
-    if (incident.status === 'ter_plaatse') return { tone: 'green', title: 'EHBO is er', sub: last ?? `${helper} · sinds ${clock(incident.onSiteAt)}`, to, more };
+    if (incident.status === 'on_site') return { tone: 'green', title: 'EHBO is er', sub: last ?? `${helper} · sinds ${clock(incident.onSiteAt)}`, to, more };
     const minutes = travelMinutes(incident.dispatches.find((d) => d.teamId === incident.teamId)?.distanceKm ?? null, team);
     return { tone: 'green', title: `Hulp is onderweg${minutes ? ` · ± ${minutes} min` : ''}`, sub: last ?? helper, to, more };
   }

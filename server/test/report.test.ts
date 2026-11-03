@@ -35,9 +35,9 @@ const later = (seconds: number) => { clock = new Date(clock.getTime() + seconds 
 let n = 0;
 
 /** Melding van de waterpost; Team 2 accepteert na `accept` s, is na `travel` s ter plaatse en rondt af. */
-async function incident(accept: number, travel: number, outcome = 'geholpen') {
+async function incident(accept: number, travel: number, outcome = 'treated') {
   const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', {
-    postId: id('posts', 'Waterpost 3 · brug'), clientId: `rapport-${++n}-abcdef`, what: 'onwel', persons: '1', responsive: null, note: null,
+    postId: id('posts', 'Waterpost 3 · brug'), clientId: `rapport-${++n}-abcdef`, what: 'unwell', persons: '1', responsive: null, note: null,
   });
   later(accept);
   await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: id('teams', 'Team 2') });
@@ -88,7 +88,7 @@ test('rapport: tijden per incident en totalen; alleen voor beheerders', async ()
   assert.equal(report.totals.avgResponseSeconds, 50);
   assert.equal(report.totals.maxResponseSeconds, 60);
   assert.equal(report.totals.avgTravelSeconds, 300);
-  assert.deepEqual(report.totals.byOutcome, { geholpen: 1, ambulance: 1 });
+  assert.deepEqual(report.totals.byOutcome, { treated: 1, ambulance: 1 });
   assert.deepEqual(report.totals.byPost, [{ postName: 'Waterpost 3 · brug', count: 2 }]);
   assert.deepEqual(report.totals.requestsByKind, { water: 1 });
 });

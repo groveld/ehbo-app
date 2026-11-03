@@ -105,7 +105,7 @@ onMounted(async () => {
               <td class="mono">{{ clock(i.closedAt) }}</td>
               <td class="mono">{{ formatDuration(i.travelSeconds) }}</td>
               <td>{{ i.teamName ?? '–' }}</td>
-              <td>{{ i.outcome ? OUTCOMES[i.outcome] : i.status === 'ingetrokken' ? 'Ingetrokken' : 'Open' }}</td>
+              <td>{{ i.outcome ? OUTCOMES[i.outcome] : i.status === 'withdrawn' ? 'Ingetrokken' : 'Open' }}</td>
               <td>{{ i.note ?? '' }}</td>
             </tr>
           </tbody>

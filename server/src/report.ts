@@ -34,7 +34,7 @@ export function buildReport(db: EventDb, now = new Date()): Report {
     responseSeconds: r.self_started === 1 ? null : seconds(r.reported_at, r.accepted_at),
     travelSeconds: r.self_started === 1 ? null : seconds(r.accepted_at, r.on_site_at),
     teamName: r.team_name as string | null,
-    escalated: r.stage === 'alle',
+    escalated: r.stage === 'all',
     selfStarted: r.self_started === 1,
     outcome: r.outcome as Outcome | null,
     note: r.outcome_note as string | null,
@@ -45,9 +45,9 @@ export function buildReport(db: EventDb, now = new Date()): Report {
   const byOutcome: Partial<Record<Outcome, number>> = {};
   for (const i of incidents) if (i.outcome) byOutcome[i.outcome] = (byOutcome[i.outcome] ?? 0) + 1;
   const byPost = new Map<string, number>();
-  for (const i of incidents) if (i.status !== 'ingetrokken') byPost.set(i.postName, (byPost.get(i.postName) ?? 0) + 1);
+  for (const i of incidents) if (i.status !== 'withdrawn') byPost.set(i.postName, (byPost.get(i.postName) ?? 0) + 1);
   const requestsByKind: Partial<Record<RequestKind, number>> = {};
-  for (const r of all("SELECT kind, COUNT(*) AS n FROM requests WHERE is_test = 0 AND status <> 'ingetrokken' GROUP BY kind")) {
+  for (const r of all("SELECT kind, COUNT(*) AS n FROM queue_requests WHERE is_test = 0 AND status <> 'withdrawn' GROUP BY kind")) {
     requestsByKind[r.kind as RequestKind] = r.n as number;
   }
 
@@ -75,8 +75,8 @@ export function buildReport(db: EventDb, now = new Date()): Report {
     incidents,
     passages: [...passages.values()],
     totals: {
-      incidents: incidents.filter((i) => i.status !== 'ingetrokken').length,
-      withdrawn: incidents.filter((i) => i.status === 'ingetrokken').length,
+      incidents: incidents.filter((i) => i.status !== 'withdrawn').length,
+      withdrawn: incidents.filter((i) => i.status === 'withdrawn').length,
       escalated: incidents.filter((i) => i.escalated).length,
       avgResponseSeconds: average(responses),
       maxResponseSeconds: responses.length ? Math.max(...responses) : null,
@@ -85,7 +85,7 @@ export function buildReport(db: EventDb, now = new Date()): Report {
       byPost: [...byPost].map(([postName, n]) => ({ postName, count: n })).sort((a, b) => b.count - a.count || a.postName.localeCompare(b.postName)),
       requestsByKind,
     },
-    testItems: count('SELECT (SELECT COUNT(*) FROM incidents WHERE is_test = 1) + (SELECT COUNT(*) FROM requests WHERE is_test = 1) AS n'),
+    testItems: count('SELECT COUNT(*) AS n FROM help_requests WHERE is_test = 1'),
   };
 }
 
@@ -99,7 +99,7 @@ export function reportCsv(report: Report) {
     const text = value === null ? '' : String(value);
     return /[;"\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
   };
-  const STATUS = { verstuurd: 'open', geaccepteerd: 'onderweg', ter_plaatse: 'ter plaatse', afgerond: 'afgerond', ingetrokken: 'ingetrokken' } as const;
+  const STATUS = { sent: 'open', accepted: 'onderweg', on_site: 'ter plaatse', closed: 'afgerond', withdrawn: 'ingetrokken' } as const;
   const header = ['Nr', 'Locatie', 'Km', 'Melding', 'Personen', 'AED', 'Status', 'Gemeld', 'Geaccepteerd', 'Ter plaatse', 'Afgerond',
     'Reactietijd (m:ss)', 'Aanrijtijd (m:ss)', 'Eenheid', 'Naar alle eenheden', 'Zelf gestart', 'Afloop', 'Notitie'];
   const rows = report.incidents.map((i) => [

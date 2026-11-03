@@ -29,7 +29,7 @@ const recent = computed(() => [...(report.value?.incidents ?? [])].reverse());
 const shown = computed(() => (showAll.value ? recent.value : recent.value.slice(0, 5)));
 const outcomes = computed(() => Object.entries(report.value?.totals.byOutcome ?? {}) as [keyof typeof OUTCOMES, number][]);
 const requests = computed(() => Object.entries(report.value?.totals.requestsByKind ?? {}) as [RequestKind, number][]);
-const OUTCOME_SHORT = { geholpen: 'geholpen', gestopt: 'gestopt', ambulance: 'ambulance', doorverwezen: 'doorverwezen', geweigerd: 'geweigerd', loos: 'loos alarm' } as const;
+const OUTCOME_SHORT = { treated: 'geholpen', stopped: 'gestopt', ambulance: 'ambulance', referred: 'doorverwezen', refused: 'geweigerd', false_alarm: 'loos alarm' } as const;
 
 async function toggleTestMode(on: boolean) {
   if (on && !await confirmDialog({ title: 'Testmodus aanzetten?', text: 'Alle oproepen en aanvragen tellen dan als proef en komen niet in het rapport. Zet hem uit voordat het evenement begint.', confirm: 'Testmodus aanzetten' })) return;
@@ -71,7 +71,7 @@ async function deleteTestData() {
             <div v-for="i in shown" :key="i.number" class="list-row row">
               <span class="mono at">{{ clock(i.reportedAt) }}</span>
               <span class="grow"><strong>{{ i.postName.split(' · ')[0] }}</strong> · {{ i.what ? INCIDENT_WHAT[i.what].split(' / ')[0]!.toLowerCase() : 'EHBO' }}</span>
-              <span class="outcome" :class="{ muted: !i.outcome }">{{ i.outcome ? OUTCOME_SHORT[i.outcome] : i.status === 'ingetrokken' ? 'ingetrokken' : 'open' }}</span>
+              <span class="outcome" :class="{ muted: !i.outcome }">{{ i.outcome ? OUTCOME_SHORT[i.outcome] : i.status === 'withdrawn' ? 'ingetrokken' : 'open' }}</span>
             </div>
           </div>
           <p v-else class="small">Nog geen incidenten.</p>

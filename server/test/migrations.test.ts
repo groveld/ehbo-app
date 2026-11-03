@@ -1,4 +1,5 @@
-// An event file from before keeps everything when the schema changes: the values in English (21) and units as teams (22), with nothing lost.
+// An event file from before keeps everything when the schema changes: values in English (21), units as teams (22), and incidents
+// and requests as one help request with a type (23), with nothing lost.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,6 +29,10 @@ test('team and contact values become English, and a rebuilt table keeps what ref
     INSERT INTO ehbo_unit_members (unit_id, phone) VALUES (1, '+31600000003');
     INSERT INTO incidents (id, client_id, post_id, reported_by, status, stage, reported_at, sent_at, unit_id) VALUES (1, 'c1', 1, '+31600000004', 'afgerond', 'dichtstbij', 'x', 'x', 1);
     INSERT INTO incident_dispatches (incident_id, unit_id, at, reason) VALUES (1, 1, 'x', 'dichtstbij');
+    UPDATE incidents SET what = 'onwel', responsive = 'nee', outcome = 'geholpen' WHERE id = 1;
+    INSERT INTO incident_events (incident_id, at, type, unit_id, text) VALUES (1, 'x', 'gemeld', NULL, 'Gemeld door EHBO-post 1');
+    INSERT INTO requests (id, client_id, post_id, kind, detail, status, reported_by, created_at, picked_at, picked_by)
+      VALUES (1, 'r1', 1, 'verkeer', 'druk', 'opgepakt', '+31600000004', 'y', 'z', '+31600000003');
   `);
   old.close();
 
@@ -37,14 +42,18 @@ test('team and contact values become English, and a rebuilt table keeps what ref
     [['Team 1', 'fixed', null, 'available'], ['Team 2', 'mobile', 'on_foot', 'unavailable']]);
   assert.deepEqual(rows('SELECT role FROM post_contacts').map((r) => r.role), ['lead']);
   assert.deepEqual(rows('SELECT team_id, phone FROM team_members').map((r) => Object.values(r)), [[1, '+31600000003']], 'members are still there');
-  assert.deepEqual(rows('SELECT team_id FROM incident_dispatches').map((r) => r.team_id), [1], 'and so are the dispatches of the report');
-  assert.deepEqual(rows('SELECT team_id FROM incidents').map((r) => r.team_id), [1]);
+  assert.deepEqual(rows('SELECT team_id, reason FROM dispatches').map((r) => Object.values(r)), [[1, 'nearest']], 'and so are the dispatches of the report');
+  assert.deepEqual(rows('SELECT id, team_id, status, stage, what, responsive, outcome FROM incidents').map((r) => Object.values(r)),
+    [[1, 1, 'closed', 'nearest', 'unwell', 'no', 'treated']], 'an incident keeps its id, in English');
+  assert.deepEqual(rows('SELECT type, text FROM help_request_events').map((r) => Object.values(r)), [['reported', 'Gemeld door EHBO-post 1']]);
+  assert.deepEqual(rows('SELECT id, kind, detail, status, created_at, picked_at, picked_by FROM queue_requests').map((r) => Object.values(r)),
+    [[1000001, 'traffic', 'busy', 'accepted', 'y', 'z', '+31600000003']], 'a request moves up by 1,000,000');
   assert.equal((db.raw.prepare('PRAGMA foreign_keys').get() as { foreign_keys: number }).foreign_keys, 1, 'foreign keys are back on');
   assert.throws(() => db.raw.prepare("INSERT INTO teams (name, kind) VALUES ('X', 'vast')").run(), /CHECK/);
   // Deleting a team still clears its members: the reference moved along with the table.
   db.raw.prepare('DELETE FROM teams WHERE id = 2').run();
-  db.raw.prepare('DELETE FROM incident_dispatches').run();
-  db.raw.prepare('UPDATE incidents SET team_id = NULL').run();
+  db.raw.prepare('DELETE FROM dispatches').run();
+  db.raw.prepare('UPDATE dispatch_details SET team_id = NULL').run();
   db.raw.prepare('DELETE FROM teams WHERE id = 1').run();
   assert.equal(rows('SELECT * FROM team_members').length, 0);
   db.close();

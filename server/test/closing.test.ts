@@ -25,6 +25,15 @@ const teamNow = () => calls.state().teams.find((u) => u.id === TEAM2())!;
 const lead = (): Me => ({ phone: DEMO.postLead, name: 'Wim', isAdmin: false, assignments: [{ kind: 'post', postId: WATER(), role: 'lead', title: '', letter: 'W', color: '' }], home: 'post' }) as Me;
 const coordinator = (): Me => ({ phone: DEMO.coordinator, name: 'Cor', isAdmin: false, assignments: [], home: 'overzicht' }) as Me;
 
+/** An incident at the water post as the server stores it: a help request of the first-aid type with its dispatch details. */
+function addIncident(clientId: string, status: 'sent' | 'accepted', teamId: number | null = null) {
+  const id = Number(db.raw.prepare(`INSERT INTO help_requests (client_id, type_id, post_id, reported_by, status, reported_at, is_test)
+    VALUES (?, (SELECT id FROM help_request_types WHERE key = 'first_aid'), ?, ?, ?, ?, 0)`).run(clientId, WATER(), DEMO.postLead, status, clock.toISOString()).lastInsertRowid);
+  set("INSERT INTO dispatch_details (help_request_id, stage, sent_at, team_id) VALUES (?, 'all', ?, ?)", id, clock.toISOString(), teamId);
+  if (teamId !== null) set("INSERT INTO dispatches (help_request_id, team_id, at, reason, accepted_at) VALUES (?, ?, ?, 'all', ?)", id, teamId, clock.toISOString(), clock.toISOString());
+  return id;
+}
+
 function sweepAt(time: string) {
   clock = at(time);
   calls.sweep();
@@ -90,11 +99,11 @@ test('keep open gives 30 minutes, then a new warning', () => {
 
 test('never closes during an open call; a warning is taken back', () => {
   sweepAt('13:50');
-  set(`INSERT INTO incidents (client_id, post_id, reported_by, status, stage, reported_at, sent_at, is_test) VALUES ('close-1', ?, ?, 'verstuurd', 'alle', ?, ?, 0)`, WATER(), DEMO.postLead, clock.toISOString(), clock.toISOString());
+  addIncident('close-1', 'sent');
   sweepAt('14:00');
   assert.equal(post().isOpen, true);
   assert.equal(post().closesAt, null);
-  set("UPDATE incidents SET status = 'afgerond'");
+  set("UPDATE help_requests SET status = 'closed'");
   sweepAt('15:00');
   assert.equal(post().isOpen, true, 'a new warning first');
   assert.ok(post().closesAt);
@@ -108,9 +117,7 @@ test('a team closes by its own shift, and a call keeps it on', () => {
   assert.equal(teamNow().availability, 'off_duty');
 
   set("UPDATE teams SET availability = 'available' WHERE id = ?", TEAM2());
-  set(`INSERT INTO incidents (client_id, post_id, reported_by, status, stage, reported_at, sent_at, is_test, team_id) VALUES ('close-2', ?, ?, 'geaccepteerd', 'alle', ?, ?, 0, ?)`, WATER(), DEMO.postLead, clock.toISOString(), clock.toISOString(), TEAM2());
-  const incident = (db.raw.prepare("SELECT id FROM incidents WHERE client_id = 'close-2'").get() as { id: number }).id;
-  set(`INSERT INTO incident_dispatches (incident_id, team_id, at, reason, accepted_at) VALUES (?, ?, ?, 'alle', ?)`, incident, TEAM2(), clock.toISOString(), clock.toISOString());
+  addIncident('close-2', 'accepted', TEAM2());
   sweepAt('13:00');
   assert.equal(teamNow().availability, 'available');
   assert.equal(teamNow().closesAt, null);
@@ -123,7 +130,7 @@ test('a phone that missed the closing can still ask for help; a post closed by a
   assert.equal(calls.report(lead(), report).postId, WATER());
   assert.equal(post().isOpen, true);
   assert.equal(post().autoClosedAt, null);
-  set("UPDATE incidents SET status = 'afgerond'");
+  set("UPDATE help_requests SET status = 'closed'");
 
   calls.setPostOpen(lead(), WATER(), false);
   assert.throws(() => calls.report(lead(), { ...report, clientId: 'close-report-2' }), /dicht/);
@@ -151,13 +158,13 @@ test('coordinator: everything at once, and not while a call is open', () => {
   assert.ok(calls.state().posts.every((p) => p.isOpen));
   assert.ok(calls.state().teams.every((u) => u.availability === 'available'));
 
-  set(`INSERT INTO incidents (client_id, post_id, reported_by, status, stage, reported_at, sent_at, is_test) VALUES ('close-3', ?, ?, 'verstuurd', 'alle', ?, ?, 0)`, WATER(), DEMO.postLead, clock.toISOString(), clock.toISOString());
+  addIncident('close-3', 'sent');
   assert.throws(() => calls.closeDay(coordinator(), () => {}), /Eerst afronden: Waterpost 3/);
   const { skipped } = calls.closeAll(coordinator());
   assert.deepEqual(skipped, ['Waterpost 3 · brug']);
   assert.equal(post().isOpen, true);
 
-  set("UPDATE incidents SET status = 'afgerond'");
+  set("UPDATE help_requests SET status = 'closed'");
   let finished = false;
   calls.closeDay(coordinator(), () => { finished = true; });
   assert.ok(finished);
@@ -175,15 +182,13 @@ test('open all skips what nobody is logged in for, and names it', () => {
 test('the last member logging out during a call: the team goes off duty once the call is over', () => {
   logIn(DEMO.mobileEhbo);
   set("UPDATE teams SET availability = 'available' WHERE id = ?", TEAM2());
-  set(`INSERT INTO incidents (client_id, post_id, reported_by, status, stage, reported_at, sent_at, is_test, team_id) VALUES ('left-1', ?, ?, 'geaccepteerd', 'alle', ?, ?, 0, ?)`, WATER(), DEMO.postLead, clock.toISOString(), clock.toISOString(), TEAM2());
-  const incident = (db.raw.prepare("SELECT id FROM incidents WHERE client_id = 'left-1'").get() as { id: number }).id;
-  set(`INSERT INTO incident_dispatches (incident_id, team_id, at, reason, accepted_at) VALUES (?, ?, ?, 'alle', ?)`, incident, TEAM2(), clock.toISOString(), clock.toISOString());
+  addIncident('left-1', 'accepted', TEAM2());
   set('DELETE FROM sessions');
   calls.leave([DEMO.mobileEhbo]);
   assert.equal(teamNow().availability, 'available');
   sweepAt('12:01');
   assert.equal(teamNow().availability, 'available');
-  set("UPDATE incidents SET status = 'afgerond'");
+  set("UPDATE help_requests SET status = 'closed'");
   sweepAt('12:02');
   assert.equal(teamNow().availability, 'off_duty');
 });
@@ -191,18 +196,18 @@ test('the last member logging out during a call: the team goes off duty once the
 test('a team starts an incident itself: on site at once, the place by GPS, and no call to anyone else', () => {
   const mo = (): Me => ({ phone: DEMO.mobileEhbo, name: 'Mo', isAdmin: false, assignments: [{ kind: 'ehbo', teamId: TEAM2(), title: '', letter: '+', color: '' }], home: 'ehbo' }) as Me;
   const [lat, lng] = [53.1512, 5.8344];
-  const body = { clientId: 'self-start-1', teamId: TEAM2(), postId: WATER(), what: 'kramp' as const, persons: '1' as const, responsive: null, note: null };
+  const body = { clientId: 'self-start-1', teamId: TEAM2(), postId: WATER(), what: 'cramp' as const, persons: '1' as const, responsive: null, note: null };
 
   // Within the radius of the post: the post itself.
   const atPost = calls.selfStart(mo(), { ...body, lat: lat + 0.0002, lng });
-  assert.deepEqual([atPost.status, atPost.post.name, atPost.offPost, atPost.selfStarted, atPost.teamId], ['ter_plaatse', 'Waterpost 3 · brug', false, true, TEAM2()]);
+  assert.deepEqual([atPost.status, atPost.post.name, atPost.offPost, atPost.selfStarted, atPost.teamId], ['on_site', 'Waterpost 3 · brug', false, true, TEAM2()]);
   assert.equal(teamNow().incidentId, atPost.id);
   assert.equal(calls.state().incidents.length, 1);
   assert.equal(calls.selfStart(mo(), { ...body, lat, lng }).id, atPost.id, 'sent twice counts once');
   assert.throws(() => calls.selfStart(mo(), { ...body, clientId: 'self-start-2', lat, lng }), /al bezig/);
   assert.ok(!pushes.some((p) => p.payload.urgent), 'no alarm for anyone');
   assert.ok(pushes.some((p) => p.phones.includes(DEMO.coordinator) && p.payload.body.includes('zelf een incident')));
-  set("UPDATE incidents SET status = 'afgerond'");
+  set("UPDATE help_requests SET status = 'closed'");
 
   // Further away: the distance to the nearest post, and that post only for the report.
   const away = calls.selfStart(mo(), { ...body, clientId: 'self-start-3', lat: lat + 0.002, lng });

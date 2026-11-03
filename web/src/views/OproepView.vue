@@ -39,12 +39,12 @@ const myTeam = computed(() => teamOf(store.pkg, myTeamId.value));
 const mode = computed(() => {
   const i = incident.value;
   if (!i) return 'missing';
-  if (i.status === 'ingetrokken') return 'withdrawn';
-  if (myDispatch.value?.acceptedAt) return i.status === 'afgerond' ? 'closed' : 'enroute';
-  if (i.status === 'afgerond') return 'closed';
-  if (myDispatch.value?.declinedAt && i.status === 'verstuurd') return 'declined';
-  if (live.invitations.some((x) => x.id === i.id)) return i.stage === 'alle' && i.status === 'verstuurd' ? 'all' : 'call';
-  if (i.status === 'verstuurd') return 'watching';
+  if (i.status === 'withdrawn') return 'withdrawn';
+  if (myDispatch.value?.acceptedAt) return i.status === 'closed' ? 'closed' : 'enroute';
+  if (i.status === 'closed') return 'closed';
+  if (myDispatch.value?.declinedAt && i.status === 'sent') return 'declined';
+  if (live.invitations.some((x) => x.id === i.id)) return i.stage === 'all' && i.status === 'sent' ? 'all' : 'call';
+  if (i.status === 'sent') return 'watching';
   return 'taken';
 });
 
@@ -57,9 +57,9 @@ const km = computed(() => myDispatch.value?.distanceKm ?? null);
 const minutes = computed(() => travelMinutes(km.value, myTeam.value));
 const takenBy = computed(() => teamOf(store.pkg, incident.value?.teamId ?? null));
 /** Na accepteren zonder AED: een eenheid met AED is nog nodig. */
-const aedCall = computed(() => mode.value === 'call' && incident.value?.status !== 'verstuurd');
+const aedCall = computed(() => mode.value === 'call' && incident.value?.status !== 'sent');
 const firstTeam = computed(() => {
-  const first = incident.value?.dispatches.find((d) => d.reason === 'dichtstbij');
+  const first = incident.value?.dispatches.find((d) => d.reason === 'nearest');
   return first ? teamOf(store.pkg, first.teamId)?.name : null;
 });
 const others = computed(() => (incident.value?.dispatches ?? []).filter((d) => d.teamId !== myTeamId.value).map((d) => ({
@@ -167,7 +167,7 @@ async function onSite() {
     <template v-else-if="mode === 'enroute'">
       <StatusBlock
         tone="red"
-        :label="incident.status === 'ter_plaatse' ? `Ter plaatse · sinds ${clock(incident.onSiteAt)}` : `Onderweg · sinds ${clock(myDispatch?.acceptedAt)}`"
+        :label="incident.status === 'on_site' ? `Ter plaatse · sinds ${clock(incident.onSiteAt)}` : `Onderweg · sinds ${clock(myDispatch?.acceptedAt)}`"
         :title="post.name"
       />
       <div v-if="store.pkg" class="map small-map">
@@ -191,7 +191,7 @@ async function onSite() {
         <dl>
           <div><dt>Wat</dt><dd>{{ incident.what ? INCIDENT_WHAT[incident.what] : 'Niet ingevuld' }}</dd></div>
           <div><dt>Personen</dt><dd>{{ personsText(incident.persons) ?? 'Niet ingevuld' }}</dd></div>
-          <div><dt>Aanspreekbaar</dt><dd :class="{ alarm: incident.responsive === 'nee' }">{{ incident.responsive ? RESPONSIVE[incident.responsive] : 'Niet ingevuld' }}</dd></div>
+          <div><dt>Aanspreekbaar</dt><dd :class="{ alarm: incident.responsive === 'no' }">{{ incident.responsive ? RESPONSIVE[incident.responsive] : 'Niet ingevuld' }}</dd></div>
           <div v-if="incident.note"><dt>Notitie</dt><dd>{{ incident.note }}</dd></div>
           <div><dt>Gemeld</dt><dd class="mono">{{ clock(incident.reportedAt) }}<template v-if="added"> · aangevuld {{ clock(added) }}</template></dd></div>
         </dl>
@@ -201,7 +201,7 @@ async function onSite() {
       <div class="grow" />
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div class="stack gap-8 bottom">
-        <button v-if="incident.status === 'geaccepteerd'" class="btn go" :disabled="busy" @click="onSite">
+        <button v-if="incident.status === 'accepted'" class="btn go" :disabled="busy" @click="onSite">
           <Icon name="pin" :size="20" />Ik ben ter plaatse
         </button>
         <RouterLink v-else :to="{ name: 'afronden', params: { id: incident.id } }" class="btn go"><Icon name="check" :size="20" />Incident afronden</RouterLink>
