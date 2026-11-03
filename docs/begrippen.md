@@ -20,6 +20,8 @@ The decisions of 30 Oct still hold: "melding" and "locatie" may each keep two me
 | Keerpunt | `turnaround` | Where a route turns back | `keerpunt`, `posts.run_id` |
 | Km-punt | `kmPoint` (table `km_points`) | A pass of a route along a location | `post_passages` |
 
+**Function names keep "post"** (owner, 3 Nov): Waterpost, Stempel-/controlepost, EHBO-post. They're the words volunteers use ("ik sta op de waterpost"), and a function isn't the place. Everywhere else the place is *locatie*: about 50 texts still say post, such as Bel post, + Post toevoegen, Soort post, Soorten posten, Posten en EHBO openen of sluiten, the report columns and the server's messages. They go first, in step 3 below.
+
 **To decide:** #83 said the code keeps `posts`, because renaming it touches everything and brings little. #84 proposes `location`. This list follows #84; say if you'd rather keep `posts`.
 
 ## People
@@ -101,6 +103,6 @@ Other values: stage `nearest`, `all` (was `dichtstbij`, `alle`); dispatch reason
 
 1. **This list approved.**
 2. **No open PRs while renaming:** every rename touches most files.
-3. **One PR per concept, in this order:** user-facing texts (already mostly done); then small to large: statuses and values → people and teams → routes and screens → `localStorage` → help requests (#86, its own four steps) → locations last.
+3. **One PR per concept, in this order:** user-facing texts first (the remaining "post" where the place is meant; function names stay); then small to large: statuses and values → people and teams → routes and screens → `localStorage` → help requests (#86, its own four steps) → locations last.
 4. **Each database rename is a new migration.** Values in `CHECK` constraints need the table rebuilt. Old event files and their reports keep working; there's a test with an event file from before.
 5. **The package gets a new `PACKAGE_FORMAT`.** A phone with a waiting incident or queued changes keeps them (converted on start, accepted by the server until sent).
