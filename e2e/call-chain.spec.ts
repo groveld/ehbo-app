@@ -65,6 +65,9 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await expect(post.locator('.helper').getByText('Mo Mobiel')).toBeVisible();
 
   await expect(ehbo.getByText(/Onderweg · sinds/i)).toBeVisible();
+  // En route: everything the post entered.
+  await expect(ehbo.locator('.details')).toContainText('Onwel / flauw');
+  await expect(ehbo.locator('.details')).toContainText('1 persoon');
   await ehbo.getByRole('button', { name: 'Ik ben ter plaatse' }).click();
   await expect(post.getByRole('heading', { name: 'EHBO is er' })).toBeVisible({ timeout: 10_000 });
 
@@ -241,6 +244,9 @@ test('closing: the warning on the post, keep open without signal, and everything
   await coordinator.getByRole('link', { name: /Posten en EHBO openen/ }).click();
   await coordinator.getByRole('button', { name: 'Alles openen' }).click();
   await coordinator.getByRole('dialog').getByRole('button', { name: 'Alles openen' }).click();
+  // Nobody has logged in for Team 1, so it stays closed with its post, and says so.
+  await expect(coordinator.getByRole('dialog')).toContainText('Niemand aangemeld: EHBO-post 1 · start, Team 1');
+  await coordinator.getByRole('dialog').getByRole('button', { name: 'Begrepen' }).click();
   await expect(coordinator.getByText('Posten open').locator('..')).toContainText('/');
   await coordinator.getByRole('button', { name: 'Dag sluiten' }).click();
   await coordinator.getByRole('dialog').getByRole('button', { name: 'Dag sluiten' }).click();

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { startAlarm, stopAlarm, unlockAudio } from './alarm.ts';
+import { chime, startAlarm, stopAlarm, unlockAudio } from './alarm.ts';
+import { lastAddition } from './incidents.ts';
 import { useLiveBar } from './composables/useLiveBar.ts';
 import { useLiveStore } from './stores/live.ts';
 import { usePackageStore } from './stores/package.ts';
@@ -13,6 +14,7 @@ import LiveBar from './components/LiveBar.vue';
 import OfflinePill from './components/OfflinePill.vue';
 import TabBar from './components/TabBar.vue';
 import { applyTheme } from './theme.ts';
+import { holdScreen, keepAwake } from './wakeLock.ts';
 
 const KaartView = defineAsyncComponent(() => import('./views/overzicht/KaartView.vue'));
 
@@ -64,6 +66,20 @@ const visible = ref(document.visibilityState === 'visible');
 document.addEventListener('visibilitychange', () => (visible.value = document.visibilityState === 'visible'));
 document.addEventListener('pointerdown', unlockAudio);
 watch(() => live.invitations.length > 0 && visible.value, (ringing) => (ringing ? startAlarm() : stopAlarm()), { immediate: true });
+// Back from the navigation app: iOS may have suspended the sound. Waking it without a tap doesn't always work; the vibration always does.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') unlockAudio(); });
+
+// The post added to my active call: a short sound once, on any screen. In the background the push does this (silent while the app is in view).
+const addition = computed(() => {
+  const active = live.myActive;
+  return active ? `${active.id}@${lastAddition(active) ?? ''}` : null;
+});
+watch(addition, (now, before) => {
+  if (now && before && now !== before && now.split('@')[0] === before.split('@')[0] && visible.value) chime();
+});
+
+// Staff phones keep the screen on while the app is in view: in a car holder or lying at a post, it's ready at once.
+watch(() => Boolean(session.me) && keepAwake.value, holdScreen, { immediate: true });
 
 onMounted(() => {
   push.registerWorker();

@@ -154,7 +154,7 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | GET | `/map/<versie>/…` | iedereen | Kaarttegels, lettertypen en iconen |
 | GET/POST | `/api/admin/map` | beheerder | Kaart ophalen (op de achtergrond) en de voortgang |
 | POST | `/api/session` | iedereen | Aanmelden `{ phone }`; zet de sessiecookie. 404 als het nummer onbekend is |
-| DELETE | `/api/session` | iedereen | Afmelden |
+| DELETE | `/api/session` | iedereen | Afmelden `{ endpoint? }`: dit toestel krijgt geen meldingen meer. Is de laatste van een post of eenheid weg, dan gaat die dicht |
 | GET | `/api/me` | medewerker | Naam, rollen en startscherm |
 | POST | `/api/subscriptions` | medewerker | Abonnement opslaan `{ subscription }` |
 | DELETE | `/api/subscriptions` | medewerker | Abonnement verwijderen `{ endpoint }` |
@@ -174,7 +174,8 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | PUT | `/api/requests/:id` | post | Aanvullen `{ detail }` |
 | POST | `/api/requests/:id/pick`, `/done`, `/withdraw` | coördinator, post | Oppakken, afhandelen (coördinator, kernteam, beheerder) of intrekken (post) |
 | GET | `/api/admin/report`, `/api/admin/report.csv` | beheerder | Rapport als JSON (scherm en afdrukpagina) of als CSV-download |
-| PUT | `/api/admin/test-mode` | beheerder | Testmodus aan of uit `{ on }` |
+| PUT | `/api/admin/test-mode` | beheerder | Testmodus aan of uit `{ on }`; in de testmodus lopen sessies tot middernacht |
+| POST | `/api/admin/logout-all` | beheerder | Iedereen afmelden behalve jezelf, ook hun meldingen |
 | DELETE | `/api/admin/test-data` | beheerder | Proefoproepen en -aanvragen wissen |
 | PUT | `/api/admin/info` | beheerder | Info & voorwaarden `{ sections, policy, contact }`; `sections: null` = standaardtekst |
 

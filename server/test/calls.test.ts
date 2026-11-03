@@ -245,7 +245,16 @@ test('aanvullen met "niet aanspreekbaar" roept alsnog de AED-eenheid op', async 
   assert.equal(current.note, 'Reageert niet meer');
   assert.ok(current.dispatches.some((d) => d.unitId === TEAM1() && d.reason === 'aed'));
   assert.match(pushesTo(DEMO.ehbo)[0]!.payload.title, /AED nodig/);
-  assert.equal(pushesTo(DEMO.mobileEhbo)[0]!.payload.title, 'Melding aangevuld');
+  const push = pushesTo(DEMO.mobileEhbo)[0]!.payload;
+  assert.equal(push.title, 'Melding aangevuld · Waterpost 3 · brug');
+  assert.equal(push.body, 'Niet aanspreekbaar · Notitie toegevoegd', 'what changed, never the note itself');
+  assert.equal(push.quietInApp, true);
+  assert.ok(current.events.some((e) => e.text === 'Aangevuld: niet aanspreekbaar, notitie toegevoegd'));
+
+  pushes.length = 0;
+  const again = await ok(DEMO.postLead, 'PUT', `/api/incidents/${inc.id}`, { what: 'onwel', persons: '1', responsive: 'nee', note: 'Reageert niet meer ' });
+  assert.equal(pushes.length, 0, 'nothing changed: no alert');
+  assert.equal(again.incidents.find((i) => i.id === inc.id)!.events.length, current.events.length);
 });
 
 test('ter plaatse en afronden; een vaste eenheid die blijft, telt vanaf die post', async () => {

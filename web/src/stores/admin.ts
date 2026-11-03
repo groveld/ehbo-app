@@ -65,6 +65,7 @@ export const useAdminStore = defineStore('admin', () => {
     loadReport: () => api<Report>('/api/admin/report'),
     setTestMode: (on: boolean) => change('/api/admin/test-mode', 'PUT', { on }),
     deleteTestData: () => change('/api/admin/test-data', 'DELETE'),
+    logoutAll: () => change('/api/admin/logout-all', 'POST'),
     // De info-pagina is openbaar (/api/event): na opslaan ook die bijwerken.
     saveInfo: (info: InfoSettings) => changeStyle('/api/admin/info', 'PUT', info),
   };

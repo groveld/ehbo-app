@@ -410,7 +410,12 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     getSession: db.prepare("SELECT phone, expires_at FROM sessions WHERE token_hash = ? AND expires_at > datetime('now')"),
     touchSession: db.prepare("UPDATE sessions SET last_seen_at = datetime('now') WHERE token_hash = ?"),
     deleteSession: db.prepare('DELETE FROM sessions WHERE token_hash = ?'),
-    deleteExpiredSessions: db.prepare("DELETE FROM sessions WHERE expires_at <= datetime('now')"),
+    deleteExpiredSessions: db.prepare("DELETE FROM sessions WHERE expires_at <= datetime('now') RETURNING phone"),
+    deleteOtherSessions: db.prepare('DELETE FROM sessions WHERE token_hash IS NOT ? RETURNING phone'),
+    shortenSessions: db.prepare('UPDATE sessions SET expires_at = ? WHERE expires_at > ?'),
+    hasSession: db.prepare("SELECT 1 FROM sessions WHERE phone = ? AND expires_at > datetime('now')"),
+    loggedIn: db.prepare("SELECT DISTINCT phone FROM sessions WHERE expires_at > datetime('now')"),
+    countSessions: db.prepare("SELECT COUNT(*) AS n FROM sessions WHERE expires_at > datetime('now')"),
     logLogin: db.prepare('INSERT INTO login_log (phone, user_agent, result) VALUES (?, ?, ?)'),
     upsertSub: db.prepare(`
       INSERT INTO subscriptions (endpoint, phone, p256dh, auth, user_agent) VALUES (?, ?, ?, ?, ?)
@@ -419,6 +424,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     getSub: db.prepare('SELECT endpoint, phone, p256dh, auth FROM subscriptions WHERE endpoint = ?'),
     subsForPhone: db.prepare('SELECT endpoint, phone, p256dh, auth FROM subscriptions WHERE phone = ?'),
     deleteSub: db.prepare('DELETE FROM subscriptions WHERE endpoint = ?'),
+    deleteSubsForPhone: db.prepare('DELETE FROM subscriptions WHERE phone = ?'),
     markPush: db.prepare("UPDATE subscriptions SET last_push_at = datetime('now'), last_status = ? WHERE endpoint = ?"),
     countSubs: db.prepare('SELECT COUNT(*) AS n FROM subscriptions'),
     bumpVersion: db.prepare('UPDATE event SET version = version + 1 WHERE id = 1'),
@@ -432,7 +438,6 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
       q.addAdmin.run(adminPhone);
     });
   }
-  q.deleteExpiredSessions.run();
 
   return {
     /** Voor gegevens die nog geen eigen functie hebben (testgegevens, latere fases). */
@@ -454,6 +459,16 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     touchSession: (tokenHash: string) => { q.touchSession.run(tokenHash); },
     deleteSession: (tokenHash: string) => { q.deleteSession.run(tokenHash); },
     logLogin: (phone: string, userAgent: string | undefined, result: 'ok' | 'onbekend') => { q.logLogin.run(phone, userAgent ?? null, result); },
+    /** Removes the sessions that ran out and gives their numbers; the server then closes what nobody is logged in for. */
+    deleteExpiredSessions: () => (q.deleteExpiredSessions.all() as { phone: string }[]).map((r) => r.phone),
+    /** Iedereen afmelden: every session except this one. Gives the numbers that were logged out. */
+    deleteOtherSessions: (keepHash: string | null) => (q.deleteOtherSessions.all(keepHash) as { phone: string }[]).map((r) => r.phone),
+    /** No session lasts beyond this time (test mode: midnight). */
+    shortenSessions: (expiresAt: string) => { q.shortenSessions.run(expiresAt, expiresAt); },
+    hasSession: (phone: string) => q.hasSession.get(phone) !== undefined,
+    /** Numbers with at least one device logged in. */
+    loggedIn: () => new Set((q.loggedIn.all() as { phone: string }[]).map((r) => r.phone)),
+    countSessions: () => (q.countSessions.get() as { n: number }).n,
 
     upsertSubscription: ({ endpoint, keys }: PushSubscriptionData, phone: string, userAgent?: string) => {
       q.upsertSub.run(endpoint, phone, keys.p256dh, keys.auth, userAgent ?? null);
@@ -466,6 +481,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     subscriptionsFor: (phone: string) => (q.subsForPhone.all(phone) as { endpoint: string; p256dh: string; auth: string }[])
       .map((row) => ({ endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } })),
     deleteSubscription: (endpoint: string) => { q.deleteSub.run(endpoint); },
+    deleteSubscriptionsFor: (phone: string) => { q.deleteSubsForPhone.run(phone); },
     markPush: (endpoint: string, status: number) => { q.markPush.run(status, endpoint); },
     countSubscriptions: () => (q.countSubs.get() as { n: number }).n,
 

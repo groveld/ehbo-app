@@ -109,10 +109,39 @@ export function recomputePassages(db: DatabaseSync) {
   }
 }
 
-/** A GPX for participants: only the route. Whatever else the uploaded file holds (author, device, times) stays out. */
-export function cleanGpx(name: string, source: string | null, line: LngLat[]) {
+/** A post on the route, as a waypoint: what participants see on the map, nothing more. */
+export interface GpxWaypoint {
+  name: string;
+  lat: number;
+  lng: number;
+  /** Post type key (null for a custom type) and its name. */
+  typeKey: string | null;
+  typeName: string;
+  /** Every pass on this run, in km. */
+  km: number[];
+}
+
+/** Symbols that Garmin and most apps know. A type without one gets a plain waypoint. */
+const SYMBOLS: Record<string, string> = {
+  start_finish: 'Flag, Blue',
+  water: 'Drinking Water',
+  ehbo: 'First Aid',
+  stempel: 'Flag, Green',
+  verkeer: 'Danger Area',
+};
+
+const xml = (text: string) => text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const kmText = (km: number) => km.toLocaleString('nl-NL', { maximumFractionDigits: 1 });
+
+/**
+ * A GPX for participants: the route and its posts. Whatever else the uploaded file holds (author, device, times) stays out,
+ * and a waypoint has only the post's name, type and km: no people, numbers or access routes. Waypoints come before the track, as GPX requires.
+ */
+export function cleanGpx(name: string, source: string | null, line: LngLat[], waypoints: GpxWaypoint[] = []) {
   const points = source ? readPoints(source) : line;
-  const title = name.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const wpts = waypoints.map((w) => `<wpt lat="${w.lat}" lon="${w.lng}"><name>${xml(w.name)}</name>`
+    + `<desc>${xml(`${w.typeName} · km ${w.km.map(kmText).join(' en ')}`)}</desc>`
+    + `<sym>${SYMBOLS[w.typeKey ?? ''] ?? 'Waypoint'}</sym><type>${xml(w.typeName)}</type></wpt>`).join('');
   const track = points.map(([lng, lat]) => `<trkpt lat="${lat}" lon="${lng}"/>`).join('');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Silvesterloop" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${title}</name><trkseg>${track}</trkseg></trk></gpx>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Silvesterloop" xmlns="http://www.topografix.com/GPX/1/1">${wpts}<trk><name>${xml(name)}</name><trkseg>${track}</trkseg></trk></gpx>\n`;
 }

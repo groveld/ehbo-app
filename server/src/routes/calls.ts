@@ -11,7 +11,7 @@ import {
   OUTCOMES,
   RESPONSIVE,
   type CloseIncident,
-  type CloseSummary,
+  type ControlResult,
   type IncidentDetails,
   type LastSeen,
   type LiveState,
@@ -52,9 +52,9 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
   app.get<{ Reply: LiveState }>('/api/live/state', async () => calls.state());
 
   app.get<{ Reply: LastSeen }>('/api/live/last-seen', async (request) => calls.lastSeen(request.me!));
-  app.post<{ Reply: LiveState }>('/api/control/open-all', async (request) => calls.openAll(request.me!));
-  app.post<{ Reply: CloseSummary }>('/api/control/close-all', async (request) => calls.closeAll(request.me!));
-  app.post<{ Reply: CloseSummary }>('/api/control/close-day', async (request) => calls.closeDay(request.me!, () => requests.finishAll()));
+  app.post<{ Reply: ControlResult }>('/api/control/open-all', async (request) => calls.openAll(request.me!));
+  app.post<{ Reply: ControlResult }>('/api/control/close-all', async (request) => calls.closeAll(request.me!));
+  app.post<{ Reply: ControlResult }>('/api/control/close-day', async (request) => calls.closeDay(request.me!, () => requests.finishAll()));
 
   app.get('/api/live', (request, reply) => {
     reply.hijack();

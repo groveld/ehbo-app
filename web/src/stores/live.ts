@@ -4,7 +4,7 @@ import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import type {
   CloseIncident,
-  CloseSummary,
+  ControlResult,
   IncidentDetails,
   LiveAction,
   LngLat,
@@ -495,9 +495,9 @@ export const useLiveStore = defineStore('live', () => {
     keepUnit: (unitId: number) => act({ type: 'keepUnit', unitId }),
     /** The coordinator's buttons: these change everything at once, so they need the server. */
     async control(action: 'open-all' | 'close-all' | 'close-day') {
-      const answer = await api<LiveState | CloseSummary>(`/api/control/${action}`, { method: 'POST' });
-      setState('skipped' in answer ? answer.state : answer);
-      return 'skipped' in answer ? answer.skipped : [];
+      const answer = await api<ControlResult>(`/api/control/${action}`, { method: 'POST' });
+      setState(answer.state);
+      return answer.skipped;
     },
     // Aanvragen (water, verkeer, vrijwilliger) gaan ook zonder bereik door: ze wachten in de wachtrij.
     requests: computed(() => state.value?.requests ?? []),
