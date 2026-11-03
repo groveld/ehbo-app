@@ -57,16 +57,16 @@ export const useLiveStore = defineStore('live', () => {
   const session = useSessionStore();
   const pkg = usePackageStore();
   // A state saved by an older version of the app lacks what the screens expect; the server sends a new one right away.
-  const stored = load<LiveState>('ehbo.live');
+  const stored = load<LiveState>('app.live');
   /** The last state from the server. */
   const base = ref<LiveState | null>(stored?.dataVersion ? stored : null);
   /** Changes made on this phone that the server doesn't have yet, oldest first. */
-  const queue = ref<QueuedAction[]>(load('ehbo.queue') ?? []);
-  watch(queue, (value) => save('ehbo.queue', value.length ? value : null), { deep: true });
+  const queue = ref<QueuedAction[]>(load('app.queue') ?? []);
+  watch(queue, (value) => save('app.queue', value.length ? value : null), { deep: true });
   /** A request made without signal has a temporary id; this maps it to the real one, so its screen keeps working. */
   /** A help request made on the phone has a negative id until the server gives it its own (#86: one map for every type). */
-  const tempIds = ref<Record<number, number>>(load('ehbo.tempIds') ?? {});
-  watch(tempIds, (value) => save('ehbo.tempIds', Object.keys(value).length ? value : null), { deep: true });
+  const tempIds = ref<Record<number, number>>(load('app.tempIds') ?? {});
+  watch(tempIds, (value) => save('app.tempIds', Object.keys(value).length ? value : null), { deep: true });
   /** The same for an incident an EHBO team started without signal. */
   /** What every screen shows: the server's state with this phone's own changes on top, so nothing ever waits for the network. */
   const state = computed<LiveState | null>(() => {
@@ -105,7 +105,7 @@ export const useLiveStore = defineStore('live', () => {
     if (base.value && value.version < base.value.version && value.serverTime <= base.value.serverTime) return;
     base.value = value;
     clockOffset.value = new Date(value.serverTime).getTime() - Date.now();
-    save('ehbo.live', value);
+    save('app.live', value);
     checkData(value.dataVersion);
   }
 
@@ -172,7 +172,7 @@ export const useLiveStore = defineStore('live', () => {
     else {
       disconnect();
       base.value = null;
-      save('ehbo.live', null);
+      save('app.live', null);
       queue.value = [];
       tempIds.value = {};
     }
@@ -191,7 +191,7 @@ export const useLiveStore = defineStore('live', () => {
   async function ping() {
     if (session.me || document.visibilityState !== 'visible') return;
     try {
-      await api('/api/ehbo-status', { timeoutMs: SEND_TIMEOUT_MS });
+      await api('/api/first-aid-status', { timeoutMs: SEND_TIMEOUT_MS });
       serverLost.value = false;
     } catch {
       serverLost.value = true;
@@ -230,7 +230,7 @@ export const useLiveStore = defineStore('live', () => {
   const postOpen = (postId: number, fallback = false) => state.value?.posts.find((p) => p.id === postId)?.isOpen ?? fallback;
   const postState = (postId: number) => state.value?.posts.find((p) => p.id === postId) ?? null;
 
-  const myTeamIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'ehbo').map((a) => a.teamId!) ?? []);
+  const myTeamIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'team').map((a) => a.teamId!) ?? []);
   const myPostIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'post').map((a) => a.postId!) ?? []);
 
   const hasAed = (teamId: number) => pkg.pkg?.teams.find((u) => u.id === teamId)?.hasAed ?? false;

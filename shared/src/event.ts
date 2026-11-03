@@ -161,7 +161,7 @@ export const mobilityLabel = (mobility: TeamMobility | null) => {
 };
 
 export interface Assignment {
-  kind: 'post' | 'ehbo' | 'kernteam' | 'beheerder';
+  kind: 'post' | 'team' | 'core_team' | 'admin';
   /** Bijv. "Lid", "EHBO Team 3", "Evenementcoördinator". */
   title: string;
   /** Bijv. "Waterpost 3 · brug · km 21,1". */
@@ -177,7 +177,7 @@ export interface Assignment {
 }
 
 /** Startscherm na aanmelden, volgens de belangrijkste rol. */
-export type HomeScreen = 'overzicht' | 'ehbo' | 'post';
+export type HomeScreen = 'map' | 'first_aid' | 'post';
 
 /** De aangemelde medewerker: GET /api/me, en het antwoord op POST /api/session. */
 export interface Me {

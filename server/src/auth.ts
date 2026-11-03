@@ -6,7 +6,7 @@ import type { Calls } from './calls.ts';
 import type { EventDb } from './event-db.ts';
 import { resolveMe } from './roles.ts';
 
-export const SESSION_COOKIE = 'ehbo_sessie';
+export const SESSION_COOKIE = 'session';
 
 declare module 'fastify' {
   interface FastifyRequest {

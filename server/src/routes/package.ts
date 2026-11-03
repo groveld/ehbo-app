@@ -1,6 +1,6 @@
 // Evenementpakket (GET /api/package): alles voor gebruik zonder bereik, in één antwoord met een versie.
 import type { FastifyInstance } from 'fastify';
-import { sameFunction, type EhboStatus, type EventPackage, type LngLat, type PackageMap } from '@ehbo/shared';
+import { sameFunction, type FirstAidStatus, type EventPackage, type LngLat, type PackageMap } from '@ehbo/shared';
 import { adminDb } from '../admin-db.ts';
 import type { Calls } from '../calls.ts';
 import type { EventDb } from '../event-db.ts';
@@ -77,7 +77,7 @@ export async function packageRoutes(app: FastifyInstance, { db, calls }: { db: E
   });
 
   // Voor iedereen, ook zonder aanmelding: welke standplaatsen nu zonder EHBO zijn (grijs kruisje). Geen posities of namen.
-  app.get<{ Reply: EhboStatus }>('/api/ehbo-status', async (_request, reply) => {
+  app.get<{ Reply: FirstAidStatus }>('/api/first-aid-status', async (_request, reply) => {
     reply.header('Cache-Control', 'no-store');
     return calls.ehboStatus();
   });

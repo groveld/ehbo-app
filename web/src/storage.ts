@@ -137,10 +137,28 @@ const STORAGE_STEPS: ((read: <T>(key: string) => T | null, write: (key: string, 
     const pkg = read<Record<string, unknown>>('ehbo.package');
     if (pkg?.staff && !pkg.helpRequestTypes) write('ehbo.package', { ...pkg, helpRequestTypes: DEFAULT_HELP_REQUEST_TYPES });
   },
+  // 7: keys start with app. instead of ehbo. (#84), and what a function is, the home screen and the navigation app are English.
+  (read, write) => {
+    for (const key of Object.keys(localStorage).filter((k) => k.startsWith('ehbo.'))) {
+      localStorage.setItem(`app.${key.slice(5)}`, localStorage.getItem(key)!);
+      localStorage.removeItem(key);
+    }
+    type Any = Record<string, any>;
+    const KIND: Record<string, string> = { ehbo: 'team', kernteam: 'core_team', beheerder: 'admin' };
+    const HOME: Record<string, string> = { overzicht: 'map', ehbo: 'first_aid' };
+    const me = read<Any>('app.me');
+    if (me) {
+      write('app.me', {
+        ...me, home: HOME[me.home] ?? me.home, assignments: (me.assignments ?? []).map((a: Any) => ({ ...a, kind: KIND[a.kind] ?? a.kind })),
+      });
+    }
+    if (read<string>('app.nav') === 'telefoon') write('app.nav', 'phone');
+  },
 ];
 
 export function upgradeStorage() {
-  const done = load<number>('ehbo.storage') ?? 0;
+  // Until step 7 the keys started with ehbo.
+  const done = load<number>('app.storage') ?? load<number>('ehbo.storage') ?? 0;
   for (let i = done; i < STORAGE_STEPS.length; i++) {
     try {
       STORAGE_STEPS[i]!(load, save);
@@ -148,7 +166,7 @@ export function upgradeStorage() {
       // Something unreadable: the next fetch from the server replaces it.
     }
   }
-  if (done < STORAGE_STEPS.length) save('ehbo.storage', STORAGE_STEPS.length);
+  if (done < STORAGE_STEPS.length) save('app.storage', STORAGE_STEPS.length);
 }
 
 export function save(key: string, value: unknown) {

@@ -30,7 +30,7 @@ const fakeSource: MapSource = {
 
 async function login(phone: string) {
   const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
-  return `ehbo_sessie=${res.cookies.find((c) => c.name === 'ehbo_sessie')!.value}`;
+  return `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
 }
 
 before(async () => {

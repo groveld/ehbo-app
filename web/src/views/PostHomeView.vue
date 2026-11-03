@@ -55,7 +55,7 @@ async function ask(kind: RequestKind) {
   let id: number | null = null;
   // Zonder bereik gaat dit gewoon door: de aanvraag wacht op de telefoon tot er weer verbinding is.
   const ok = await run(async () => { id = (await live.request(post.value!.id, kind)).id; });
-  if (ok && id !== null) router.push({ name: 'aanvraag', params: { id } });
+  if (ok && id !== null) router.push({ name: 'request', params: { id } });
 }
 
 async function setOpen(value: boolean) {
@@ -115,7 +115,7 @@ async function setOpen(value: boolean) {
       <template v-else>
         <span class="ask">Wat heb je nodig?</span>
         <div class="tiles">
-          <RouterLink :to="{ name: 'ehbo-verzoek', params: { id: post.id } }" class="tile ehbo">
+          <RouterLink :to="{ name: 'new-incident', params: { id: post.id } }" class="tile ehbo">
             <span class="tile-icon" style="background: var(--danger)"><Icon name="ehbo" :size="22" /></span>
             <span class="tile-text"><span class="tile-label">EHBO</span><span class="tile-sub">Eerste hulp nodig</span></span>
           </RouterLink>
@@ -133,20 +133,20 @@ async function setOpen(value: boolean) {
         </div>
 
         <div class="card requests">
-          <RouterLink v-for="r in openRequests" :key="`r${r.id}`" :to="{ name: 'aanvraag', params: { id: r.id } }" class="request">
+          <RouterLink v-for="r in openRequests" :key="`r${r.id}`" :to="{ name: 'request', params: { id: r.id } }" class="request">
             <span class="mono at">{{ clock(r.reportedAt) }}</span>
             <span class="grow">{{ [helpRequestType(store.pkg?.helpRequestTypes, r.type).name, requestDetailLabel(store.pkg?.helpRequestTypes, r.type, r.detail)].filter(Boolean).join(' · ') }}</span>
             <span class="state blue">{{ r.status === 'accepted' ? 'wordt geregeld' : `plek ${r.position}` }}</span>
             <Icon name="forward" :size="16" />
           </RouterLink>
-          <RouterLink v-for="w in waiting" :key="w.clientId" :to="{ name: 'geen-bereik', params: { clientId: w.clientId } }" class="request">
+          <RouterLink v-for="w in waiting" :key="w.clientId" :to="{ name: 'no-signal', params: { clientId: w.clientId } }" class="request">
             <span class="mono at">{{ clock(w.reportedAt) }}</span>
             <span class="grow">EHBO · {{ incidentSummary(w) }}</span>
             <span class="state">wacht op bereik</span>
             <Icon name="forward" :size="16" />
           </RouterLink>
           <template v-if="openIncidents.length">
-            <RouterLink v-for="i in openIncidents" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="request">
+            <RouterLink v-for="i in openIncidents" :key="i.id" :to="{ name: 'incident', params: { id: i.id } }" class="request">
               <span class="mono at">{{ clock(i.reportedAt) }}</span>
               <span class="grow">EHBO · {{ incidentSummary(i) }}</span>
               <span class="state">{{ i.status === 'sent' ? 'zoeken' : i.status === 'accepted' ? 'onderweg' : 'ter plaatse' }}</span>
@@ -158,7 +158,7 @@ async function setOpen(value: boolean) {
       </template>
 
       <div class="list earlier">
-        <RouterLink :to="{ name: 'post-eerder', params: { id: post.id } }" class="list-row">
+        <RouterLink :to="{ name: 'post-history', params: { id: post.id } }" class="list-row">
           <span class="grow">Eerder vandaag</span>
           <strong>{{ earlier || 'nog niets' }}</strong>
           <Icon name="forward" :size="16" />

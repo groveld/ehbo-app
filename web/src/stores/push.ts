@@ -13,8 +13,8 @@ function b64urlToUint8(b64: string) {
 
 export const usePushStore = defineStore('push', () => {
   const info = ref<AppInfo | null>(null);
-  const serverState = ref<'onbekend' | 'bereikbaar' | 'niet bereikbaar'>('onbekend');
-  const workerState = ref<'onbekend' | 'actief' | 'fout' | 'niet ondersteund'>('onbekend');
+  const serverState = ref<'unknown' | 'bereikbaar' | 'niet bereikbaar'>('unknown');
+  const workerState = ref<'unknown' | 'actief' | 'fout' | 'niet ondersteund'>('unknown');
   const permission = ref<Permission>('default');
   const hasSubscription = ref(false);
   const serverSubscription = ref<'ja' | 'nee' | 'fout'>('nee');

@@ -73,9 +73,9 @@ const api = (url: string, method: Method = 'GET', payload?: object, cookie?: str
 async function login(phone: string, remoteAddress = '10.0.0.1') {
   const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone }, remoteAddress });
   assert.equal(res.statusCode, 200, res.body);
-  const cookie = res.cookies.find((c) => c.name === 'ehbo_sessie');
+  const cookie = res.cookies.find((c) => c.name === 'session');
   assert.ok(cookie, 'sessiecookie gezet');
-  return { me: res.json() as Me, cookie: `ehbo_sessie=${cookie.value}`, raw: cookie };
+  return { me: res.json() as Me, cookie: `session=${cookie.value}`, raw: cookie };
 }
 
 function fakeSubscription(endpoint: string): PushSubscriptionData {
@@ -118,7 +118,7 @@ test('webapp: bestanden, cache-headers en terugval op index.html', async () => {
   assert.equal((await api('/bestaat-niet.png')).statusCode, 404);
   assert.equal((await api('/api/bestaat-niet')).statusCode, 404);
 
-  const route = await api('/aanmelden');
+  const route = await api('/login');
   assert.equal(route.statusCode, 200, 'app-routes vallen terug op index.html');
   assert.match(route.body, /<title>EHBO-app/);
   assert.notEqual((await api('/..%2f..%2fevents%2ftest.sqlite')).statusCode, 200, 'geen toegang buiten de webmap');
@@ -159,14 +159,14 @@ test('aanmelden met een bekend nummer: rollen, startscherm en cookie', async () 
   assert.equal(second?.detail, 'Waterpost 3 · brug · km 2');
   assert.equal(second?.letter, 'W');
 
-  assert.equal((await login(DEMO.ehbo)).me.home, 'ehbo');
+  assert.equal((await login(DEMO.ehbo)).me.home, 'first_aid');
   assert.equal((await login(DEMO.postMember)).me.home, 'post', 'ook een lid van een post begint bij de post');
   const coordinator = (await login(DEMO.coordinator)).me;
   assert.equal(coordinator.home, 'post', 'kernteam met een post begint bij de post');
   assert.equal(coordinator.assignments[0]?.title, 'Evenementcoördinator');
   const admin = (await login(DEMO.admin)).me;
   assert.equal(admin.isAdmin, true);
-  assert.equal(admin.home, 'overzicht');
+  assert.equal(admin.home, 'map');
 
   const me = await api('/api/me', 'GET', undefined, lead.cookie);
   assert.equal(me.statusCode, 200);
@@ -195,7 +195,7 @@ test('mislukte aanmeldpogingen vanaf één adres worden afgeremd, gelukte niet',
 
 test('zonder aanmelding geen persoonlijke routes', async () => {
   assert.equal((await api('/api/me')).statusCode, 401);
-  assert.equal((await api('/api/me', 'GET', undefined, 'ehbo_sessie=verzonnen')).statusCode, 401);
+  assert.equal((await api('/api/me', 'GET', undefined, 'session=verzonnen')).statusCode, 401);
   assert.equal((await api('/api/subscriptions', 'POST', { subscription: fakeSubscription(pushEndpoint) })).statusCode, 401);
   assert.equal((await api('/api/test-push', 'POST', { endpoint: pushEndpoint })).statusCode, 401);
 });

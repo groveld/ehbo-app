@@ -98,17 +98,17 @@ async function submit() {
     // Lege regels (geen nummer) tellen niet mee.
     contacts: form.contacts.filter((c) => c.phone.trim()).map((c) => ({ ...c, timeFrom: c.timeFrom || null, timeTo: c.timeTo || null })),
   };
-  if (await save.run(() => admin.savePost(isNew.value ? null : Number(props.id), data))) router.push({ name: 'beheer-posten' });
+  if (await save.run(() => admin.savePost(isNew.value ? null : Number(props.id), data))) router.push({ name: 'admin-posts' });
 }
 
 async function remove() {
   if (!await confirmDialog({ title: `${form.name} verwijderen?`, text: 'De contactpersonen kunnen zich dan niet meer via deze locatie aanmelden.', confirm: 'Verwijderen', tone: 'danger' })) return;
-  if (await save.run(() => admin.deletePost(Number(props.id)))) router.push({ name: 'beheer-posten' });
+  if (await save.run(() => admin.deletePost(Number(props.id)))) router.push({ name: 'admin-posts' });
 }
 </script>
 
 <template>
-  <AdminPage :title="isNew ? 'Nieuwe locatie' : form.name || 'Locatie'" eyebrow="Locaties" :back="{ name: 'beheer-posten' }">
+  <AdminPage :title="isNew ? 'Nieuwe locatie' : form.name || 'Locatie'" eyebrow="Locaties" :back="{ name: 'admin-posts' }">
     <template #default="{ state }">
       <p v-if="!isNew && !post" class="note warn">Deze locatie bestaat niet (meer).</p>
       <template v-else>

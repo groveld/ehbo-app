@@ -21,8 +21,8 @@ export const isStandalone =
  */
 export const browserTest = (() => {
   try {
-    if (new URLSearchParams(location.search).has('browser')) sessionStorage.setItem('ehbo.browser', '1');
-    return sessionStorage.getItem('ehbo.browser') === '1';
+    if (new URLSearchParams(location.search).has('browser')) sessionStorage.setItem('app.browser', '1');
+    return sessionStorage.getItem('app.browser') === '1';
   } catch {
     return new URLSearchParams(location.search).has('browser');
   }

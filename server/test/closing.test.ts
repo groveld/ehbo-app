@@ -23,7 +23,7 @@ const TEAM2 = () => idOf('teams', 'Team 2');
 const post = () => calls.state().posts.find((p) => p.id === WATER())!;
 const teamNow = () => calls.state().teams.find((u) => u.id === TEAM2())!;
 const lead = (): Me => ({ phone: DEMO.postLead, name: 'Wim', isAdmin: false, assignments: [{ kind: 'post', postId: WATER(), role: 'lead', title: '', letter: 'W', color: '' }], home: 'post' }) as Me;
-const coordinator = (): Me => ({ phone: DEMO.coordinator, name: 'Cor', isAdmin: false, assignments: [], home: 'overzicht' }) as Me;
+const coordinator = (): Me => ({ phone: DEMO.coordinator, name: 'Cor', isAdmin: false, assignments: [], home: 'map' }) as Me;
 
 /** An incident at the water post as the server stores it: a help request of the first-aid type with its dispatch details. */
 function addIncident(clientId: string, status: 'sent' | 'accepted', teamId: number | null = null) {
@@ -194,7 +194,7 @@ test('the last member logging out during a call: the team goes off duty once the
 });
 
 test('a team starts an incident itself: on site at once, the place by GPS, and no call to anyone else', () => {
-  const mo = (): Me => ({ phone: DEMO.mobileEhbo, name: 'Mo', isAdmin: false, assignments: [{ kind: 'ehbo', teamId: TEAM2(), title: '', letter: '+', color: '' }], home: 'ehbo' }) as Me;
+  const mo = (): Me => ({ phone: DEMO.mobileEhbo, name: 'Mo', isAdmin: false, assignments: [{ kind: 'team', teamId: TEAM2(), title: '', letter: '+', color: '' }], home: 'first_aid' }) as Me;
   const [lat, lng] = [53.1512, 5.8344];
   const body = { clientId: 'self-start-1', teamId: TEAM2(), postId: WATER(), what: 'cramp' as const, persons: '1' as const, responsive: null, note: null };
 

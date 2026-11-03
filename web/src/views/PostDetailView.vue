@@ -72,7 +72,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'fixed' ? `E
     <header class="top">
       <button class="icon-btn" aria-label="Terug" @click="back"><Icon name="back" /></button>
       <span class="top-title">Locatie</span>
-      <RouterLink v-if="session.me?.isAdmin && post" :to="{ name: 'beheer-post', params: { id: post.id } }" class="edit">Bewerken</RouterLink>
+      <RouterLink v-if="session.me?.isAdmin && post" :to="{ name: 'admin-post', params: { id: post.id } }" class="edit">Bewerken</RouterLink>
     </header>
 
     <NotOnPhone v-if="!post || !store.pkg">Deze locatie bestaat niet (meer).</NotOnPhone>
