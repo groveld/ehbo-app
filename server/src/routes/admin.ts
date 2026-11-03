@@ -15,6 +15,8 @@ import {
   normalizePhone,
   styleProblem,
   type AddAdminRequest,
+  type ImportPreview,
+  type ImportRequest,
   type PeopleOverview,
   type AdminState,
   type CoreTeamEntry,
@@ -35,9 +37,19 @@ import { nextMidnight, requireAdmin, sessionsEnded, sqliteTime } from '../auth.t
 import type { EventDb } from '../event-db.ts';
 import { parseGpx } from '../gpx.ts';
 import { peopleCsv, peopleOverview } from '../people.ts';
+import { SHEET_KEYS, exportCsv, exportXlsx, planImport, sheetFileName } from '../spreadsheet.ts';
 import { buildReport, reportCsv } from '../report.ts';
 
 const GPX_LIMIT = 10 * 1024 * 1024;
+/** An import as base64 JSON: an .xlsx of an event is a few hundred kB at most. */
+const IMPORT_LIMIT = 8 * 1024 * 1024;
+
+declare module 'fastify' {
+  interface FastifyContextConfig {
+    /** Changes nothing, so the event package keeps its version (e.g. checking an import). */
+    readOnly?: boolean;
+  }
+}
 
 const badRequest = (message: string) => Object.assign(new Error(message), { statusCode: 400 });
 const notFound = (message: string) => Object.assign(new Error(message), { statusCode: 404 });
@@ -164,7 +176,7 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
   app.addHook('preHandler', requireAdmin);
   // Na elke geslaagde wijziging een nieuwe versie van het evenementpakket.
   app.addHook('onResponse', async (request, reply) => {
-    if (request.method === 'GET' || reply.statusCode >= 300) return;
+    if (request.method === 'GET' || reply.statusCode >= 300 || request.routeOptions.config.readOnly) return;
     db.bumpVersion();
     // Eenheden of posten kunnen veranderd zijn: de live stand opnieuw naar iedereen.
     calls.changed();
@@ -177,6 +189,37 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
     const day = report.event.startDate ?? report.generatedAt.slice(0, 10);
     reply.header('Content-Disposition', `attachment; filename="rapport-${day}.csv"`).type('text/csv; charset=utf-8');
     return reportCsv(report);
+  });
+
+  // Import and export (#43): one .xlsx as export and template, or a CSV per sheet. Checking first shows what would change.
+  app.get('/api/admin/export.xlsx', async (_request, reply) => {
+    reply.header('Content-Disposition', 'attachment; filename="evenement.xlsx"').type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    return exportXlsx(admin.getState());
+  });
+  app.get<{ Params: { file: string } }>('/api/admin/export/:file', async (request, reply) => {
+    const state = admin.getState();
+    const key = SHEET_KEYS.find((k) => `${sheetFileName(state, k)}.csv` === request.params.file);
+    if (!key) throw notFound('Onbekend tabblad');
+    reply.header('Content-Disposition', `attachment; filename="${request.params.file}"`).type('text/csv; charset=utf-8');
+    return exportCsv(state, key);
+  });
+  const importSchema = {
+    body: {
+      type: 'object',
+      required: ['files', 'removeMissing'],
+      properties: {
+        files: { type: 'array', minItems: 1, maxItems: 10, items: { type: 'object', required: ['name', 'data'], properties: { name: text(200), data: { type: 'string' } } } },
+        removeMissing: { type: 'boolean' },
+      },
+    },
+  } as const;
+  const importFiles = (body: ImportRequest) => body.files.map((f) => ({ name: f.name, data: Buffer.from(f.data, 'base64') }));
+  app.post<{ Body: ImportRequest; Reply: ImportPreview }>('/api/admin/import/check', { bodyLimit: IMPORT_LIMIT, schema: importSchema, config: { readOnly: true } },
+    async (request) => planImport(admin, importFiles(request.body), request.body.removeMissing).preview);
+  app.post<{ Body: ImportRequest; Reply: AdminState }>('/api/admin/import', { bodyLimit: IMPORT_LIMIT, schema: importSchema }, async (request) => {
+    const plan = planImport(admin, importFiles(request.body), request.body.removeMissing);
+    db.transaction(plan.apply);
+    return admin.getState();
   });
 
   // Beheer › Mensen: everyone at once, to see who's missing or listed twice. Only the name can be changed here.

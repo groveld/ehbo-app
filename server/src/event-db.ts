@@ -384,8 +384,19 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
   const db = new DatabaseSync(path.join(dir, `${slug}.sqlite`));
   db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
 
+  // Nests: only the outermost one commits, and an error anywhere rolls all of it back (an import is all or nothing).
+  let depth = 0;
   const transaction = <T>(fn: () => T): T => {
+    if (depth > 0) {
+      depth++;
+      try {
+        return fn();
+      } finally {
+        depth--;
+      }
+    }
     db.exec('BEGIN');
+    depth = 1;
     try {
       const result = fn();
       db.exec('COMMIT');
@@ -393,6 +404,8 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;
+    } finally {
+      depth = 0;
     }
   };
 

@@ -58,6 +58,11 @@ function teamSummary(state: AdminState) {
           <span class="main"><span class="title-line">Beheerders</span><span class="sub">{{ state.admins.length }} {{ state.admins.length === 1 ? 'beheerder' : 'beheerders' }}</span></span>
           <Icon name="forward" :size="18" />
         </RouterLink>
+        <RouterLink :to="{ name: 'beheer-import' }" class="list-row">
+          <Icon name="download" :size="20" />
+          <span class="main"><span class="title-line">Importeren en exporteren</span><span class="sub">Locaties, mensen en eenheden in Excel voorbereiden</span></span>
+          <Icon name="forward" :size="18" />
+        </RouterLink>
         <RouterLink :to="{ name: 'beheer-info' }" class="list-row">
           <Icon name="info" :size="20" />
           <span class="main">

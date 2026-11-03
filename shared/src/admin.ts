@@ -153,6 +153,35 @@ export interface AdminState {
   info: InfoSettings;
 }
 
+/** Import from a spreadsheet (#43): per sheet what would change, and every problem by row. Nothing is saved while there are problems. */
+export interface ImportSheetSummary {
+  sheet: string;
+  added: number;
+  changed: number;
+  unchanged: number;
+  removed: number;
+}
+
+export interface ImportProblem {
+  sheet: string;
+  /** Row in the file, as Excel shows it; null for the file as a whole. */
+  row: number | null;
+  message: string;
+}
+
+export interface ImportPreview {
+  sheets: ImportSheetSummary[];
+  problems: ImportProblem[];
+  removeMissing: boolean;
+}
+
+/** POST /api/admin/import and /import/check: one .xlsx, or one or more CSV files, as base64. */
+export interface ImportRequest {
+  files: { name: string; data: string }[];
+  /** Remove locations, teams, core team functions and numbers that aren't in the file. */
+  removeMissing: boolean;
+}
+
 /** Beheer › Mensen (#70): where someone is listed, linking to that page. */
 export interface PersonLink {
   kind: 'post' | 'unit' | 'core' | 'admin';
