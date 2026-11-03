@@ -58,7 +58,7 @@ onMounted(async () => {
         <h2>Evenement</h2>
         <table class="pairs">
           <tbody>
-            <tr><th>Locaties</th><td>{{ report.counts.posts }}</td><th>Medewerkers</th><td>{{ report.counts.staff }}</td><th>EHBO-eenheden</th><td>{{ report.counts.units }}</td></tr>
+            <tr><th>Locaties</th><td>{{ report.counts.posts }}</td><th>Medewerkers</th><td>{{ report.counts.staff }}</td><th>EHBO-eenheden</th><td>{{ report.counts.teams }}</td></tr>
           </tbody>
         </table>
       </section>
@@ -104,7 +104,7 @@ onMounted(async () => {
               <td class="mono">{{ clock(i.onSiteAt) }}</td>
               <td class="mono">{{ clock(i.closedAt) }}</td>
               <td class="mono">{{ formatDuration(i.travelSeconds) }}</td>
-              <td>{{ i.unitName ?? '–' }}</td>
+              <td>{{ i.teamName ?? '–' }}</td>
               <td>{{ i.outcome ? OUTCOMES[i.outcome] : i.status === 'ingetrokken' ? 'Ingetrokken' : 'Open' }}</td>
               <td>{{ i.note ?? '' }}</td>
             </tr>

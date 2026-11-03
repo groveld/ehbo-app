@@ -3,7 +3,7 @@
 import { computed } from 'vue';
 import { telHref, type EventPackage, type PackagePost } from '@ehbo/shared';
 import { navigationUrl } from '../navigate.ts';
-import { kmLabel, manned, primaryContact, unitsAt } from '../posts.ts';
+import { kmLabel, manned, primaryContact, teamsAt } from '../posts.ts';
 import Icon from './Icon.vue';
 import PostBadge from './PostBadge.vue';
 
@@ -19,8 +19,8 @@ const contact = computed(() => primaryContact(props.post));
 /** Open or closed only means something where people are (#69). */
 const hasPeople = computed(() => manned(props.pkg, props.post));
 /** km-punt, dan de EHBO-eenheid die hier staat (met kruisje), anders de contactpersoon. */
-const units = computed(() => unitsAt(props.pkg, props.post.id).map((u) => u.name).join(', '));
-const who = computed(() => units.value || contact.value?.name || '');
+const teams = computed(() => teamsAt(props.pkg, props.post.id).map((u) => u.name).join(', '));
+const who = computed(() => teams.value || contact.value?.name || '');
 const km = computed(() => kmLabel(props.post));
 </script>
 
@@ -35,7 +35,7 @@ const km = computed(() => kmLabel(props.post));
         <span v-if="quietMinutes" class="late">{{ quietMinutes }} min niet gezien</span>
         <span v-if="km || who" class="sub">
           {{ km }}<template v-if="km && who"> · </template>
-          <span v-if="units" class="ehbo"><Icon name="ehbo" :size="12" />{{ units }}</span>
+          <span v-if="teams" class="ehbo"><Icon name="ehbo" :size="12" />{{ teams }}</span>
           <template v-else>{{ who }}</template>
         </span>
       </span>

@@ -1,6 +1,6 @@
 // Beheer: vorm van de gegevens die het beheerscherm leest en opslaat.
-import type { Brand, EventStyle, InfoSection, PostContactRole, UnitKind, UnitMobility } from './event.ts';
-import type { UnitAvailability } from './incident.ts';
+import type { Brand, EventStyle, InfoSection, PostContactRole, TeamKind, TeamMobility } from './event.ts';
+import type { TeamAvailability } from './incident.ts';
 
 /** Datum als jjjj-mm-dd, tijd als uu:mm. */
 export const DATE_PATTERN = '^\\d{4}-\\d{2}-\\d{2}$';
@@ -98,11 +98,11 @@ export interface MemberData {
   phone: string;
 }
 
-export interface UnitData {
+export interface TeamData {
   name: string;
-  kind: UnitKind;
+  kind: TeamKind;
   /** Alleen bij mobiel. */
-  mobility: UnitMobility | null;
+  mobility: TeamMobility | null;
   /** Vast: de eigen EHBO-post. Mobiel: de standplaats (optioneel). */
   postId: number | null;
   hasAed: boolean;
@@ -112,9 +112,9 @@ export interface UnitData {
   members: MemberData[];
 }
 
-export interface AdminUnit extends UnitData {
+export interface AdminTeam extends TeamData {
   id: number;
-  availability: UnitAvailability;
+  availability: TeamAvailability;
 }
 
 export interface CoreTeamEntry {
@@ -141,7 +141,7 @@ export interface AdminState {
   runs: AdminRun[];
   postTypes: PostTypeInfo[];
   posts: AdminPost[];
-  units: AdminUnit[];
+  teams: AdminTeam[];
   coreTeam: CoreTeamEntry[];
   emergencyNumbers: EmergencyNumber[];
   admins: AdminPerson[];
@@ -184,7 +184,7 @@ export interface ImportRequest {
 
 /** Beheer › Mensen (#70): where someone is listed, linking to that page. */
 export interface PersonLink {
-  kind: 'post' | 'unit' | 'core' | 'admin';
+  kind: 'post' | 'team' | 'core' | 'admin';
   /** Post or team; null for the core team and the admin list, which are one page each. */
   id: number | null;
   label: string;

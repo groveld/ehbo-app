@@ -8,7 +8,7 @@ import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentLog, incidentSummary, lastAddition, personsText, postOf, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentLog, incidentSummary, lastAddition, personsText, postOf, travelMinutes, teamOf } from '../incidents.ts';
 import { navigationUrl } from '../navigate.ts';
 import { callLines, primaryContact } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
@@ -32,9 +32,9 @@ const post = computed(() => (incident.value ? postOf(store.postById, incident.va
 const contact = computed(() => (post.value ? primaryContact(post.value) : null));
 
 /** Mijn eenheid voor deze oproep: die is opgeroepen of heeft aangenomen; anders mijn eerste eenheid. */
-const myDispatch = computed(() => incident.value?.dispatches.find((d) => live.myUnitIds.includes(d.unitId)) ?? null);
-const myUnitId = computed(() => myDispatch.value?.unitId ?? live.myUnitIds[0] ?? null);
-const myUnit = computed(() => unitOf(store.pkg, myUnitId.value));
+const myDispatch = computed(() => incident.value?.dispatches.find((d) => live.myTeamIds.includes(d.teamId)) ?? null);
+const myTeamId = computed(() => myDispatch.value?.teamId ?? live.myTeamIds[0] ?? null);
+const myTeam = computed(() => teamOf(store.pkg, myTeamId.value));
 
 const mode = computed(() => {
   const i = incident.value;
@@ -54,22 +54,22 @@ const totalSeconds = computed(() => {
   return i?.escalatesAt ? Math.max(1, Math.round((new Date(i.escalatesAt).getTime() - new Date(i.sentAt).getTime()) / 1000)) : 30;
 });
 const km = computed(() => myDispatch.value?.distanceKm ?? null);
-const minutes = computed(() => travelMinutes(km.value, myUnit.value));
-const takenBy = computed(() => unitOf(store.pkg, incident.value?.unitId ?? null));
+const minutes = computed(() => travelMinutes(km.value, myTeam.value));
+const takenBy = computed(() => teamOf(store.pkg, incident.value?.teamId ?? null));
 /** Na accepteren zonder AED: een eenheid met AED is nog nodig. */
 const aedCall = computed(() => mode.value === 'call' && incident.value?.status !== 'verstuurd');
-const firstUnit = computed(() => {
+const firstTeam = computed(() => {
   const first = incident.value?.dispatches.find((d) => d.reason === 'dichtstbij');
-  return first ? unitOf(store.pkg, first.unitId)?.name : null;
+  return first ? teamOf(store.pkg, first.teamId)?.name : null;
 });
-const others = computed(() => (incident.value?.dispatches ?? []).filter((d) => d.unitId !== myUnitId.value).map((d) => ({
-  name: unitOf(store.pkg, d.unitId)?.name ?? 'Eenheid',
-  kind: unitOf(store.pkg, d.unitId)?.kind,
+const others = computed(() => (incident.value?.dispatches ?? []).filter((d) => d.teamId !== myTeamId.value).map((d) => ({
+  name: teamOf(store.pkg, d.teamId)?.name ?? 'Eenheid',
+  kind: teamOf(store.pkg, d.teamId)?.kind,
   state: d.acceptedAt ? 'accepted' : d.declinedAt ? 'declined' : 'pending',
   km: d.distanceKm,
 })));
 /** From this team to the call, on the map. */
-const lines = computed(() => callLines(store.pkg, live.units.filter((u) => u.id === myUnitId.value), live.incidents, live.serverNow));
+const lines = computed(() => callLines(store.pkg, live.teams.filter((u) => u.id === myTeamId.value), live.incidents, live.serverNow));
 const navUrl = computed(() => (post.value?.lat != null && post.value.lng != null ? navigationUrl(post.value.lat, post.value.lng, post.value.name) : null));
 
 // En route: what the post added is marked new until the team has seen it (a tap, or leaving the screen).
@@ -85,12 +85,12 @@ function markSeen() {
 onBeforeUnmount(markSeen);
 
 async function accept() {
-  if (!incident.value || myUnitId.value === null) return;
-  if (await run(() => live.accept(incident.value!.id, myUnitId.value!)) && navUrl.value) location.href = navUrl.value;
+  if (!incident.value || myTeamId.value === null) return;
+  if (await run(() => live.accept(incident.value!.id, myTeamId.value!)) && navUrl.value) location.href = navUrl.value;
 }
 async function decline() {
-  if (!incident.value || myUnitId.value === null) return;
-  await run(() => live.decline(incident.value!.id, myUnitId.value!));
+  if (!incident.value || myTeamId.value === null) return;
+  await run(() => live.decline(incident.value!.id, myTeamId.value!));
 }
 const toEhbo = () => router.replace({ name: 'ehbo' });
 /** On site, the next step is closing the incident; also without signal. */
@@ -110,7 +110,7 @@ async function onSite() {
     <!-- 4.3 · Oproep, en 4.4 · naar alle eenheden -->
     <template v-else-if="mode === 'call' || mode === 'all'">
       <StatusBlock
-        tone="red" :label="mode === 'all' ? '' : aedCall ? 'AED nodig' : `Oproep · ${myUnit?.name ?? ''}`" :title="post.name"
+        tone="red" :label="mode === 'all' ? '' : aedCall ? 'AED nodig' : `Oproep · ${myTeam?.name ?? ''}`" :title="post.name"
       >
         <template v-if="mode === 'all'" #label><span class="all-chip">Alle eenheden</span></template>
         <div v-if="mode === 'call' && left !== null" class="ring">
@@ -126,10 +126,10 @@ async function onSite() {
       </StatusBlock>
 
       <p class="card what gap-top"><strong>{{ incidentSummary(incident) }}</strong><span class="small"> · gemeld {{ clock(incident.reportedAt) }}</span></p>
-      <p v-if="incident.aed && myUnit?.hasAed" class="note warn gap-top"><strong>AED meenemen.</strong> De persoon is niet aanspreekbaar.</p>
+      <p v-if="incident.aed && myTeam?.hasAed" class="note warn gap-top"><strong>AED meenemen.</strong> De persoon is niet aanspreekbaar.</p>
       <p v-if="aedCall" class="note warn gap-top">{{ takenBy?.name }} is onderweg zonder AED. Breng de AED.</p>
       <p v-else-if="mode === 'all'" class="note warn gap-top">
-        <template v-if="firstUnit">{{ firstUnit }} reageerde niet op tijd of kan niet. </template><strong>Wie het eerst accepteert, gaat.</strong>
+        <template v-if="firstTeam">{{ firstTeam }} reageerde niet op tijd of kan niet. </template><strong>Wie het eerst accepteert, gaat.</strong>
       </p>
 
       <div v-if="mode === 'call' && store.pkg" class="map">
@@ -196,7 +196,7 @@ async function onSite() {
           <div><dt>Gemeld</dt><dd class="mono">{{ clock(incident.reportedAt) }}<template v-if="added"> · aangevuld {{ clock(added) }}</template></dd></div>
         </dl>
       </div>
-      <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar.</strong>{{ myUnit?.hasAed ? ' AED meenemen.' : '' }} Is 112 gebeld?</p>
+      <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar.</strong>{{ myTeam?.hasAed ? ' AED meenemen.' : '' }} Is 112 gebeld?</p>
 
       <div class="grow" />
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
@@ -225,9 +225,9 @@ async function onSite() {
       </div>
       <div class="list gap-top-lg">
         <div v-if="incident.acceptedAt" class="list-row"><span class="grow muted">Aangenomen</span><span class="mono">{{ clock(incident.acceptedAt) }}</span></div>
-        <div v-if="myUnitId !== null" class="list-row">
+        <div v-if="myTeamId !== null" class="list-row">
           <span class="grow muted">Jouw status</span>
-          <strong class="free">{{ live.unitState(myUnitId)?.availability === 'available' ? 'Weer beschikbaar' : live.unitState(myUnitId)?.availability === 'unavailable' ? 'Niet beschikbaar (pauze)' : 'Uit dienst' }}</strong>
+          <strong class="free">{{ live.teamState(myTeamId)?.availability === 'available' ? 'Weer beschikbaar' : live.teamState(myTeamId)?.availability === 'unavailable' ? 'Niet beschikbaar (pauze)' : 'Uit dienst' }}</strong>
         </div>
       </div>
       <div class="grow" />

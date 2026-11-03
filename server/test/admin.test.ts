@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { DEFAULT_STYLE, type AdminState, type EventPackage, type PeopleOverview, type PostData, type UnitData } from '@ehbo/shared';
+import { DEFAULT_STYLE, type AdminState, type EventPackage, type PeopleOverview, type PostData, type TeamData } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
 import { openEventDb, type EventDb } from '../src/event-db.ts';
@@ -64,7 +64,7 @@ test('alleen beheerders', async () => {
   assert.equal(state.event.name, 'Silvesterloop 2026');
   assert.equal(state.posts.length, 4);
   assert.deepEqual(state.posts.map((p) => Math.round(p.km! * 10) / 10), [0, 0, 1.5, 2], 'gesorteerd op km-punt');
-  assert.equal(state.units[0]?.members[0]?.name, 'Eva EHBO');
+  assert.equal(state.teams[0]?.members[0]?.name, 'Eva EHBO');
   assert.equal(state.coreTeam[0]?.isCoordinator, true);
 });
 
@@ -220,10 +220,10 @@ test('a post with incidents or requests stays: deleting it gives a clear error',
 test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   const stamp = state.posts.find((p) => p.name === 'Kruising 4')!;
-  const unit: UnitData = { name: 'Team 3', kind: 'mobile', mobility: 'bike', postId: stamp.id, hasAed: true, timeFrom: null, timeTo: null, members: [{ name: 'Fiets Fred', phone: '0687654321' }] };
-  const res = await call('POST', '/api/admin/units', unit);
+  const team: TeamData = { name: 'Team 3', kind: 'mobile', mobility: 'bike', postId: stamp.id, hasAed: true, timeFrom: null, timeTo: null, members: [{ name: 'Fiets Fred', phone: '0687654321' }] };
+  const res = await call('POST', '/api/admin/teams', team);
   assert.equal(res.statusCode, 200, res.body);
-  const saved = (res.json() as AdminState).units.find((u) => u.name === 'Team 3')!;
+  const saved = (res.json() as AdminState).teams.find((u) => u.name === 'Team 3')!;
   assert.equal(saved.mobility, 'bike');
   assert.equal(saved.members[0]?.phone, '+31687654321');
 
@@ -231,23 +231,23 @@ test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
   assert.equal(me.home, 'ehbo');
   assert.match(me.assignments[0].detail, /Mobiel \(fiets\) · Standplaats Kruising 4/);
 
-  assert.equal((await call('POST', '/api/admin/units', { ...unit, kind: 'fixed', postId: null })).statusCode, 400);
-  const fixed = await call('PUT', `/api/admin/units/${saved.id}`, { ...unit, kind: 'fixed', mobility: 'bike' });
-  assert.equal((fixed.json() as AdminState).units.find((u) => u.id === saved.id)?.mobility, null, 'vast heeft geen vervoer');
-  assert.equal((await call('DELETE', `/api/admin/units/${saved.id}`)).statusCode, 200);
+  assert.equal((await call('POST', '/api/admin/teams', { ...team, kind: 'fixed', postId: null })).statusCode, 400);
+  const fixed = await call('PUT', `/api/admin/teams/${saved.id}`, { ...team, kind: 'fixed', mobility: 'bike' });
+  assert.equal((fixed.json() as AdminState).teams.find((u) => u.id === saved.id)?.mobility, null, 'vast heeft geen vervoer');
+  assert.equal((await call('DELETE', `/api/admin/teams/${saved.id}`)).statusCode, 200);
 });
 
 test('kernteam en noodnummers', async () => {
-  const team = [
+  const entries = [
     { function: 'Evenementcoördinator', name: 'Cor Coördinator', phone: '0600000002', isCoordinator: true },
     { function: 'Wedstrijdleiding', name: 'Wil Wedstrijd', phone: '0611112222', isCoordinator: false },
     { function: 'EHBO-coördinator', name: '', phone: null, isCoordinator: false },
   ];
-  const res = await call('PUT', '/api/admin/core-team', team);
+  const res = await call('PUT', '/api/admin/core-team', entries);
   assert.equal(res.statusCode, 200, res.body);
   assert.equal((res.json() as AdminState).coreTeam[1]?.phone, '+31611112222');
   assert.equal(db.coordinatorPhone(), DEMO.coordinator);
-  assert.equal((await call('PUT', '/api/admin/core-team', team.map((t) => ({ ...t, isCoordinator: true })))).statusCode, 400);
+  assert.equal((await call('PUT', '/api/admin/core-team', entries.map((t) => ({ ...t, isCoordinator: true })))).statusCode, 400);
 
   const numbers = [{ label: 'SEH Heerenveen', number: '0513-685 685' }, { label: 'Huisartsenpost', number: '0900 1122' }];
   assert.deepEqual((await call('PUT', '/api/admin/emergency-numbers', numbers)).json().emergencyNumbers, [{ label: 'SEH Heerenveen', number: '+31513685685' }, { label: 'Huisartsenpost', number: '09001122' }]);

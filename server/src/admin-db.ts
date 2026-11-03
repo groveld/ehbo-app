@@ -5,7 +5,7 @@ import type {
   AdminPost,
   AdminRun,
   AdminState,
-  AdminUnit,
+  AdminTeam,
   CoreTeamEntry,
   EmergencyNumber,
   EventSettings,
@@ -15,7 +15,7 @@ import type {
   PostPassages,
   PostTypeInfo,
   RunData,
-  UnitData,
+  TeamData,
 } from '@ehbo/shared';
 import { isManned, mainFunction } from '@ehbo/shared';
 import { getBrand, getStyle, saveStyle } from './brand.ts';
@@ -104,23 +104,23 @@ export function adminDb(events: EventDb) {
       contacts: contactsByPost.get(p.id as number) ?? [],
     }));
 
-    const membersByUnit = new Map<number, UnitData['members']>();
-    for (const m of all('SELECT m.unit_id, m.phone, p.name FROM ehbo_unit_members m JOIN people p ON p.phone = m.phone ORDER BY m.rowid')) {
-      const list = membersByUnit.get(m.unit_id as number) ?? [];
+    const membersByTeam = new Map<number, TeamData['members']>();
+    for (const m of all('SELECT m.team_id, m.phone, p.name FROM team_members m JOIN people p ON p.phone = m.phone ORDER BY m.rowid')) {
+      const list = membersByTeam.get(m.team_id as number) ?? [];
       list.push({ name: m.name as string, phone: m.phone as string });
-      membersByUnit.set(m.unit_id as number, list);
+      membersByTeam.set(m.team_id as number, list);
     }
-    const units: AdminUnit[] = all('SELECT * FROM ehbo_units ORDER BY sort, id').map((u) => ({
+    const teams: AdminTeam[] = all('SELECT * FROM teams ORDER BY sort, id').map((u) => ({
       id: u.id as number,
       name: u.name as string,
-      kind: u.kind as AdminUnit['kind'],
-      mobility: u.mobility as AdminUnit['mobility'],
+      kind: u.kind as AdminTeam['kind'],
+      mobility: u.mobility as AdminTeam['mobility'],
       postId: u.post_id as number | null,
       hasAed: u.has_aed === 1,
       timeFrom: u.time_from as string | null,
       timeTo: u.time_to as string | null,
-      availability: u.availability as AdminUnit['availability'],
-      members: membersByUnit.get(u.id as number) ?? [],
+      availability: u.availability as AdminTeam['availability'],
+      members: membersByTeam.get(u.id as number) ?? [],
     }));
 
     const coreTeam: CoreTeamEntry[] = all(`SELECT c.function, c.phone, c.is_coordinator, COALESCE(p.name, '') AS name
@@ -134,7 +134,7 @@ export function adminDb(events: EventDb) {
     const admins: AdminPerson[] = all('SELECT a.phone, p.name FROM admins a JOIN people p ON p.phone = a.phone ORDER BY p.name, a.phone')
       .map((a) => ({ phone: a.phone as string, name: a.name as string }));
 
-    return { event, runs, postTypes, posts, units, coreTeam, emergencyNumbers, admins, brand: getBrand(events), testMode: events.testMode(), sessions: events.countSessions(), info: getInfo() };
+    return { event, runs, postTypes, posts, teams, coreTeam, emergencyNumbers, admins, brand: getBrand(events), testMode: events.testMode(), sessions: events.countSessions(), info: getInfo() };
   }
 
   function getInfo(): InfoSettings {
@@ -204,23 +204,23 @@ export function adminDb(events: EventDb) {
     });
   }
 
-  function saveUnit(id: number | null, u: UnitData): number | null {
-    if (id !== null && !exists('ehbo_units', id)) return null;
+  function saveTeam(id: number | null, u: TeamData): number | null {
+    if (id !== null && !exists('teams', id)) return null;
     return events.transaction(() => {
       const values = [u.name.trim(), u.kind, u.kind === 'mobile' ? (u.mobility ?? 'other') : null, u.postId, u.hasAed ? 1 : 0, u.timeFrom ?? null, u.timeTo ?? null] as const;
-      let unitId = id;
-      if (unitId === null) {
-        const sort = (db.prepare('SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM ehbo_units').get() as { n: number }).n;
-        unitId = Number(run('INSERT INTO ehbo_units (name, kind, mobility, post_id, has_aed, time_from, time_to, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
+      let teamId = id;
+      if (teamId === null) {
+        const sort = (db.prepare('SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM teams').get() as { n: number }).n;
+        teamId = Number(run('INSERT INTO teams (name, kind, mobility, post_id, has_aed, time_from, time_to, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
       } else {
-        run('UPDATE ehbo_units SET name = ?, kind = ?, mobility = ?, post_id = ?, has_aed = ?, time_from = ?, time_to = ? WHERE id = ?', ...values, unitId);
-        run('DELETE FROM ehbo_unit_members WHERE unit_id = ?', unitId);
+        run('UPDATE teams SET name = ?, kind = ?, mobility = ?, post_id = ?, has_aed = ?, time_from = ?, time_to = ? WHERE id = ?', ...values, teamId);
+        run('DELETE FROM team_members WHERE team_id = ?', teamId);
       }
       for (const m of u.members) {
         upsertPerson(m.phone, m.name);
-        run('INSERT INTO ehbo_unit_members (unit_id, phone) VALUES (?, ?) ON CONFLICT DO NOTHING', unitId, m.phone);
+        run('INSERT INTO team_members (team_id, phone) VALUES (?, ?) ON CONFLICT DO NOTHING', teamId, m.phone);
       }
-      return unitId;
+      return teamId;
     });
   }
 
@@ -266,8 +266,8 @@ export function adminDb(events: EventDb) {
     postExists: (id: number) => exists('posts', id),
     /** The report needs them: a post with incidents or requests can't be deleted. */
     postHasHistory: (id: number) => db.prepare('SELECT 1 FROM incidents WHERE post_id = ? UNION SELECT 1 FROM requests WHERE post_id = ?').get(id, id) !== undefined,
-    saveUnit,
-    deleteUnit: (id: number) => run('DELETE FROM ehbo_units WHERE id = ?', id).changes > 0,
+    saveTeam,
+    deleteTeam: (id: number) => run('DELETE FROM teams WHERE id = ?', id).changes > 0,
     saveCoreTeam,
     saveEmergencyNumbers,
     addAdmin,

@@ -1,6 +1,6 @@
 // Evenementpakket: alles wat een telefoon nodig heeft om zonder bereik te werken, met één versienummer.
 import type { PostPassages, PostTypeInfo } from './admin.ts';
-import type { PostContactRole, UnitKind, UnitMobility } from './event.ts';
+import type { PostContactRole, TeamKind, TeamMobility } from './event.ts';
 
 /** [lengtegraad, breedtegraad] */
 export type LngLat = [number, number];
@@ -48,11 +48,11 @@ export interface PackageRun {
   line: LngLat[] | null;
 }
 
-export interface PackageUnit {
+export interface PackageTeam {
   id: number;
   name: string;
-  kind: UnitKind;
-  mobility: UnitMobility | null;
+  kind: TeamKind;
+  mobility: TeamMobility | null;
   postId: number | null;
   hasAed: boolean;
   timeFrom: string | null;
@@ -79,7 +79,7 @@ export interface EventPackage {
   postTypes: PostTypeInfo[];
   posts: PackagePost[];
   runs: PackageRun[];
-  units: PackageUnit[];
+  teams: PackageTeam[];
   coreTeam: { function: string; name: string; phone: string; isCoordinator: boolean }[];
   emergencyNumbers: { label: string; number: string }[];
   /** Voor iedereen, ook deelnemers: "Bel EHBO" belt de EHBO-coördinator, anders de evenementcoördinator. Alleen het nummer. */

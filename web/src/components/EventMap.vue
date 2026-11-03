@@ -72,9 +72,9 @@ const AMBULANCE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 // The order of functions lives in @ehbo/shared (MARKER_ORDER): it also decides a location's main function.
 /** Boven alle posten: de ambulance en je eigen positie. */
 const EHBO_RANK = MARKER_ORDER.indexOf('ehbo');
-const UNIT_LAYER = MARKER_ORDER.length + EHBO_RANK + 1;
+const TEAM_LAYER = MARKER_ORDER.length + EHBO_RANK + 1;
 /** Altijd bovenop: open oproep, geselecteerde post en het gekozen punt in beheer. */
-const TOP_LAYER = UNIT_LAYER + 1;
+const TOP_LAYER = TEAM_LAYER + 1;
 
 /**
  * Rustige kaart: grijs met zachte pastels (water lichtblauw, groen salie), op de warme achtergrond van de app.
@@ -170,7 +170,7 @@ function runFeatures() {
 function postLayer(post: PackagePost, typeKey: string | null | undefined, onTop: boolean) {
   if (onTop) return TOP_LAYER;
   const rank = markerRank(typeKey);
-  const raised = rank >= EHBO_RANK || props.pkg.units.some((u) => u.postId === post.id);
+  const raised = rank >= EHBO_RANK || props.pkg.teams.some((u) => u.postId === post.id);
   return rank + (raised ? EHBO_RANK : 0) + 1;
 }
 
@@ -189,7 +189,7 @@ const MAX_PETALS = 6;
 function petalsOf(post: PackagePost, away: boolean) {
   const types = post.functionIds.filter((id) => id !== post.typeId).map((id) => props.pkg.postTypes.find((t) => t.id === id)).filter((t) => t !== undefined);
   const main = props.pkg.postTypes.find((t) => t.id === post.typeId);
-  const standplaats = main?.key !== 'ehbo' && !types.some((t) => t.key === 'ehbo') && props.pkg.units.some((u) => u.postId === post.id);
+  const standplaats = main?.key !== 'ehbo' && !types.some((t) => t.key === 'ehbo') && props.pkg.teams.some((u) => u.postId === post.id);
   const petals = types.map((t) => {
     const icon = postTypeIcon(t.key);
     const grey = t.key === 'ehbo' && away;
@@ -225,7 +225,7 @@ function markerElement(post: PackagePost) {
   // A run is chosen: what isn't on it steps back. You want to know where the nearest EHBO is, so that stays half visible.
   const run = focusRun();
   if (run && !alert && !focus && !isOnRun(props.pkg, post, run.id)) {
-    const ehbo = type?.key === 'ehbo' || props.pkg.units.some((u) => u.postId === post.id);
+    const ehbo = type?.key === 'ehbo' || props.pkg.teams.some((u) => u.postId === post.id);
     el.classList.add(ehbo ? 'dimmed' : 'faded');
   }
   const icon = postTypeIcon(type?.key);
@@ -265,8 +265,8 @@ function drawAmbulances() {
   for (const m of ambulanceMarkers) m.remove();
   ambulanceMarkers = props.ambulances.map((a) => {
     const el = document.createElement('div');
-    el.className = `unit-marker${a.available ? '' : ' unavailable'}`;
-    el.style.zIndex = String(UNIT_LAYER);
+    el.className = `team-marker${a.available ? '' : ' unavailable'}`;
+    el.style.zIndex = String(TEAM_LAYER);
     el.setAttribute('role', 'img');
     el.setAttribute('aria-label', `EHBO ${a.name}, ${a.busy ? 'bezig met een oproep' : a.available ? 'beschikbaar' : 'niet beschikbaar'}`);
     el.innerHTML = AMBULANCE;
@@ -350,7 +350,7 @@ async function startUserLocation(ask = false) {
     if (!userMarker) {
       const el = document.createElement('div');
       el.className = 'user-dot';
-      el.style.zIndex = String(UNIT_LAYER);
+      el.style.zIndex = String(TEAM_LAYER);
       el.innerHTML = '<span class="accuracy"></span>';
       userMarker = new maplibregl.Marker({ element: el }).setLngLat([coords.longitude, coords.latitude]).addTo(map);
       if (locating.value !== 'off') centreOnUser();
@@ -586,11 +586,11 @@ onBeforeUnmount(() => {
 }
 .event-map.flowers :deep(.post-marker .petals), .event-map :deep(.post-marker.open .petals) { display: block; }
 .event-map.flowers :deep(.post-marker .count), .event-map :deep(.post-marker.open .count) { display: none; }
-.event-map :deep(.unit-marker) {
+.event-map :deep(.team-marker) {
   width: 28px; height: 28px; border-radius: 50%; background: #FFFFFF; border: 2px solid #0A7D4F; color: #0A7D4F;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
 }
-.event-map :deep(.unit-marker.unavailable) { border-color: #C8261E; color: #C8261E; }
+.event-map :deep(.team-marker.unavailable) { border-color: #C8261E; color: #C8261E; }
 .event-map :deep(.post-marker.focus) { width: 36px; height: 36px; box-shadow: 0 0 0 8px rgba(31, 111, 178, .25); }
 /* A blinking glow, so you see at once where something is going on. Only the shadow: MapLibre positions markers with transform. */
 .event-map :deep(.post-marker.alert) { width: 32px; height: 32px; --glow: rgba(200, 38, 30, .55); box-shadow: 0 0 0 10px var(--glow); animation: glow 1.2s ease-in-out infinite; }

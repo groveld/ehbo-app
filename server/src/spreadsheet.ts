@@ -17,9 +17,9 @@ import {
   type ImportSheetSummary,
   type PostContactRole,
   type PostData,
-  type UnitData,
-  type UnitKind,
-  type UnitMobility,
+  type TeamData,
+  type TeamKind,
+  type TeamMobility,
 } from '@ehbo/shared';
 import type { AdminDb } from './admin-db.ts';
 import { readXlsx, writeXlsx, type SheetColumn, type SheetSpec } from './xlsx.ts';
@@ -31,10 +31,10 @@ const FUNCTIONS = 4;
 /** As written in the sheet, and the value it stands for. */
 const ROLES: Record<string, PostContactRole> = { verantwoordelijke: 'lead', lid: 'member', reserve: 'reserve' };
 const ROLE_TEXT = Object.fromEntries(Object.entries(ROLES).map(([text, value]) => [value, text])) as Record<PostContactRole, string>;
-const KINDS: Record<string, UnitKind> = { vast: 'fixed', mobiel: 'mobile' };
-const KIND_TEXT: Record<UnitKind, string> = { fixed: 'vast', mobile: 'mobiel' };
-const MOBILITY: Record<string, UnitMobility> = { 'te voet': 'on_foot', fiets: 'bike', auto: 'car', anders: 'other' };
-const MOBILITY_TEXT = Object.fromEntries(Object.entries(MOBILITY).map(([text, value]) => [value, text])) as Record<UnitMobility, string>;
+const KINDS: Record<string, TeamKind> = { vast: 'fixed', mobiel: 'mobile' };
+const KIND_TEXT: Record<TeamKind, string> = { fixed: 'vast', mobile: 'mobiel' };
+const MOBILITY: Record<string, TeamMobility> = { 'te voet': 'on_foot', fiets: 'bike', auto: 'car', anders: 'other' };
+const MOBILITY_TEXT = Object.fromEntries(Object.entries(MOBILITY).map(([text, value]) => [value, text])) as Record<TeamMobility, string>;
 const YES_NO = ['ja', 'nee'];
 
 interface Column extends SheetColumn { key: string; required?: boolean }
@@ -45,7 +45,7 @@ function sheets(state: AdminState): Sheet[] {
   const functions = state.postTypes.map((t) => t.name);
   const posts = state.posts.map((p) => p.name);
   const runs = state.runs.map((r) => r.name);
-  const units = state.units.map((u) => u.name);
+  const teams = state.teams.map((u) => u.name);
   return [
     {
       key: 'locaties', name: 'Locaties',
@@ -91,7 +91,7 @@ function sheets(state: AdminState): Sheet[] {
       key: 'leden', name: 'EHBO-leden',
       note: 'Wie in welke eenheid zit. Een eenheid die hier staat, krijgt precies deze mensen.',
       columns: [
-        { key: 'unit', header: 'Eenheid', width: 20, list: units, required: true },
+        { key: 'team', header: 'Eenheid', width: 20, list: teams, required: true },
         { key: 'name', header: 'Naam', width: 24 },
         { key: 'phone', header: 'Telefoon', width: 16, text: true, required: true },
       ],
@@ -128,8 +128,8 @@ function exportRows(state: AdminState): Record<SheetKey, (string | number | null
     locaties: state.posts.map((p) => [p.name, ...Array.from({ length: FUNCTIONS }, (_, i) => (p.functionIds[i] !== undefined ? typeName(p.functionIds[i]!) : null)),
       p.lat, p.lng, p.address, p.accessRoute, p.timeFrom, p.timeTo, p.runId === null ? null : state.runs.find((r) => r.id === p.runId)?.name ?? null]),
     contactpersonen: state.posts.flatMap((p) => p.contacts.map((c) => [p.name, c.name, phoneText(c.phone), ROLE_TEXT[c.role], c.timeFrom, c.timeTo])),
-    eenheden: state.units.map((u) => [u.name, KIND_TEXT[u.kind], u.mobility ? MOBILITY_TEXT[u.mobility] : null, postName(u.postId), u.hasAed ? 'ja' : 'nee', u.timeFrom, u.timeTo]),
-    leden: state.units.flatMap((u) => u.members.map((m) => [u.name, m.name, phoneText(m.phone)])),
+    eenheden: state.teams.map((u) => [u.name, KIND_TEXT[u.kind], u.mobility ? MOBILITY_TEXT[u.mobility] : null, postName(u.postId), u.hasAed ? 'ja' : 'nee', u.timeFrom, u.timeTo]),
+    leden: state.teams.flatMap((u) => u.members.map((m) => [u.name, m.name, phoneText(m.phone)])),
     kernteam: state.coreTeam.map((c) => [c.function, c.name, phoneText(c.phone), c.isCoordinator ? 'ja' : 'nee']),
     noodnummers: state.emergencyNumbers.map((n) => [n.label, n.number]),
   };
@@ -357,7 +357,7 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
   }
 
   const postSummary = locations ? summary('locaties') : null;
-  const toRemove = { posts: [] as number[], units: [] as number[] };
+  const toRemove = { posts: [] as number[], teams: [] as number[] };
   if (locations) {
     for (const plan of postPlans.values()) {
       if (plan.data) {
@@ -385,14 +385,14 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
   };
 
   // Teams, the same way.
-  type UnitPlan = { name: string; existing: AdminState['units'][number] | undefined; data: Omit<UnitData, 'members' | 'postId'> & { post: string | null } | null; members: UnitData['members'] | null };
-  const unitPlans = new Map<string, UnitPlan>();
-  for (const u of state.units) unitPlans.set(norm(u.name), { name: u.name, existing: u, data: null, members: null });
-  const teams = found.get('eenheden');
-  if (teams) {
-    for (const { row, values } of required('eenheden', teams)) {
+  type TeamPlan = { name: string; existing: AdminState['teams'][number] | undefined; data: Omit<TeamData, 'members' | 'postId'> & { post: string | null } | null; members: TeamData['members'] | null };
+  const teamPlans = new Map<string, TeamPlan>();
+  for (const u of state.teams) teamPlans.set(norm(u.name), { name: u.name, existing: u, data: null, members: null });
+  const teamRows = found.get('eenheden');
+  if (teamRows) {
+    for (const { row, values } of required('eenheden', teamRows)) {
       const key = norm(values.name!);
-      const plan = unitPlans.get(key) ?? { name: values.name!, existing: undefined, data: null, members: null };
+      const plan = teamPlans.get(key) ?? { name: values.name!, existing: undefined, data: null, members: null };
       if (plan.data) {
         problem('eenheden', row, `${values.name} staat er twee keer in`);
         continue;
@@ -411,17 +411,17 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
         name: values.name!.trim(), kind: kind ?? 'mobile', mobility: kind === 'mobile' ? mobility ?? 'other' : null, post: values.post || null,
         hasAed: yes(values.aed ?? ''), timeFrom: timeFrom ?? null, timeTo: timeTo ?? null,
       };
-      unitPlans.set(key, plan);
+      teamPlans.set(key, plan);
     }
   }
   const members = found.get('leden');
   const memberSummary = members ? summary('leden') : null;
   if (members) {
-    const byUnit = new Map<string, UnitData['members']>();
+    const byTeam = new Map<string, TeamData['members']>();
     for (const { row, values } of required('leden', members)) {
-      const plan = unitPlans.get(norm(values.unit!));
+      const plan = teamPlans.get(norm(values.team!));
       if (!plan || (!plan.existing && !plan.data)) {
-        problem('leden', row, `Eenheid ${values.unit} bestaat niet`);
+        problem('leden', row, `Eenheid ${values.team} bestaat niet`);
         continue;
       }
       const phone = phoneOf(values.phone!);
@@ -429,11 +429,11 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
         problem('leden', row, `Ongeldig telefoonnummer bij ${values.name || 'deze persoon'}: ${values.phone}`);
         continue;
       }
-      byUnit.set(norm(values.unit!), [...(byUnit.get(norm(values.unit!)) ?? []), { name: values.name ?? '', phone }]);
+      byTeam.set(norm(values.team!), [...(byTeam.get(norm(values.team!)) ?? []), { name: values.name ?? '', phone }]);
     }
-    for (const [key, plan] of unitPlans) {
-      if (byUnit.has(key) || plan.data) {
-        plan.members = byUnit.get(key) ?? [];
+    for (const [key, plan] of teamPlans) {
+      if (byTeam.has(key) || plan.data) {
+        plan.members = byTeam.get(key) ?? [];
         const before = new Map((plan.existing?.members ?? []).map((m) => [m.phone, m]));
         for (const m of plan.members) {
           const old = before.get(m.phone);
@@ -446,30 +446,30 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
       }
     }
   }
-  const unitSummary = teams ? summary('eenheden') : null;
-  if (teams) {
-    for (const plan of unitPlans.values()) {
+  const teamSummary = teamRows ? summary('eenheden') : null;
+  if (teamRows) {
+    for (const plan of teamPlans.values()) {
       if (plan.data) {
         const e = plan.existing;
         const postName = e?.postId != null ? state.posts.find((p) => p.id === e.postId)?.name ?? null : null;
-        if (!e) unitSummary!.added++;
+        if (!e) teamSummary!.added++;
         else if (e.kind === plan.data.kind && e.mobility === plan.data.mobility && e.hasAed === plan.data.hasAed && e.timeFrom === plan.data.timeFrom && e.timeTo === plan.data.timeTo
-          && norm(postName ?? '') === norm(plan.data.post ?? '')) unitSummary!.unchanged++;
-        else unitSummary!.changed++;
+          && norm(postName ?? '') === norm(plan.data.post ?? '')) teamSummary!.unchanged++;
+        else teamSummary!.changed++;
       } else if (removeMissing && plan.existing) {
-        toRemove.units.push(plan.existing.id);
-        unitSummary!.removed++;
+        toRemove.teams.push(plan.existing.id);
+        teamSummary!.removed++;
       }
     }
   }
 
   // Core team and emergency numbers: one list each, matched on the function and the description.
   let coreTeam: CoreTeamEntry[] | null = null;
-  const team = found.get('kernteam');
-  if (team) {
+  const coreRows = found.get('kernteam');
+  if (coreRows) {
     const s = summary('kernteam');
     const fromFile: CoreTeamEntry[] = [];
-    for (const { row, values } of required('kernteam', team)) {
+    for (const { row, values } of required('kernteam', coreRows)) {
       const phone = values.phone ? phoneOf(values.phone) : null;
       if (values.phone && !phone) problem('kernteam', row, `Ongeldig telefoonnummer bij ${values.name || values.function}: ${values.phone}`);
       fromFile.push({ function: values.function!.trim(), name: values.name ?? '', phone, isCoordinator: yes(values.coordinator ?? '') });
@@ -517,7 +517,7 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
   function apply() {
     if (problems.length) throw Object.assign(new Error('Het bestand heeft nog fouten; er is niets opgeslagen'), { statusCode: 400 });
     const types = state.postTypes;
-    for (const id of toRemove.units) admin.deleteUnit(id);
+    for (const id of toRemove.teams) admin.deleteTeam(id);
     for (const id of toRemove.posts) admin.deletePost(id);
     for (const plan of postPlans.values()) {
       if (!plan.data && !plan.contacts) continue;
@@ -528,15 +528,15 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
     }
     // New locations have an id now.
     const posts = admin.getState().posts;
-    for (const plan of unitPlans.values()) {
+    for (const plan of teamPlans.values()) {
       if (!plan.data && !plan.members) continue;
       const e = plan.existing;
       const postName = plan.data ? plan.data.post : null;
       const postId = plan.data ? (postName ? posts.find((p) => sameKey(p.name, postName))?.id ?? null : null) : e!.postId;
-      const data: UnitData = plan.data
+      const data: TeamData = plan.data
         ? { name: plan.data.name, kind: plan.data.kind, mobility: plan.data.mobility, postId, hasAed: plan.data.hasAed, timeFrom: plan.data.timeFrom, timeTo: plan.data.timeTo, members: plan.members ?? e?.members ?? [] }
         : { ...e!, members: plan.members ?? e!.members };
-      admin.saveUnit(e?.id ?? null, data);
+      admin.saveTeam(e?.id ?? null, data);
     }
     if (coreTeam) admin.saveCoreTeam(coreTeam);
     if (numbers) admin.saveEmergencyNumbers(numbers);

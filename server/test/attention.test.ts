@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isDueOpen, lacksPosition, type LiveUnit } from '@ehbo/shared';
+import { isDueOpen, lacksPosition, type LiveTeam } from '@ehbo/shared';
 
 const post = { timeFrom: '11:30', timeTo: '13:00' };
 const event = { startDate: '2026-12-31', endDate: '2026-12-31' };
@@ -22,9 +22,9 @@ test('a post is only due on a day of the event, and only with a time slot', () =
 
 test('only a mobile team on duty can lack a position', () => {
   const now = at('12:00');
-  const live = (availability: LiveUnit['availability'], minutesAgo: number | null) => ({
+  const live = (availability: LiveTeam['availability'], minutesAgo: number | null) => ({
     availability, position: minutesAgo === null ? null : { lat: 53, lng: 5, at: new Date(now - minutesAgo * 60_000).toISOString() },
-  }) as LiveUnit;
+  }) as LiveTeam;
   assert.equal(lacksPosition({ kind: 'mobile' }, live('available', null), now), true);
   assert.equal(lacksPosition({ kind: 'mobile' }, live('available', 4), now), true);
   assert.equal(lacksPosition({ kind: 'mobile' }, live('available', 2), now), false);

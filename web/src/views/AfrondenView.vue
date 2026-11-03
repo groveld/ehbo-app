@@ -6,7 +6,7 @@ import { NOTE_MAX, OUTCOMES, type Outcome } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, postOf, unitOf } from '../incidents.ts';
+import { clock, postOf, teamOf } from '../incidents.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -18,10 +18,10 @@ const { busy, error, run } = useSave();
 
 const incident = computed(() => live.incidentById(Number(props.id)));
 const post = computed(() => (incident.value ? postOf(store.postById, incident.value) : undefined));
-const myUnit = computed(() => unitOf(store.pkg, incident.value?.dispatches.find((d) => d.acceptedAt && live.myUnitIds.includes(d.unitId))?.unitId ?? null));
-const ownPost = computed(() => (myUnit.value?.postId != null ? store.postById.get(myUnit.value.postId) : undefined));
+const myTeam = computed(() => teamOf(store.pkg, incident.value?.dispatches.find((d) => d.acceptedAt && live.myTeamIds.includes(d.teamId))?.teamId ?? null));
+const ownPost = computed(() => (myTeam.value?.postId != null ? store.postById.get(myTeam.value.postId) : undefined));
 /** Alleen een vaste eenheid die niet op haar eigen post is, kan "even blijven". */
-const canStay = computed(() => myUnit.value?.kind === 'fixed' && ownPost.value && ownPost.value.id !== post.value?.id);
+const canStay = computed(() => myTeam.value?.kind === 'fixed' && ownPost.value && ownPost.value.id !== post.value?.id);
 
 const outcome = ref<Outcome | null>(null);
 const note = ref('');

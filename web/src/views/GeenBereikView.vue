@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 import { formatKm, telHref } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
-import { coordinatorOf, unitsByDistance } from '../posts.ts';
+import { coordinatorOf, teamsByDistance } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -21,11 +21,11 @@ const post = computed(() => store.postById.get(item.value?.postId ?? -1));
 const from = computed(() => post.value ?? (item.value?.lat != null ? { lat: item.value.lat, lng: item.value.lng ?? null } : undefined));
 const coordinator = computed(() => coordinatorOf(store.pkg));
 /** Op afstand; wie volgens de laatst bekende stand uit dienst is, laten we weg. */
-const units = computed(() => (store.pkg && from.value
-  ? unitsByDistance(store.pkg, from.value, (id) => live.unitState(id)?.availability === 'off_duty').filter((u) => u.unit.members.length)
+const teams = computed(() => (store.pkg && from.value
+  ? teamsByDistance(store.pkg, from.value, (id) => live.teamState(id)?.availability === 'off_duty').filter((u) => u.team.members.length)
   : []));
-const first = computed(() => units.value[0]);
-const rest = computed(() => units.value.slice(1, 3));
+const first = computed(() => teams.value[0]);
+const rest = computed(() => teams.value.slice(1, 3));
 
 // Alsnog aangekomen: door naar de gewone melding.
 watch(() => live.delivered[props.clientId], (id) => {
@@ -40,18 +40,18 @@ watch(() => live.delivered[props.clientId], (id) => {
     </StatusBlock>
 
     <div class="stack gap-10 calls">
-      <a v-if="first" :href="telHref(first.unit.members[0]!.phone)" class="call nearest">
+      <a v-if="first" :href="telHref(first.team.members[0]!.phone)" class="call nearest">
         <span class="icon"><Icon name="phone" :size="22" /></span>
         <span class="stack grow">
-          <span class="who">Bel {{ first.unit.name }}</span>
+          <span class="who">Bel {{ first.team.name }}</span>
           <span class="sub">Dichtstbij · {{ first.post.name }} · {{ formatKm(first.km) }} km</span>
         </span>
       </a>
       <a v-if="coordinator" :href="telHref(coordinator.phone)" class="call">
         <span class="stack grow"><span class="who">Bel evenementcoördinator</span><span class="sub">{{ coordinator.name }}</span></span>
       </a>
-      <a v-for="u in rest" :key="u.unit.id" :href="telHref(u.unit.members[0]!.phone)" class="call">
-        <span class="stack grow"><span class="who">Bel {{ u.unit.name }}</span><span class="sub">Reserve · {{ formatKm(u.km) }} km</span></span>
+      <a v-for="u in rest" :key="u.team.id" :href="telHref(u.team.members[0]!.phone)" class="call">
+        <span class="stack grow"><span class="who">Bel {{ u.team.name }}</span><span class="sub">Reserve · {{ formatKm(u.km) }} km</span></span>
       </a>
       <p v-if="!first && !coordinator" class="note warn">Geen nummers op deze telefoon. Bel 112 als het nodig is.</p>
     </div>

@@ -1,4 +1,4 @@
-// An event file from before keeps everything when the schema changes: the values in English (migration 21), with nothing lost.
+// An event file from before keeps everything when the schema changes: the values in English (21) and units as teams (22), with nothing lost.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -33,13 +33,20 @@ test('team and contact values become English, and a rebuilt table keeps what ref
 
   const db = openEventDb(dir, 'old', { name: 'Oud' });
   const rows = (sql: string) => db.raw.prepare(sql).all();
-  assert.deepEqual(rows('SELECT name, kind, mobility, availability FROM ehbo_units ORDER BY id').map((r) => Object.values(r)),
+  assert.deepEqual(rows('SELECT name, kind, mobility, availability FROM teams ORDER BY id').map((r) => Object.values(r)),
     [['Team 1', 'fixed', null, 'available'], ['Team 2', 'mobile', 'on_foot', 'unavailable']]);
   assert.deepEqual(rows('SELECT role FROM post_contacts').map((r) => r.role), ['lead']);
-  assert.equal(rows('SELECT * FROM ehbo_unit_members').length, 1, 'members are still there');
-  assert.equal(rows('SELECT * FROM incident_dispatches').length, 1, 'and so are the dispatches of the report');
+  assert.deepEqual(rows('SELECT team_id, phone FROM team_members').map((r) => Object.values(r)), [[1, '+31600000003']], 'members are still there');
+  assert.deepEqual(rows('SELECT team_id FROM incident_dispatches').map((r) => r.team_id), [1], 'and so are the dispatches of the report');
+  assert.deepEqual(rows('SELECT team_id FROM incidents').map((r) => r.team_id), [1]);
   assert.equal((db.raw.prepare('PRAGMA foreign_keys').get() as { foreign_keys: number }).foreign_keys, 1, 'foreign keys are back on');
-  assert.throws(() => db.raw.prepare("INSERT INTO ehbo_units (name, kind) VALUES ('X', 'vast')").run(), /CHECK/);
+  assert.throws(() => db.raw.prepare("INSERT INTO teams (name, kind) VALUES ('X', 'vast')").run(), /CHECK/);
+  // Deleting a team still clears its members: the reference moved along with the table.
+  db.raw.prepare('DELETE FROM teams WHERE id = 2').run();
+  db.raw.prepare('DELETE FROM incident_dispatches').run();
+  db.raw.prepare('UPDATE incidents SET team_id = NULL').run();
+  db.raw.prepare('DELETE FROM teams WHERE id = 1').run();
+  assert.equal(rows('SELECT * FROM team_members').length, 0);
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });

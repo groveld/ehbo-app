@@ -2,16 +2,16 @@
 // Mijn inzetten: de afgeronde en ingetrokken oproepen van je EHBO-eenheid, vanaf het EHBO-scherm. Tik op een inzet voor de melding.
 import { computed } from 'vue';
 import Icon from '../components/Icon.vue';
-import { clock, incidentSummary, myDeployments, unitOf } from '../incidents.ts';
+import { clock, incidentSummary, myDeployments, teamOf } from '../incidents.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
 const store = usePackageStore();
 const live = useLiveStore();
 
-const unitId = computed(() => live.myUnitIds[0] ?? null);
-const unit = computed(() => unitOf(store.pkg, unitId.value));
-const deployments = computed(() => (unitId.value !== null ? myDeployments(live.incidents, unitId.value) : []));
+const teamId = computed(() => live.myTeamIds[0] ?? null);
+const team = computed(() => teamOf(store.pkg, teamId.value));
+const deployments = computed(() => (teamId.value !== null ? myDeployments(live.incidents, teamId.value) : []));
 </script>
 
 <template>
@@ -20,7 +20,7 @@ const deployments = computed(() => (unitId.value !== null ? myDeployments(live.i
       <RouterLink :to="{ name: 'ehbo' }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
       <div class="stack">
         <h1 class="heading">Mijn inzetten</h1>
-        <span v-if="unit" class="small">{{ unit.name }}</span>
+        <span v-if="team" class="small">{{ team.name }}</span>
       </div>
     </header>
 

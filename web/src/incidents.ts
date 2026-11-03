@@ -1,5 +1,5 @@
 // Weergave van oproepen: korte omschrijving, tijden, reistijd.
-import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type EventPackage, type IncidentDetails, type IncidentEventType, type IncidentPersons, type LiveIncident, type LiveRequest, type PackagePost, type PackageUnit, type UnitMobility } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type EventPackage, type IncidentDetails, type IncidentEventType, type IncidentPersons, type LiveIncident, type LiveRequest, type PackagePost, type PackageTeam, type TeamMobility } from '@ehbo/shared';
 
 const PERSONS: Record<IncidentPersons, string> = { '1': '1 persoon', '2': '2 personen', '3+': '3 of meer personen' };
 
@@ -17,22 +17,22 @@ export const clock = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }) : '–';
 
 /** Gemiddelde snelheid in km/u voor een ruwe reistijd; hemelsbreed, dus het blijft een schatting. Een vaste eenheid telt als "anders". */
-const SPEED: Record<UnitMobility, number> = { on_foot: 5, bike: 15, car: 30, other: 15 };
+const SPEED: Record<TeamMobility, number> = { on_foot: 5, bike: 15, car: 30, other: 15 };
 
-export function travelMinutes(km: number | null, unit: PackageUnit | undefined) {
+export function travelMinutes(km: number | null, team: PackageTeam | undefined) {
   if (km === null) return null;
-  return Math.max(1, Math.round((km / SPEED[unit?.mobility ?? 'other']) * 60));
+  return Math.max(1, Math.round((km / SPEED[team?.mobility ?? 'other']) * 60));
 }
 
 /** The post of an incident; until the new event package has arrived, what the incident itself says about it. */
 export const postOf = (posts: Map<number, PackagePost>, incident: LiveIncident): PackagePost =>
   (incident.offPost ? undefined : posts.get(incident.postId)) ?? { id: incident.postId, isOpen: true, timeFrom: null, timeTo: null, passages: [], functionIds: [incident.post.typeId], runId: null, ...incident.post };
 
-export const unitOf = (pkg: EventPackage | null, id: number | null) => (id === null ? undefined : pkg?.units.find((u) => u.id === id));
+export const teamOf = (pkg: EventPackage | null, id: number | null) => (id === null ? undefined : pkg?.teams.find((u) => u.id === id));
 
 /** De inzetten van een eenheid: afgeronde of ingetrokken oproepen die ze had aangenomen, nieuwste eerst. */
-export const myDeployments = (incidents: LiveIncident[], unitId: number) =>
-  incidents.filter((i) => (i.status === 'afgerond' || i.status === 'ingetrokken') && i.dispatches.some((d) => d.unitId === unitId && d.acceptedAt));
+export const myDeployments = (incidents: LiveIncident[], teamId: number) =>
+  incidents.filter((i) => (i.status === 'afgerond' || i.status === 'ingetrokken') && i.dispatches.some((d) => d.teamId === teamId && d.acceptedAt));
 
 /** One step in a log (ActivityLog.vue). */
 export interface LogEntry {

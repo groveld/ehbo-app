@@ -10,7 +10,7 @@ import PostBadge from '../components/PostBadge.vue';
 import { navigationUrl } from '../navigate.ts';
 import { confirmClosePost } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
-import { ROLE_TEXT, kmLabel, manned, mobileUnits, nearestUnit, primaryContact, unitsAt } from '../posts.ts';
+import { ROLE_TEXT, kmLabel, manned, mobileTeams, nearestTeam, primaryContact, teamsAt } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -36,10 +36,10 @@ const hasPeople = computed(() => (post.value ? manned(store.pkg, post.value) : t
 const runName = computed(() => (post.value?.runId != null ? store.pkg?.runs.find((r) => r.id === post.value!.runId)?.name ?? null : null));
 const functionNames = computed(() => post.value?.functionIds.map((id) => store.typeById.get(id)?.name).filter(Boolean).join(' · ') ?? '');
 const contact = computed(() => (post.value ? primaryContact(post.value) : null));
-const here = computed(() => (store.pkg && post.value ? unitsAt(store.pkg, post.value.id) : []));
-const nearest = computed(() => (store.pkg && post.value && !here.value.length ? nearestUnit(store.pkg, post.value) : null));
+const here = computed(() => (store.pkg && post.value ? teamsAt(store.pkg, post.value.id) : []));
+const nearest = computed(() => (store.pkg && post.value && !here.value.length ? nearestTeam(store.pkg, post.value) : null));
 const isOpen = computed(() => (post.value ? live.postOpen(post.value.id, post.value.isOpen) : false));
-const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
+const mobile = computed(() => mobileTeams(store.pkg, live.state?.teams ?? [], live.serverNow));
 /** Zoals op de kaart van het overzicht: open oproepen rood, dichte posten grijs. */
 const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
 /** Zoals de server: de locatieverantwoordelijke van deze post, of een beheerder. */
@@ -134,7 +134,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'fixed' ? `E
       </p>
       <p v-else-if="nearest" class="note ok nearest">
         <PostBadge :type="store.pkg.postTypes.find((t) => t.key === 'ehbo')" :size="22" />
-        <span>Dichtstbijzijnde EHBO: <strong>{{ nearest.unit.name }}</strong> bij {{ nearest.post.name }} · {{ formatKm(nearest.km) }} km</span>
+        <span>Dichtstbijzijnde EHBO: <strong>{{ nearest.team.name }}</strong> bij {{ nearest.post.name }} · {{ formatKm(nearest.km) }} km</span>
       </p>
 
       <div class="grow" />

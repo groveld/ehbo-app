@@ -28,7 +28,7 @@ import {
   type PostData,
   type Report,
   type RunData,
-  type UnitData,
+  type TeamData,
 } from '@ehbo/shared';
 import { adminDb } from '../admin-db.ts';
 import { BRAND_IMAGES, ICON_IMAGES, LOGO_MAX_SIDE, pngSize, setBrandImages } from '../brand.ts';
@@ -155,7 +155,7 @@ const postSchema = {
   },
 } as const;
 
-const unitSchema = {
+const teamSchema = {
   type: 'object',
   required: ['name', 'kind', 'mobility', 'postId', 'hasAed', 'members'],
   properties: {
@@ -356,21 +356,21 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
   });
 
   // EHBO-eenheden
-  const checkUnit = (body: UnitData): UnitData => {
+  const checkTeam = (body: TeamData): TeamData => {
     if (body.kind === 'fixed' && body.postId === null) throw badRequest('Kies de EHBO-post van deze vaste eenheid');
     if (body.postId !== null && !admin.postExists(body.postId)) throw badRequest('Onbekende locatie');
     return { ...body, members: body.members.map((m) => ({ name: m.name.trim(), phone: phoneOf(m.phone, m.name) })) };
   };
-  app.post<{ Body: UnitData; Reply: AdminState }>('/api/admin/units', { schema: { body: unitSchema } }, async (request) => {
-    admin.saveUnit(null, checkUnit(request.body));
+  app.post<{ Body: TeamData; Reply: AdminState }>('/api/admin/teams', { schema: { body: teamSchema } }, async (request) => {
+    admin.saveTeam(null, checkTeam(request.body));
     return admin.getState();
   });
-  app.put<{ Params: { id: number }; Body: UnitData; Reply: AdminState }>('/api/admin/units/:id', { schema: { params: idParams, body: unitSchema } }, async (request) => {
-    if (admin.saveUnit(request.params.id, checkUnit(request.body)) === null) throw notFound('EHBO-eenheid niet gevonden');
+  app.put<{ Params: { id: number }; Body: TeamData; Reply: AdminState }>('/api/admin/teams/:id', { schema: { params: idParams, body: teamSchema } }, async (request) => {
+    if (admin.saveTeam(request.params.id, checkTeam(request.body)) === null) throw notFound('EHBO-eenheid niet gevonden');
     return admin.getState();
   });
-  app.delete<{ Params: { id: number }; Reply: AdminState }>('/api/admin/units/:id', { schema: { params: idParams } }, async (request) => {
-    if (!admin.deleteUnit(request.params.id)) throw notFound('EHBO-eenheid niet gevonden');
+  app.delete<{ Params: { id: number }; Reply: AdminState }>('/api/admin/teams/:id', { schema: { params: idParams } }, async (request) => {
+    if (!admin.deleteTeam(request.params.id)) throw notFound('EHBO-eenheid niet gevonden');
     return admin.getState();
   });
 

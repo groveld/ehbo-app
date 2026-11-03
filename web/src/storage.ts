@@ -35,6 +35,19 @@ const STORAGE_STEPS: ((read: <T>(key: string) => T | null, write: (key: string, 
     const me = read<Any>('ehbo.me');
     if (me?.assignments) write('ehbo.me', { ...me, assignments: me.assignments.map((a: Any) => (a.role ? { ...a, role: ROLE[a.role] ?? a.role } : a)) });
   },
+  // 2: an EHBO unit is a team: units → teams and unitId → teamId wherever they are, and the action keepUnit → keepTeam.
+  (read, write) => {
+    const KEYS: Record<string, string> = { units: 'teams', unitId: 'teamId' };
+    const rename = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(rename);
+      if (!value || typeof value !== 'object') return value;
+      return Object.fromEntries(Object.entries(value).map(([k, v]) => [KEYS[k] ?? k, k === 'type' && v === 'keepUnit' ? 'keepTeam' : rename(v)]));
+    };
+    for (const key of ['ehbo.queue', 'ehbo.live', 'ehbo.package', 'ehbo.me', 'ehbo.outbox']) {
+      const value = read<unknown>(key);
+      if (value !== null) write(key, rename(value));
+    }
+  },
 ];
 
 export function upgradeStorage() {

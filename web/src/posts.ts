@@ -1,5 +1,5 @@
 // Posten in het evenementpakket: contactpersoon, eenheden, dichtstbijzijnde EHBO.
-import { DEFAULT_AT_POST_M, POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, isManned, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, type PostContactRole, sameFunction } from '@ehbo/shared';
+import { DEFAULT_AT_POST_M, POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, isManned, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageTeam, type LiveTeam, type PostContactRole, sameFunction } from '@ehbo/shared';
 
 /** "km 2,1", and "+1" when the longest run comes by more often. */
 export function kmLabel(post: Pick<PackagePost, 'km' | 'passages'>) {
@@ -32,10 +32,10 @@ export const primaryContact = (post: PackagePost) =>
   post.contacts?.find((c) => c.role === 'lead') ?? post.contacts?.[0] ?? null;
 
 /** EHBO-eenheden die bij deze post horen: vast op deze post, of mobiel met deze post als standplaats. */
-export const unitsAt = (pkg: EventPackage, postId: number) => pkg.units.filter((u) => u.postId === postId);
+export const teamsAt = (pkg: EventPackage, postId: number) => pkg.teams.filter((u) => u.postId === postId);
 
-export interface UnitDistance {
-  unit: PackageUnit;
+export interface TeamDistance {
+  team: PackageTeam;
   post: PackagePost;
   km: number;
 }
@@ -45,17 +45,17 @@ export interface UnitDistance {
  * Werkt zonder bereik, uit het evenementpakket. Eenheden zonder plek tellen niet mee; wie uit dienst is (als dat bekend is) ook niet.
  */
 /** Teams by distance from a post, or from where someone asks for help. */
-export function unitsByDistance(pkg: EventPackage, post: { lat: number | null; lng: number | null }, offDuty: (unitId: number) => boolean = () => false): UnitDistance[] {
+export function teamsByDistance(pkg: EventPackage, post: { lat: number | null; lng: number | null }, offDuty: (teamId: number) => boolean = () => false): TeamDistance[] {
   const from = post.lat != null && post.lng != null ? [post.lng, post.lat] as LngLat : null;
   if (!from) return [];
-  return pkg.units.flatMap((unit) => {
-    const at = unit.postId !== null ? pkg.posts.find((p) => p.id === unit.postId) : undefined;
+  return pkg.teams.flatMap((team) => {
+    const at = team.postId !== null ? pkg.posts.find((p) => p.id === team.postId) : undefined;
     const to = at && lngLat(at);
-    return at && to && !offDuty(unit.id) ? [{ unit, post: at, km: distanceKm(from, to) }] : [];
+    return at && to && !offDuty(team.id) ? [{ team, post: at, km: distanceKm(from, to) }] : [];
   }).sort((a, b) => a.km - b.km);
 }
 
-export const nearestUnit = (pkg: EventPackage, post: PackagePost) => unitsByDistance(pkg, post)[0] ?? null;
+export const nearestTeam = (pkg: EventPackage, post: PackagePost) => teamsByDistance(pkg, post)[0] ?? null;
 
 /** De evenementcoördinator uit het kernteam (alleen in het pakket van medewerkers). */
 export const coordinatorOf = (pkg: EventPackage | null) => pkg?.coreTeam.find((c) => c.isCoordinator) ?? null;
@@ -72,36 +72,36 @@ export interface Ambulance { id: number; name: string; lng: number; lat: number;
 /** How close counts as at a post, as the admin set it. A package from before the setting has the default. */
 export const atPostM = (pkg: EventPackage | null) => pkg?.event.atPostM ?? DEFAULT_AT_POST_M;
 
-export function mobileUnits(pkg: EventPackage | null, units: LiveUnit[], now: number): { ambulances: Ambulance[]; awayPostIds: number[] } {
+export function mobileTeams(pkg: EventPackage | null, teams: LiveTeam[], now: number): { ambulances: Ambulance[]; awayPostIds: number[] } {
   if (!pkg) return { ambulances: [], awayPostIds: [] };
-  const ambulances = units.flatMap((u) => {
-    const unit = pkg.units.find((x) => x.id === u.id);
-    if (!unit || !u.position || !isAway(unit, u, pkg.posts.find((p) => p.id === unit.postId), now, atPostM(pkg))) return [];
+  const ambulances = teams.flatMap((u) => {
+    const team = pkg.teams.find((x) => x.id === u.id);
+    if (!team || !u.position || !isAway(team, u, pkg.posts.find((p) => p.id === team.postId), now, atPostM(pkg))) return [];
     const busy = u.incidentId !== null;
-    return [{ id: u.id, name: unit.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'available' }];
+    return [{ id: u.id, name: team.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'available' }];
   });
-  return { ambulances, awayPostIds: awayPostIds(pkg.units, units, pkg.posts, now, atPostM(pkg)) };
+  return { ambulances, awayPostIds: awayPostIds(pkg.teams, teams, pkg.posts, now, atPostM(pkg)) };
 }
 
 /**
  * A line from each team on its way to where the call is, so you see at once which team goes where.
  * It starts at the team's last GPS position, or else at its own post. Once on site there's nothing left to show.
  */
-export function callLines(pkg: EventPackage | null, units: LiveUnit[], incidents: LiveIncident[], now: number): [LngLat, LngLat][] {
+export function callLines(pkg: EventPackage | null, teams: LiveTeam[], incidents: LiveIncident[], now: number): [LngLat, LngLat][] {
   if (!pkg) return [];
-  return units.flatMap((u) => {
+  return teams.flatMap((u) => {
     const incident = incidents.find((i) => i.id === u.incidentId && i.status === 'geaccepteerd');
     if (!incident || incident.post.lat === null || incident.post.lng === null) return [];
     const fresh = u.position && now - new Date(u.position.at).getTime() <= POSITION_MAX_AGE_MS ? u.position : null;
-    const home = pkg.posts.find((p) => p.id === pkg.units.find((x) => x.id === u.id)?.postId);
+    const home = pkg.posts.find((p) => p.id === pkg.teams.find((x) => x.id === u.id)?.postId);
     const from = fresh ? [fresh.lng, fresh.lat] as LngLat : home ? lngLat(home) : null;
     return from ? [[from, [incident.post.lng, incident.post.lat]] as [LngLat, LngLat]] : [];
   });
 }
 
 /** "12:00 – 16:00", or what's known of it. */
-export const shiftText = (unit: { timeFrom: string | null; timeTo: string | null } | undefined) => {
-  if (!unit) return '';
-  if (unit.timeFrom && unit.timeTo) return `${unit.timeFrom} – ${unit.timeTo}`;
-  return unit.timeFrom ? `vanaf ${unit.timeFrom}` : unit.timeTo ? `tot ${unit.timeTo}` : '';
+export const shiftText = (team: { timeFrom: string | null; timeTo: string | null } | undefined) => {
+  if (!team) return '';
+  if (team.timeFrom && team.timeTo) return `${team.timeFrom} – ${team.timeTo}`;
+  return team.timeFrom ? `vanaf ${team.timeFrom}` : team.timeTo ? `tot ${team.timeTo}` : '';
 };

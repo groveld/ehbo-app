@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { recomputePassages } from './gpx.ts';
-import { DEFAULT_CORE_TEAM, DEFAULT_POST_TYPES, normalizeEmergencyNumber, type PostContactRole, type PushSubscriptionData, type UnitKind, type UnitMobility } from '@ehbo/shared';
+import { DEFAULT_CORE_TEAM, DEFAULT_POST_TYPES, normalizeEmergencyNumber, type PostContactRole, type PushSubscriptionData, type TeamKind, type TeamMobility } from '@ehbo/shared';
 
 // Elke stap draait één keer; PRAGMA user_version onthoudt tot waar het bestand is bijgewerkt.
 // Een stap is SQL, of een functie als de gegevens zelf omgezet moeten worden.
@@ -366,6 +366,15 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   DROP TABLE post_contacts;
   ALTER TABLE post_contacts_new RENAME TO post_contacts;
   `,
+  // 22: an EHBO unit is a team (docs/begrippen.md). SQLite moves the references in other tables along with the table.
+  `
+  ALTER TABLE ehbo_units RENAME TO teams;
+  ALTER TABLE ehbo_unit_members RENAME TO team_members;
+  ALTER TABLE team_members RENAME COLUMN unit_id TO team_id;
+  ALTER TABLE incidents RENAME COLUMN unit_id TO team_id;
+  ALTER TABLE incident_dispatches RENAME COLUMN unit_id TO team_id;
+  ALTER TABLE incident_events RENAME COLUMN unit_id TO team_id;
+  `,
 ];
 
 export interface EventRow {
@@ -395,11 +404,11 @@ export interface PostAssignmentRow {
   person_label: string | null;
 }
 
-export interface UnitAssignmentRow {
-  unit_id: number;
-  unit_name: string;
-  kind: UnitKind;
-  mobility: UnitMobility | null;
+export interface TeamAssignmentRow {
+  team_id: number;
+  team_name: string;
+  kind: TeamKind;
+  mobility: TeamMobility | null;
   time_from: string | null;
   time_to: string | null;
   post_name: string | null;
@@ -490,9 +499,9 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
              t.letter AS type_letter, t.color AS type_color, t.person_label
       FROM post_contacts c JOIN posts p ON p.id = c.post_id JOIN post_types t ON t.id = p.type_id
       WHERE c.phone = ? ORDER BY COALESCE(c.time_from, p.time_from), p.sort, p.id`),
-    unitAssignments: db.prepare(`
-      SELECT u.id AS unit_id, u.name AS unit_name, u.kind, u.mobility, u.time_from, u.time_to, p.name AS post_name
-      FROM ehbo_unit_members m JOIN ehbo_units u ON u.id = m.unit_id LEFT JOIN posts p ON p.id = u.post_id
+    teamAssignments: db.prepare(`
+      SELECT u.id AS team_id, u.name AS team_name, u.kind, u.mobility, u.time_from, u.time_to, p.name AS post_name
+      FROM team_members m JOIN teams u ON u.id = m.team_id LEFT JOIN posts p ON p.id = u.post_id
       WHERE m.phone = ? ORDER BY u.sort, u.id`),
     coreTeamAssignments: db.prepare('SELECT function, is_coordinator FROM core_team WHERE phone = ? ORDER BY sort, id'),
     coordinatorPhone: db.prepare('SELECT phone FROM core_team WHERE is_coordinator = 1 AND phone IS NOT NULL ORDER BY sort, id LIMIT 1'),
@@ -538,7 +547,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     getPerson: (phone: string) => q.getPerson.get(phone) as PersonRow | undefined,
     isAdmin: (phone: string) => q.isAdmin.get(phone) !== undefined,
     postAssignments: (phone: string) => q.postAssignments.all(phone) as unknown as PostAssignmentRow[],
-    unitAssignments: (phone: string) => q.unitAssignments.all(phone) as unknown as UnitAssignmentRow[],
+    teamAssignments: (phone: string) => q.teamAssignments.all(phone) as unknown as TeamAssignmentRow[],
     coreTeamAssignments: (phone: string) => q.coreTeamAssignments.all(phone) as unknown as CoreTeamAssignmentRow[],
     coordinatorPhone: () => (q.coordinatorPhone.get() as { phone: string } | undefined)?.phone ?? null,
 

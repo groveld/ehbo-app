@@ -2,7 +2,7 @@
 // 1.5 · EHBO-eenheid: vast (eigen EHBO-post) of mobiel (met optionele standplaats), leden en AED.
 import { computed, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import { formatPhone, type UnitData, type UnitMobility } from '@ehbo/shared';
+import { formatPhone, type TeamData, type TeamMobility } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 import { useDirty } from '../../composables/useDirty.ts';
@@ -16,22 +16,22 @@ const router = useRouter();
 const save = useSave();
 
 const isNew = computed(() => props.id === 'nieuw');
-const unit = computed(() => admin.state?.units.find((u) => u.id === Number(props.id)) ?? null);
-const MOBILITY: { value: UnitMobility; label: string }[] = [
+const team = computed(() => admin.state?.teams.find((u) => u.id === Number(props.id)) ?? null);
+const MOBILITY: { value: TeamMobility; label: string }[] = [
   { value: 'on_foot', label: 'Te voet' }, { value: 'bike', label: 'Fiets' }, { value: 'car', label: 'Auto' }, { value: 'other', label: 'Anders' },
 ];
 
-const form = reactive<UnitData>({ name: '', kind: 'fixed', mobility: null, postId: null, hasAed: false, timeFrom: null, timeTo: null, members: [] });
+const form = reactive<TeamData>({ name: '', kind: 'fixed', mobility: null, postId: null, hasAed: false, timeFrom: null, timeTo: null, members: [] });
 const loaded = ref(false);
 // Een nieuwe post, eenheid of loop is nog niet opgeslagen; een bestaande alleen als er iets gewijzigd is.
 const { dirty, markClean } = useDirty(() => form);
 const canSave = computed(() => isNew.value || dirty.value);
 watchEffect(() => {
   if (loaded.value || !admin.state) return;
-  if (unit.value) {
-    Object.assign(form, unit.value, { members: unit.value.members.map((m) => ({ ...m, phone: formatPhone(m.phone) })) });
+  if (team.value) {
+    Object.assign(form, team.value, { members: team.value.members.map((m) => ({ ...m, phone: formatPhone(m.phone) })) });
   } else {
-    form.name = `Team ${admin.state.units.length + 1}`;
+    form.name = `Team ${admin.state.teams.length + 1}`;
     form.members = [{ name: '', phone: '' }];
   }
   markClean();
@@ -46,7 +46,7 @@ const ehboPosts = computed(() => {
 const postChoices = computed(() => (form.kind === 'fixed' ? ehboPosts.value : admin.state?.posts ?? []));
 const selectedPost = computed(() => (form.postId !== null ? admin.postById.get(form.postId) : undefined));
 
-function setKind(kind: UnitData['kind']) {
+function setKind(kind: TeamData['kind']) {
   form.kind = kind;
   if (kind === 'mobile') form.mobility ??= 'bike';
   // Een standplaats die geen EHBO-post is, kan niet de eigen post van een vaste eenheid zijn.
@@ -54,26 +54,26 @@ function setKind(kind: UnitData['kind']) {
 }
 
 async function submit() {
-  const data: UnitData = {
+  const data: TeamData = {
     ...form,
     mobility: form.kind === 'mobile' ? form.mobility : null,
     timeFrom: form.timeFrom || null,
     timeTo: form.timeTo || null,
     members: form.members.filter((m) => m.phone.trim()),
   };
-  if (await save.run(() => admin.saveUnit(isNew.value ? null : Number(props.id), data))) router.push({ name: 'beheer-eenheden' });
+  if (await save.run(() => admin.saveTeam(isNew.value ? null : Number(props.id), data))) router.push({ name: 'beheer-eenheden' });
 }
 
 async function remove() {
   if (!await confirmDialog({ title: `${form.name} verwijderen?`, text: 'De leden krijgen dan geen oproepen meer.', confirm: 'Verwijderen', tone: 'danger' })) return;
-  if (await save.run(() => admin.deleteUnit(Number(props.id)))) router.push({ name: 'beheer-eenheden' });
+  if (await save.run(() => admin.deleteTeam(Number(props.id)))) router.push({ name: 'beheer-eenheden' });
 }
 </script>
 
 <template>
   <AdminPage title="EHBO-eenheid" :eyebrow="isNew ? 'Nieuw' : form.name" :back="{ name: 'beheer-eenheden' }">
     <template #default="{ state }">
-      <p v-if="!isNew && !unit" class="note warn">Deze eenheid bestaat niet (meer).</p>
+      <p v-if="!isNew && !team" class="note warn">Deze eenheid bestaat niet (meer).</p>
       <template v-else>
         <div class="form-field">
           <label for="team-naam">Naam</label>
@@ -135,14 +135,14 @@ async function remove() {
           <span class="main"><span class="label">AED bij zich</span><span class="small">Voorrang bij "niet aanspreekbaar"</span></span>
           <button role="switch" class="switch" :aria-checked="form.hasAed" aria-label="AED bij zich" @click="form.hasAed = !form.hasAed" />
         </div>
-        <span v-if="state.units.length === 0 && isNew" class="small">Een eenheid van één persoon kan ook.</span>
+        <span v-if="state.teams.length === 0 && isNew" class="small">Een eenheid van één persoon kan ook.</span>
       </template>
     </template>
 
     <template #footer>
       <p v-if="save.error.value" class="error-text" role="alert">{{ save.error.value }}</p>
-      <button v-if="canSave" class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !unit)" @click="submit">Opslaan</button>
-      <button v-if="!isNew && unit" class="btn link danger-link" @click="remove">Eenheid verwijderen</button>
+      <button v-if="canSave" class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !team)" @click="submit">Opslaan</button>
+      <button v-if="!isNew && team" class="btn link danger-link" @click="remove">Eenheid verwijderen</button>
     </template>
   </AdminPage>
 </template>

@@ -3,7 +3,7 @@
 import { computed } from 'vue';
 import { useRoute, type RouteLocationRaw } from 'vue-router';
 import type { LiveIncident } from '@ehbo/shared';
-import { clock, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentSummary, postOf, travelMinutes, teamOf } from '../incidents.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -33,7 +33,7 @@ export function useLiveBar() {
     if (incident.status === 'ter_plaatse') {
       return { tone: 'red', title: `Ter plaatse · ${name}`, sub: 'Tik om af te ronden', to: { name: 'afronden', params: { id: incident.id } }, more: 0 };
     }
-    const since = incident.dispatches.find((d) => live.myUnitIds.includes(d.unitId))?.acceptedAt;
+    const since = incident.dispatches.find((d) => live.myTeamIds.includes(d.teamId))?.acceptedAt;
     return { tone: 'red', title: `Onderweg · ${name}`, sub: `${incidentSummary(incident)} · sinds ${clock(since)}`, to: { name: 'oproep', params: { id: incident.id } }, more: 0 };
   }
 
@@ -44,10 +44,10 @@ export function useLiveBar() {
       const left = live.secondsLeft(incident);
       return { tone: 'orange', title: "We zoeken een EHBO'er", sub: last ?? (left !== null ? `Nog ${left} s tot alle eenheden` : 'Alle eenheden zijn opgeroepen'), to, more };
     }
-    const unit = unitOf(store.pkg, incident.unitId);
-    const helper = [incident.acceptedBy?.name, unit ? `EHBO ${unit.name}` : null].filter(Boolean).join(' · ');
+    const team = teamOf(store.pkg, incident.teamId);
+    const helper = [incident.acceptedBy?.name, team ? `EHBO ${team.name}` : null].filter(Boolean).join(' · ');
     if (incident.status === 'ter_plaatse') return { tone: 'green', title: 'EHBO is er', sub: last ?? `${helper} · sinds ${clock(incident.onSiteAt)}`, to, more };
-    const minutes = travelMinutes(incident.dispatches.find((d) => d.unitId === incident.unitId)?.distanceKm ?? null, unit);
+    const minutes = travelMinutes(incident.dispatches.find((d) => d.teamId === incident.teamId)?.distanceKm ?? null, team);
     return { tone: 'green', title: `Hulp is onderweg${minutes ? ` · ± ${minutes} min` : ''}`, sub: last ?? helper, to, more };
   }
 

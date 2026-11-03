@@ -42,7 +42,7 @@ const checks = computed((): { label: string; value: string; tone: Tone }[] => [
   },
   { label: 'Meldingen', value: permissionCheck.value[0], tone: permissionCheck.value[1] },
   { label: 'Locatie', value: LOCATION[location.permission]![0], tone: LOCATION[location.permission]![1] },
-  { label: 'Positie delen', value: live.sharingUnit != null ? 'aan' : 'uit', tone: (live.sharingUnit != null ? 'ok' : '') as Tone },
+  { label: 'Positie delen', value: live.sharingTeam != null ? 'aan' : 'uit', tone: (live.sharingTeam != null ? 'ok' : '') as Tone },
   {
     label: 'Aangemeld bij server',
     value: push.serverSubscription,

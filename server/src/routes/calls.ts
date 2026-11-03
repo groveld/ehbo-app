@@ -17,7 +17,7 @@ import {
   type LiveState,
   type NewIncident,
   type NewSelfIncident,
-  type UnitAvailability,
+  type TeamAvailability,
 } from '@ehbo/shared';
 import { requireMe } from '../auth.ts';
 import type { Calls } from '../calls.ts';
@@ -33,7 +33,7 @@ const details = {
 } as const;
 const detailsRequired = ['what', 'persons', 'responsive', 'note'];
 const idParams = { type: 'object', required: ['id'], properties: { id: { type: 'integer', minimum: 1 } } } as const;
-const unitBody = { type: 'object', required: ['unitId'], properties: { unitId: { type: 'integer', minimum: 1 } } } as const;
+const teamBody = { type: 'object', required: ['teamId'], properties: { teamId: { type: 'integer', minimum: 1 } } } as const;
 
 type Id = { Params: { id: number } };
 
@@ -106,10 +106,10 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
     schema: {
       body: {
         type: 'object',
-        required: ['clientId', 'unitId', 'postId', 'lat', 'lng', ...detailsRequired],
+        required: ['clientId', 'teamId', 'postId', 'lat', 'lng', ...detailsRequired],
         properties: {
           clientId: { type: 'string', minLength: 8, maxLength: 64 },
-          unitId: { type: 'integer', minimum: 1 },
+          teamId: { type: 'integer', minimum: 1 },
           postId: { type: 'integer', minimum: 1 },
           lat: coordinate(90),
           lng: coordinate(180),
@@ -123,12 +123,12 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
     schema: { params: idParams, body: { type: 'object', required: detailsRequired, properties: details } },
   }, async (request) => calls.once(...actionHeaders(request), () => calls.update(request.me!, request.params.id, request.body)));
 
-  app.post<Id & { Body: { unitId: number }; Reply: LiveState }>('/api/incidents/:id/accept', { schema: { params: idParams, body: unitBody } },
-    async (request) => calls.once(...actionHeaders(request), () => calls.accept(request.me!, request.params.id, request.body.unitId)));
-  app.post<Id & { Body: { unitId: number }; Reply: LiveState }>('/api/incidents/:id/decline', { schema: { params: idParams, body: unitBody } },
-    async (request) => calls.once(...actionHeaders(request), () => calls.decline(request.me!, request.params.id, request.body.unitId)));
-  app.post<Id & { Body: { unitId: number }; Reply: LiveState }>('/api/incidents/:id/assign', { schema: { params: idParams, body: unitBody } },
-    async (request) => calls.once(...actionHeaders(request), () => calls.assign(request.me!, request.params.id, request.body.unitId)));
+  app.post<Id & { Body: { teamId: number }; Reply: LiveState }>('/api/incidents/:id/accept', { schema: { params: idParams, body: teamBody } },
+    async (request) => calls.once(...actionHeaders(request), () => calls.accept(request.me!, request.params.id, request.body.teamId)));
+  app.post<Id & { Body: { teamId: number }; Reply: LiveState }>('/api/incidents/:id/decline', { schema: { params: idParams, body: teamBody } },
+    async (request) => calls.once(...actionHeaders(request), () => calls.decline(request.me!, request.params.id, request.body.teamId)));
+  app.post<Id & { Body: { teamId: number }; Reply: LiveState }>('/api/incidents/:id/assign', { schema: { params: idParams, body: teamBody } },
+    async (request) => calls.once(...actionHeaders(request), () => calls.assign(request.me!, request.params.id, request.body.teamId)));
   app.post<Id & { Reply: LiveState }>('/api/incidents/:id/on-site', { schema: { params: idParams } },
     async (request) => calls.once(...actionHeaders(request), () => calls.onSite(request.me!, request.params.id)));
   app.post<Id & { Reply: LiveState }>('/api/incidents/:id/withdraw', { schema: { params: idParams } },
@@ -144,7 +144,7 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
     },
   }, async (request) => calls.once(...actionHeaders(request), () => calls.close(request.me!, request.params.id, request.body)));
 
-  app.put<Id & { Body: { availability: UnitAvailability }; Reply: LiveState }>('/api/units/:id/availability', {
+  app.put<Id & { Body: { availability: TeamAvailability }; Reply: LiveState }>('/api/teams/:id/availability', {
     schema: { params: idParams, body: { type: 'object', required: ['availability'], properties: { availability: { enum: ['available', 'unavailable', 'off_duty'] } } } },
   }, async (request) => calls.once(...actionHeaders(request), () => calls.setAvailability(request.me!, request.params.id, request.body.availability)));
 
@@ -160,8 +160,8 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
 
   app.post<Id & { Reply: LiveState }>('/api/posts/:id/keep-open', { schema: { params: idParams } },
     async (request) => calls.once(...actionHeaders(request), () => calls.keepPost(request.me!, request.params.id)));
-  app.post<Id & { Reply: LiveState }>('/api/units/:id/keep-on-duty', { schema: { params: idParams } },
-    async (request) => calls.once(...actionHeaders(request), () => calls.keepUnit(request.me!, request.params.id)));
+  app.post<Id & { Reply: LiveState }>('/api/teams/:id/keep-on-duty', { schema: { params: idParams } },
+    async (request) => calls.once(...actionHeaders(request), () => calls.keepTeam(request.me!, request.params.id)));
 
   app.put<Id & { Body: { open: boolean }; Reply: LiveState }>('/api/posts/:id/open', {
     schema: { params: idParams, body: { type: 'object', required: ['open'], properties: { open: { type: 'boolean' } } } },

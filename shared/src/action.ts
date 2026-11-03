@@ -1,20 +1,20 @@
 // Changes a phone makes to the live state. The phone applies each one to its own state at once and queues it for the server,
 // so nothing ever waits for the network; the queue goes out in order as soon as there is a connection.
-import type { CloseIncident, Dispatch, IncidentDetails, IncidentEventType, IncidentPost, LiveIncident, LiveState, LiveUnit, NewSelfIncident, UnitAvailability } from './incident.ts';
+import type { CloseIncident, Dispatch, IncidentDetails, IncidentEventType, IncidentPost, LiveIncident, LiveState, LiveTeam, NewSelfIncident, TeamAvailability } from './incident.ts';
 import type { LiveRequest, NewRequest, RequestKind } from './request.ts';
 
 export type LiveAction =
-  | { type: 'accept' | 'decline' | 'assign'; incidentId: number; unitId: number }
+  | { type: 'accept' | 'decline' | 'assign'; incidentId: number; teamId: number }
   /** tempId: a negative id until the server has given the real one. post: how it shows meanwhile. */
   | { type: 'selfStart'; tempId: number; body: NewSelfIncident; post: IncidentPost; offPost: boolean; postId: number }
   | { type: 'onSite' | 'withdraw'; incidentId: number }
   | { type: 'close'; incidentId: number; body: CloseIncident }
   | { type: 'update'; incidentId: number; details: IncidentDetails }
-  | { type: 'availability'; unitId: number; availability: UnitAvailability }
+  | { type: 'availability'; teamId: number; availability: TeamAvailability }
   | { type: 'postOpen'; postId: number; open: boolean }
   /** After the warning that it's about to close. */
   | { type: 'keepPost'; postId: number }
-  | { type: 'keepUnit'; unitId: number }
+  | { type: 'keepTeam'; teamId: number }
   /** tempId: a negative id until the server has given the real one. */
   | { type: 'requestNew'; tempId: number; clientId: string; postId: number; postName: string; kind: RequestKind }
   | { type: 'requestDetail'; requestId: number; detail: string | null }
@@ -37,7 +37,7 @@ export const ACTION_MAX_AGE_MS = 12 * 3600_000;
 /** What applying an action needs to know from the fixed data. */
 export interface ActionContext {
   me: { name: string; phone: string } | null;
-  units: { id: number; name: string; kind: 'fixed' | 'mobile'; postId: number | null; members?: { phone: string }[] }[];
+  teams: { id: number; name: string; kind: 'fixed' | 'mobile'; postId: number | null; members?: { phone: string }[] }[];
 }
 
 const OPEN_REQUEST = ['aangevraagd', 'opgepakt'];
@@ -45,10 +45,10 @@ const OPEN_REQUEST = ['aangevraagd', 'opgepakt'];
 const changeIncident = (state: LiveState, id: number, change: (incident: LiveIncident) => LiveIncident): LiveState =>
   ({ ...state, incidents: state.incidents.map((i) => (i.id === id ? change(i) : i)) });
 
-/** A unit or post the state doesn't list yet (a phone that never had a connection) is added. */
-function changeUnit(state: LiveState, id: number, change: (unit: LiveUnit) => LiveUnit): LiveState {
-  if (state.units.some((u) => u.id === id)) return { ...state, units: state.units.map((u) => (u.id === id ? change(u) : u)) };
-  return { ...state, units: [...state.units, change({ id, availability: 'off_duty', incidentId: null, stayPostId: null, position: null, closesAt: null })] };
+/** A team or post the state doesn't list yet (a phone that never had a connection) is added. */
+function changeTeam(state: LiveState, id: number, change: (team: LiveTeam) => LiveTeam): LiveState {
+  if (state.teams.some((u) => u.id === id)) return { ...state, teams: state.teams.map((u) => (u.id === id ? change(u) : u)) };
+  return { ...state, teams: [...state.teams, change({ id, availability: 'off_duty', incidentId: null, stayPostId: null, position: null, closesAt: null })] };
 }
 
 function setPostOpen(state: LiveState, id: number, isOpen: boolean): LiveState {
@@ -61,27 +61,27 @@ const changeRequest = (state: LiveState, id: number, change: (request: LiveReque
   ({ ...state, requests: state.requests.map((r) => (r.id === id ? change(r) : r)) });
 
 /** The same line as the server's, once: the server's own may already be in the state while the action is still on its way. */
-const logged = (incident: LiveIncident, at: string, type: IncidentEventType, text: string, unitId: number | null = null): LiveIncident =>
-  (incident.events.some((e) => e.type === type && e.text === text) ? incident : { ...incident, events: [...incident.events, { at, type, unitId, text }] });
+const logged = (incident: LiveIncident, at: string, type: IncidentEventType, text: string, teamId: number | null = null): LiveIncident =>
+  (incident.events.some((e) => e.type === type && e.text === text) ? incident : { ...incident, events: [...incident.events, { at, type, teamId, text }] });
 
-/** The unit of this person that took the incident. */
-function myAcceptedUnit(incident: LiveIncident, { me, units }: ActionContext) {
-  const accepted = incident.dispatches.filter((d) => d.acceptedAt).map((d) => units.find((u) => u.id === d.unitId)).filter((u) => u !== undefined);
+/** The team of this person that took the incident. */
+function myAcceptedTeam(incident: LiveIncident, { me, teams }: ActionContext) {
+  const accepted = incident.dispatches.filter((d) => d.acceptedAt).map((d) => teams.find((u) => u.id === d.teamId)).filter((u) => u !== undefined);
   return accepted.find((u) => u.members?.some((m) => m.phone === me?.phone)) ?? accepted[0];
 }
 
-function take(state: LiveState, at: string, incidentId: number, unitId: number, manual: boolean, context: ActionContext) {
-  const name = context.units.find((u) => u.id === unitId)?.name ?? 'Eenheid';
+function take(state: LiveState, at: string, incidentId: number, teamId: number, manual: boolean, context: ActionContext) {
+  const name = context.teams.find((u) => u.id === teamId)?.name ?? 'Eenheid';
   const accepted = changeIncident(state, incidentId, (i) => {
-    const dispatches: Dispatch[] = i.dispatches.some((d) => d.unitId === unitId)
-      ? i.dispatches.map((d) => (d.unitId === unitId ? { ...d, acceptedAt: at, declinedAt: null } : d))
-      : [...i.dispatches, { unitId, at, reason: manual ? 'handmatig' : 'alle', distanceKm: null, declinedAt: null, acceptedAt: at }];
+    const dispatches: Dispatch[] = i.dispatches.some((d) => d.teamId === teamId)
+      ? i.dispatches.map((d) => (d.teamId === teamId ? { ...d, acceptedAt: at, declinedAt: null } : d))
+      : [...i.dispatches, { teamId, at, reason: manual ? 'handmatig' : 'alle', distanceKm: null, declinedAt: null, acceptedAt: at }];
     const first = i.status === 'verstuurd'
-      ? { status: 'geaccepteerd' as const, unitId, acceptedBy: manual ? null : context.me, acceptedAt: at, escalatesAt: null }
+      ? { status: 'geaccepteerd' as const, teamId, acceptedBy: manual ? null : context.me, acceptedAt: at, escalatesAt: null }
       : {};
-    return logged({ ...i, dispatches, ...first }, at, manual ? 'toegewezen' : 'geaccepteerd', manual ? `Toegewezen aan ${name}` : `Geaccepteerd door ${name} (${context.me?.name})`, unitId);
+    return logged({ ...i, dispatches, ...first }, at, manual ? 'toegewezen' : 'geaccepteerd', manual ? `Toegewezen aan ${name}` : `Geaccepteerd door ${name} (${context.me?.name})`, teamId);
   });
-  return changeUnit(accepted, unitId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId }));
+  return changeTeam(accepted, teamId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId }));
 }
 
 /** The state as this phone should show it after the action, the same way the server will do it. An unknown incident or request changes nothing. */
@@ -89,69 +89,69 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
   switch (action.type) {
     case 'selfStart': {
       const { body, tempId, post, offPost, postId } = action;
-      const name = context.units.find((u) => u.id === body.unitId)?.name ?? 'Eenheid';
+      const name = context.teams.find((u) => u.id === body.teamId)?.name ?? 'Eenheid';
       const incident: LiveIncident = {
         id: tempId, isTest: state.testMode, selfStarted: true, offPost, accuracyM: null, postId, post, reportedBy: context.me?.phone ?? '', status: 'ter_plaatse', stage: 'dichtstbij', aed: body.responsive === 'nee',
         what: body.what, persons: body.persons, responsive: body.responsive, note: body.note, reportedAt: at, sentAt: at, escalatesAt: null,
-        unitId: body.unitId, acceptedBy: context.me, acceptedAt: at, onSiteAt: at, closedAt: null, outcome: null,
-        dispatches: [{ unitId: body.unitId, at, reason: 'handmatig', distanceKm: 0, declinedAt: null, acceptedAt: at }],
-        events: [{ at, type: 'gemeld', unitId: body.unitId, text: `Zelf gestart door ${name} · ${post.name}` }],
+        teamId: body.teamId, acceptedBy: context.me, acceptedAt: at, onSiteAt: at, closedAt: null, outcome: null,
+        dispatches: [{ teamId: body.teamId, at, reason: 'handmatig', distanceKm: 0, declinedAt: null, acceptedAt: at }],
+        events: [{ at, type: 'gemeld', teamId: body.teamId, text: `Zelf gestart door ${name} · ${post.name}` }],
       };
-      return changeUnit({ ...state, incidents: [incident, ...state.incidents] }, body.unitId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId: tempId }));
+      return changeTeam({ ...state, incidents: [incident, ...state.incidents] }, body.teamId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId: tempId }));
     }
-    case 'accept': return take(state, at, action.incidentId, action.unitId, false, context);
-    case 'assign': return take(state, at, action.incidentId, action.unitId, true, context);
+    case 'accept': return take(state, at, action.incidentId, action.teamId, false, context);
+    case 'assign': return take(state, at, action.incidentId, action.teamId, true, context);
     case 'decline': {
-      const name = context.units.find((u) => u.id === action.unitId)?.name ?? 'Eenheid';
+      const name = context.teams.find((u) => u.id === action.teamId)?.name ?? 'Eenheid';
       return changeIncident(state, action.incidentId, (i) => {
-        const dispatches: Dispatch[] = i.dispatches.some((d) => d.unitId === action.unitId)
-          ? i.dispatches.map((d) => (d.unitId === action.unitId ? { ...d, declinedAt: at } : d))
-          : [...i.dispatches, { unitId: action.unitId, at, reason: 'alle', distanceKm: null, declinedAt: at, acceptedAt: null }];
-        return logged({ ...i, dispatches }, at, 'geweigerd', `${name}: kan niet`, action.unitId);
+        const dispatches: Dispatch[] = i.dispatches.some((d) => d.teamId === action.teamId)
+          ? i.dispatches.map((d) => (d.teamId === action.teamId ? { ...d, declinedAt: at } : d))
+          : [...i.dispatches, { teamId: action.teamId, at, reason: 'alle', distanceKm: null, declinedAt: at, acceptedAt: null }];
+        return logged({ ...i, dispatches }, at, 'geweigerd', `${name}: kan niet`, action.teamId);
       });
     }
     case 'onSite': return changeIncident(state, action.incidentId, (i) => {
-      const unit = myAcceptedUnit(i, context);
-      return logged({ ...i, status: 'ter_plaatse', onSiteAt: i.onSiteAt ?? at }, at, 'ter_plaatse', `${unit?.name ?? 'Eenheid'} is ter plaatse`, unit?.id ?? null);
+      const team = myAcceptedTeam(i, context);
+      return logged({ ...i, status: 'ter_plaatse', onSiteAt: i.onSiteAt ?? at }, at, 'ter_plaatse', `${team?.name ?? 'Eenheid'} is ter plaatse`, team?.id ?? null);
     });
     case 'close': {
       const incident = state.incidents.find((i) => i.id === action.incidentId);
       if (!incident) return state;
-      const unit = myAcceptedUnit(incident, context);
+      const team = myAcceptedTeam(incident, context);
       const { outcome, pause, stayHere } = action.body;
       const closed = changeIncident(state, action.incidentId, (i) => logged(
         { ...i, status: 'afgerond', closedAt: at, outcome, onSiteAt: i.onSiteAt ?? at }, at, 'afgerond',
-        `Afgerond door ${unit?.name ?? 'Eenheid'}${pause ? ', daarna pauze' : ''}`, unit?.id ?? null,
+        `Afgerond door ${team?.name ?? 'Eenheid'}${pause ? ', daarna pauze' : ''}`, team?.id ?? null,
       ));
-      if (!unit) return closed;
-      const stay = stayHere && unit.kind === 'fixed' && incident.postId !== unit.postId ? incident.postId : null;
-      return changeUnit(closed, unit.id, (u) => ({ ...u, incidentId: null, stayPostId: stay, availability: pause ? 'unavailable' : u.availability }));
+      if (!team) return closed;
+      const stay = stayHere && team.kind === 'fixed' && incident.postId !== team.postId ? incident.postId : null;
+      return changeTeam(closed, team.id, (u) => ({ ...u, incidentId: null, stayPostId: stay, availability: pause ? 'unavailable' : u.availability }));
     }
     case 'withdraw': {
       const withdrawn = changeIncident(state, action.incidentId, (i) => logged(
         { ...i, status: 'ingetrokken', closedAt: at, escalatesAt: null }, at, 'ingetrokken', `Ingetrokken door ${context.me?.name}`,
       ));
-      return { ...withdrawn, units: withdrawn.units.map((u) => (u.incidentId === action.incidentId ? { ...u, incidentId: null } : u)) };
+      return { ...withdrawn, teams: withdrawn.teams.map((u) => (u.incidentId === action.incidentId ? { ...u, incidentId: null } : u)) };
     }
     case 'update': return changeIncident(state, action.incidentId, (i) => ({ ...i, ...action.details, aed: i.aed || action.details.responsive === 'nee' }));
     case 'availability': {
-      const { availability, unitId } = action;
-      const changed = changeUnit(state, unitId, (u) => (availability === 'off_duty' ? { ...u, availability, stayPostId: null, position: null, closesAt: null } : { ...u, availability }));
-      const unit = context.units.find((u) => u.id === unitId);
-      if (unit?.kind !== 'fixed' || unit.postId === null || availability === 'unavailable') return changed;
-      // A fixed unit on duty and its own EHBO post open are the same thing, as long as no other shift is still there.
-      const othersOnDuty = context.units.some((u) => u.id !== unitId && u.kind === 'fixed' && u.postId === unit.postId
-        && (changed.units.find((l) => l.id === u.id)?.availability ?? 'off_duty') !== 'off_duty');
-      return availability === 'available' || !othersOnDuty ? setPostOpen(changed, unit.postId, availability === 'available') : changed;
+      const { availability, teamId } = action;
+      const changed = changeTeam(state, teamId, (u) => (availability === 'off_duty' ? { ...u, availability, stayPostId: null, position: null, closesAt: null } : { ...u, availability }));
+      const team = context.teams.find((u) => u.id === teamId);
+      if (team?.kind !== 'fixed' || team.postId === null || availability === 'unavailable') return changed;
+      // A fixed team on duty and its own EHBO post open are the same thing, as long as no other shift is still there.
+      const othersOnDuty = context.teams.some((u) => u.id !== teamId && u.kind === 'fixed' && u.postId === team.postId
+        && (changed.teams.find((l) => l.id === u.id)?.availability ?? 'off_duty') !== 'off_duty');
+      return availability === 'available' || !othersOnDuty ? setPostOpen(changed, team.postId, availability === 'available') : changed;
     }
     case 'keepPost': return { ...state, posts: state.posts.map((p) => (p.id === action.postId ? { ...p, isOpen: true, closesAt: null, autoClosedAt: null } : p)) };
-    case 'keepUnit': return changeUnit(state, action.unitId, (u) => ({ ...u, closesAt: null }));
+    case 'keepTeam': return changeTeam(state, action.teamId, (u) => ({ ...u, closesAt: null }));
     case 'postOpen': {
-      const fixed = context.units.filter((u) => u.kind === 'fixed' && u.postId === action.postId);
+      const fixed = context.teams.filter((u) => u.kind === 'fixed' && u.postId === action.postId);
       // Opening: your own team, when you're on one; the other shift stays as it is.
       const mine = fixed.filter((u) => u.members?.some((m) => m.phone === context.me?.phone));
       return (action.open && mine.length ? mine : fixed).reduce(
-        (s, u) => (s.units.find((l) => l.id === u.id)?.availability === 'unavailable' ? s : changeUnit(s, u.id, (l) => ({ ...l, availability: action.open ? 'available' : 'off_duty' }))),
+        (s, u) => (s.teams.find((l) => l.id === u.id)?.availability === 'unavailable' ? s : changeTeam(s, u.id, (l) => ({ ...l, availability: action.open ? 'available' : 'off_duty' }))),
         setPostOpen(state, action.postId, action.open),
       );
     }
@@ -173,17 +173,17 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
 export function actionRequest(action: LiveAction): { method: 'POST' | 'PUT'; path: string; body?: object } {
   switch (action.type) {
     case 'selfStart': return { method: 'POST', path: '/api/incidents/self', body: action.body };
-    case 'accept': return { method: 'POST', path: `/api/incidents/${action.incidentId}/accept`, body: { unitId: action.unitId } };
-    case 'decline': return { method: 'POST', path: `/api/incidents/${action.incidentId}/decline`, body: { unitId: action.unitId } };
-    case 'assign': return { method: 'POST', path: `/api/incidents/${action.incidentId}/assign`, body: { unitId: action.unitId } };
+    case 'accept': return { method: 'POST', path: `/api/incidents/${action.incidentId}/accept`, body: { teamId: action.teamId } };
+    case 'decline': return { method: 'POST', path: `/api/incidents/${action.incidentId}/decline`, body: { teamId: action.teamId } };
+    case 'assign': return { method: 'POST', path: `/api/incidents/${action.incidentId}/assign`, body: { teamId: action.teamId } };
     case 'onSite': return { method: 'POST', path: `/api/incidents/${action.incidentId}/on-site` };
     case 'withdraw': return { method: 'POST', path: `/api/incidents/${action.incidentId}/withdraw` };
     case 'close': return { method: 'POST', path: `/api/incidents/${action.incidentId}/close`, body: action.body };
     case 'update': return { method: 'PUT', path: `/api/incidents/${action.incidentId}`, body: action.details };
-    case 'availability': return { method: 'PUT', path: `/api/units/${action.unitId}/availability`, body: { availability: action.availability } };
+    case 'availability': return { method: 'PUT', path: `/api/teams/${action.teamId}/availability`, body: { availability: action.availability } };
     case 'postOpen': return { method: 'PUT', path: `/api/posts/${action.postId}/open`, body: { open: action.open } };
     case 'keepPost': return { method: 'POST', path: `/api/posts/${action.postId}/keep-open` };
-    case 'keepUnit': return { method: 'POST', path: `/api/units/${action.unitId}/keep-on-duty` };
+    case 'keepTeam': return { method: 'POST', path: `/api/teams/${action.teamId}/keep-on-duty` };
     case 'requestNew': return {
       method: 'POST', path: '/api/requests',
       body: { postId: action.postId, kind: action.kind, detail: null, clientId: action.clientId } satisfies NewRequest,
