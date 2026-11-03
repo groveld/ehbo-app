@@ -468,7 +468,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (!post) throw body.postId === null ? httpError(409, 'Er zijn nog geen posten met een plek') : httpError(404, 'Post niet gevonden');
     if (body.postId !== null) {
       if (!atPost(me, post.id) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Je kunt alleen een verzoek doen vanaf je eigen post');
-      if (!post.isOpen && !reopenAutoClosed(post.id)) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
+      if (!post.isOpen && !reopenAutoClosed(post.id)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
     }
     const offPost = place !== null && !place.atPost;
 
@@ -773,7 +773,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (!post) throw httpError(404, 'Post niet gevonden');
     const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
     const ownEhboPost = post.isEhbo && units().some((u) => u.kind === 'vast' && u.postId === postId && memberOf(me, u.id));
-    if (!lead && !ownEhboPost && !me.isAdmin) throw httpError(403, 'Alleen de postverantwoordelijke kan de post open of dicht zetten');
+    if (!lead && !ownEhboPost && !me.isAdmin) throw httpError(403, 'Alleen de locatieverantwoordelijke kan de locatie open of dicht zetten');
     const fixed = units().filter((u) => u.kind === 'vast' && u.postId === postId);
     // Openen: je eigen eenheid, als je daarbij hoort; een andere dienst op dezelfde post blijft zoals hij is.
     // On a location with more than EHBO (#83), someone else opening or closing it doesn't make the team available or take it off duty.
@@ -890,7 +890,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const post = posts().get(postId);
     if (!post) throw httpError(404, 'Post niet gevonden');
     const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
-    if (!lead && !isLead(me)) throw httpError(403, 'Alleen de postverantwoordelijke of de coördinator kan de post open houden');
+    if (!lead && !isLead(me)) throw httpError(403, 'Alleen de locatieverantwoordelijke of de coördinator kan de locatie open houden');
     const until = new Date(now().getTime() + KEEP_OPEN_MIN * 60_000).toISOString();
     run('UPDATE posts SET is_open = 1, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', until, postId);
     changed();

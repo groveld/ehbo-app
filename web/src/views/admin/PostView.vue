@@ -104,9 +104,9 @@ async function remove() {
 </script>
 
 <template>
-  <AdminPage :title="isNew ? 'Nieuwe post' : form.name || 'Post'" eyebrow="Posten" :back="{ name: 'beheer-posten' }">
+  <AdminPage :title="isNew ? 'Nieuwe locatie' : form.name || 'Locatie'" eyebrow="Locaties" :back="{ name: 'beheer-posten' }">
     <template #default="{ state }">
-      <p v-if="!isNew && !post" class="note warn">Deze post bestaat niet (meer).</p>
+      <p v-if="!isNew && !post" class="note warn">Deze locatie bestaat niet (meer).</p>
       <template v-else>
         <div class="form-field">
           <span class="section-label">Functies</span>

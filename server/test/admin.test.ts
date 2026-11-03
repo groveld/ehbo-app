@@ -341,9 +341,9 @@ test('Beheer › Mensen: everyone with where they are, what is missing, and the 
   assert.equal(res.statusCode, 200);
   const overview = res.json() as PeopleOverview;
   const wim = overview.people.find((p) => p.phone === DEMO.postLead)!;
-  assert.deepEqual(wim.links.map((l) => l.label), ['Waterpost 3 · brug · postverantwoordelijke', 'Kruising 4 · posthouder']);
+  assert.deepEqual(wim.links.map((l) => l.label), ['Waterpost 3 · brug · locatieverantwoordelijke', 'Kruising 4 · posthouder']);
   assert.ok(overview.people.find((p) => p.phone === DEMO.admin)!.links.some((l) => l.kind === 'admin'));
-  assert.ok(overview.gaps.some((g) => g.label === 'Kruising 4: nog geen postverantwoordelijke'));
+  assert.ok(overview.gaps.some((g) => g.label === 'Kruising 4: nog geen locatieverantwoordelijke'));
   assert.ok(!overview.gaps.some((g) => g.label.startsWith('EHBO-post 1')), 'run by its fixed team');
   const names = overview.people.map((p) => p.name).filter(Boolean);
   assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'nl')), 'by name');

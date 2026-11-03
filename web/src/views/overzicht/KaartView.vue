@@ -109,7 +109,7 @@ const counters = computed(() => {
     return state?.availability === 'vrij' && state.incidentId === null;
   });
   return [
-    { label: 'Posten', value: `${pkg.posts.length - closedIds.value.length}/${pkg.posts.length}`, full: 'Posten open' },
+    { label: 'Locaties', value: `${pkg.posts.length - closedIds.value.length}/${pkg.posts.length}`, full: 'Locaties open' },
     { label: 'EHBO', value: `${free.length}/${pkg.units.length}`, full: 'EHBO beschikbaar' },
     { label: 'Oproepen', value: String(live.openIncidents.length), full: 'Open oproepen' },
     { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'aangevraagd').length), full: 'Aanvragen nog niet opgepakt' },
@@ -148,7 +148,7 @@ const banner = computed(() => {
       <div v-if="active && store.pkg.posts.length" class="find">
         <label class="search">
           <Icon name="search" :size="18" />
-          <input v-model="query" class="input" type="search" placeholder="Zoek post of km" aria-label="Zoek een post">
+          <input v-model="query" class="input" type="search" placeholder="Zoek locatie of km" aria-label="Zoek een locatie">
         </label>
         <select v-model="filter" class="input type" aria-label="Soort post">
           <option :value="null">Alle</option>
@@ -170,7 +170,7 @@ const banner = computed(() => {
         </section>
         <template v-if="filter !== 'teams'">
           <section v-if="posts.length" class="stack gap-8">
-            <h2 class="section-title">Posten</h2>
+            <h2 class="section-title">Locaties</h2>
             <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="latePosts.includes(p.id)" :quiet-minutes="quietPost(p.id)" /></div>
           </section>
           <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen posten ingevoerd.</p>

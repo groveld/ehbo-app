@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 3.1 · Post openen en 3.2 · Post open: wat heb je nodig? Het startscherm van een post.
+// 3.1 · Locatie openen en 3.2 · Post open: wat heb je nodig? Het startscherm van een post.
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { POST_CONTACT_ROLE_LABEL, REQUEST_KINDS, formatKm, formatPhone, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
@@ -79,27 +79,27 @@ async function setOpen(value: boolean) {
           <span v-if="open" class="small">{{ kmLabel(post) }}<template v-if="post.km !== null"> · </template><strong class="open">post open</strong></span>
           <span v-else class="small">{{ planned }}</span>
         </div>
-        <button v-if="open && canOpen" class="close-post" :disabled="busy" @click="setOpen(false)"><Icon name="close" :size="14" />Post sluiten</button>
+        <button v-if="open && canOpen" class="close-post" :disabled="busy" @click="setOpen(false)"><Icon name="close" :size="14" />Locatie sluiten</button>
       </header>
 
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
 
       <div v-if="open && closing" class="note warn closing">
-        <span class="grow">Deze post sluit om <strong>{{ clock(closing) }}</strong>. De geplande tijd is voorbij.</span>
+        <span class="grow">Deze locatie sluit om <strong>{{ clock(closing) }}</strong>. De geplande tijd is voorbij.</span>
         <button v-if="canOpen" class="btn keep" :disabled="busy" @click="run(() => live.keepPost(post!.id))">Open houden</button>
       </div>
 
       <!-- 3.1 · Post is dicht -->
       <template v-if="!open">
         <div class="card closed">
-          <span class="closed-chip"><span class="dot" />POST IS DICHT</span>
+          <span class="closed-chip"><span class="dot" />LOCATIE IS DICHT</span>
           <p v-if="autoClosed" class="small center">Automatisch gesloten om {{ clock(autoClosed) }}: de geplande tijd was voorbij.</p>
-          <p v-if="canOpen" class="lead center">Ben je op je plek en is alles klaar? Zet de post open. Dan ziet de evenementcoördinator dat je er bent en werkt de hulpknop. Je kunt de post zo vaak openen en sluiten als nodig.</p>
-          <p v-else class="lead center">De postverantwoordelijke zet de post open. Daarna werkt de hulpknop ook voor jou.</p>
-          <button v-if="canOpen" class="btn go" :disabled="busy" @click="setOpen(true)">Post openen</button>
+          <p v-if="canOpen" class="lead center">Ben je op je plek en is alles klaar? Zet de locatie open. Dan ziet de evenementcoördinator dat je er bent en werkt de hulpknop. Je kunt de locatie zo vaak openen en sluiten als nodig.</p>
+          <p v-else class="lead center">De locatieverantwoordelijke zet de locatie open. Daarna werkt de hulpknop ook voor jou.</p>
+          <button v-if="canOpen" class="btn go" :disabled="busy" @click="setOpen(true)">Locatie openen</button>
         </div>
 
-        <span class="section-label people-label">Op deze post</span>
+        <span class="section-label people-label">Op deze locatie</span>
         <div class="list">
           <div v-for="c in post.contacts ?? []" :key="c.phone" class="list-row">
             <span class="main">

@@ -39,7 +39,7 @@ const isOpen = computed(() => (post.value ? live.postOpen(post.value.id, post.va
 const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
 /** Zoals op de kaart van het overzicht: open oproepen rood, dichte posten grijs. */
 const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
-/** Zoals de server: de postverantwoordelijke van deze post, of een beheerder. */
+/** Zoals de server: de locatieverantwoordelijke van deze post, of een beheerder. */
 const canToggle = computed(() => session.me?.isAdmin
   || session.me?.assignments.some((a) => a.kind === 'post' && a.postId === post.value?.id && a.role === 'verantwoordelijke'));
 
@@ -72,7 +72,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <RouterLink v-if="session.me?.isAdmin && post" :to="{ name: 'beheer-post', params: { id: post.id } }" class="edit">Bewerken</RouterLink>
     </header>
 
-    <NotOnPhone v-if="!post || !store.pkg">Deze post bestaat niet (meer).</NotOnPhone>
+    <NotOnPhone v-if="!post || !store.pkg">Deze locatie bestaat niet (meer).</NotOnPhone>
     <template v-else>
       <div class="title">
         <PostBadge :type="type" :size="56" />
@@ -107,9 +107,9 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <!-- Open of dicht, live. Een beheerder kan elke post open en dicht zetten, voor wie minder technisch is. -->
       <div class="card open-row">
         <span class="dot" :class="{ on: isOpen }" />
-        <span class="grow"><strong>{{ isOpen ? 'Post is open' : 'Post is dicht' }}</strong></span>
+        <span class="grow"><strong>{{ isOpen ? 'Locatie is open' : 'Locatie is dicht' }}</strong></span>
         <button
-          v-if="canToggle" class="switch" role="switch" :aria-checked="isOpen" aria-label="Post open"
+          v-if="canToggle" class="switch" role="switch" :aria-checked="isOpen" aria-label="Locatie open"
           :disabled="toggle.busy.value" @click="setOpen(!isOpen)"
         />
       </div>

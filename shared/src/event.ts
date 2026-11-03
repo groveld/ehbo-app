@@ -6,7 +6,7 @@ export type UnitKind = 'vast' | 'mobiel';
 export type UnitMobility = 'te_voet' | 'fiets' | 'auto' | 'anders';
 
 export const POST_CONTACT_ROLE_LABEL: Record<PostContactRole, string> = {
-  verantwoordelijke: 'Postverantwoordelijke',
+  verantwoordelijke: 'Locatieverantwoordelijke',
   lid: 'Posthouder',
   reserve: 'Reserve',
 };
@@ -160,7 +160,7 @@ export interface Assignment {
   color: string;
   postId?: number;
   unitId?: number;
-  /** Alleen bij posten: de postverantwoordelijke zet de post open en dicht. */
+  /** Alleen bij posten: de locatieverantwoordelijke zet de post open en dicht. */
   role?: PostContactRole;
 }
 

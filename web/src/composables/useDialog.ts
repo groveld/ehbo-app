@@ -43,9 +43,9 @@ export const messageDialog = (options: Omit<DialogOptions, 'cancel'>) => show(op
 /** Closing a post, from the post screen and the post details. People hold back when they don't know it can be undone. */
 export const confirmClosePost = (name: string) => confirmDialog({
   title: `${name} sluiten?`,
-  text: 'Zolang de post dicht is, kan hij geen verzoeken doen en staat hij grijs op de kaart.',
-  reassure: 'Je kunt de post daarna altijd weer openen met de knop Post openen.',
-  confirm: 'Post sluiten',
+  text: 'Zolang de locatie dicht is, kan ze geen verzoeken doen.',
+  reassure: 'Je kunt de locatie daarna altijd weer openen met de knop Locatie openen.',
+  confirm: 'Locatie sluiten',
   cancel: 'Open laten',
   tone: 'danger',
 });

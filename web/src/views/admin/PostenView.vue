@@ -9,7 +9,7 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
 </script>
 
 <template>
-  <AdminPage title="Posten" eyebrow="Beheer" :back="{ name: 'beheer' }">
+  <AdminPage title="Locaties" eyebrow="Beheer" :back="{ name: 'beheer' }">
     <template #default="{ state }">
       <div v-if="state.posts.length" class="list">
         <RouterLink v-for="p in state.posts" :key="p.id" :to="{ name: 'beheer-post', params: { id: p.id } }" class="list-row">
@@ -25,7 +25,7 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
           <Icon name="forward" :size="18" />
         </RouterLink>
       </div>
-      <p v-else class="note">Nog geen posten. Voeg ze toe ter plaatse, dan legt de app meteen de GPS-positie vast.</p>
+      <p v-else class="note">Nog geen locaties. Voeg ze toe ter plaatse, dan legt de app meteen de GPS-positie vast.</p>
       <RouterLink :to="{ name: 'beheer-post', params: { id: 'nieuw' } }" class="add-link">+ Post toevoegen</RouterLink>
     </template>
   </AdminPage>

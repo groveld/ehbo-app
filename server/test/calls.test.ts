@@ -137,7 +137,7 @@ afterEach(async () => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('post open en dicht: alleen de postverantwoordelijke; een dichte post kan geen verzoek doen', async () => {
+test('post open en dicht: alleen de locatieverantwoordelijke; een dichte post kan geen verzoek doen', async () => {
   assert.equal((await call(DEMO.postLead, 'POST', '/api/incidents', request())).statusCode, 409, 'post is nog dicht');
   const traffic = idOf('posts', 'Kruising 4');
   assert.equal((await call(DEMO.postMember, 'PUT', `/api/posts/${traffic}/open`, { open: true })).statusCode, 403, 'lid, geen verantwoordelijke');

@@ -42,8 +42,8 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
 
   const post = await staffPhone(browser, PHONE.postLead);
   await expect(post.getByRole('heading', { name: 'Waterpost 3 · brug' })).toBeVisible();
-  await expect(post.getByText('POST IS DICHT')).toBeVisible();
-  await post.getByRole('button', { name: 'Post openen' }).click();
+  await expect(post.getByText('LOCATIE IS DICHT')).toBeVisible();
+  await post.getByRole('button', { name: 'Locatie openen' }).click();
   await expect(post.getByText('Wat heb je nodig?')).toBeVisible();
 
   await post.getByRole('link', { name: /EHBO/ }).first().click();
@@ -94,7 +94,7 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
 test('zonder bereik: bellen, en de melding gaat vanzelf weg zodra er weer bereik is', async ({ browser }) => {
   const post = await staffPhone(browser, PHONE.postLead);
   // Na de vorige test staat de post nog open; anders openen.
-  const open = post.getByRole('button', { name: 'Post openen' });
+  const open = post.getByRole('button', { name: 'Locatie openen' });
   if (await open.isVisible()) await open.click();
   await post.getByRole('link', { name: /EHBO/ }).first().click();
 
@@ -113,15 +113,15 @@ test('zonder bereik: bellen, en de melding gaat vanzelf weg zodra er weer bereik
   await post.getByRole('button', { name: 'Melding intrekken' }).click();
   await post.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
   await expect(post.getByText('Wat heb je nodig?')).toBeVisible();
-  await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await post.getByRole('button', { name: 'Locatie sluiten' }).click();
   await expect(post.getByRole('dialog').getByText(/altijd weer openen/)).toBeVisible();
-  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
-  await expect(post.getByText('POST IS DICHT')).toBeVisible();
+  await post.getByRole('dialog').getByRole('button', { name: 'Locatie sluiten' }).click();
+  await expect(post.getByText('LOCATIE IS DICHT')).toBeVisible();
 });
 
 test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', async ({ browser }) => {
   const post = await staffPhone(browser, PHONE.postLead);
-  await post.getByRole('button', { name: 'Post openen' }).click();
+  await post.getByRole('button', { name: 'Locatie openen' }).click();
   await post.getByRole('button', { name: /^Water/ }).click();
   await expect(post.getByRole('heading', { name: 'Water aangevraagd' })).toBeVisible();
   await expect(post.getByText(/Plek 1 in de wachtrij/)).toBeVisible();
@@ -154,10 +154,10 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await post.getByRole('button', { name: 'Terug', exact: true }).click();
   await expect(post.getByRole('heading', { name: 'Eerder vandaag' })).toBeVisible();
   await post.getByRole('link', { name: 'Terug' }).click();
-  await post.getByRole('button', { name: 'Post sluiten' }).click();
+  await post.getByRole('button', { name: 'Locatie sluiten' }).click();
   await expect(post.getByRole('dialog').getByText(/altijd weer openen/)).toBeVisible();
-  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
-  await expect(post.getByText('POST IS DICHT')).toBeVisible();
+  await post.getByRole('dialog').getByRole('button', { name: 'Locatie sluiten' }).click();
+  await expect(post.getByText('LOCATIE IS DICHT')).toBeVisible();
 });
 
 test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later door', async ({ browser }) => {
@@ -165,7 +165,7 @@ test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later
   const post = await staffPhone(browser, PHONE.postLead);
   await ehbo.getByRole('button', { name: 'Beschikbaar', exact: true }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
-  await post.getByRole('button', { name: 'Post openen' }).click();
+  await post.getByRole('button', { name: 'Locatie openen' }).click();
   await post.getByRole('link', { name: /EHBO/ }).first().click();
   await post.getByRole('button', { name: 'EHBO-verzoek versturen' }).click();
   await ehbo.getByRole('button', { name: 'Accepteren & navigeren' }).click();
@@ -209,14 +209,14 @@ test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later
   await expect(coordinator.locator('.incident').filter({ hasText: 'afgerond' }).first()).toBeVisible();
 
   await post.getByRole('button', { name: 'Terug naar mijn post' }).click();
-  await post.getByRole('button', { name: 'Post sluiten' }).click();
-  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
-  await expect(post.getByText('POST IS DICHT')).toBeVisible();
+  await post.getByRole('button', { name: 'Locatie sluiten' }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Locatie sluiten' }).click();
+  await expect(post.getByText('LOCATIE IS DICHT')).toBeVisible();
 });
 
 test('closing: the warning on the post, keep open without signal, and everything at once', async ({ browser }) => {
   const post = await staffPhone(browser, PHONE.postLead);
-  const open = post.getByRole('button', { name: 'Post openen' });
+  const open = post.getByRole('button', { name: 'Locatie openen' });
   // Wait for the screen: open or closed, depending on the test before.
   await expect(open.or(post.getByText('Wat heb je nodig?'))).toBeVisible();
   if (await open.isVisible()) await open.click();
@@ -233,9 +233,9 @@ test('closing: the warning on the post, keep open without signal, and everything
     localStorage.setItem('ehbo.live', JSON.stringify(live));
   });
   await post.reload();
-  await expect(post.getByText(/Deze post sluit om/)).toBeVisible();
+  await expect(post.getByText(/Deze locatie sluit om/)).toBeVisible();
   await post.getByRole('button', { name: 'Open houden' }).click();
-  await expect(post.getByText(/Deze post sluit om/)).toBeHidden();
+  await expect(post.getByText(/Deze locatie sluit om/)).toBeHidden();
   await post.context().setOffline(false);
   await expect(post.locator('.offline-pill')).toBeHidden({ timeout: 20_000 });
 
@@ -247,10 +247,10 @@ test('closing: the warning on the post, keep open without signal, and everything
   // Nobody has logged in for Team 1, so it stays closed with its post, and says so.
   await expect(coordinator.getByRole('dialog')).toContainText('Niemand aangemeld: EHBO-post 1 · start, Team 1');
   await coordinator.getByRole('dialog').getByRole('button', { name: 'Begrepen' }).click();
-  await expect(coordinator.getByText('Posten open').locator('..')).toContainText('/');
+  await expect(coordinator.getByText('Locaties open').locator('..')).toContainText('/');
   await coordinator.getByRole('button', { name: 'Dag sluiten' }).click();
   await coordinator.getByRole('dialog').getByRole('button', { name: 'Dag sluiten' }).click();
-  await expect(post.getByText('POST IS DICHT')).toBeVisible({ timeout: 10_000 });
+  await expect(post.getByText('LOCATIE IS DICHT')).toBeVisible({ timeout: 10_000 });
 });
 
 test('rapport: cijfers, CSV, afdrukpagina en de testmodus', async ({ browser }) => {
@@ -290,12 +290,12 @@ test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ 
 
   await admin.goto('/overzicht/kaart');
   await admin.getByRole('link', { name: /Kruising 4/ }).first().click();
-  await expect(admin.getByText('Post is dicht')).toBeVisible();
-  await admin.getByRole('switch', { name: 'Post open' }).click();
-  await expect(admin.getByText('Post is open')).toBeVisible();
-  await admin.getByRole('switch', { name: 'Post open' }).click();
-  await admin.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
-  await expect(admin.getByText('Post is dicht')).toBeVisible();
+  await expect(admin.getByText('Locatie is dicht')).toBeVisible();
+  await admin.getByRole('switch', { name: 'Locatie open' }).click();
+  await expect(admin.getByText('Locatie is open')).toBeVisible();
+  await admin.getByRole('switch', { name: 'Locatie open' }).click();
+  await admin.getByRole('dialog').getByRole('button', { name: 'Locatie sluiten' }).click();
+  await expect(admin.getByText('Locatie is dicht')).toBeVisible();
 
   // Terug naar de standaardtekst, zodat een volgende ronde hetzelfde begint.
   await admin.goto('/beheer/info');
@@ -334,7 +334,7 @@ test('geen vorige pagina om naar te vegen; terug in de app gaat één stap omhoo
   const admin = await staffPhone(browser, PHONE.admin);
   await admin.getByRole('link', { name: 'Menu' }).click();
   await admin.getByRole('link', { name: 'Beheer' }).click();
-  await admin.getByRole('link', { name: /Posten/ }).first().click();
+  await admin.getByRole('link', { name: /Locaties/ }).first().click();
   await admin.locator('a[href^="/beheer/posten/"]').first().click();
   await expect(admin).toHaveURL(/\/beheer\/posten\/\w+$/);
   for (const path of [/\/beheer\/posten$/, /\/beheer$/, /\/menu$/]) {
@@ -402,7 +402,7 @@ test('a new post in admin: open phones get it by themselves, and a call works be
 
   const post = await staffPhone(browser, '0600000011');
   await expect(post.getByRole('heading', { name: NEW_POST })).toBeVisible();
-  await post.getByRole('button', { name: 'Post openen' }).click();
+  await post.getByRole('button', { name: 'Locatie openen' }).click();
   await post.getByRole('link', { name: /EHBO/ }).first().click();
   await post.getByRole('button', { name: 'Onwel / flauw' }).click();
   await post.getByRole('button', { name: '1', exact: true }).click();
@@ -452,7 +452,7 @@ test('choosing a route: what is not on it steps back, and choosing it again undo
 test('overview map: teams in the list for all staff, counters only for the coordinator', async ({ browser }) => {
   const coordinator = await staffPhone(browser, PHONE.coordinator);
   await coordinator.getByRole('link', { name: 'Kaart' }).click();
-  await expect(coordinator.getByLabel(/^Posten open:/)).toBeVisible();
+  await expect(coordinator.getByLabel(/^Locaties open:/)).toBeVisible();
   // Closed posts keep their full colour.
   await expect(coordinator.locator('.post-marker').first()).toHaveCSS('opacity', '1');
   await expect(coordinator.getByLabel(/^EHBO beschikbaar:/)).toBeVisible();
@@ -474,7 +474,7 @@ test('overview map: teams in the list for all staff, counters only for the coord
   await post.getByRole('link', { name: 'Kaart' }).click();
   await expect(post.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
   await expect(post.getByLabel('Soort post').getByRole('option', { name: 'Vraagt aandacht' })).toHaveCount(0);
-  await expect(post.getByLabel(/^Posten open:/)).toHaveCount(0);
+  await expect(post.getByLabel(/^Locaties open:/)).toHaveCount(0);
 });
 
 test('EHBO starts an incident itself, also without signal, and goes straight to closing', async ({ browser }) => {
@@ -508,7 +508,7 @@ test('status bar: the call is one tap away on every page, for the post and the t
   await expect(ehbo.getByRole('heading', { name: /Uit dienst|Beschikbaar/ })).toBeVisible();
   await ehbo.getByRole('button', { name: 'Beschikbaar', exact: true }).click();
   const post = await staffPhone(browser, PHONE.postLead);
-  const open = post.getByRole('button', { name: 'Post openen' });
+  const open = post.getByRole('button', { name: 'Locatie openen' });
   await expect(open.or(post.getByText('Wat heb je nodig?'))).toBeVisible();
   if (await open.isVisible()) await open.click();
 
@@ -541,9 +541,9 @@ test('status bar: the call is one tap away on every page, for the post and the t
 
   await post.getByRole('button', { name: /Melding intrekken/ }).click();
   await post.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
-  await post.getByRole('button', { name: 'Post sluiten' }).click();
-  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
-  await expect(post.getByText('POST IS DICHT')).toBeVisible();
+  await post.getByRole('button', { name: 'Locatie sluiten' }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Locatie sluiten' }).click();
+  await expect(post.getByText('LOCATIE IS DICHT')).toBeVisible();
   await expect(ehbo.locator('.live-bar')).toHaveCount(0);
 });
 
@@ -562,7 +562,7 @@ test('every page keeps its own scroll position', async ({ browser }) => {
 
 test('map tab: quiet out of view, up to date the moment it opens', async ({ browser }) => {
   const post = await staffPhone(browser, PHONE.postLead);
-  const open = post.getByRole('button', { name: 'Post openen' });
+  const open = post.getByRole('button', { name: 'Locatie openen' });
   await expect(open.or(post.getByText('Wat heb je nodig?'))).toBeVisible();
   if (await open.isVisible()) await open.click();
 
@@ -607,9 +607,9 @@ test('map tab: quiet out of view, up to date the moment it opens', async ({ brow
 
   await post.getByRole('button', { name: 'Melding intrekken' }).click();
   await post.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
-  await post.getByRole('button', { name: 'Post sluiten' }).click();
-  await post.getByRole('dialog').getByRole('button', { name: 'Post sluiten' }).click();
-  await expect(post.getByText('POST IS DICHT')).toBeVisible();
+  await post.getByRole('button', { name: 'Locatie sluiten' }).click();
+  await post.getByRole('dialog').getByRole('button', { name: 'Locatie sluiten' }).click();
+  await expect(post.getByText('LOCATIE IS DICHT')).toBeVisible();
 });
 
 test('route page: details, posts in order, GPX download and the star', async ({ browser }) => {
@@ -661,9 +661,9 @@ test('Beheer › Mensen: everyone with where they are, and what is still missing
   await admin.goto('/beheer');
   await admin.getByRole('link', { name: /^Mensen/ }).click();
   const wim = admin.locator('.person').filter({ hasText: 'Wim Water' });
-  await expect(wim.getByRole('link', { name: 'Waterpost 3 · brug · postverantwoordelijke' })).toBeVisible();
-  await expect(admin.getByText('Kruising 4: nog geen postverantwoordelijke')).toBeVisible();
+  await expect(wim.getByRole('link', { name: 'Waterpost 3 · brug · locatieverantwoordelijke' })).toBeVisible();
+  await expect(admin.getByText('Kruising 4: nog geen locatieverantwoordelijke')).toBeVisible();
   if (process.env.SHOTS) await admin.screenshot({ path: `${process.env.SHOTS}/mensen.png`, fullPage: true });
-  await wim.getByRole('link', { name: 'Waterpost 3 · brug · postverantwoordelijke' }).click();
+  await wim.getByRole('link', { name: 'Waterpost 3 · brug · locatieverantwoordelijke' }).click();
   await expect(admin).toHaveURL(/\/beheer\/posten\/\d+/);
 });
