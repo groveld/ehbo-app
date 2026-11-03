@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { DEFAULT_STYLE, type AdminState, type EventPackage, type PeopleOverview, type PostData, type TeamData } from '@ehbo/shared';
+import { DEFAULT_STYLE, type AdminState, type EventPackage, type PeopleOverview, type LocationData, type TeamData } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
 import { openEventDb, type EventDb } from '../src/event-db.ts';
@@ -27,7 +27,7 @@ const call = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: 
 const version = () => (db.raw.prepare('SELECT version FROM event').get() as { version: number }).version;
 
 const EVENT = {
-  name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 30, atPostM: 30, style: DEFAULT_STYLE,
+  name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 30, atLocationM: 30, style: DEFAULT_STYLE,
 };
 
 /** Begin van een PNG met de gevraagde maat, als base64; meer leest de server niet. */
@@ -48,7 +48,7 @@ before(async () => {
   app = buildApp({ db, vapid: { ...generateVapidKeys(), subject: 'mailto:test@example.org' }, build: { version: 'test', commit: 'x', builtAt: '' } });
   await app.ready();
   adminCookie = await login(DEMO.admin);
-  staffCookie = await login(DEMO.postMember);
+  staffCookie = await login(DEMO.locationMember);
 });
 
 after(async () => {
@@ -62,8 +62,8 @@ test('alleen beheerders', async () => {
   assert.equal((await call('GET', '/api/admin', undefined, staffCookie)).statusCode, 403);
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   assert.equal(state.event.name, 'Silvesterloop 2026');
-  assert.equal(state.posts.length, 4);
-  assert.deepEqual(state.posts.map((p) => Math.round(p.km! * 10) / 10), [0, 0, 1.5, 2], 'gesorteerd op km-punt');
+  assert.equal(state.locations.length, 4);
+  assert.deepEqual(state.locations.map((p) => Math.round(p.km! * 10) / 10), [0, 0, 1.5, 2], 'gesorteerd op km-punt');
   assert.equal(state.teams[0]?.members[0]?.name, 'Eva EHBO');
   assert.equal(state.coreTeam[0]?.isCoordinator, true);
 });
@@ -81,12 +81,12 @@ test('evenement opslaan; einddatum niet voor begindatum', async () => {
 });
 
 test('how close counts as at a post: set by the admin, in the package, and used for a place', async () => {
-  const res = await call('PUT', '/api/admin/event', { ...EVENT, atPostM: 120 });
-  assert.equal((res.json() as AdminState).event.atPostM, 120);
-  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, atPostM: 10 })).statusCode, 400, 'below the minimum');
-  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, atPostM: 600 })).statusCode, 400, 'above the maximum');
+  const res = await call('PUT', '/api/admin/event', { ...EVENT, atLocationM: 120 });
+  assert.equal((res.json() as AdminState).event.atLocationM, 120);
+  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, atLocationM: 10 })).statusCode, 400, 'below the minimum');
+  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, atLocationM: 600 })).statusCode, 400, 'above the maximum');
   const pkg = (await app.inject({ url: '/api/package' })).json() as EventPackage;
-  assert.equal(pkg.event.atPostM, 120, 'participants get it too, for the grey cross');
+  assert.equal(pkg.event.atLocationM, 120, 'participants get it too, for the grey cross');
   await call('PUT', '/api/admin/event', EVENT);
 });
 
@@ -154,65 +154,65 @@ test('loop toevoegen, GPX uploaden en verwijderen', async () => {
 
 test('a location with several functions: the main one from the marker order, and one lead', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
-  const type = (key: string) => state.postTypes.find((t) => t.key === key)!.id;
-  const post: PostData = {
-    functionIds: [type('water'), type('ehbo'), type('stempel')], runId: null, name: 'Brug', lat: 53.17, lng: 5.86, accuracyM: null, address: null,
+  const type = (key: string) => state.functionTypes.find((t) => t.key === key)!.id;
+  const location: LocationData = {
+    functionIds: [type('water'), type('first_aid'), type('stamp')], runId: null, name: 'Brug', lat: 53.17, lng: 5.86, accuracyM: null, address: null,
     accessRoute: null, timeFrom: null, timeTo: null, contacts: [],
   };
-  const saved = ((await call('POST', '/api/admin/posts', post)).json() as AdminState).posts.find((p) => p.name === 'Brug')!;
-  assert.equal(saved.typeId, type('ehbo'), 'EHBO is above water and stamp');
-  assert.deepEqual(saved.functionIds, [type('ehbo'), type('water'), type('stempel')], 'main function first');
+  const saved = ((await call('POST', '/api/admin/locations', location)).json() as AdminState).locations.find((p) => p.name === 'Brug')!;
+  assert.equal(saved.typeId, type('first_aid'), 'EHBO is above water and stamp');
+  assert.deepEqual(saved.functionIds, [type('first_aid'), type('water'), type('stamp')], 'main function first');
   const pkg = (await app.inject({ url: '/api/package' })).json() as EventPackage;
-  assert.deepEqual(pkg.posts.find((p) => p.id === saved.id)!.functionIds, saved.functionIds);
+  assert.deepEqual(pkg.locations.find((p) => p.id === saved.id)!.functionIds, saved.functionIds);
 
-  assert.equal((await call('PUT', `/api/admin/posts/${saved.id}`, { ...post, functionIds: [] })).statusCode, 400, 'at least one function');
-  const two = { ...post, contacts: [
+  assert.equal((await call('PUT', `/api/admin/locations/${saved.id}`, { ...location, functionIds: [] })).statusCode, 400, 'at least one function');
+  const two = { ...location, contacts: [
     { name: 'Een', phone: '0611111101', role: 'lead', timeFrom: null, timeTo: null },
     { name: 'Twee', phone: '0611111102', role: 'lead', timeFrom: null, timeTo: null },
   ] };
-  const refused = await call('PUT', `/api/admin/posts/${saved.id}`, two);
+  const refused = await call('PUT', `/api/admin/locations/${saved.id}`, two);
   assert.equal(refused.statusCode, 400);
   assert.match(refused.json().error, /Brug: kies één locatieverantwoordelijke/);
-  assert.equal((await call('DELETE', `/api/admin/posts/${saved.id}`)).statusCode, 200);
+  assert.equal((await call('DELETE', `/api/admin/locations/${saved.id}`)).statusCode, 200);
 });
 
 test('post met contactpersonen; nieuw nummer kan daarna aanmelden', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
-  const water = state.postTypes.find((t) => t.key === 'water')!;
-  const post: PostData = {
+  const water = state.functionTypes.find((t) => t.key === 'water')!;
+  const location: LocationData = {
     functionIds: [water.id], runId: null, name: 'Waterpost 5', lat: 53.16, lng: 5.85, accuracyM: 4, address: null,
     accessRoute: 'Via de dijk', timeFrom: '11:00', timeTo: '14:00',
     contacts: [{ name: 'Nieuwe Vrijwilliger', phone: '06-1234 5678', role: 'lead', timeFrom: null, timeTo: null }],
   };
-  const res = await call('POST', '/api/admin/posts', post);
+  const res = await call('POST', '/api/admin/locations', location);
   assert.equal(res.statusCode, 200, res.body);
-  const saved = (res.json() as AdminState).posts.find((p) => p.name === 'Waterpost 5')!;
+  const saved = (res.json() as AdminState).locations.find((p) => p.name === 'Waterpost 5')!;
   assert.equal(saved.contacts[0]?.phone, '+31612345678', 'nummer genormaliseerd');
 
   const me = (await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0612345678' } })).json();
   assert.equal(me.name, 'Nieuwe Vrijwilliger');
-  assert.equal(me.home, 'post');
+  assert.equal(me.home, 'location');
 
   // Wijzigen vervangt de contactpersonen; wie eraf gaat, verliest zijn rol.
-  const edited = await call('PUT', `/api/admin/posts/${saved.id}`, { ...post, contacts: [] });
+  const edited = await call('PUT', `/api/admin/locations/${saved.id}`, { ...location, contacts: [] });
   assert.equal(edited.statusCode, 200);
   assert.equal((await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0612345678' } })).statusCode, 404);
 
-  const invalid = await call('POST', '/api/admin/posts', { ...post, contacts: [{ ...post.contacts[0], name: 'Piet', phone: '123' }] });
+  const invalid = await call('POST', '/api/admin/locations', { ...location, contacts: [{ ...location.contacts[0], name: 'Piet', phone: '123' }] });
   assert.equal(invalid.statusCode, 400);
   assert.match(invalid.json().error, /Piet/);
-  assert.equal((await call('POST', '/api/admin/posts', { ...post, functionIds: [999] })).statusCode, 400);
-  assert.equal((await call('POST', '/api/admin/posts', { ...post, lng: null })).statusCode, 400);
+  assert.equal((await call('POST', '/api/admin/locations', { ...location, functionIds: [999] })).statusCode, 400);
+  assert.equal((await call('POST', '/api/admin/locations', { ...location, lng: null })).statusCode, 400);
 
-  assert.equal((await call('DELETE', `/api/admin/posts/${saved.id}`)).statusCode, 200);
+  assert.equal((await call('DELETE', `/api/admin/locations/${saved.id}`)).statusCode, 200);
 });
 
 test('a post with incidents or requests stays: deleting it gives a clear error', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
-  const post = state.posts.find((p) => p.name === 'Kruising 4')!;
-  db.raw.prepare(`INSERT INTO help_requests (client_id, type_id, post_id, status, reported_by, reported_at)
-    VALUES ('history', (SELECT id FROM help_request_types WHERE key = 'water'), ?, 'closed', ?, '2026-12-31T10:00:00Z')`).run(post.id, DEMO.postLead);
-  const res = await call('DELETE', `/api/admin/posts/${post.id}`);
+  const location = state.locations.find((p) => p.name === 'Kruising 4')!;
+  db.raw.prepare(`INSERT INTO help_requests (client_id, type_id, location_id, status, reported_by, reported_at)
+    VALUES ('history', (SELECT id FROM help_request_types WHERE key = 'water'), ?, 'closed', ?, '2026-12-31T10:00:00Z')`).run(location.id, DEMO.locationLead);
+  const res = await call('DELETE', `/api/admin/locations/${location.id}`);
   assert.equal(res.statusCode, 409, res.body);
   assert.match(res.json().error, /oproepen of aanvragen/);
   db.raw.prepare("DELETE FROM help_requests WHERE client_id = 'history'").run();
@@ -220,8 +220,8 @@ test('a post with incidents or requests stays: deleting it gives a clear error',
 
 test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
-  const stamp = state.posts.find((p) => p.name === 'Kruising 4')!;
-  const team: TeamData = { name: 'Team 3', kind: 'mobile', mobility: 'bike', postId: stamp.id, hasAed: true, timeFrom: null, timeTo: null, members: [{ name: 'Fiets Fred', phone: '0687654321' }] };
+  const stamp = state.locations.find((p) => p.name === 'Kruising 4')!;
+  const team: TeamData = { name: 'Team 3', kind: 'mobile', mobility: 'bike', locationId: stamp.id, hasAed: true, timeFrom: null, timeTo: null, members: [{ name: 'Fiets Fred', phone: '0687654321' }] };
   const res = await call('POST', '/api/admin/teams', team);
   assert.equal(res.statusCode, 200, res.body);
   const saved = (res.json() as AdminState).teams.find((u) => u.name === 'Team 3')!;
@@ -232,7 +232,7 @@ test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
   assert.equal(me.home, 'first_aid');
   assert.match(me.assignments[0].detail, /Mobiel \(fiets\) · Standplaats Kruising 4/);
 
-  assert.equal((await call('POST', '/api/admin/teams', { ...team, kind: 'fixed', postId: null })).statusCode, 400);
+  assert.equal((await call('POST', '/api/admin/teams', { ...team, kind: 'fixed', locationId: null })).statusCode, 400);
   const fixed = await call('PUT', `/api/admin/teams/${saved.id}`, { ...team, kind: 'fixed', mobility: 'bike' });
   assert.equal((fixed.json() as AdminState).teams.find((u) => u.id === saved.id)?.mobility, null, 'vast heeft geen vervoer');
   assert.equal((await call('DELETE', `/api/admin/teams/${saved.id}`)).statusCode, 200);
@@ -286,24 +286,24 @@ test('info & voorwaarden: eigen tekst met plaatshouders, terug naar de standaard
 
 test('km points follow from the GPX and the position, and stay up to date', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
-  const water = state.posts.find((p) => p.name === 'Waterpost 3 · brug')!;
+  const water = state.locations.find((p) => p.name === 'Waterpost 3 · brug')!;
   const tenKm = state.runs.find((r) => r.name === '10 km')!;
   assert.equal(water.passages.length, 1);
   assert.equal(water.passages[0]!.runId, tenKm.id);
   assert.equal(water.km, water.passages[0]!.km[0]);
-  const crossing = state.posts.find((p) => p.name === 'Kruising 4')!;
+  const crossing = state.locations.find((p) => p.name === 'Kruising 4')!;
   assert.equal(crossing.passages[0]!.km.length, 2, 'out and back passes it twice');
 
   // Moved away from every route: no km points any more.
   const { id, ...data } = water;
-  let res = await call('PUT', `/api/admin/posts/${id}`, { ...data, lat: 53.3, lng: 5.9 });
+  let res = await call('PUT', `/api/admin/locations/${id}`, { ...data, lat: 53.3, lng: 5.9 });
   assert.equal(res.statusCode, 200, res.body);
-  let moved = (res.json() as AdminState).posts.find((p) => p.id === id)!;
+  let moved = (res.json() as AdminState).locations.find((p) => p.id === id)!;
   assert.deepEqual([moved.km, moved.passages], [null, []]);
 
   // And back: they return.
-  res = await call('PUT', `/api/admin/posts/${id}`, data);
-  moved = (res.json() as AdminState).posts.find((p) => p.id === id)!;
+  res = await call('PUT', `/api/admin/locations/${id}`, data);
+  moved = (res.json() as AdminState).locations.find((p) => p.id === id)!;
   assert.deepEqual(moved.passages, water.passages);
 });
 
@@ -326,7 +326,7 @@ test('GPX for download: public, and only the route', async () => {
 
 test('GPX for download: every post on the route as a waypoint, before the track, and nothing for staff only', async () => {
   const run = db.raw.prepare("SELECT id FROM runs WHERE name = '10 km'").get() as { id: number };
-  db.raw.prepare("UPDATE posts SET access_route = 'Via het fietspad achter de boerderij' WHERE name = 'Kruising 4'").run();
+  db.raw.prepare("UPDATE locations SET access_route = 'Via het fietspad achter de boerderij' WHERE name = 'Kruising 4'").run();
   const body = (await app.inject({ url: `/gpx/${run.id}.gpx` })).body;
   const names = [...body.matchAll(/<wpt [^>]*><name>([^<]*)<\/name>/g)].map((m) => m[1]);
   assert.deepEqual(names, ['Start/finish De Trilker', 'EHBO-post 1 · start', 'Kruising 4', 'Waterpost 3 · brug'], 'in the order you meet them');
@@ -341,7 +341,7 @@ test('Beheer › Mensen: everyone with where they are, what is missing, and the 
   const res = await call('GET', '/api/admin/people');
   assert.equal(res.statusCode, 200);
   const overview = res.json() as PeopleOverview;
-  const wim = overview.people.find((p) => p.phone === DEMO.postLead)!;
+  const wim = overview.people.find((p) => p.phone === DEMO.locationLead)!;
   assert.deepEqual(wim.links.map((l) => l.label), ['Waterpost 3 · brug · locatieverantwoordelijke', 'Kruising 4 · lid']);
   assert.ok(overview.people.find((p) => p.phone === DEMO.admin)!.links.some((l) => l.kind === 'admin'));
   assert.ok(overview.gaps.some((g) => g.label === 'Kruising 4: nog geen locatieverantwoordelijke'));
@@ -350,15 +350,15 @@ test('Beheer › Mensen: everyone with where they are, what is missing, and the 
   assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'nl')), 'by name');
 
   // Two places at the same time.
-  db.raw.prepare("UPDATE post_contacts SET time_from = '11:00', time_to = '12:00' WHERE phone = ?").run(DEMO.postLead);
+  db.raw.prepare("UPDATE location_contacts SET time_from = '11:00', time_to = '12:00' WHERE phone = ?").run(DEMO.locationLead);
   const twice = (await call('GET', '/api/admin/people')).json() as PeopleOverview;
-  assert.match(twice.people.find((p) => p.phone === DEMO.postLead)!.problems.join(), /Overlappende tijden: Waterpost 3 · brug en Kruising 4/);
-  db.raw.prepare('UPDATE post_contacts SET time_from = NULL, time_to = NULL WHERE phone = ?').run(DEMO.postLead);
+  assert.match(twice.people.find((p) => p.phone === DEMO.locationLead)!.problems.join(), /Overlappende tijden: Waterpost 3 · brug en Kruising 4/);
+  db.raw.prepare('UPDATE location_contacts SET time_from = NULL, time_to = NULL WHERE phone = ?').run(DEMO.locationLead);
 
-  const renamed = (await call('PUT', `/api/admin/people/${encodeURIComponent(DEMO.postLead)}`, { name: 'Wim Waterman' })).json() as PeopleOverview;
-  assert.equal(renamed.people.find((p) => p.phone === DEMO.postLead)!.name, 'Wim Waterman');
+  const renamed = (await call('PUT', `/api/admin/people/${encodeURIComponent(DEMO.locationLead)}`, { name: 'Wim Waterman' })).json() as PeopleOverview;
+  assert.equal(renamed.people.find((p) => p.phone === DEMO.locationLead)!.name, 'Wim Waterman');
   assert.equal((await call('PUT', '/api/admin/people/0699999998', { name: 'X' })).statusCode, 404);
-  await call('PUT', `/api/admin/people/${encodeURIComponent(DEMO.postLead)}`, { name: 'Wim Water' });
+  await call('PUT', `/api/admin/people/${encodeURIComponent(DEMO.locationLead)}`, { name: 'Wim Water' });
 
   const csv = await call('GET', '/api/admin/people.csv');
   assert.match(csv.headers['content-type'] as string, /text\/csv/);
@@ -367,24 +367,24 @@ test('Beheer › Mensen: everyone with where they are, what is missing, and the 
 
 test('unmanned functions: an AED has no people, never opens, and a turnaround belongs to one run', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
-  const type = (key: string) => state.postTypes.find((t) => t.key === key)!;
-  assert.deepEqual(['aed', 'toilet', 'keerpunt'].map((k) => type(k).manned), [false, false, false]);
-  assert.equal(type('stempel').name, 'Stempel-/controlepost', 'the checkpoint is the stamp post');
+  const type = (key: string) => state.functionTypes.find((t) => t.key === key)!;
+  assert.deepEqual(['aed', 'toilet', 'turnaround'].map((k) => type(k).staffed), [false, false, false]);
+  assert.equal(type('stamp').name, 'Stempel-/controlepost', 'the checkpoint is the stamp post');
 
   const run = state.runs.find((r) => r.name === '10 km')!;
-  const aed: PostData = {
+  const aed: LocationData = {
     functionIds: [type('aed').id], runId: run.id, name: 'AED dorpshuis', lat: 53.145, lng: 5.82, accuracyM: null, address: null, accessRoute: null,
     timeFrom: '10:00', timeTo: '12:00', contacts: [{ name: 'Niemand', phone: '0611111199', role: 'lead', timeFrom: null, timeTo: null }],
   };
-  const saved = ((await call('POST', '/api/admin/posts', aed)).json() as AdminState).posts.find((p) => p.name === 'AED dorpshuis')!;
+  const saved = ((await call('POST', '/api/admin/locations', aed)).json() as AdminState).locations.find((p) => p.name === 'AED dorpshuis')!;
   assert.deepEqual([saved.contacts.length, saved.timeFrom, saved.runId], [0, null, null], 'no people, no times, and only a turnaround has a run');
 
-  const turn = ((await call('POST', '/api/admin/posts', { ...aed, functionIds: [type('keerpunt').id], name: 'Keerpunt 10 km' })).json() as AdminState)
-    .posts.find((p) => p.name === 'Keerpunt 10 km')!;
+  const turn = ((await call('POST', '/api/admin/locations', { ...aed, functionIds: [type('turnaround').id], name: 'Keerpunt 10 km' })).json() as AdminState)
+    .locations.find((p) => p.name === 'Keerpunt 10 km')!;
   assert.equal(turn.runId, run.id);
-  assert.equal((await call('POST', '/api/admin/posts', { ...aed, runId: 9999 })).statusCode, 400);
+  assert.equal((await call('POST', '/api/admin/locations', { ...aed, runId: 9999 })).statusCode, 400);
 
-  const opened = await app.inject({ method: 'PUT', url: `/api/posts/${saved.id}/open`, payload: { open: true }, headers: { cookie: adminCookie } });
+  const opened = await app.inject({ method: 'PUT', url: `/api/locations/${saved.id}/open`, payload: { open: true }, headers: { cookie: adminCookie } });
   assert.equal(opened.statusCode, 409, 'nobody there, so it never opens');
-  for (const id of [saved.id, turn.id]) await call('DELETE', `/api/admin/posts/${id}`);
+  for (const id of [saved.id, turn.id]) await call('DELETE', `/api/admin/locations/${id}`);
 });

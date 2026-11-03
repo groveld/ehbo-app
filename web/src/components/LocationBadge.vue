@@ -1,13 +1,13 @@
 <script setup lang="ts">
 // Rondje met het icoon van de soort post (of de letter van een eigen soort); een EHBO-post is een groen vierkant met een kruis.
 import { computed } from 'vue';
-import type { PostTypeInfo } from '@ehbo/shared';
-import { postTypeIcon } from '../icons.ts';
+import type { FunctionTypeInfo } from '@ehbo/shared';
+import { functionTypeIcon } from '../icons.ts';
 import Icon from './Icon.vue';
 
-const props = withDefaults(defineProps<{ type?: PostTypeInfo; size?: number }>(), { type: undefined, size: 40 });
-const ehbo = computed(() => props.type?.key === 'ehbo');
-const icon = computed(() => postTypeIcon(props.type?.key));
+const props = withDefaults(defineProps<{ type?: FunctionTypeInfo; size?: number }>(), { type: undefined, size: 40 });
+const ehbo = computed(() => props.type?.key === 'first_aid');
+const icon = computed(() => functionTypeIcon(props.type?.key));
 const fontSize = computed(() => Math.round(props.size * ((props.type?.letter.length ?? 1) > 1 ? 0.32 : 0.4)));
 </script>
 

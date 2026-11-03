@@ -20,7 +20,7 @@ import type {
 import { ACTION_AT_HEADER, ACTION_ID_HEADER, LIVE_HEARTBEAT_MS, POSITION_SHARE_MS, actionRequest, applyAction, placeOf } from '@ehbo/shared';
 import { api, ApiRequestError, noAnswer } from '../api.ts';
 import { messageDialog } from '../composables/useDialog.ts';
-import { atPostM } from '../posts.ts';
+import { atLocationM } from '../locations.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
 import { useSessionStore } from './session.ts';
@@ -73,7 +73,7 @@ export const useLiveStore = defineStore('live', () => {
     if (!queue.value.length) return base.value;
     const context = { me: session.me, teams: pkg.pkg?.teams ?? [] };
     return queue.value.reduce((s, item) => applyAction(s, item, context), base.value ?? {
-      version: 0, dataVersion: '', serverTime: new Date().toISOString(), helpRequests: [], teams: [], posts: [], testMode: false,
+      version: 0, dataVersion: '', serverTime: new Date().toISOString(), helpRequests: [], teams: [], locations: [], testMode: false,
     });
   });
   /** Nog niet bij de server aangekomen. De server telt dezelfde clientId maar één keer, dus opnieuw versturen kan altijd. */
@@ -227,11 +227,11 @@ export const useLiveStore = defineStore('live', () => {
   };
   const teamState = (id: number) => state.value?.teams.find((u) => u.id === id) ?? null;
   /** Live open/dicht; zonder live stand wat in het evenementpakket staat. */
-  const postOpen = (postId: number, fallback = false) => state.value?.posts.find((p) => p.id === postId)?.isOpen ?? fallback;
-  const postState = (postId: number) => state.value?.posts.find((p) => p.id === postId) ?? null;
+  const locationOpen = (locationId: number, fallback = false) => state.value?.locations.find((p) => p.id === locationId)?.isOpen ?? fallback;
+  const locationState = (locationId: number) => state.value?.locations.find((p) => p.id === locationId) ?? null;
 
   const myTeamIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'team').map((a) => a.teamId!) ?? []);
-  const myPostIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'post').map((a) => a.postId!) ?? []);
+  const myLocationIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'location').map((a) => a.locationId!) ?? []);
 
   const hasAed = (teamId: number) => pkg.pkg?.teams.find((u) => u.id === teamId)?.hasAed ?? false;
 
@@ -250,10 +250,10 @@ export const useLiveStore = defineStore('live', () => {
   const unknownData = computed(() => {
     if (!pkg.pkg) return '';
     const assignments = session.me?.assignments ?? [];
-    const posts = [...incidents.value.map((i) => i.postId), ...requests.value.map((r) => r.postId), ...myPostIds.value];
+    const locations = [...incidents.value.map((i) => i.locationId), ...requests.value.map((r) => r.locationId), ...myLocationIds.value];
     const teams = [...(state.value?.teams ?? []).map((u) => u.id), ...assignments.flatMap((a) => (a.teamId == null ? [] : [a.teamId]))];
     return [
-      ...posts.filter((id) => !pkg.postById.has(id)).map((id) => `post ${id}`),
+      ...locations.filter((id) => !pkg.locationById.has(id)).map((id) => `post ${id}`),
       ...teams.filter((id) => !pkg.pkg!.teams.some((u) => u.id === id)).map((id) => `team ${id}`),
     ].join();
   });
@@ -446,8 +446,8 @@ export const useLiveStore = defineStore('live', () => {
   }
 
   return {
-    state, teams, connected, offline, syncing, serverNow, sharingTeam, incidents, openIncidents, invitations, myActive, myTeamIds, myPostIds,
-    incidentById, teamState, postOpen, postState, secondsLeft, needsAed, refresh, connect, report, checkData,
+    state, teams, connected, offline, syncing, serverNow, sharingTeam, incidents, openIncidents, invitations, myActive, myTeamIds, myLocationIds,
+    incidentById, teamState, locationOpen, locationState, secondsLeft, needsAed, refresh, connect, report, checkData,
     /** "Opnieuw laden": everything at once. */
     reload: () => Promise.all([syncData(), refresh()]),
     outbox, delivered, refused, flush,
@@ -459,24 +459,24 @@ export const useLiveStore = defineStore('live', () => {
     close: (incidentId: number, body: CloseIncident) => act({ type: 'close', incidentId, body }),
     withdraw: (incidentId: number) => act({ type: 'withdraw', incidentId }),
     /** Someone came to the team. Gives the id to open it with; without signal that's a temporary one, which keeps working afterwards. */
-    async selfStart({ teamId, postId, position, ...details }: IncidentDetails & { teamId: number; postId: number; position: LngLat | null }) {
+    async selfStart({ teamId, locationId, position, ...details }: IncidentDetails & { teamId: number; locationId: number; position: LngLat | null }) {
       const tempId = -Date.now();
-      const known = pkg.postById.get(postId);
-      const place = position ? placeOf(pkg.pkg?.posts ?? [], position, atPostM(pkg.pkg)) : null;
-      const shown = place ? pkg.postById.get(place.postId) ?? known : known;
+      const known = pkg.locationById.get(locationId);
+      const place = position ? placeOf(pkg.pkg?.locations ?? [], position, atLocationM(pkg.pkg)) : null;
+      const shown = place ? pkg.locationById.get(place.locationId) ?? known : known;
       await act({
-        type: 'selfStart', tempId, postId: shown?.id ?? postId, offPost: place !== null && !place.atPost,
-        post: {
+        type: 'selfStart', tempId, locationId: shown?.id ?? locationId, offLocation: place !== null && !place.atLocation,
+        location: {
           typeId: shown?.typeId ?? 0, name: place?.name ?? shown?.name ?? 'Locatie', km: shown?.km ?? null,
-          lat: place && !place.atPost ? position![1] : shown?.lat ?? null, lng: place && !place.atPost ? position![0] : shown?.lng ?? null,
+          lat: place && !place.atLocation ? position![1] : shown?.lat ?? null, lng: place && !place.atLocation ? position![0] : shown?.lng ?? null,
         },
-        body: { clientId: crypto.randomUUID(), teamId, postId, lat: position?.[1] ?? null, lng: position?.[0] ?? null, ...details },
+        body: { clientId: crypto.randomUUID(), teamId, locationId, lat: position?.[1] ?? null, lng: position?.[0] ?? null, ...details },
       });
       return tempIds.value[tempId] ?? tempId;
     },
     setAvailability: (teamId: number, availability: TeamAvailability) => act({ type: 'availability', teamId, availability }),
-    setPostOpen: (postId: number, open: boolean) => act({ type: 'postOpen', postId, open }),
-    keepPost: (postId: number) => act({ type: 'keepPost', postId }),
+    setLocationOpen: (locationId: number, open: boolean) => act({ type: 'locationOpen', locationId, open }),
+    keepLocation: (locationId: number) => act({ type: 'keepLocation', locationId }),
     keepTeam: (teamId: number) => act({ type: 'keepTeam', teamId }),
     /** The coordinator's buttons: these change everything at once, so they need the server. */
     async control(action: 'open-all' | 'close-all' | 'close-day') {
@@ -488,9 +488,9 @@ export const useLiveStore = defineStore('live', () => {
     requests,
     requestById,
     /** Gives the id to open the request with; without signal that's a temporary one, which keeps working afterwards. */
-    async request(postId: number, kind: RequestKind) {
+    async request(locationId: number, kind: RequestKind) {
       const tempId = -Date.now();
-      await act({ type: 'requestNew', tempId, clientId: crypto.randomUUID(), postId, postName: pkg.postById.get(postId)?.name ?? 'Post', kind });
+      await act({ type: 'requestNew', tempId, clientId: crypto.randomUUID(), locationId, locationName: pkg.locationById.get(locationId)?.name ?? 'Post', kind });
       return { id: tempIds.value[tempId] ?? tempId };
     },
     setRequestDetail: (requestId: number, detail: string | null) => act({ type: 'requestDetail', requestId, detail }),

@@ -1,7 +1,7 @@
 // Beheer: de volledige stand van het evenement. Elke wijziging stuurt de nieuwe stand terug.
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, InfoSettings, LogoUpload, PostData, Report, RunData, TeamData } from '@ehbo/shared';
+import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, InfoSettings, LogoUpload, LocationData, Report, RunData, TeamData } from '@ehbo/shared';
 import { api, ApiRequestError } from '../api.ts';
 import { makeIconSet, makeLogo } from '../images.ts';
 import { useSessionStore } from './session.ts';
@@ -10,8 +10,8 @@ export const useAdminStore = defineStore('admin', () => {
   const state = ref<AdminState | null>(null);
   const loading = ref(false);
 
-  const postTypeById = computed(() => new Map(state.value?.postTypes.map((t) => [t.id, t]) ?? []));
-  const postById = computed(() => new Map(state.value?.posts.map((p) => [p.id, p]) ?? []));
+  const functionTypeById = computed(() => new Map(state.value?.functionTypes.map((t) => [t.id, t]) ?? []));
+  const locationById = computed(() => new Map(state.value?.locations.map((p) => [p.id, p]) ?? []));
 
   async function load() {
     loading.value = true;
@@ -45,7 +45,7 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   return {
-    state, loading, postTypeById, postById, load, uploadGpx,
+    state, loading, functionTypeById, locationById, load, uploadGpx,
     uploadLogo: async (file: File) => changeStyle('/api/admin/brand/logo', 'PUT', { png: await makeLogo(file) } satisfies LogoUpload),
     uploadIcon: async (file: File) => changeStyle('/api/admin/brand/icon', 'PUT', await makeIconSet(file)),
     deleteLogo: () => changeStyle('/api/admin/brand/logo', 'DELETE'),
@@ -53,8 +53,8 @@ export const useAdminStore = defineStore('admin', () => {
     saveEvent: (e: EventSettings) => changeStyle('/api/admin/event', 'PUT', e),
     saveRun: (id: number | null, r: RunData) => change(id === null ? '/api/admin/runs' : `/api/admin/runs/${id}`, id === null ? 'POST' : 'PUT', r),
     deleteRun: (id: number) => change(`/api/admin/runs/${id}`, 'DELETE'),
-    savePost: (id: number | null, p: PostData) => change(id === null ? '/api/admin/posts' : `/api/admin/posts/${id}`, id === null ? 'POST' : 'PUT', p),
-    deletePost: (id: number) => change(`/api/admin/posts/${id}`, 'DELETE'),
+    saveLocation: (id: number | null, p: LocationData) => change(id === null ? '/api/admin/locations' : `/api/admin/locations/${id}`, id === null ? 'POST' : 'PUT', p),
+    deleteLocation: (id: number) => change(`/api/admin/locations/${id}`, 'DELETE'),
     saveTeam: (id: number | null, u: TeamData) => change(id === null ? '/api/admin/teams' : `/api/admin/teams/${id}`, id === null ? 'POST' : 'PUT', u),
     deleteTeam: (id: number) => change(`/api/admin/teams/${id}`, 'DELETE'),
     saveCoreTeam: (entries: CoreTeamEntry[]) => change('/api/admin/core-team', 'PUT', entries),

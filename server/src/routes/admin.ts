@@ -3,8 +3,8 @@ import type { FastifyInstance } from 'fastify';
 import {
   COLOR_PATTERN,
   DATE_PATTERN,
-  AT_POST_MAX_M,
-  AT_POST_MIN_M,
+  AT_LOCATION_MAX_M,
+  AT_LOCATION_MIN_M,
   ESCALATION_MAX_SECONDS,
   ESCALATION_MIN_SECONDS,
   IMAGE_MAX_BASE64,
@@ -25,7 +25,7 @@ import {
   type IconUpload,
   type InfoSettings,
   type LogoUpload,
-  type PostData,
+  type LocationData,
   type Report,
   type RunData,
   type TeamData,
@@ -70,14 +70,14 @@ const idParams = { type: 'object', required: ['id'], properties: { id: { type: '
 
 const eventSchema = {
   type: 'object',
-  required: ['name', 'startLocation', 'startDate', 'endDate', 'escalationSeconds', 'atPostM', 'style'],
+  required: ['name', 'startLocation', 'startDate', 'endDate', 'escalationSeconds', 'atLocationM', 'style'],
   properties: {
     name: { type: 'string', minLength: 1, maxLength: 80 },
     startLocation: optionalText(120),
     startDate: date,
     endDate: date,
     escalationSeconds: { type: 'integer', minimum: ESCALATION_MIN_SECONDS, maximum: ESCALATION_MAX_SECONDS },
-    atPostM: { type: 'integer', minimum: AT_POST_MIN_M, maximum: AT_POST_MAX_M },
+    atLocationM: { type: 'integer', minimum: AT_LOCATION_MIN_M, maximum: AT_LOCATION_MAX_M },
     style: {
       type: 'object',
       required: ['shortName', 'primaryColor', 'accentColor'],
@@ -124,7 +124,7 @@ const personSchema = {
   properties: { name: text(80), phone: { type: 'string', minLength: 1, maxLength: 32 } },
 } as const;
 
-const postSchema = {
+const locationSchema = {
   type: 'object',
   required: ['functionIds', 'runId', 'name', 'lat', 'lng', 'accuracyM', 'address', 'accessRoute', 'timeFrom', 'timeTo', 'contacts'],
   properties: {
@@ -157,12 +157,12 @@ const postSchema = {
 
 const teamSchema = {
   type: 'object',
-  required: ['name', 'kind', 'mobility', 'postId', 'hasAed', 'members'],
+  required: ['name', 'kind', 'mobility', 'locationId', 'hasAed', 'members'],
   properties: {
     name: { type: 'string', minLength: 1, maxLength: 60 },
     kind: { enum: ['fixed', 'mobile'] },
     mobility: { enum: ['on_foot', 'bike', 'car', 'other', null] },
-    postId: { type: ['integer', 'null'] },
+    locationId: { type: ['integer', 'null'] },
     hasAed: { type: 'boolean' },
     timeFrom: time,
     timeTo: time,
@@ -332,32 +332,32 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
   });
 
   // Posten
-  const checkPost = (body: PostData): PostData => {
-    if (!body.functionIds.every((id) => admin.postTypeExists(id))) throw badRequest('Onbekende functie');
+  const checkLocation = (body: LocationData): LocationData => {
+    if (!body.functionIds.every((id) => admin.functionTypeExists(id))) throw badRequest('Onbekende functie');
     if (body.runId !== null && !admin.runExists(body.runId)) throw badRequest('Onbekende loop');
     // One lead per location (#83): two people responsible apart from each other means two locations.
     if (body.contacts.filter((c) => c.role === 'lead').length > 1) throw badRequest(`${body.name.trim()}: kies één locatieverantwoordelijke`);
     if ((body.lat === null) !== (body.lng === null)) throw badRequest('Vul zowel breedte- als lengtegraad in');
     return { ...body, contacts: body.contacts.map((c) => ({ ...c, name: c.name.trim(), phone: phoneOf(c.phone, c.name) })) };
   };
-  app.post<{ Body: PostData; Reply: AdminState }>('/api/admin/posts', { schema: { body: postSchema } }, async (request) => {
-    admin.savePost(null, checkPost(request.body));
+  app.post<{ Body: LocationData; Reply: AdminState }>('/api/admin/locations', { schema: { body: locationSchema } }, async (request) => {
+    admin.saveLocation(null, checkLocation(request.body));
     return admin.getState();
   });
-  app.put<{ Params: { id: number }; Body: PostData; Reply: AdminState }>('/api/admin/posts/:id', { schema: { params: idParams, body: postSchema } }, async (request) => {
-    if (admin.savePost(request.params.id, checkPost(request.body)) === null) throw notFound('Locatie niet gevonden');
+  app.put<{ Params: { id: number }; Body: LocationData; Reply: AdminState }>('/api/admin/locations/:id', { schema: { params: idParams, body: locationSchema } }, async (request) => {
+    if (admin.saveLocation(request.params.id, checkLocation(request.body)) === null) throw notFound('Locatie niet gevonden');
     return admin.getState();
   });
-  app.delete<{ Params: { id: number }; Reply: AdminState }>('/api/admin/posts/:id', { schema: { params: idParams } }, async (request) => {
-    if (admin.postHasHistory(request.params.id)) throw conflict('Deze locatie heeft oproepen of aanvragen en kan daarom niet weg. Zet haar dicht, of wis eerst de proefgegevens in het rapport.');
-    if (!admin.deletePost(request.params.id)) throw notFound('Locatie niet gevonden');
+  app.delete<{ Params: { id: number }; Reply: AdminState }>('/api/admin/locations/:id', { schema: { params: idParams } }, async (request) => {
+    if (admin.locationHasHistory(request.params.id)) throw conflict('Deze locatie heeft oproepen of aanvragen en kan daarom niet weg. Zet haar dicht, of wis eerst de proefgegevens in het rapport.');
+    if (!admin.deleteLocation(request.params.id)) throw notFound('Locatie niet gevonden');
     return admin.getState();
   });
 
   // EHBO-eenheden
   const checkTeam = (body: TeamData): TeamData => {
-    if (body.kind === 'fixed' && body.postId === null) throw badRequest('Kies de EHBO-post van deze vaste eenheid');
-    if (body.postId !== null && !admin.postExists(body.postId)) throw badRequest('Onbekende locatie');
+    if (body.kind === 'fixed' && body.locationId === null) throw badRequest('Kies de EHBO-post van deze vaste eenheid');
+    if (body.locationId !== null && !admin.locationExists(body.locationId)) throw badRequest('Onbekende locatie');
     return { ...body, members: body.members.map((m) => ({ name: m.name.trim(), phone: phoneOf(m.phone, m.name) })) };
   };
   app.post<{ Body: TeamData; Reply: AdminState }>('/api/admin/teams', { schema: { body: teamSchema } }, async (request) => {

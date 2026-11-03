@@ -1,36 +1,36 @@
 <script setup lang="ts">
 // Eén post in een lijst: naam, km-punt en contact, met belknop en navigeerknop.
 import { computed } from 'vue';
-import { telHref, type EventPackage, type PackagePost } from '@ehbo/shared';
+import { telHref, type EventPackage, type PackageLocation } from '@ehbo/shared';
 import { navigationUrl } from '../navigate.ts';
-import { kmLabel, manned, primaryContact, teamsAt } from '../posts.ts';
+import { kmLabel, staffed, primaryContact, teamsAt } from '../locations.ts';
 import Icon from './Icon.vue';
-import PostBadge from './PostBadge.vue';
+import LocationBadge from './LocationBadge.vue';
 
 /**
  * alert: er is een open oproep bij deze post (rode rand en badge).
  * open: open or closed, as a ring around the icon. late: it should be open by now.
  */
-const props = defineProps<{ pkg: EventPackage; post: PackagePost; alert?: boolean; open: boolean; late?: boolean; quietMinutes?: number | null }>();
-const type = computed(() => props.pkg.postTypes.find((t) => t.id === props.post.typeId));
+const props = defineProps<{ pkg: EventPackage; location: PackageLocation; alert?: boolean; open: boolean; late?: boolean; quietMinutes?: number | null }>();
+const type = computed(() => props.pkg.functionTypes.find((t) => t.id === props.location.typeId));
 /** The other functions of this location, small next to the main one (#83). */
-const others = computed(() => props.post.functionIds.filter((id) => id !== props.post.typeId).map((id) => props.pkg.postTypes.find((t) => t.id === id)).filter((t) => t !== undefined));
-const contact = computed(() => primaryContact(props.post));
+const others = computed(() => props.location.functionIds.filter((id) => id !== props.location.typeId).map((id) => props.pkg.functionTypes.find((t) => t.id === id)).filter((t) => t !== undefined));
+const contact = computed(() => primaryContact(props.location));
 /** Open or closed only means something where people are (#69). */
-const hasPeople = computed(() => manned(props.pkg, props.post));
+const hasPeople = computed(() => staffed(props.pkg, props.location));
 /** km-punt, dan de EHBO-eenheid die hier staat (met kruisje), anders de contactpersoon. */
-const teams = computed(() => teamsAt(props.pkg, props.post.id).map((u) => u.name).join(', '));
+const teams = computed(() => teamsAt(props.pkg, props.location.id).map((u) => u.name).join(', '));
 const who = computed(() => teams.value || contact.value?.name || '');
-const km = computed(() => kmLabel(props.post));
+const km = computed(() => kmLabel(props.location));
 </script>
 
 <template>
   <div class="post-row list-row" :class="{ alert }">
-    <RouterLink :to="{ name: 'post', params: { id: post.id } }" class="main">
-      <PostBadge :type="type" :size="40" :class="{ 'status-ring': hasPeople, on: open }" />
+    <RouterLink :to="{ name: 'location', params: { id: location.id } }" class="main">
+      <LocationBadge :type="type" :size="40" :class="{ 'status-ring': hasPeople, on: open }" />
       <span v-if="hasPeople" class="visually-hidden">{{ open ? 'Open' : 'Dicht' }}</span>
       <span class="text">
-        <span class="name">{{ post.name }}<span v-if="others.length" class="others"><PostBadge v-for="t in others" :key="t.id" :type="t" :size="18" /></span></span>
+        <span class="name">{{ location.name }}<span v-if="others.length" class="others"><LocationBadge v-for="t in others" :key="t.id" :type="t" :size="18" /></span></span>
         <span v-if="late" class="late">Nog dicht</span>
         <span v-if="quietMinutes" class="late">{{ quietMinutes }} min niet gezien</span>
         <span v-if="km || who" class="sub">
@@ -40,10 +40,10 @@ const km = computed(() => kmLabel(props.post));
         </span>
       </span>
     </RouterLink>
-    <a v-if="contact" :href="telHref(contact.phone)" class="round call" :aria-label="`Bel ${post.name}`"><Icon name="phone" :size="20" /></a>
+    <a v-if="contact" :href="telHref(contact.phone)" class="round call" :aria-label="`Bel ${location.name}`"><Icon name="phone" :size="20" /></a>
     <a
-      v-if="post.lat !== null && post.lng !== null" :href="navigationUrl(post.lat, post.lng, post.name)"
-      class="round nav" :aria-label="`Navigeer naar ${post.name}`"
+      v-if="location.lat !== null && location.lng !== null" :href="navigationUrl(location.lat, location.lng, location.name)"
+      class="round nav" :aria-label="`Navigeer naar ${location.name}`"
     ><Icon name="navigate" :size="20" /></a>
   </div>
 </template>

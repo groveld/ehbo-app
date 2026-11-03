@@ -10,9 +10,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { LIGHT, layers, type Flavor } from '@protomaps/basemaps';
 // MapLibre laadt zijn worker als los bestand; Vite ziet dat adres niet vanzelf, dus geven we het mee.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import { MARKER_ORDER, markerRank, type Bbox, type EventPackage, type LngLat, type PackagePost } from '@ehbo/shared';
-import { iconSvg, postTypeIcon } from '../icons.ts';
-import { isOnRun, type Ambulance } from '../posts.ts';
+import { MARKER_ORDER, markerRank, type Bbox, type EventPackage, type LngLat, type PackageLocation } from '@ehbo/shared';
+import { iconSvg, functionTypeIcon } from '../icons.ts';
+import { isOnRun, type Ambulance } from '../locations.ts';
 import { assetUrl, tileUrl } from '../stores/package.ts';
 
 maplibregl.setWorkerUrl(workerUrl);
@@ -20,14 +20,14 @@ maplibregl.setWorkerUrl(workerUrl);
 const props = withDefaults(defineProps<{
   pkg: EventPackage;
   /** Welke posten op de kaart; standaard alle posten met een locatie. */
-  posts?: PackagePost[];
+  locations?: PackageLocation[];
   /** Ingezoomd op deze post. */
-  focusPostId?: number | null;
+  focusLocationId?: number | null;
   /** Deze loop dik en donker en in beeld; wat er niet aan ligt wordt bijna doorzichtig. */
   highlightRunId?: number | null;
   /** Only the highlighted run, with its start and finish marked. */
   onlyHighlighted?: boolean;
-  /** Mark focusPostId, but frame the whole route: where a call is only means something in relation to the course. */
+  /** Mark focusLocationId, but frame the whole route: where a call is only means something in relation to the course. */
   wholeRoute?: boolean;
   showUser?: boolean;
   /** Beheer: tik op de kaart om een punt te kiezen. */
@@ -35,20 +35,20 @@ const props = withDefaults(defineProps<{
   picked?: LngLat | null;
   interactive?: boolean;
   /** Posten met een open oproep: rood, met een gloed. */
-  alertPostIds?: number[];
-  /** Posts with an open request: an amber glow, less urgent than a call. */
-  taskPostIds?: number[];
+  alertLocationIds?: number[];
+  /** Locations with an open request: an amber glow, less urgent than a call. */
+  taskLocationIds?: number[];
   /** From a team to the call it's going to. */
   lines?: [LngLat, LngLat][];
   /** Mobiele EHBO-eenheden onderweg, op hun laatste GPS-positie. */
   ambulances?: Ambulance[];
   /** Standplaatsen waar de mobiele EHBO nu niet is: het kruisje grijs. */
-  awayPostIds?: number[];
+  awayLocationIds?: number[];
   /** Kept in memory but not in view: no location, and nothing happens until it's back. */
   paused?: boolean;
-}>(), { posts: undefined, focusPostId: null, highlightRunId: null, onlyHighlighted: false, wholeRoute: false, showUser: true, picking: false, picked: null, interactive: true, alertPostIds: () => [], taskPostIds: () => [], lines: () => [], ambulances: () => [], awayPostIds: () => [], paused: false });
+}>(), { locations: undefined, focusLocationId: null, highlightRunId: null, onlyHighlighted: false, wholeRoute: false, showUser: true, picking: false, picked: null, interactive: true, alertLocationIds: () => [], taskLocationIds: () => [], lines: () => [], ambulances: () => [], awayLocationIds: () => [], paused: false });
 
-const emit = defineEmits<{ select: [postId: number]; pick: [lngLat: LngLat] }>();
+const emit = defineEmits<{ select: [locationId: number]; pick: [lngLat: LngLat] }>();
 
 const container = ref<HTMLDivElement>();
 let map: maplibregl.Map | null = null;
@@ -71,7 +71,7 @@ const AMBULANCE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 /** Volgorde van de markeringen per soort, van onder naar boven. Eigen soorten liggen onderop, bij Anders. */
 // The order of functions lives in @ehbo/shared (MARKER_ORDER): it also decides a location's main function.
 /** Boven alle posten: de ambulance en je eigen positie. */
-const EHBO_RANK = MARKER_ORDER.indexOf('ehbo');
+const EHBO_RANK = MARKER_ORDER.indexOf('first_aid');
 const TEAM_LAYER = MARKER_ORDER.length + EHBO_RANK + 1;
 /** Altijd bovenop: open oproep, geselecteerde post en het gekozen punt in beheer. */
 const TOP_LAYER = TEAM_LAYER + 1;
@@ -164,13 +164,13 @@ function runFeatures() {
 
 /**
  * Layer of a post: open call and selected post on top, otherwise the order of its type.
- * A post with a standplaats only ever moves up: above every post without one, but below the EHBO posts.
- * Among posts with a standplaats the order of the types still holds, and EHBO and above keep their place.
+ * A post with a standplaats only ever moves up: above every post without one, but below the EHBO locations.
+ * Among locations with a standplaats the order of the types still holds, and EHBO and above keep their place.
  */
-function postLayer(post: PackagePost, typeKey: string | null | undefined, onTop: boolean) {
+function locationLayer(location: PackageLocation, typeKey: string | null | undefined, onTop: boolean) {
   if (onTop) return TOP_LAYER;
   const rank = markerRank(typeKey);
-  const raised = rank >= EHBO_RANK || props.pkg.teams.some((u) => u.postId === post.id);
+  const raised = rank >= EHBO_RANK || props.pkg.teams.some((u) => u.locationId === location.id);
   return rank + (raised ? EHBO_RANK : 0) + 1;
 }
 
@@ -186,14 +186,14 @@ const MAX_PETALS = 6;
  * The petals of a location: its other functions, and a team's standplaats, which isn't a function you tick but comes with the team.
  * One cross for EHBO, grey when the mobile team is away.
  */
-function petalsOf(post: PackagePost, away: boolean) {
-  const types = post.functionIds.filter((id) => id !== post.typeId).map((id) => props.pkg.postTypes.find((t) => t.id === id)).filter((t) => t !== undefined);
-  const main = props.pkg.postTypes.find((t) => t.id === post.typeId);
-  const standplaats = main?.key !== 'ehbo' && !types.some((t) => t.key === 'ehbo') && props.pkg.teams.some((u) => u.postId === post.id);
+function petalsOf(location: PackageLocation, away: boolean) {
+  const types = location.functionIds.filter((id) => id !== location.typeId).map((id) => props.pkg.functionTypes.find((t) => t.id === id)).filter((t) => t !== undefined);
+  const main = props.pkg.functionTypes.find((t) => t.id === location.typeId);
+  const standplaats = main?.key !== 'first_aid' && !types.some((t) => t.key === 'first_aid') && props.pkg.teams.some((u) => u.locationId === location.id);
   const petals = types.map((t) => {
-    const icon = postTypeIcon(t.key);
-    const grey = t.key === 'ehbo' && away;
-    return { color: grey ? GREY : t.color, html: t.key === 'ehbo' ? CROSS : icon ? iconSvg(icon, 11, 2.6) : (t.letter ?? '').slice(0, 2), ehbo: t.key === 'ehbo' };
+    const icon = functionTypeIcon(t.key);
+    const grey = t.key === 'first_aid' && away;
+    return { color: grey ? GREY : t.color, html: t.key === 'first_aid' ? CROSS : icon ? iconSvg(icon, 11, 2.6) : (t.letter ?? '').slice(0, 2), ehbo: t.key === 'first_aid' };
   });
   if (standplaats) petals.push({ color: away ? GREY : '#0A7D4F', html: CROSS, ehbo: true });
   return petals;
@@ -209,29 +209,29 @@ function petalsHtml(petals: ReturnType<typeof petalsOf>) {
   return `<span class="petals" aria-hidden="true">${placed.join('')}</span><span class="count" aria-hidden="true">+${petals.length}</span>`;
 }
 
-function markerElement(post: PackagePost) {
-  const type = props.pkg.postTypes.find((t) => t.id === post.typeId);
+function markerElement(location: PackageLocation) {
+  const type = props.pkg.functionTypes.find((t) => t.id === location.typeId);
   const el = document.createElement('button');
   el.type = 'button';
-  const alert = props.alertPostIds.includes(post.id);
-  const away = props.awayPostIds.includes(post.id);
-  const focus = post.id === props.focusPostId;
-  const task = !alert && props.taskPostIds.includes(post.id);
-  el.className = `post-marker${type?.key === 'ehbo' ? ' ehbo' : ''}${focus ? ' focus' : ''}${alert ? ' alert' : ''}${task ? ' task' : ''}`;
-  el.style.zIndex = String(postLayer(post, type?.key, alert || focus));
+  const alert = props.alertLocationIds.includes(location.id);
+  const away = props.awayLocationIds.includes(location.id);
+  const focus = location.id === props.focusLocationId;
+  const task = !alert && props.taskLocationIds.includes(location.id);
+  el.className = `post-marker${type?.key === 'first_aid' ? ' ehbo' : ''}${focus ? ' focus' : ''}${alert ? ' alert' : ''}${task ? ' task' : ''}`;
+  el.style.zIndex = String(locationLayer(location, type?.key, alert || focus));
   // Altijd de kleur van de soort post; een post met een open oproep rood.
   // Een EHBO-post waar de mobiele eenheid niet is: grijs.
-  el.style.background = alert ? '#C8261E' : type?.key === 'ehbo' && away ? GREY : (type?.color ?? '#6B7079');
+  el.style.background = alert ? '#C8261E' : type?.key === 'first_aid' && away ? GREY : (type?.color ?? '#6B7079');
   // A run is chosen: what isn't on it steps back. You want to know where the nearest EHBO is, so that stays half visible.
   const run = focusRun();
-  if (run && !alert && !focus && !isOnRun(props.pkg, post, run.id)) {
-    const ehbo = type?.key === 'ehbo' || props.pkg.teams.some((u) => u.postId === post.id);
+  if (run && !alert && !focus && !isOnRun(props.pkg, location, run.id)) {
+    const ehbo = type?.key === 'first_aid' || props.pkg.teams.some((u) => u.locationId === location.id);
     el.classList.add(ehbo ? 'dimmed' : 'faded');
   }
-  const icon = postTypeIcon(type?.key);
-  const names = post.functionIds.map((id) => props.pkg.postTypes.find((t) => t.id === id)?.name).filter(Boolean);
-  el.setAttribute('aria-label', [post.name, names.length > 1 ? names.join(', ') : null, away ? 'EHBO onderweg' : null].filter(Boolean).join(', '));
-  if (type?.key === 'ehbo') el.innerHTML = CROSS;
+  const icon = functionTypeIcon(type?.key);
+  const names = location.functionIds.map((id) => props.pkg.functionTypes.find((t) => t.id === id)?.name).filter(Boolean);
+  el.setAttribute('aria-label', [location.name, names.length > 1 ? names.join(', ') : null, away ? 'EHBO onderweg' : null].filter(Boolean).join(', '));
+  if (type?.key === 'first_aid') el.innerHTML = CROSS;
   else {
     if (icon) el.innerHTML = iconSvg(icon, 16, 2.4);
     else {
@@ -240,23 +240,23 @@ function markerElement(post: PackagePost) {
     }
   }
   // A turnaround says which run, when there's more than one (#69).
-  const ownRun = post.runId !== null && props.pkg.runs.length > 1 ? props.pkg.runs.find((r) => r.id === post.runId) : undefined;
+  const ownRun = location.runId !== null && props.pkg.runs.length > 1 ? props.pkg.runs.find((r) => r.id === location.runId) : undefined;
   if (ownRun) el.insertAdjacentHTML('beforeend', `<span class="run-label">${ownRun.name.replace(/[<>&"']/g, '')}</span>`);
   // The other functions and a standplaats, as petals; the selected location always has its flower open.
-  el.insertAdjacentHTML('beforeend', petalsHtml(petalsOf(post, away)));
+  el.insertAdjacentHTML('beforeend', petalsHtml(petalsOf(location, away)));
   if (focus) el.classList.add('open');
   el.addEventListener('click', (e) => {
     e.stopPropagation();
-    emit('select', post.id);
+    emit('select', location.id);
   });
   return el;
 }
 
-function drawPosts() {
+function drawLocations() {
   if (!map) return;
   for (const m of markers) m.remove();
-  const posts = (props.posts ?? props.pkg.posts).filter((p) => p.lat !== null && p.lng !== null);
-  markers = posts.map((p) => new maplibregl.Marker({ element: markerElement(p) }).setLngLat([p.lng!, p.lat!]).addTo(map!));
+  const locations = (props.locations ?? props.pkg.locations).filter((p) => p.lat !== null && p.lng !== null);
+  markers = locations.map((p) => new maplibregl.Marker({ element: markerElement(p) }).setLngLat([p.lng!, p.lat!]).addTo(map!));
 }
 
 /** Mobiele EHBO als ambulance: groen als ze beschikbaar is, rood bij pauze of tijdens een oproep. */
@@ -282,10 +282,10 @@ function drawPicked() {
 }
 
 /** Het hele gebied in beeld, de gekozen route, of ingezoomd op één post. */
-/** The chosen run, or else everything on the map. The posts shown count too: a call can be at a post the package doesn't have yet. */
+/** The chosen run, or else everything on the map. The locations shown count too: a call can be at a post the package doesn't have yet. */
 function routeBounds() {
   const run = focusRun();
-  const located = [...props.pkg.posts, ...(props.posts ?? [])].filter((p) => p.lat !== null && p.lng !== null).map((p) => [p.lng!, p.lat!] as LngLat);
+  const located = [...props.pkg.locations, ...(props.locations ?? [])].filter((p) => p.lat !== null && p.lng !== null).map((p) => [p.lng!, p.lat!] as LngLat);
   const points: LngLat[] = run ? run.line! : [...props.pkg.runs.flatMap((r) => r.line ?? []), ...located];
   return points.length ? points.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(points[0], points[0])) : null;
 }
@@ -300,7 +300,7 @@ function showRouteAgain() {
 function frame(animate = false) {
   if (!map) return;
   const duration = animate ? 500 : 0;
-  const focus = props.focusPostId !== null ? props.pkg.posts.find((p) => p.id === props.focusPostId) : undefined;
+  const focus = props.focusLocationId !== null ? props.pkg.locations.find((p) => p.id === props.focusLocationId) : undefined;
   if (!props.wholeRoute && focus?.lat != null && focus.lng != null) {
     map.jumpTo({ center: [focus.lng, focus.lat], zoom: 15 });
     return;
@@ -459,7 +459,7 @@ function createMap() {
   map.on('click', (e) => {
     if (props.picking) emit('pick', [Math.round(e.lngLat.lng * 1e6) / 1e6, Math.round(e.lngLat.lat * 1e6) / 1e6]);
   });
-  drawPosts();
+  drawLocations();
   drawAmbulances();
   drawPicked();
   frame();
@@ -486,9 +486,9 @@ onMounted(() => {
   document.addEventListener('visibilitychange', restoreMap);
 });
 
-watch(() => [props.posts, props.pkg, props.focusPostId, props.highlightRunId, props.alertPostIds, props.taskPostIds], drawPosts);
+watch(() => [props.locations, props.pkg, props.focusLocationId, props.highlightRunId, props.alertLocationIds, props.taskLocationIds], drawLocations);
 // Wordt elke tel opnieuw berekend; alleen opnieuw tekenen als er echt iets verandert.
-watch(() => props.awayPostIds.join(), drawPosts);
+watch(() => props.awayLocationIds.join(), drawLocations);
 watch(() => props.picked, drawPicked);
 watch(() => props.ambulances, drawAmbulances);
 // Recalculated every second; only redraw when a line really moved.
@@ -507,7 +507,7 @@ watch(() => props.lines.length > 0 && !props.paused, (moving) => {
   }, DASH_STEP_MS);
 }, { immediate: true });
 // Naar een andere post (bijv. vanaf de postpagina): de kaart gaat mee.
-watch(() => props.focusPostId, () => frame());
+watch(() => props.focusLocationId, () => frame());
 watch(() => props.highlightRunId, () => frame(true));
 watch(() => [props.highlightRunId, props.pkg], () => (map?.getSource('lopen') as GeoJSONSource | undefined)?.setData(runFeatures()));
 
@@ -534,7 +534,7 @@ onBeforeUnmount(() => {
   map?.remove();
   map = null;
 });
-</script>
+`}`</script>
 
 <template>
   <div class="event-map-wrap">

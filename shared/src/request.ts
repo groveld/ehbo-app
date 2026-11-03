@@ -52,7 +52,7 @@ export type RequestStatus = 'sent' | 'accepted' | 'closed' | 'withdrawn';
 /** A help request of a queue type (#86): POST /api/help-requests. */
 export interface NewRequest {
   type: RequestKind;
-  postId: number;
+  locationId: number;
   /** One of the choices of its type, or null. */
   detail: string | null;
   /** Door de telefoon gekozen id: twee keer versturen telt één keer. */
@@ -65,9 +65,9 @@ export interface LiveRequest {
   type: RequestKind;
   /** Gedaan in de testmodus. */
   isTest: boolean;
-  postId: number;
+  locationId: number;
   /** Shown before the new event package has arrived. */
-  postName: string;
+  locationName: string;
   detail: string | null;
   status: RequestStatus;
   reportedAt: string;

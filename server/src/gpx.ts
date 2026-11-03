@@ -91,20 +91,20 @@ export function passages(line: LngLat[], point: LngLat, trackKm?: number): numbe
 
 /**
  * Recalculates all km points. Runs after every change to a GPX or a post's position.
- * posts.km is the first pass on the longest run that comes by, for wherever one km is shown.
+ * locations.km is the first pass on the longest run that comes by, for wherever one km is shown.
  */
 export function recomputePassages(db: DatabaseSync) {
   const runs = db.prepare('SELECT id, track_json, track_km FROM runs WHERE track_json IS NOT NULL ORDER BY track_km DESC, id').all() as { id: number; track_json: string; track_km: number }[];
-  const posts = db.prepare('SELECT id, lat, lng FROM posts WHERE lat IS NOT NULL AND lng IS NOT NULL').all() as { id: number; lat: number; lng: number }[];
-  db.exec('DELETE FROM post_passages; UPDATE posts SET km = NULL;');
-  const insert = db.prepare('INSERT INTO post_passages (post_id, run_id, seq, km) VALUES (?, ?, ?, ?)');
-  const setKm = db.prepare('UPDATE posts SET km = ? WHERE id = ? AND km IS NULL');
+  const locations = db.prepare('SELECT id, lat, lng FROM locations WHERE lat IS NOT NULL AND lng IS NOT NULL').all() as { id: number; lat: number; lng: number }[];
+  db.exec('DELETE FROM km_points; UPDATE locations SET km = NULL;');
+  const insert = db.prepare('INSERT INTO km_points (location_id, run_id, seq, km) VALUES (?, ?, ?, ?)');
+  const setKm = db.prepare('UPDATE locations SET km = ? WHERE id = ? AND km IS NULL');
   for (const run of runs) {
     const line = JSON.parse(run.track_json) as LngLat[];
-    for (const post of posts) {
-      const found = passages(line, [post.lng, post.lat], run.track_km);
-      found.forEach((km, seq) => insert.run(post.id, run.id, seq, km));
-      if (found.length) setKm.run(found[0]!, post.id);
+    for (const location of locations) {
+      const found = passages(line, [location.lng, location.lat], run.track_km);
+      found.forEach((km, seq) => insert.run(location.id, run.id, seq, km));
+      if (found.length) setKm.run(found[0]!, location.id);
     }
   }
 }
@@ -125,19 +125,19 @@ export interface GpxWaypoint {
 const SYMBOLS: Record<string, string> = {
   start_finish: 'Flag, Blue',
   water: 'Drinking Water',
-  ehbo: 'First Aid',
-  stempel: 'Flag, Green',
-  verkeer: 'Danger Area',
+  first_aid: 'First Aid',
+  stamp: 'Flag, Green',
+  traffic: 'Danger Area',
   aed: 'Medical Facility',
   toilet: 'Restroom',
-  keerpunt: 'Flag, Red',
+  turnaround: 'Flag, Red',
 };
 
 const xml = (text: string) => text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const kmText = (km: number) => km.toLocaleString('nl-NL', { maximumFractionDigits: 1 });
 
 /**
- * A GPX for participants: the route and its posts. Whatever else the uploaded file holds (author, device, times) stays out,
+ * A GPX for participants: the route and its locations. Whatever else the uploaded file holds (author, device, times) stays out,
  * and a waypoint has only the post's name, type and km: no people, numbers or access routes. Waypoints come before the track, as GPX requires.
  */
 export function cleanGpx(name: string, source: string | null, line: LngLat[], waypoints: GpxWaypoint[] = []) {

@@ -9,8 +9,8 @@ import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { confirmDialog } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentLog, incidentSummary, postOf, travelMinutes, teamOf } from '../incidents.ts';
-import { coordinatorOf } from '../posts.ts';
+import { clock, incidentLog, incidentSummary, locationOf, travelMinutes, teamOf } from '../incidents.ts';
+import { coordinatorOf } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -23,12 +23,12 @@ const router = useRouter();
 const { busy, error, run } = useSave();
 
 const incident = computed(() => live.incidentById(Number(props.id)));
-const post = computed(() => (incident.value ? postOf(store.postById, incident.value) : undefined));
+const location = computed(() => (incident.value ? locationOf(store.locationById, incident.value) : undefined));
 const coordinator = computed(() => coordinatorOf(store.pkg));
 const isCoordinator = computed(() => coordinator.value?.phone === session.me?.phone || session.me?.isAdmin);
-const atPost = computed(() => live.myPostIds.includes(incident.value?.postId ?? -1));
+const atLocation = computed(() => live.myLocationIds.includes(incident.value?.locationId ?? -1));
 /** The post, or who asked for help from where they were. */
-const canChange = computed(() => atPost.value || isCoordinator.value || incident.value?.reportedBy === session.me?.phone);
+const canChange = computed(() => atLocation.value || isCoordinator.value || incident.value?.reportedBy === session.me?.phone);
 
 const pending = computed(() => incident.value?.dispatches.filter((d) => !d.declinedAt && !d.acceptedAt) ?? []);
 const accepted = computed(() => incident.value?.dispatches.filter((d) => d.acceptedAt) ?? []);
@@ -40,7 +40,7 @@ const helper = computed(() => {
   const i = incident.value;
   const team = teamOf(store.pkg, i?.teamId ?? null);
   if (!i || !team) return null;
-  const from = team.postId !== null ? store.postById.get(team.postId)?.name : null;
+  const from = team.locationId !== null ? store.locationById.get(team.locationId)?.name : null;
   const dispatch = i.dispatches.find((d) => d.teamId === team.id);
   return {
     name: i.acceptedBy?.name ?? team.members[0]?.name ?? team.name,
@@ -69,7 +69,7 @@ const back = () => router.back();
 
 <template>
   <main class="screen tight">
-    <NotOnPhone v-if="!incident || !post" class="top-gap">Deze melding staat (nog) niet op deze telefoon.</NotOnPhone>
+    <NotOnPhone v-if="!incident || !location" class="top-gap">Deze melding staat (nog) niet op deze telefoon.</NotOnPhone>
 
     <!-- 4.2 · Verstuurd: we zoeken een EHBO'er -->
     <template v-else-if="incident.status === 'sent'">
@@ -150,7 +150,7 @@ const back = () => router.back();
         :title="incident.status === 'closed' ? 'Klaar' : 'Melding ingetrokken'"
       />
       <div class="card yours gap-top">
-        <span class="small">{{ incident.post.name }}</span>
+        <span class="small">{{ incident.location.name }}</span>
         <span class="summary">{{ incidentSummary(incident) }}</span>
       </div>
       <ActivityLog :entries="incidentLog(incident)" />

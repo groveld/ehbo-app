@@ -74,7 +74,7 @@ test('a line wobbling around a post is one pass', () => {
   assert.equal(passages(line, north(1.02)).length, 1);
 });
 
-test('posts close together keep their order, even at the same rounded km', () => {
+test('locations close together keep their order, even at the same rounded km', () => {
   const line = [north(0), north(22)];
   const [traffic] = passages(line, north(21.08));
   const [finish] = passages(line, north(21.13));

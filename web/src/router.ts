@@ -7,9 +7,9 @@ export function homeRoute() {
   const session = useSessionStore();
   const me = session.me!;
   if (me.home === 'first_aid') return { name: 'first-aid' };
-  if (me.home === 'post') {
-    const post = me.assignments.find((a) => a.kind === 'post' && a.role === 'lead') ?? me.assignments.find((a) => a.kind === 'post');
-    if (post?.postId) return { name: 'post-home', params: { id: post.postId } };
+  if (me.home === 'location') {
+    const location = me.assignments.find((a) => a.kind === 'location' && a.role === 'lead') ?? me.assignments.find((a) => a.kind === 'location');
+    if (location?.locationId) return { name: 'location-home', params: { id: location.locationId } };
   }
   return { name: 'map' };
 }
@@ -47,15 +47,15 @@ export const router = createRouter({
     { path: '/map', name: 'map', component: { render: () => null }, meta: { staff: true } },
     { path: '/requests', name: 'requests', component: () => import('./views/tabs/RequestsTab.vue'), meta: { staff: true } },
     { path: '/contacts', name: 'contacts', component: () => import('./views/tabs/ContactsTab.vue'), meta: { staff: true } },
-    { path: '/post/:id', name: 'post', component: () => import('./views/PostDetailView.vue'), props: true, meta: { staff: true } },
+    { path: '/location/:id', name: 'location', component: () => import('./views/LocationDetailView.vue'), props: true, meta: { staff: true } },
     // Post: startscherm (3.1/3.2), EHBO-verzoek (4.1) en de melding daarna (4.2/4.6).
-    { path: '/post/:id/start', name: 'post-home', component: () => import('./views/PostHomeView.vue'), props: true, meta: { staff: true } },
+    { path: '/location/:id/start', name: 'location-home', component: () => import('./views/LocationHomeView.vue'), props: true, meta: { staff: true } },
     // Eerder vandaag, met de melding of aanvraag eronder: de terugknop blijft in deze groep.
-    { path: '/post/:id/history', name: 'post-history', component: () => import('./views/PostHistoryView.vue'), props: true, meta: { staff: true } },
-    { path: '/post/:postId/history/incident/:id', name: 'post-incident', component: () => import('./views/IncidentView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
-    { path: '/post/:postId/history/request/:id', name: 'post-request', component: () => import('./views/RequestView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
+    { path: '/location/:id/history', name: 'location-history', component: () => import('./views/LocationHistoryView.vue'), props: true, meta: { staff: true } },
+    { path: '/location/:locationId/history/incident/:id', name: 'location-incident', component: () => import('./views/IncidentView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
+    { path: '/location/:locationId/history/request/:id', name: 'location-request', component: () => import('./views/RequestView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
     { path: '/help', name: 'help', component: () => import('./views/NewIncidentView.vue'), meta: { staff: true } },
-    { path: '/post/:id/first-aid', name: 'new-incident', component: () => import('./views/NewIncidentView.vue'), props: true, meta: { staff: true } },
+    { path: '/location/:id/first-aid', name: 'new-incident', component: () => import('./views/NewIncidentView.vue'), props: true, meta: { staff: true } },
     { path: '/incident/:id', name: 'incident', component: () => import('./views/IncidentView.vue'), props: true, meta: { staff: true } },
     { path: '/request/:id', name: 'request', component: () => import('./views/RequestView.vue'), props: true, meta: { staff: true } },
     { path: '/no-signal/:clientId', name: 'no-signal', component: () => import('./views/NoSignalView.vue'), props: true, meta: { staff: true } },
@@ -81,8 +81,8 @@ export const router = createRouter({
     { path: '/admin/report/print', name: 'admin-report-print', component: () => import('./views/admin/ReportPrintView.vue'), meta: { staff: true, admin: true } },
     { path: '/admin/app-icon', name: 'admin-app-icon', component: () => import('./views/admin/AppIconView.vue'), meta: { staff: true, admin: true } },
     { path: '/admin/runs/:id', name: 'admin-run', component: () => import('./views/admin/RunView.vue'), props: true, meta: { staff: true, admin: true } },
-    { path: '/admin/posts', name: 'admin-posts', component: () => import('./views/admin/PostsView.vue'), meta: { staff: true, admin: true } },
-    { path: '/admin/posts/:id', name: 'admin-post', component: () => import('./views/admin/PostView.vue'), props: true, meta: { staff: true, admin: true } },
+    { path: '/admin/locations', name: 'admin-locations', component: () => import('./views/admin/LocationsView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/locations/:id', name: 'admin-location', component: () => import('./views/admin/LocationView.vue'), props: true, meta: { staff: true, admin: true } },
     { path: '/admin/teams', name: 'admin-teams', component: () => import('./views/admin/TeamsView.vue'), meta: { staff: true, admin: true } },
     { path: '/admin/teams/:id', name: 'admin-team', component: () => import('./views/admin/TeamView.vue'), props: true, meta: { staff: true, admin: true } },
     { path: '/:path(.*)*', redirect: '/' },

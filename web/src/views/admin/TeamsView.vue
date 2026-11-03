@@ -8,11 +8,11 @@ import { useAdminStore } from '../../stores/admin.ts';
 const admin = useAdminStore();
 
 function describe(u: AdminTeam) {
-  const post = u.postId !== null ? admin.postById.get(u.postId) : undefined;
-  const km = post?.km != null ? ` · km ${post.km.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}` : '';
+  const location = u.locationId !== null ? admin.locationById.get(u.locationId) : undefined;
+  const km = location?.km != null ? ` · km ${location.km.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}` : '';
   const members = u.members.length === 1 ? '1 lid' : `${u.members.length} leden`;
-  if (u.kind === 'fixed') return post ? `${post.name}${km} · ${members}` : `Geen EHBO-post gekozen · ${members}`;
-  return post ? `Standplaats: ${post.name} · ${members}` : 'Geen standplaats · niet op de kaart';
+  if (u.kind === 'fixed') return location ? `${location.name}${km} · ${members}` : `Geen EHBO-post gekozen · ${members}`;
+  return location ? `Standplaats: ${location.name} · ${members}` : 'Geen standplaats · niet op de kaart';
 }
 </script>
 
@@ -28,7 +28,7 @@ function describe(u: AdminTeam) {
               <span class="tag">{{ u.kind === 'fixed' ? 'VAST' : mobilityLabel(u.mobility).toUpperCase() }}</span>
               <span v-if="u.hasAed" class="tag ok">AED</span>
             </span>
-            <span class="sub" :class="{ warn: u.kind === 'fixed' && u.postId === null }">{{ describe(u) }}</span>
+            <span class="sub" :class="{ warn: u.kind === 'fixed' && u.locationId === null }">{{ describe(u) }}</span>
           </span>
           <Icon name="forward" :size="18" />
         </RouterLink>

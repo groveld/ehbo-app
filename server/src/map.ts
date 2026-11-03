@@ -106,7 +106,7 @@ export function eventPoints(db: EventDb): LngLat[] {
   for (const row of db.raw.prepare('SELECT track_json FROM runs WHERE track_json IS NOT NULL').all() as { track_json: string }[]) {
     points.push(...(JSON.parse(row.track_json) as LngLat[]));
   }
-  for (const row of db.raw.prepare('SELECT lng, lat FROM posts WHERE lat IS NOT NULL AND lng IS NOT NULL').all() as { lng: number; lat: number }[]) {
+  for (const row of db.raw.prepare('SELECT lng, lat FROM locations WHERE lat IS NOT NULL AND lng IS NOT NULL').all() as { lng: number; lat: number }[]) {
     points.push([row.lng, row.lat]);
   }
   return points;

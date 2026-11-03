@@ -94,7 +94,7 @@ test('a new location with people, and a changed one, saved in one go', async () 
 
   const res = await send('/api/admin/import', [{ name: 'evenement.xlsx', data: file }]);
   assert.equal(res.statusCode, 200, res.body);
-  const after = (await state()).posts;
+  const after = (await state()).locations;
   const mill = after.find((p) => p.name === 'Waterpost 7 · molen')!;
   assert.deepEqual([mill.timeFrom, mill.timeTo, mill.functionIds.length], ['10:30', '13:00', 2], 'a time as Excel writes it');
   assert.deepEqual(mill.contacts.map((c) => [c.name, c.phone, c.role]), [['Mia Molen', '+31612345678', 'lead']], 'the 0 Excel dropped comes back');
@@ -119,7 +119,7 @@ test('problems by row, and then nothing is saved at all', async () => {
   const before = await state();
   const res = await send('/api/admin/import', [{ name: 'evenement.xlsx', data: file }]);
   assert.equal(res.statusCode, 400);
-  assert.deepEqual((await state()).posts, before.posts, 'all or nothing');
+  assert.deepEqual((await state()).locations, before.locations, 'all or nothing');
 });
 
 test('one CSV changes only its own sheet; removing what is missing is a choice', async () => {
@@ -130,14 +130,14 @@ test('one CSV changes only its own sheet; removing what is missing is a choice',
   assert.deepEqual(preview.sheets.map((s) => s.sheet), ['Noodnummers']);
   assert.equal((await send('/api/admin/import', [{ name: 'noodnummers.csv', data: 'Omschrijving;Nummer\r\nHuisartsenpost;0900 1234567\r\n' }])).statusCode, 200);
   assert.ok((await state()).emergencyNumbers.some((n) => n.label === 'Huisartsenpost'));
-  assert.equal((await state()).posts.length, 4, 'the locations stay');
+  assert.equal((await state()).locations.length, 4, 'the locations stay');
 
   // Only the water post in the file, and remove the rest: the others go, but not one with history.
   const locations = 'Naam;Functie 1\r\nWaterpost 3 · brug;Waterpost\r\n';
   const removing = await check([{ name: 'locaties.csv', data: locations }], true);
   assert.equal(removing.sheets[0]!.removed, 3);
-  db.raw.prepare(`INSERT INTO help_requests (client_id, type_id, post_id, status, reported_by, reported_at)
-    VALUES ('h', (SELECT id FROM help_request_types WHERE key = 'water'), (SELECT id FROM posts WHERE name = 'Kruising 4'), 'closed', ?, '2026-12-31T10:00:00Z')`).run(DEMO.postLead);
+  db.raw.prepare(`INSERT INTO help_requests (client_id, type_id, location_id, status, reported_by, reported_at)
+    VALUES ('h', (SELECT id FROM help_request_types WHERE key = 'water'), (SELECT id FROM locations WHERE name = 'Kruising 4'), 'closed', ?, '2026-12-31T10:00:00Z')`).run(DEMO.locationLead);
   const blocked = await check([{ name: 'locaties.csv', data: locations }], true);
   assert.ok(blocked.problems.some((p) => /Kruising 4 heeft oproepen of aanvragen/.test(p.message)));
 });

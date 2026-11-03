@@ -5,7 +5,7 @@ import { helpRequestType, requestDetailLabel, telHref, type LiveRequest } from '
 import Icon from '../../components/Icon.vue';
 import { clock, incidentSummary, teamOf } from '../../incidents.ts';
 import { useSave } from '../../composables/useSave.ts';
-import { kmLabel, primaryContact } from '../../posts.ts';
+import { kmLabel, primaryContact } from '../../locations.ts';
 import { isOpen, useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 import { useSessionStore } from '../../stores/session.ts';
@@ -26,12 +26,12 @@ const doneRequests = computed(() => live.requests.filter((r) => r.status === 'cl
 /** A request's type, with its name and the colours of its chip (#86). */
 const typeOf = (r: LiveRequest) => helpRequestType(store.pkg?.helpRequestTypes, r.type);
 const line = (r: LiveRequest) => {
-  const post = store.postById.get(r.postId);
-  return [r.postName, post ? kmLabel(post) : null, requestDetailLabel(store.pkg?.helpRequestTypes, r.type, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
+  const location = store.locationById.get(r.locationId);
+  return [r.locationName, location ? kmLabel(location) : null, requestDetailLabel(store.pkg?.helpRequestTypes, r.type, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
 };
-const postPhone = (r: LiveRequest) => {
-  const post = store.postById.get(r.postId);
-  return post ? primaryContact(post)?.phone ?? null : null;
+const locationPhone = (r: LiveRequest) => {
+  const location = store.locationById.get(r.locationId);
+  return location ? primaryContact(location)?.phone ?? null : null;
 };
 const pickedText = (r: LiveRequest) => (r.status === 'accepted'
   ? (r.acceptedBy?.phone === session.me?.phone ? 'Opgepakt door jou' : `Opgepakt door ${r.acceptedBy?.name}`)
@@ -53,7 +53,7 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
           <span class="picked grow state" :class="i.status">{{ STATUS[i.status] }}<template v-if="who(i.teamId)"> · {{ who(i.teamId) }}</template><template v-if="i.selfStarted"> · zelf gestart</template></span>
           <span class="mono at">{{ clock(i.reportedAt) }}</span>
         </div>
-        <span class="request-line">{{ i.post.name }} · {{ incidentSummary(i) }}{{ i.aed ? ' · AED' : '' }}</span>
+        <span class="request-line">{{ i.location.name }} · {{ incidentSummary(i) }}{{ i.aed ? ' · AED' : '' }}</span>
       </RouterLink>
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div v-for="r in openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'accepted' && r.acceptedBy?.phone === session.me?.phone }">
@@ -64,7 +64,7 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
         </div>
         <RouterLink :to="{ name: 'request', params: { id: r.id } }" class="request-line open-link">{{ line(r) }}<Icon name="forward" :size="16" /></RouterLink>
         <div v-if="handles" class="request-actions">
-          <a v-if="postPhone(r)" :href="telHref(postPhone(r)!)" class="btn call" :aria-label="`Bel ${r.postName}`"><Icon name="phone" :size="20" /></a>
+          <a v-if="locationPhone(r)" :href="telHref(locationPhone(r)!)" class="btn call" :aria-label="`Bel ${r.locationName}`"><Icon name="phone" :size="20" /></a>
           <button v-if="r.status === 'sent'" class="btn primary-ish" :disabled="busy" @click="run(() => live.pickRequest(r.id))">Oppakken</button>
           <button v-else class="btn done" :disabled="busy" @click="run(() => live.finishRequest(r.id))">Afgehandeld</button>
         </div>
@@ -79,7 +79,7 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
             <span class="picked grow">{{ STATUS[i.status] }}<template v-if="who(i.teamId)"> · {{ who(i.teamId) }}</template><template v-if="i.selfStarted"> · zelf gestart</template></span>
             <span class="mono at">{{ clock(i.reportedAt) }}</span>
           </div>
-          <span class="request-line">{{ i.post.name }} · {{ incidentSummary(i) }}</span>
+          <span class="request-line">{{ i.location.name }} · {{ incidentSummary(i) }}</span>
         </RouterLink>
         <div v-for="r in doneRequests" :key="r.id" class="card request">
           <div class="request-top">

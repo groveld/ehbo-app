@@ -2,10 +2,10 @@
 // Importing first checks everything and shows what would change; only then it saves, in one transaction: all or nothing.
 // Things are matched on name. What isn't in the file stays, unless "remove what's missing" is ticked.
 import {
-  POST_CONTACT_ROLE_LABEL,
+  LOCATION_CONTACT_ROLE_LABEL,
   TIME_PATTERN,
   formatPhone,
-  isManned,
+  isStaffed,
   normalizeEmergencyNumber,
   normalizePhone,
   type AdminState,
@@ -15,8 +15,8 @@ import {
   type ImportPreview,
   type ImportProblem,
   type ImportSheetSummary,
-  type PostContactRole,
-  type PostData,
+  type LocationContactRole,
+  type LocationData,
   type TeamData,
   type TeamKind,
   type TeamMobility,
@@ -29,8 +29,8 @@ export type SheetKey = (typeof SHEET_KEYS)[number];
 
 const FUNCTIONS = 4;
 /** As written in the sheet, and the value it stands for. */
-const ROLES: Record<string, PostContactRole> = { verantwoordelijke: 'lead', lid: 'member', reserve: 'reserve' };
-const ROLE_TEXT = Object.fromEntries(Object.entries(ROLES).map(([text, value]) => [value, text])) as Record<PostContactRole, string>;
+const ROLES: Record<string, LocationContactRole> = { verantwoordelijke: 'lead', lid: 'member', reserve: 'reserve' };
+const ROLE_TEXT = Object.fromEntries(Object.entries(ROLES).map(([text, value]) => [value, text])) as Record<LocationContactRole, string>;
 const KINDS: Record<string, TeamKind> = { vast: 'fixed', mobiel: 'mobile' };
 const KIND_TEXT: Record<TeamKind, string> = { fixed: 'vast', mobile: 'mobiel' };
 const MOBILITY: Record<string, TeamMobility> = { 'te voet': 'on_foot', fiets: 'bike', auto: 'car', anders: 'other' };
@@ -42,8 +42,8 @@ interface Sheet { key: SheetKey; name: string; note: string; columns: Column[] }
 
 /** The sheets, in the order of the file. The lists for dropdowns depend on the event. */
 function sheets(state: AdminState): Sheet[] {
-  const functions = state.postTypes.map((t) => t.name);
-  const posts = state.posts.map((p) => p.name);
+  const functions = state.functionTypes.map((t) => t.name);
+  const locations = state.locations.map((p) => p.name);
   const runs = state.runs.map((r) => r.name);
   const teams = state.teams.map((u) => u.name);
   return [
@@ -66,7 +66,7 @@ function sheets(state: AdminState): Sheet[] {
       key: 'contactpersonen', name: 'Contactpersonen',
       note: 'Wie op welke locatie staat. Per locatie hooguit één verantwoordelijke. Een locatie die hier staat, krijgt precies deze mensen.',
       columns: [
-        { key: 'post', header: 'Locatie', width: 28, list: posts, required: true },
+        { key: 'location', header: 'Locatie', width: 28, list: locations, required: true },
         { key: 'name', header: 'Naam', width: 24 },
         { key: 'phone', header: 'Telefoon', width: 16, text: true, required: true },
         { key: 'role', header: 'Rol', width: 18, list: Object.keys(ROLES) },
@@ -81,7 +81,7 @@ function sheets(state: AdminState): Sheet[] {
         { key: 'name', header: 'Naam', width: 20, required: true },
         { key: 'kind', header: 'Soort', width: 10, list: Object.keys(KINDS), required: true },
         { key: 'mobility', header: 'Vervoer', width: 12, list: Object.keys(MOBILITY) },
-        { key: 'post', header: 'Locatie of standplaats', width: 28, list: posts },
+        { key: 'location', header: 'Locatie of standplaats', width: 28, list: locations },
         { key: 'aed', header: 'AED', width: 7, list: YES_NO },
         { key: 'timeFrom', header: 'Dienst vanaf', width: 13, text: true },
         { key: 'timeTo', header: 'Tot', width: 9, text: true },
@@ -122,13 +122,13 @@ function sheets(state: AdminState): Sheet[] {
 const phoneText = (phone: string | null) => (phone ? formatPhone(phone) : null);
 
 function exportRows(state: AdminState): Record<SheetKey, (string | number | null)[][]> {
-  const typeName = (id: number) => state.postTypes.find((t) => t.id === id)?.name ?? null;
-  const postName = (id: number | null) => (id === null ? null : state.posts.find((p) => p.id === id)?.name ?? null);
+  const typeName = (id: number) => state.functionTypes.find((t) => t.id === id)?.name ?? null;
+  const locationName = (id: number | null) => (id === null ? null : state.locations.find((p) => p.id === id)?.name ?? null);
   return {
-    locaties: state.posts.map((p) => [p.name, ...Array.from({ length: FUNCTIONS }, (_, i) => (p.functionIds[i] !== undefined ? typeName(p.functionIds[i]!) : null)),
+    locaties: state.locations.map((p) => [p.name, ...Array.from({ length: FUNCTIONS }, (_, i) => (p.functionIds[i] !== undefined ? typeName(p.functionIds[i]!) : null)),
       p.lat, p.lng, p.address, p.accessRoute, p.timeFrom, p.timeTo, p.runId === null ? null : state.runs.find((r) => r.id === p.runId)?.name ?? null]),
-    contactpersonen: state.posts.flatMap((p) => p.contacts.map((c) => [p.name, c.name, phoneText(c.phone), ROLE_TEXT[c.role], c.timeFrom, c.timeTo])),
-    eenheden: state.teams.map((u) => [u.name, KIND_TEXT[u.kind], u.mobility ? MOBILITY_TEXT[u.mobility] : null, postName(u.postId), u.hasAed ? 'ja' : 'nee', u.timeFrom, u.timeTo]),
+    contactpersonen: state.locations.flatMap((p) => p.contacts.map((c) => [p.name, c.name, phoneText(c.phone), ROLE_TEXT[c.role], c.timeFrom, c.timeTo])),
+    eenheden: state.teams.map((u) => [u.name, KIND_TEXT[u.kind], u.mobility ? MOBILITY_TEXT[u.mobility] : null, locationName(u.locationId), u.hasAed ? 'ja' : 'nee', u.timeFrom, u.timeTo]),
     leden: state.teams.flatMap((u) => u.members.map((m) => [u.name, m.name, phoneText(m.phone)])),
     kernteam: state.coreTeam.map((c) => [c.function, c.name, phoneText(c.phone), c.isCoordinator ? 'ja' : 'nee']),
     noodnummers: state.emergencyNumbers.map((n) => [n.label, n.number]),
@@ -280,16 +280,16 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
   };
 
   // Locations: from the file, keyed by name, with the existing one when there is one.
-  type PostPlan = { name: string; existing: AdminState['posts'][number] | undefined; data: Omit<PostData, 'contacts'> | null; contacts: ContactData[] | null };
-  const postPlans = new Map<string, PostPlan>();
-  const postKey = (name: string) => norm(name);
-  for (const p of state.posts) postPlans.set(postKey(p.name), { name: p.name, existing: p, data: null, contacts: null });
+  type LocationPlan = { name: string; existing: AdminState['locations'][number] | undefined; data: Omit<LocationData, 'contacts'> | null; contacts: ContactData[] | null };
+  const locationPlans = new Map<string, LocationPlan>();
+  const locationKey = (name: string) => norm(name);
+  for (const p of state.locations) locationPlans.set(locationKey(p.name), { name: p.name, existing: p, data: null, contacts: null });
 
-  const locations = found.get('locaties');
-  if (locations) {
-    for (const { row, values } of required('locaties', locations)) {
-      const key = postKey(values.name!);
-      const plan = postPlans.get(key) ?? { name: values.name!, existing: undefined, data: null, contacts: null };
+  const locationSheet = found.get('locaties');
+  if (locationSheet) {
+    for (const { row, values } of required('locaties', locationSheet)) {
+      const key = locationKey(values.name!);
+      const plan = locationPlans.get(key) ?? { name: values.name!, existing: undefined, data: null, contacts: null };
       if (plan.data) {
         problem('locaties', row, `${values.name} staat er twee keer in`);
         continue;
@@ -298,7 +298,7 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
       for (let i = 1; i <= FUNCTIONS; i++) {
         const name = values[`function${i}`];
         if (!name) continue;
-        const type = state.postTypes.find((t) => sameKey(t.name, name));
+        const type = state.functionTypes.find((t) => sameKey(t.name, name));
         if (!type) problem('locaties', row, `Onbekende functie: ${name}`);
         else if (!functionIds.includes(type.id)) functionIds.push(type.id);
       }
@@ -312,37 +312,37 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
         functionIds, runId: run?.id ?? null, name: values.name!.trim(), lat, lng, accuracyM: plan.existing && plan.existing.lat === lat && plan.existing.lng === lng ? plan.existing.accuracyM : null,
         address: values.address || null, accessRoute: values.accessRoute || null, timeFrom: timeFrom ?? null, timeTo: timeTo ?? null,
       };
-      postPlans.set(key, plan);
+      locationPlans.set(key, plan);
     }
   }
 
   const contacts = found.get('contactpersonen');
   const contactSummary = contacts ? summary('contactpersonen') : null;
   if (contacts) {
-    const byPost = new Map<string, ContactData[]>();
+    const byLocation = new Map<string, ContactData[]>();
     for (const { row, values } of required('contactpersonen', contacts)) {
-      const plan = postPlans.get(postKey(values.post!));
+      const plan = locationPlans.get(locationKey(values.location!));
       if (!plan || (!plan.existing && !plan.data)) {
-        problem('contactpersonen', row, `Locatie ${values.post} bestaat niet`);
+        problem('contactpersonen', row, `Locatie ${values.location} bestaat niet`);
         continue;
       }
       const phone = phoneOf(values.phone!);
       if (!phone) problem('contactpersonen', row, `Ongeldig telefoonnummer bij ${values.name || 'deze persoon'}: ${values.phone}`);
       const roleText = norm(values.role || 'lid');
-      const role = ROLES[roleText] ?? (Object.values(ROLES).find((r) => r === roleText || norm(POST_CONTACT_ROLE_LABEL[r]) === roleText));
+      const role = ROLES[roleText] ?? (Object.values(ROLES).find((r) => r === roleText || norm(LOCATION_CONTACT_ROLE_LABEL[r]) === roleText));
       if (!role) problem('contactpersonen', row, `Onbekende rol: ${values.role}. Kies verantwoordelijke, lid of reserve`);
       const [timeFrom, timeTo] = [timeOf(values.timeFrom!), timeOf(values.timeTo!)];
       if (timeFrom === undefined || timeTo === undefined) problem('contactpersonen', row, 'Tijden als uu:mm, bijvoorbeeld 09:30');
       if (!phone || !role) continue;
-      const list = byPost.get(postKey(values.post!)) ?? [];
+      const list = byLocation.get(locationKey(values.location!)) ?? [];
       if (role === 'lead' && list.some((c) => c.role === 'lead')) problem('contactpersonen', row, `${plan.name}: kies één locatieverantwoordelijke`);
       list.push({ name: values.name ?? '', phone, role, timeFrom: timeFrom ?? null, timeTo: timeTo ?? null });
-      byPost.set(postKey(values.post!), list);
+      byLocation.set(locationKey(values.location!), list);
     }
     // Every location in the file gets exactly the people in this sheet; the others keep theirs.
-    for (const [key, plan] of postPlans) {
-      if (byPost.has(key) || plan.data) {
-        plan.contacts = byPost.get(key) ?? [];
+    for (const [key, plan] of locationPlans) {
+      if (byLocation.has(key) || plan.data) {
+        plan.contacts = byLocation.get(key) ?? [];
         const before = new Map((plan.existing?.contacts ?? []).map((c) => [c.phone, c]));
         for (const c of plan.contacts) {
           const old = before.get(c.phone);
@@ -356,36 +356,36 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
     }
   }
 
-  const postSummary = locations ? summary('locaties') : null;
-  const toRemove = { posts: [] as number[], teams: [] as number[] };
-  if (locations) {
-    for (const plan of postPlans.values()) {
+  const locationSummary = locationSheet ? summary('locaties') : null;
+  const toRemove = { locations: [] as number[], teams: [] as number[] };
+  if (locationSheet) {
+    for (const plan of locationPlans.values()) {
       if (plan.data) {
-        if (!plan.existing) postSummary!.added++;
+        if (!plan.existing) locationSummary!.added++;
         else {
           const e = plan.existing;
           const same = [...e.functionIds].sort().join() === [...plan.data.functionIds].sort().join() && e.runId === plan.data.runId && e.lat === plan.data.lat && e.lng === plan.data.lng
             && e.address === plan.data.address && e.accessRoute === plan.data.accessRoute && e.timeFrom === plan.data.timeFrom && e.timeTo === plan.data.timeTo;
-          if (same) postSummary!.unchanged++;
-          else postSummary!.changed++;
+          if (same) locationSummary!.unchanged++;
+          else locationSummary!.changed++;
         }
       } else if (removeMissing && plan.existing) {
-        if (admin.postHasHistory(plan.existing.id)) problem('locaties', null, `${plan.existing.name} heeft oproepen of aanvragen en kan niet weg`);
-        toRemove.posts.push(plan.existing.id);
-        postSummary!.removed++;
+        if (admin.locationHasHistory(plan.existing.id)) problem('locaties', null, `${plan.existing.name} heeft oproepen of aanvragen en kan niet weg`);
+        toRemove.locations.push(plan.existing.id);
+        locationSummary!.removed++;
       }
     }
   }
   /** Is there (still) a location by this name, and does it have an EHBO function? */
-  const postAfter = (name: string) => {
-    const plan = postPlans.get(postKey(name));
-    if (!plan || (plan.existing && toRemove.posts.includes(plan.existing.id) && !plan.data)) return null;
+  const locationAfter = (name: string) => {
+    const plan = locationPlans.get(locationKey(name));
+    if (!plan || (plan.existing && toRemove.locations.includes(plan.existing.id) && !plan.data)) return null;
     const functionIds = plan.data?.functionIds ?? plan.existing?.functionIds ?? [];
-    return { ehbo: functionIds.some((id) => state.postTypes.find((t) => t.id === id)?.key === 'ehbo') };
+    return { ehbo: functionIds.some((id) => state.functionTypes.find((t) => t.id === id)?.key === 'first_aid') };
   };
 
   // Teams, the same way.
-  type TeamPlan = { name: string; existing: AdminState['teams'][number] | undefined; data: Omit<TeamData, 'members' | 'postId'> & { post: string | null } | null; members: TeamData['members'] | null };
+  type TeamPlan = { name: string; existing: AdminState['teams'][number] | undefined; data: Omit<TeamData, 'members' | 'locationId'> & { location: string | null } | null; members: TeamData['members'] | null };
   const teamPlans = new Map<string, TeamPlan>();
   for (const u of state.teams) teamPlans.set(norm(u.name), { name: u.name, existing: u, data: null, members: null });
   const teamRows = found.get('eenheden');
@@ -401,14 +401,14 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
       if (!kind) problem('eenheden', row, `Soort is vast of mobiel, niet ${values.kind}`);
       const mobility = values.mobility ? MOBILITY[norm(values.mobility)] : undefined;
       if (values.mobility && !mobility) problem('eenheden', row, `Onbekend vervoer: ${values.mobility}`);
-      const post = values.post ? postAfter(values.post) : null;
-      if (values.post && !post) problem('eenheden', row, `Locatie ${values.post} bestaat niet`);
-      if (kind === 'fixed' && !values.post) problem('eenheden', row, 'Kies de EHBO-post van deze vaste eenheid');
-      if (kind === 'fixed' && post && !post.ehbo) problem('eenheden', row, `${values.post} heeft geen EHBO-functie`);
+      const location = values.location ? locationAfter(values.location) : null;
+      if (values.location && !location) problem('eenheden', row, `Locatie ${values.location} bestaat niet`);
+      if (kind === 'fixed' && !values.location) problem('eenheden', row, 'Kies de EHBO-post van deze vaste eenheid');
+      if (kind === 'fixed' && location && !location.ehbo) problem('eenheden', row, `${values.location} heeft geen EHBO-functie`);
       const [timeFrom, timeTo] = [timeOf(values.timeFrom!), timeOf(values.timeTo!)];
       if (timeFrom === undefined || timeTo === undefined) problem('eenheden', row, 'Tijden als uu:mm, bijvoorbeeld 09:30');
       plan.data = {
-        name: values.name!.trim(), kind: kind ?? 'mobile', mobility: kind === 'mobile' ? mobility ?? 'other' : null, post: values.post || null,
+        name: values.name!.trim(), kind: kind ?? 'mobile', mobility: kind === 'mobile' ? mobility ?? 'other' : null, location: values.location || null,
         hasAed: yes(values.aed ?? ''), timeFrom: timeFrom ?? null, timeTo: timeTo ?? null,
       };
       teamPlans.set(key, plan);
@@ -451,10 +451,10 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
     for (const plan of teamPlans.values()) {
       if (plan.data) {
         const e = plan.existing;
-        const postName = e?.postId != null ? state.posts.find((p) => p.id === e.postId)?.name ?? null : null;
+        const locationName = e?.locationId != null ? state.locations.find((p) => p.id === e.locationId)?.name ?? null : null;
         if (!e) teamSummary!.added++;
         else if (e.kind === plan.data.kind && e.mobility === plan.data.mobility && e.hasAed === plan.data.hasAed && e.timeFrom === plan.data.timeFrom && e.timeTo === plan.data.timeTo
-          && norm(postName ?? '') === norm(plan.data.post ?? '')) teamSummary!.unchanged++;
+          && norm(locationName ?? '') === norm(plan.data.location ?? '')) teamSummary!.unchanged++;
         else teamSummary!.changed++;
       } else if (removeMissing && plan.existing) {
         toRemove.teams.push(plan.existing.id);
@@ -516,25 +516,25 @@ export function planImport(admin: AdminDb, files: ImportFile[], removeMissing: b
 
   function apply() {
     if (problems.length) throw Object.assign(new Error('Het bestand heeft nog fouten; er is niets opgeslagen'), { statusCode: 400 });
-    const types = state.postTypes;
+    const types = state.functionTypes;
     for (const id of toRemove.teams) admin.deleteTeam(id);
-    for (const id of toRemove.posts) admin.deletePost(id);
-    for (const plan of postPlans.values()) {
+    for (const id of toRemove.locations) admin.deleteLocation(id);
+    for (const plan of locationPlans.values()) {
       if (!plan.data && !plan.contacts) continue;
       const base = plan.data ?? { ...plan.existing!, contacts: undefined };
-      const data: PostData = { ...base, contacts: plan.contacts ?? plan.existing?.contacts ?? [] };
-      if (!isManned(data, types)) data.contacts = [];
-      admin.savePost(plan.existing?.id ?? null, data);
+      const data: LocationData = { ...base, contacts: plan.contacts ?? plan.existing?.contacts ?? [] };
+      if (!isStaffed(data, types)) data.contacts = [];
+      admin.saveLocation(plan.existing?.id ?? null, data);
     }
-    // New locations have an id now.
-    const posts = admin.getState().posts;
+    // New locationSheet have an id now.
+    const locations = admin.getState().locations;
     for (const plan of teamPlans.values()) {
       if (!plan.data && !plan.members) continue;
       const e = plan.existing;
-      const postName = plan.data ? plan.data.post : null;
-      const postId = plan.data ? (postName ? posts.find((p) => sameKey(p.name, postName))?.id ?? null : null) : e!.postId;
+      const locationName = plan.data ? plan.data.location : null;
+      const locationId = plan.data ? (locationName ? locations.find((p) => sameKey(p.name, locationName))?.id ?? null : null) : e!.locationId;
       const data: TeamData = plan.data
-        ? { name: plan.data.name, kind: plan.data.kind, mobility: plan.data.mobility, postId, hasAed: plan.data.hasAed, timeFrom: plan.data.timeFrom, timeTo: plan.data.timeTo, members: plan.members ?? e?.members ?? [] }
+        ? { name: plan.data.name, kind: plan.data.kind, mobility: plan.data.mobility, locationId, hasAed: plan.data.hasAed, timeFrom: plan.data.timeFrom, timeTo: plan.data.timeTo, members: plan.members ?? e?.members ?? [] }
         : { ...e!, members: plan.members ?? e!.members };
       admin.saveTeam(e?.id ?? null, data);
     }

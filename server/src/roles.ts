@@ -1,5 +1,5 @@
 // Wie is iemand vandaag? Rollen volgen uit het telefoonnummer: post, EHBO-eenheid, kernteam of beheerderslijst.
-import { POST_CONTACT_ROLE_LABEL, mobilityLabel, type Assignment, type HomeScreen, type Me } from '@ehbo/shared';
+import { LOCATION_CONTACT_ROLE_LABEL, mobilityLabel, type Assignment, type HomeScreen, type Me } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
 
 const EHBO_COLOR = '#0A7D4F';
@@ -18,19 +18,19 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
   }
   for (const r of db.teamAssignments(phone)) {
     const detail = r.kind === 'fixed'
-      ? (r.post_name ?? 'Vaste EHBO-post')
-      : `${mobilityLabel(r.mobility).replace('m', 'M')}${r.post_name ? ` · Standplaats ${r.post_name}` : ''}`;
+      ? (r.location_name ?? 'Vaste EHBO-post')
+      : `${mobilityLabel(r.mobility).replace('m', 'M')}${r.location_name ? ` · Standplaats ${r.location_name}` : ''}`;
     assignments.push({ kind: 'team', title: `EHBO ${r.team_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, teamId: r.team_id });
   }
-  for (const r of db.postAssignments(phone)) {
+  for (const r of db.locationAssignments(phone)) {
     assignments.push({
-      kind: 'post',
-      title: r.role === 'lead' ? POST_CONTACT_ROLE_LABEL.lead : (r.person_label ?? POST_CONTACT_ROLE_LABEL[r.role]),
-      detail: `${r.post_name}${km(r.km)}`,
+      kind: 'location',
+      title: r.role === 'lead' ? LOCATION_CONTACT_ROLE_LABEL.lead : (r.person_label ?? LOCATION_CONTACT_ROLE_LABEL[r.role]),
+      detail: `${r.location_name}${km(r.km)}`,
       times: times(r.time_from, r.time_to),
       letter: r.type_letter,
       color: r.type_color,
-      postId: r.post_id,
+      locationId: r.location_id,
       role: r.role,
     });
   }
@@ -41,7 +41,7 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
   // Het startscherm is je functie: EHBO als je EHBO'er bent, anders je post; alleen wie geen van beide heeft, begint op de kaart.
   let home: HomeScreen = 'map';
   if (assignments.some((a) => a.kind === 'team')) home = 'first_aid';
-  else if (assignments.some((a) => a.kind === 'post')) home = 'post';
+  else if (assignments.some((a) => a.kind === 'location')) home = 'location';
 
   return { phone, name: db.getPerson(phone)?.name ?? '', isAdmin, assignments, home };
 }

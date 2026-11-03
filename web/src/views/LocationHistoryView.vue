@@ -11,17 +11,17 @@ const props = defineProps<{ id: string }>();
 const store = usePackageStore();
 const live = useLiveStore();
 
-const postId = computed(() => Number(props.id));
-const post = computed(() => store.postById.get(postId.value));
+const locationId = computed(() => Number(props.id));
+const location = computed(() => store.locationById.get(locationId.value));
 /** Nieuwste eerst. */
 const history = computed(() => [
-  ...live.incidents.filter((i) => i.postId === postId.value && !i.offPost && (i.status === 'closed' || i.status === 'withdrawn')).map((i) => ({
+  ...live.incidents.filter((i) => i.locationId === locationId.value && !i.offLocation && (i.status === 'closed' || i.status === 'withdrawn')).map((i) => ({
     key: `i${i.id}`, at: i.reportedAt, text: `EHBO · ${incidentSummary(i)}`, done: i.status === 'closed', state: i.status === 'closed' ? 'afgerond' : 'ingetrokken',
-    to: { name: 'post-incident', params: { postId: postId.value, id: i.id } },
+    to: { name: 'location-incident', params: { locationId: locationId.value, id: i.id } },
   })),
-  ...live.requests.filter((r) => r.postId === postId.value && (r.status === 'closed' || r.status === 'withdrawn')).map((r) => ({
+  ...live.requests.filter((r) => r.locationId === locationId.value && (r.status === 'closed' || r.status === 'withdrawn')).map((r) => ({
     key: `r${r.id}`, at: r.reportedAt, text: [helpRequestType(store.pkg?.helpRequestTypes, r.type).name, requestDetailLabel(store.pkg?.helpRequestTypes, r.type, r.detail)].filter(Boolean).join(' · '), done: r.status === 'closed',
-    state: r.status === 'closed' ? 'afgehandeld' : 'ingetrokken', to: { name: 'post-request', params: { postId: postId.value, id: r.id } },
+    state: r.status === 'closed' ? 'afgehandeld' : 'ingetrokken', to: { name: 'location-request', params: { locationId: locationId.value, id: r.id } },
   })),
 ].sort((a, b) => b.at.localeCompare(a.at)));
 </script>
@@ -29,10 +29,10 @@ const history = computed(() => [
 <template>
   <main class="screen tight">
     <header class="header">
-      <RouterLink :to="{ name: 'post-home', params: { id } }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
+      <RouterLink :to="{ name: 'location-home', params: { id } }" aria-label="Terug" class="icon-btn"><Icon name="back" /></RouterLink>
       <div class="stack">
         <h1 class="heading">Eerder vandaag</h1>
-        <span v-if="post" class="small">{{ post.name }}</span>
+        <span v-if="location" class="small">{{ location.name }}</span>
       </div>
     </header>
 

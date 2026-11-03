@@ -36,8 +36,8 @@ let n = 0;
 
 /** Melding van de waterpost; Team 2 accepteert na `accept` s, is na `travel` s ter plaatse en rondt af. */
 async function incident(accept: number, travel: number, outcome = 'treated') {
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', {
-    type: 'first_aid', postId: id('posts', 'Waterpost 3 · brug'), clientId: `rapport-${++n}-abcdef`, what: 'unwell', persons: '1', responsive: null, note: null,
+  const inc = await ok<LiveIncident>(DEMO.locationLead, 'POST', '/api/help-requests', {
+    type: 'first_aid', locationId: id('locations', 'Waterpost 3 · brug'), clientId: `rapport-${++n}-abcdef`, what: 'unwell', persons: '1', responsive: null, note: null,
   });
   later(accept);
   await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: id('teams', 'Team 2') });
@@ -62,7 +62,7 @@ beforeEach(async () => {
     calls: { notify: (_phones, payload) => pushes.push(payload), schedule: () => () => {}, now: () => clock },
   });
   await app.ready();
-  await ok(DEMO.postLead, 'PUT', `/api/posts/${id('posts', 'Waterpost 3 · brug')}/open`, { open: true });
+  await ok(DEMO.locationLead, 'PUT', `/api/locations/${id('locations', 'Waterpost 3 · brug')}/open`, { open: true });
   await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${id('teams', 'Team 2')}/availability`, { availability: 'available' });
 });
 
@@ -76,20 +76,20 @@ test('rapport: tijden per incident en totalen; alleen voor beheerders', async ()
   assert.equal((await call(DEMO.coordinator, 'GET', '/api/admin/report')).statusCode, 403);
   await incident(40, 240);
   await incident(60, 360, 'ambulance');
-  await ok(DEMO.postLead, 'POST', '/api/help-requests', { type: 'water', postId: id('posts', 'Waterpost 3 · brug'), detail: null, clientId: 'water-1-abcdef' });
+  await ok(DEMO.locationLead, 'POST', '/api/help-requests', { type: 'water', locationId: id('locations', 'Waterpost 3 · brug'), detail: null, clientId: 'water-1-abcdef' });
 
   const report = await ok<Report>(DEMO.admin, 'GET', '/api/admin/report');
   assert.equal(report.event.name, 'Silvesterloop 2026');
-  assert.deepEqual(report.counts, { posts: 4, staff: 5, teams: 2 });
+  assert.deepEqual(report.counts, { locations: 4, staff: 5, teams: 2 });
   assert.equal(report.incidents.length, 2);
   const [first] = report.incidents;
-  assert.deepEqual([first!.number, first!.postName, first!.teamName, first!.responseSeconds, first!.travelSeconds], [1, 'Waterpost 3 · brug', 'Team 2', 40, 240]);
+  assert.deepEqual([first!.number, first!.locationName, first!.teamName, first!.responseSeconds, first!.travelSeconds], [1, 'Waterpost 3 · brug', 'Team 2', 40, 240]);
   assert.equal(report.totals.incidents, 2);
   assert.equal(report.totals.avgResponseSeconds, 50);
   assert.equal(report.totals.maxResponseSeconds, 60);
   assert.equal(report.totals.avgTravelSeconds, 300);
   assert.deepEqual(report.totals.byOutcome, { treated: 1, ambulance: 1 });
-  assert.deepEqual(report.totals.byPost, [{ postName: 'Waterpost 3 · brug', count: 2 }]);
+  assert.deepEqual(report.totals.byLocation, [{ locationName: 'Waterpost 3 · brug', count: 2 }]);
   assert.deepEqual(report.totals.requestsByKind, { water: 1 });
 });
 
@@ -109,7 +109,7 @@ test('CSV voor Excel: puntkomma, BOM, Nederlandse tijd, aanhalingstekens in noti
 test('testmodus: proefoproepen met "Test" in de melding, niet in het rapport, daarna te wissen', async () => {
   let state = await ok<AdminState>(DEMO.admin, 'PUT', '/api/admin/test-mode', { on: true });
   assert.equal(state.testMode, true);
-  assert.equal((await ok(DEMO.postLead, 'GET', '/api/live/state')).testMode, true, 'iedereen ziet de testmodus');
+  assert.equal((await ok(DEMO.locationLead, 'GET', '/api/live/state')).testMode, true, 'iedereen ziet de testmodus');
 
   pushes.length = 0;
   const proef = await incident(30, 120);
@@ -129,8 +129,8 @@ test('testmodus: proefoproepen met "Test" in de melding, niet in het rapport, da
 
 test('testgegevens wissen kan niet zolang er een proefoproep loopt', async () => {
   await ok(DEMO.admin, 'PUT', '/api/admin/test-mode', { on: true });
-  await ok(DEMO.postLead, 'POST', '/api/help-requests', {
-    type: 'first_aid', postId: id('posts', 'Waterpost 3 · brug'), clientId: 'open-proef-abcdef', what: null, persons: null, responsive: null, note: null,
+  await ok(DEMO.locationLead, 'POST', '/api/help-requests', {
+    type: 'first_aid', locationId: id('locations', 'Waterpost 3 · brug'), clientId: 'open-proef-abcdef', what: null, persons: null, responsive: null, note: null,
   });
   const res = await call(DEMO.admin, 'DELETE', '/api/admin/test-data');
   assert.equal(res.statusCode, 409);

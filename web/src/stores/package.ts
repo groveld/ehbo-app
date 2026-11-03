@@ -2,7 +2,7 @@
 // De app haalt het pakket op bij het openen en zodra de live stand een nieuwe versie noemt; alleen een nieuwe versie komt over de lijn.
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { EventPackage, PackageMap, PackagePost, PostTypeInfo } from '@ehbo/shared';
+import type { EventPackage, PackageMap, PackageLocation, FunctionTypeInfo } from '@ehbo/shared';
 import { load, save } from '../storage.ts';
 
 const MAP_CACHE_PREFIX = 'ehbo-map-';
@@ -25,8 +25,8 @@ export const usePackageStore = defineStore('package', () => {
   const cachedMapVersion = ref<number | null>(load('app.mapCached'));
   let downloading: Promise<void> | null = null;
 
-  const typeById = computed(() => new Map<number, PostTypeInfo>(pkg.value?.postTypes.map((t) => [t.id, t]) ?? []));
-  const postById = computed(() => new Map<number, PackagePost>(pkg.value?.posts.map((p) => [p.id, p]) ?? []));
+  const typeById = computed(() => new Map<number, FunctionTypeInfo>(pkg.value?.functionTypes.map((t) => [t.id, t]) ?? []));
+  const locationById = computed(() => new Map<number, PackageLocation>(pkg.value?.locations.map((p) => [p.id, p]) ?? []));
 
   function setPackage(value: EventPackage | null) {
     pkg.value = value;
@@ -95,5 +95,5 @@ export const usePackageStore = defineStore('package', () => {
     if (pkg.value?.staff) setPackage(null);
   }
 
-  return { pkg, cachedMapVersion, typeById, postById, isCurrent, refresh, cacheMap, clearStaffData };
+  return { pkg, cachedMapVersion, typeById, locationById, isCurrent, refresh, cacheMap, clearStaffData };
 });

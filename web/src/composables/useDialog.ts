@@ -41,7 +41,7 @@ export const confirmDialog = (options: DialogOptions) => show({ cancel: 'Annuler
 export const messageDialog = (options: Omit<DialogOptions, 'cancel'>) => show(options);
 
 /** Closing a post, from the post screen and the post details. People hold back when they don't know it can be undone. */
-export const confirmClosePost = (name: string) => confirmDialog({
+export const confirmCloseLocation = (name: string) => confirmDialog({
   title: `${name} sluiten?`,
   text: 'Zolang de locatie dicht is, kan ze geen verzoeken doen.',
   reassure: 'Je kunt de locatie daarna altijd weer openen met de knop Locatie openen.',

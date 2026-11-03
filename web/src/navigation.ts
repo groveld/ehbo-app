@@ -3,7 +3,7 @@
 // toestel daardoor de app. Terug in de app (de pijl linksboven) gaat één stap omhoog, naar het hoofdscherm van wat je bekijkt:
 // postdetail → kaart, beheer › post → beheer › posten, een tab → je startscherm.
 import type { RouteLocation, RouteLocationRaw, Router } from 'vue-router';
-import { coordinatorOf } from './posts.ts';
+import { coordinatorOf } from './locations.ts';
 import { homeRoute } from './router.ts';
 import { useLiveStore } from './stores/live.ts';
 import { usePackageStore } from './stores/package.ts';
@@ -11,10 +11,10 @@ import { useSessionStore } from './stores/session.ts';
 
 /** Vaste ouders: de terugknop bovenaan dezelfde schermen. */
 const PARENT: Record<string, string> = {
-  post: 'map', route: 'map', help: 'map',
+  location: 'map', route: 'map', help: 'map',
   dispatch: 'first-aid', 'self-start': 'first-aid', assign: 'first-aid', 'assign-incident': 'assign',
   info: 'menu', check: 'menu', admin: 'menu', control: 'menu',
-  'admin-post': 'admin-posts', 'admin-team': 'admin-teams',
+  'admin-location': 'admin-locations', 'admin-team': 'admin-teams',
   'admin-run': 'admin-event', 'admin-app-icon': 'admin-event', 'admin-report-print': 'admin-report',
 };
 
@@ -31,9 +31,9 @@ function isHome(route: RouteLocation) {
 }
 
 /** Een melding of aanvraag hoort bij je eigen post, anders bij Meldingen (coördinator, beheer), het EHBO-scherm of de kaart. */
-function postOrQueue(postId: number | null | undefined): RouteLocationRaw {
+function locationOrQueue(locationId: number | null | undefined): RouteLocationRaw {
   const me = useSessionStore().me!;
-  if (postId != null && me.assignments.some((a) => a.kind === 'post' && a.postId === postId)) return { name: 'post-home', params: { id: postId } };
+  if (locationId != null && me.assignments.some((a) => a.kind === 'location' && a.locationId === locationId)) return { name: 'location-home', params: { id: locationId } };
   if (me.isAdmin || coordinatorOf(usePackageStore().pkg)?.phone === me.phone) return { name: 'requests' };
   if (me.assignments.some((a) => a.kind === 'team')) return { name: 'first-aid' };
   return { name: 'map' };
@@ -46,14 +46,14 @@ export function upOf(route: RouteLocation): RouteLocationRaw | null {
   const live = useLiveStore();
   const p = route.params;
   switch (name) {
-    case 'new-incident': return { name: 'post-home', params: { id: p.id } };
+    case 'new-incident': return { name: 'location-home', params: { id: p.id } };
     case 'close-incident': return { name: 'dispatch', params: { id: p.id } };
-    case 'post-incident': case 'post-request': return { name: 'post-history', params: { id: p.postId } };
-    case 'post-history': return { name: 'post-home', params: { id: p.id } };
-    case 'incident': return postOrQueue(live.incidentById(Number(p.id))?.postId);
+    case 'location-incident': case 'location-request': return { name: 'location-history', params: { id: p.locationId } };
+    case 'location-history': return { name: 'location-home', params: { id: p.id } };
+    case 'incident': return locationOrQueue(live.incidentById(Number(p.id))?.locationId);
     case 'add-to-incident': return { name: 'incident', params: { id: p.incidentId } };
-    case 'request': return postOrQueue(live.requestById(Number(p.id))?.postId);
-    case 'no-signal': return postOrQueue(live.outbox.find((i) => i.clientId === p.clientId)?.postId);
+    case 'request': return locationOrQueue(live.requestById(Number(p.id))?.locationId);
+    case 'no-signal': return locationOrQueue(live.outbox.find((i) => i.clientId === p.clientId)?.locationId);
   }
   if (PARENT[name]) return { name: PARENT[name] };
   if (name.startsWith('admin-')) return { name: 'admin' };

@@ -97,12 +97,12 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
     return reply.code(204).send();
   });
 
-  app.post<Id & { Reply: LiveState }>('/api/posts/:id/keep-open', { schema: { params: idParams } },
-    async (request) => calls.once(...actionHeaders(request), () => calls.keepPost(request.me!, request.params.id)));
+  app.post<Id & { Reply: LiveState }>('/api/locations/:id/keep-open', { schema: { params: idParams } },
+    async (request) => calls.once(...actionHeaders(request), () => calls.keepLocation(request.me!, request.params.id)));
   app.post<Id & { Reply: LiveState }>('/api/teams/:id/keep-on-duty', { schema: { params: idParams } },
     async (request) => calls.once(...actionHeaders(request), () => calls.keepTeam(request.me!, request.params.id)));
 
-  app.put<Id & { Body: { open: boolean }; Reply: LiveState }>('/api/posts/:id/open', {
+  app.put<Id & { Body: { open: boolean }; Reply: LiveState }>('/api/locations/:id/open', {
     schema: { params: idParams, body: { type: 'object', required: ['open'], properties: { open: { type: 'boolean' } } } },
-  }, async (request) => calls.once(...actionHeaders(request), () => calls.setPostOpen(request.me!, request.params.id, request.body.open)));
+  }, async (request) => calls.once(...actionHeaders(request), () => calls.setLocationOpen(request.me!, request.params.id, request.body.open)));
 }

@@ -5,11 +5,11 @@ import Icon from '../components/Icon.vue';
 import { useGpsFix } from '../composables/useGpsFix.ts';
 import { isIOS, isStandalone } from '../platform.ts';
 import { useLiveStore } from '../stores/live.ts';
-import { useLocationStore } from '../stores/location.ts';
+import { usePositionStore } from '../stores/position.ts';
 import { usePushStore } from '../stores/push.ts';
 
 const push = usePushStore();
-const location = useLocationStore();
+const position = usePositionStore();
 const live = useLiveStore();
 const gps = useGpsFix();
 
@@ -19,7 +19,7 @@ const LOCATION: Record<string, [string, Tone]> = {
 
 async function testGps() {
   const fix = await gps.start();
-  if (fix) void location.check();
+  if (fix) void position.check();
 }
 
 type Tone = 'ok' | 'bad' | 'pending' | '';
@@ -41,7 +41,7 @@ const checks = computed((): { label: string; value: string; tone: Tone }[] => [
     tone: push.workerState === 'actief' ? 'ok' : push.workerState === 'unknown' ? '' : 'bad',
   },
   { label: 'Meldingen', value: permissionCheck.value[0], tone: permissionCheck.value[1] },
-  { label: 'Locatie', value: LOCATION[location.permission]![0], tone: LOCATION[location.permission]![1] },
+  { label: 'Locatie', value: LOCATION[position.permission]![0], tone: LOCATION[position.permission]![1] },
   { label: 'Positie delen', value: live.sharingTeam != null ? 'aan' : 'uit', tone: (live.sharingTeam != null ? 'ok' : '') as Tone },
   {
     label: 'Aangemeld bij server',
@@ -69,7 +69,7 @@ const help = computed(() => {
 
 onMounted(() => {
   push.init();
-  void location.check();
+  void position.check();
 });
 </script>
 
@@ -106,8 +106,8 @@ onMounted(() => {
 
       <div class="card stack gap-10">
         <h2 class="section-title">GPS</h2>
-        <p v-if="location.permission === 'denied'" class="small">{{ isIOS ? 'Locatie is geweigerd. Zet het aan via Instellingen › Privacy › Locatievoorzieningen.' : 'Locatie is geweigerd. Zet het aan via de app-instellingen van je telefoon (Locatie).' }}</p>
-        <button v-if="location.permission === 'prompt'" class="btn primary" @click="location.request">Locatie aanzetten</button>
+        <p v-if="position.permission === 'denied'" class="small">{{ isIOS ? 'Locatie is geweigerd. Zet het aan via Instellingen › Privacy › Locatievoorzieningen.' : 'Locatie is geweigerd. Zet het aan via de app-instellingen van je telefoon (Locatie).' }}</p>
+        <button v-if="position.permission === 'prompt'" class="btn primary" @click="position.request">Locatie aanzetten</button>
         <button class="btn" :disabled="gps.measuring.value" @click="testGps">
           <Icon name="gps" :size="20" />{{ gps.measuring.value ? 'Meten…' : 'Test GPS' }}
         </button>

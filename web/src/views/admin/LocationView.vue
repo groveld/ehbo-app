@@ -2,7 +2,7 @@
 // 1.3 · Post invoeren: soort, naam, GPS-positie (de km-punten volgen uit de GPX), aanrijroute, tijden en contactpersonen.
 import { computed, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import { formatPhone, isManned, type ContactData, type PostContactRole, type PostData } from '@ehbo/shared';
+import { formatPhone, isStaffed, type ContactData, type LocationContactRole, type LocationData } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
@@ -23,15 +23,15 @@ const picking = ref(false);
 const save = useSave();
 
 const isNew = computed(() => props.id === 'nieuw');
-const post = computed(() => admin.postById.get(Number(props.id)) ?? null);
+const location = computed(() => admin.locationById.get(Number(props.id)) ?? null);
 
-const ROLES: { value: PostContactRole; label: string }[] = [
+const ROLES: { value: LocationContactRole; label: string }[] = [
   { value: 'lead', label: 'Verantwoordelijke' },
   { value: 'member', label: 'Lid' },
   { value: 'reserve', label: 'Reserve' },
 ];
 
-const form = reactive<PostData>({
+const form = reactive<LocationData>({
   functionIds: [], runId: null, name: '', lat: null, lng: null, accuracyM: null, address: null, accessRoute: null, timeFrom: null, timeTo: null, contacts: [],
 });
 const coordsText = ref('');
@@ -45,10 +45,10 @@ const emptyContact = (): ContactData => ({ name: '', phone: '', role: form.conta
 
 watchEffect(() => {
   if (loaded.value || !admin.state) return;
-  if (post.value) {
-    Object.assign(form, post.value, { contacts: post.value.contacts.map((c) => ({ ...c, phone: formatPhone(c.phone) })) });
+  if (location.value) {
+    Object.assign(form, location.value, { contacts: location.value.contacts.map((c) => ({ ...c, phone: formatPhone(c.phone) })) });
   } else {
-    form.functionIds = admin.state.postTypes[0] ? [admin.state.postTypes[0].id] : [];
+    form.functionIds = admin.state.functionTypes[0] ? [admin.state.functionTypes[0].id] : [];
     form.contacts = [emptyContact()];
   }
   markClean();
@@ -61,8 +61,8 @@ function toggleFunction(id: number) {
   else if (form.functionIds.length > 1) form.functionIds = form.functionIds.filter((f) => f !== id);
 }
 /** Nobody at an AED, toilets or a turnaround (#69): no people or times to fill in. */
-const hasPeople = computed(() => isManned(form, admin.state?.postTypes ?? []));
-const turnaround = computed(() => form.functionIds.some((id) => admin.postTypeById.get(id)?.key === 'keerpunt'));
+const hasPeople = computed(() => isStaffed(form, admin.state?.functionTypes ?? []));
+const turnaround = computed(() => form.functionIds.some((id) => admin.functionTypeById.get(id)?.key === 'turnaround'));
 
 /** One lead per location (#83): once someone is, the others can't be chosen as lead. */
 const leadTaken = (i: number) => form.contacts.some((c, j) => j !== i && c.role === 'lead');
@@ -89,7 +89,7 @@ function optionStyle(color: string) {
 }
 
 async function submit() {
-  const data: PostData = {
+  const data: LocationData = {
     ...form,
     address: form.address || null,
     accessRoute: form.accessRoute || null,
@@ -98,25 +98,25 @@ async function submit() {
     // Lege regels (geen nummer) tellen niet mee.
     contacts: form.contacts.filter((c) => c.phone.trim()).map((c) => ({ ...c, timeFrom: c.timeFrom || null, timeTo: c.timeTo || null })),
   };
-  if (await save.run(() => admin.savePost(isNew.value ? null : Number(props.id), data))) router.push({ name: 'admin-posts' });
+  if (await save.run(() => admin.saveLocation(isNew.value ? null : Number(props.id), data))) router.push({ name: 'admin-locations' });
 }
 
 async function remove() {
   if (!await confirmDialog({ title: `${form.name} verwijderen?`, text: 'De contactpersonen kunnen zich dan niet meer via deze locatie aanmelden.', confirm: 'Verwijderen', tone: 'danger' })) return;
-  if (await save.run(() => admin.deletePost(Number(props.id)))) router.push({ name: 'admin-posts' });
+  if (await save.run(() => admin.deleteLocation(Number(props.id)))) router.push({ name: 'admin-locations' });
 }
 </script>
 
 <template>
-  <AdminPage :title="isNew ? 'Nieuwe locatie' : form.name || 'Locatie'" eyebrow="Locaties" :back="{ name: 'admin-posts' }">
+  <AdminPage :title="isNew ? 'Nieuwe locatie' : form.name || 'Locatie'" eyebrow="Locaties" :back="{ name: 'admin-locations' }">
     <template #default="{ state }">
-      <p v-if="!isNew && !post" class="note warn">Deze locatie bestaat niet (meer).</p>
+      <p v-if="!isNew && !location" class="note warn">Deze locatie bestaat niet (meer).</p>
       <template v-else>
         <div class="form-field">
           <span class="section-label">Functies</span>
           <div class="choice-grid">
             <button
-              v-for="t in state.postTypes" :key="t.id" class="option" :style="optionStyle(t.color)"
+              v-for="t in state.functionTypes" :key="t.id" class="option" :style="optionStyle(t.color)"
               :aria-pressed="form.functionIds.includes(t.id)" @click="toggleFunction(t.id)"
             >{{ t.name }}</button>
           </div>
@@ -146,7 +146,7 @@ async function remove() {
           </div>
           <div v-if="picking && pkg.pkg" class="pick-map">
             <EventMap
-              :pkg="pkg.pkg" picking :focus-post-id="post?.id ?? null"
+              :pkg="pkg.pkg" picking :focus-location-id="location?.id ?? null"
               :picked="form.lat !== null && form.lng !== null ? [form.lng, form.lat] : null"
               @pick="([lng, lat]) => Object.assign(form, { lat, lng, accuracyM: null })"
             />
@@ -162,7 +162,7 @@ async function remove() {
 
         <div class="form-field">
           <span class="section-label">Km-punten</span>
-          <KmPoints v-if="post?.passages.length" :passages="post.passages" :runs="admin.state?.runs ?? []" />
+          <KmPoints v-if="location?.passages.length" :passages="location.passages" :runs="admin.state?.runs ?? []" />
           <span v-else class="small">Geen km: geen GPX, geen positie, of de route komt hier niet langs. De km-punten volgen uit de GPX van de lopen.</span>
         </div>
 
@@ -214,8 +214,8 @@ async function remove() {
 
     <template #footer>
       <p v-if="save.error.value" class="error-text" role="alert">{{ save.error.value }}</p>
-      <button v-if="canSave" class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !post)" @click="submit">Locatie opslaan</button>
-      <button v-if="!isNew && post" class="btn link danger-link" @click="remove">Locatie verwijderen</button>
+      <button v-if="canSave" class="btn primary" :disabled="save.busy.value || !form.name.trim() || (!isNew && !location)" @click="submit">Locatie opslaan</button>
+      <button v-if="!isNew && location" class="btn link danger-link" @click="remove">Locatie verwijderen</button>
     </template>
   </AdminPage>
 </template>

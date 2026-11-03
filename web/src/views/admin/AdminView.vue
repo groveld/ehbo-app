@@ -4,9 +4,9 @@ import type { AdminState } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 
-/** Everyone with a number somewhere: posts, teams, core team and admins. */
+/** Everyone with a number somewhere: locations, teams, core team and admins. */
 const peopleCount = (state: AdminState) => new Set([
-  ...state.posts.flatMap((p) => p.contacts.map((c) => c.phone)),
+  ...state.locations.flatMap((p) => p.contacts.map((c) => c.phone)),
   ...state.teams.flatMap((u) => u.members.map((m) => m.phone)),
   ...state.coreTeam.flatMap((c) => (c.phone ? [c.phone] : [])),
   ...state.admins.map((a) => a.phone),
@@ -28,9 +28,9 @@ function teamSummary(state: AdminState) {
           <span class="main"><span class="title-line">Evenement</span><span class="sub">{{ state.event.name }} · {{ state.runs.length }} lopen</span></span>
           <Icon name="forward" :size="18" />
         </RouterLink>
-        <RouterLink :to="{ name: 'admin-posts' }" class="list-row">
+        <RouterLink :to="{ name: 'admin-locations' }" class="list-row">
           <Icon name="pin" :size="20" />
-          <span class="main"><span class="title-line">Locaties</span><span class="sub">{{ state.posts.length }} locaties</span></span>
+          <span class="main"><span class="title-line">Locaties</span><span class="sub">{{ state.locations.length }} locaties</span></span>
           <Icon name="forward" :size="18" />
         </RouterLink>
         <RouterLink :to="{ name: 'admin-teams' }" class="list-row">

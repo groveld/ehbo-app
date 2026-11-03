@@ -8,9 +8,9 @@ import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentLog, incidentSummary, lastAddition, personsText, postOf, travelMinutes, teamOf } from '../incidents.ts';
+import { clock, incidentLog, incidentSummary, lastAddition, personsText, locationOf, travelMinutes, teamOf } from '../incidents.ts';
 import { navigationUrl } from '../navigate.ts';
-import { callLines, primaryContact } from '../posts.ts';
+import { callLines, primaryContact } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { load, save } from '../storage.ts';
@@ -28,8 +28,8 @@ const { busy, error, run } = useSave();
 const RING = 2 * Math.PI * 30;
 
 const incident = computed(() => live.incidentById(Number(props.id)));
-const post = computed(() => (incident.value ? postOf(store.postById, incident.value) : undefined));
-const contact = computed(() => (post.value ? primaryContact(post.value) : null));
+const location = computed(() => (incident.value ? locationOf(store.locationById, incident.value) : undefined));
+const contact = computed(() => (location.value ? primaryContact(location.value) : null));
 
 /** Mijn eenheid voor deze oproep: die is opgeroepen of heeft aangenomen; anders mijn eerste eenheid. */
 const myDispatch = computed(() => incident.value?.dispatches.find((d) => live.myTeamIds.includes(d.teamId)) ?? null);
@@ -70,7 +70,7 @@ const others = computed(() => (incident.value?.dispatches ?? []).filter((d) => d
 })));
 /** From this team to the call, on the map. */
 const lines = computed(() => callLines(store.pkg, live.teams.filter((u) => u.id === myTeamId.value), live.incidents, live.serverNow));
-const navUrl = computed(() => (post.value?.lat != null && post.value.lng != null ? navigationUrl(post.value.lat, post.value.lng, post.value.name) : null));
+const navUrl = computed(() => (location.value?.lat != null && location.value.lng != null ? navigationUrl(location.value.lat, location.value.lng, location.value.name) : null));
 
 // En route: what the post added is marked new until the team has seen it (a tap, or leaving the screen).
 const SEEN_KEY = 'app.seen-additions';
@@ -86,7 +86,7 @@ onBeforeUnmount(markSeen);
 
 async function accept() {
   if (!incident.value || myTeamId.value === null) return;
-  if (await run(() => live.accept(incident.value!.id, myTeamId.value!)) && navUrl.value) location.href = navUrl.value;
+  if (await run(() => live.accept(incident.value!.id, myTeamId.value!)) && navUrl.value) window.location.href = navUrl.value;
 }
 async function decline() {
   if (!incident.value || myTeamId.value === null) return;
@@ -101,7 +101,7 @@ async function onSite() {
 
 <template>
   <main class="screen tight">
-    <template v-if="mode === 'missing' || !incident || !post">
+    <template v-if="mode === 'missing' || !incident || !location">
       <NotOnPhone class="top-gap">Deze oproep staat (nog) niet op deze telefoon.</NotOnPhone>
       <div class="grow" />
       <button class="btn primary" @click="toEhbo">Terug naar EHBO</button>
@@ -110,7 +110,7 @@ async function onSite() {
     <!-- 4.3 · Oproep, en 4.4 · naar alle eenheden -->
     <template v-else-if="mode === 'call' || mode === 'all'">
       <StatusBlock
-        tone="red" :label="mode === 'all' ? '' : aedCall ? 'AED nodig' : `Oproep · ${myTeam?.name ?? ''}`" :title="post.name"
+        tone="red" :label="mode === 'all' ? '' : aedCall ? 'AED nodig' : `Oproep · ${myTeam?.name ?? ''}`" :title="location.name"
       >
         <template v-if="mode === 'all'" #label><span class="all-chip">Alle eenheden</span></template>
         <div v-if="mode === 'call' && left !== null" class="ring">
@@ -133,13 +133,13 @@ async function onSite() {
       </p>
 
       <div v-if="mode === 'call' && store.pkg" class="map">
-        <EventMap :pkg="store.pkg" :posts="[post]" :focus-post-id="post.id" :alert-post-ids="[post.id]" whole-route :interactive="false" />
+        <EventMap :pkg="store.pkg" :locations="[location]" :focus-location-id="location.id" :alert-location-ids="[location.id]" whole-route :interactive="false" />
       </div>
 
       <div class="facts gap-top" :style="{ '--facts': mode === 'all' ? 2 : 3 }">
         <div class="fact"><span class="label">{{ mode === 'all' ? 'Jouw afstand' : 'Afstand' }}</span><span class="value">{{ km !== null ? `${formatKm(km)} km` : '–' }}</span></div>
         <div class="fact"><span class="label">Reistijd</span><span class="value">{{ minutes ? `± ${minutes} min` : '–' }}</span></div>
-        <div v-if="mode === 'call'" class="fact"><span class="label">Km-punt</span><span class="value">{{ post.km !== null ? formatKm(post.km) : '–' }}</span></div>
+        <div v-if="mode === 'call'" class="fact"><span class="label">Km-punt</span><span class="value">{{ location.km !== null ? formatKm(location.km) : '–' }}</span></div>
       </div>
 
       <ActivityLog v-if="mode === 'call'" :entries="incidentLog(incident)" />
@@ -168,14 +168,14 @@ async function onSite() {
       <StatusBlock
         tone="red"
         :label="incident.status === 'on_site' ? `Ter plaatse · sinds ${clock(incident.onSiteAt)}` : `Onderweg · sinds ${clock(myDispatch?.acceptedAt)}`"
-        :title="post.name"
+        :title="location.name"
       />
       <div v-if="store.pkg" class="map small-map">
-        <EventMap :pkg="store.pkg" :posts="[post]" :focus-post-id="post.id" :alert-post-ids="[post.id]" :lines="lines" whole-route />
+        <EventMap :pkg="store.pkg" :locations="[location]" :focus-location-id="location.id" :alert-location-ids="[location.id]" :lines="lines" whole-route />
       </div>
-      <div v-if="post.accessRoute" class="card route">
+      <div v-if="location.accessRoute" class="card route">
         <span class="small">Aanrijroute</span>
-        <span>{{ post.accessRoute }}</span>
+        <span>{{ location.accessRoute }}</span>
       </div>
       <!-- The same pair as on the post details: call on the left, navigate on the right. -->
       <div class="actions gap-top">
@@ -216,11 +216,11 @@ async function onSite() {
           mode === 'withdrawn' ? 'Melding ingetrokken' : mode === 'declined' ? 'Je kunt niet' : mode === 'watching' ? 'Andere eenheden zijn opgeroepen' : mode === 'closed' ? 'Oproep afgerond' : 'Oproep is al aangenomen'
         }}</h1>
         <p class="lead">
-          <template v-if="mode === 'withdrawn'">{{ post.name }} heeft geen hulp meer nodig.</template>
+          <template v-if="mode === 'withdrawn'">{{ location.name }} heeft geen hulp meer nodig.</template>
           <template v-else-if="mode === 'declined'">De oproep is naar alle beschikbare eenheden gegaan.</template>
           <template v-else-if="mode === 'watching'">Je eenheid is nu niet opgeroepen.</template>
           <template v-else-if="mode === 'closed'">{{ takenBy?.name }} heeft de oproep afgerond.</template>
-          <template v-else><strong>{{ takenBy?.name }}</strong> gaat naar {{ post.name }}.<br>Je hoeft niet te komen.</template>
+          <template v-else><strong>{{ takenBy?.name }}</strong> gaat naar {{ location.name }}.<br>Je hoeft niet te komen.</template>
         </p>
       </div>
       <div class="list gap-top-lg">

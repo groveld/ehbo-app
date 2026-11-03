@@ -1,5 +1,5 @@
 // Weergave van oproepen: korte omschrijving, tijden, reistijd.
-import { INCIDENT_WHAT, OUTCOMES, helpRequestType, type HelpRequestType, type EventPackage, type IncidentDetails, type IncidentEventType, type IncidentPersons, type LiveIncident, type LiveRequest, type PackagePost, type PackageTeam, type TeamMobility } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, helpRequestType, type HelpRequestType, type EventPackage, type IncidentDetails, type IncidentEventType, type IncidentPersons, type LiveIncident, type LiveRequest, type PackageLocation, type PackageTeam, type TeamMobility } from '@ehbo/shared';
 
 const PERSONS: Record<IncidentPersons, string> = { '1': '1 persoon', '2': '2 personen', '3+': '3 of meer personen' };
 
@@ -25,8 +25,8 @@ export function travelMinutes(km: number | null, team: PackageTeam | undefined) 
 }
 
 /** The post of an incident; until the new event package has arrived, what the incident itself says about it. */
-export const postOf = (posts: Map<number, PackagePost>, incident: LiveIncident): PackagePost =>
-  (incident.offPost ? undefined : posts.get(incident.postId)) ?? { id: incident.postId, isOpen: true, timeFrom: null, timeTo: null, passages: [], functionIds: [incident.post.typeId], runId: null, ...incident.post };
+export const locationOf = (locations: Map<number, PackageLocation>, incident: LiveIncident): PackageLocation =>
+  (incident.offLocation ? undefined : locations.get(incident.locationId)) ?? { id: incident.locationId, isOpen: true, timeFrom: null, timeTo: null, passages: [], functionIds: [incident.location.typeId], runId: null, ...incident.location };
 
 export const teamOf = (pkg: EventPackage | null, id: number | null) => (id === null ? undefined : pkg?.teams.find((u) => u.id === id));
 
@@ -51,7 +51,7 @@ export function incidentLog(incident: LiveIncident): LogEntry[] {
 }
 
 export function requestLog(request: LiveRequest, types: HelpRequestType[] | undefined): LogEntry[] {
-  const log: LogEntry[] = [{ at: request.reportedAt, text: `${helpRequestType(types, request.type).name} aangevraagd door ${request.postName}` }];
+  const log: LogEntry[] = [{ at: request.reportedAt, text: `${helpRequestType(types, request.type).name} aangevraagd door ${request.locationName}` }];
   if (request.acceptedAt) log.push({ at: request.acceptedAt, text: `Opgepakt door ${request.acceptedBy?.name ?? 'de coördinator'}` });
   if (request.status === 'closed') log.push({ at: request.closedAt, text: 'Afgehandeld' });
   else if (request.status === 'withdrawn') log.push({ at: request.closedAt, text: 'Ingetrokken', tone: 'stop' });

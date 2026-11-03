@@ -1,6 +1,6 @@
 // Beheer › Mensen (#70): every number with its name and everything it's listed at, and what's still missing. Only to look at;
 // changes stay on the page of the post, team or core team. The name is the exception: it lives in people and is shared everywhere.
-import { POST_CONTACT_ROLE_LABEL, formatPhone, type PeopleOverview, type PersonLink, type PersonOverview, type PostContactRole } from '@ehbo/shared';
+import { LOCATION_CONTACT_ROLE_LABEL, formatPhone, type PeopleOverview, type PersonLink, type PersonOverview, type LocationContactRole } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
 
 type Row = Record<string, string | number | null>;
@@ -25,10 +25,10 @@ export function peopleOverview(db: EventDb): PeopleOverview {
   for (const p of all('SELECT phone, name FROM people')) person(p.phone as string, p.name as string);
 
   for (const c of all(`SELECT c.phone, c.role, COALESCE(c.time_from, p.time_from) AS time_from, COALESCE(c.time_to, p.time_to) AS time_to, p.id, p.name
-                       FROM post_contacts c JOIN posts p ON p.id = c.post_id ORDER BY p.sort, p.id, c.id`)) {
+                       FROM location_contacts c JOIN locations p ON p.id = c.location_id ORDER BY p.sort, p.id, c.id`)) {
     const entry = person(c.phone as string, '');
-    const label = `${c.name as string} · ${POST_CONTACT_ROLE_LABEL[c.role as PostContactRole].toLowerCase()}`;
-    entry.links.push({ kind: 'post', id: c.id as number, label });
+    const label = `${c.name as string} · ${LOCATION_CONTACT_ROLE_LABEL[c.role as LocationContactRole].toLowerCase()}`;
+    entry.links.push({ kind: 'location', id: c.id as number, label });
     if (c.time_from && c.time_to) entry.slots.push({ label: c.name as string, from: c.time_from as string, to: c.time_to as string });
   }
   for (const m of all(`SELECT m.phone, u.id, u.name, u.time_from, u.time_to FROM team_members m JOIN teams u ON u.id = m.team_id ORDER BY u.sort, u.id`)) {
@@ -54,9 +54,9 @@ export function peopleOverview(db: EventDb): PeopleOverview {
 
   const gaps: PeopleOverview['gaps'] = [
     // An EHBO post with a fixed team is run by that team, so it needs no lead.
-    ...all(`SELECT id, name FROM posts p WHERE NOT EXISTS (SELECT 1 FROM post_contacts c WHERE c.post_id = p.id AND c.role = 'lead')
-              AND NOT EXISTS (SELECT 1 FROM teams u WHERE u.post_id = p.id AND u.kind = 'fixed') ORDER BY sort, id`)
-      .map((p): PersonLink => ({ kind: 'post', id: p.id as number, label: `${p.name as string}: nog geen locatieverantwoordelijke` })),
+    ...all(`SELECT id, name FROM locations p WHERE NOT EXISTS (SELECT 1 FROM location_contacts c WHERE c.location_id = p.id AND c.role = 'lead')
+              AND NOT EXISTS (SELECT 1 FROM teams u WHERE u.location_id = p.id AND u.kind = 'fixed') ORDER BY sort, id`)
+      .map((p): PersonLink => ({ kind: 'location', id: p.id as number, label: `${p.name as string}: nog geen locatieverantwoordelijke` })),
     ...all('SELECT id, name FROM teams u WHERE NOT EXISTS (SELECT 1 FROM team_members m WHERE m.team_id = u.id) ORDER BY sort, id')
       .map((u): PersonLink => ({ kind: 'team', id: u.id as number, label: `${u.name as string}: nog geen leden` })),
     ...all('SELECT function FROM core_team WHERE phone IS NULL ORDER BY sort, id')

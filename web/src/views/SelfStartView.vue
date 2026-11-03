@@ -7,7 +7,7 @@ import { INCIDENT_PERSONS, INCIDENT_WHAT, RESPONSIVE, placeOf, type IncidentDeta
 import Icon from '../components/Icon.vue';
 import { useSave } from '../composables/useSave.ts';
 import { teamOf } from '../incidents.ts';
-import { atPostM } from '../posts.ts';
+import { atLocationM } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -21,7 +21,7 @@ const { busy, error, run } = useSave();
 
 const teamId = computed(() => live.myTeamIds[0] ?? null);
 const team = computed(() => teamOf(store.pkg, teamId.value));
-const posts = computed(() => store.pkg?.posts ?? []);
+const locations = computed(() => store.pkg?.locations ?? []);
 
 const form = reactive<IncidentDetails>({ what: null, persons: null, responsive: null, note: null });
 const toggle = <K extends keyof IncidentDetails>(key: K, value: IncidentDetails[K]) => { form[key] = form[key] === value ? null : value; };
@@ -31,13 +31,13 @@ const locating = ref(false);
 /** Chosen by hand; that goes above the GPS. */
 const chosen = ref<number | null>(null);
 
-const place = computed(() => (gps.value ? placeOf(posts.value, gps.value, atPostM(store.pkg)) : null));
+const place = computed(() => (gps.value ? placeOf(locations.value, gps.value, atLocationM(store.pkg)) : null));
 /** Without GPS the place of the team: where it stayed, or its own post or standplaats. */
-const homePostId = computed(() => (teamId.value !== null ? live.teamState(teamId.value)?.stayPostId : null) ?? team.value?.postId ?? null);
-const postId = computed(() => chosen.value ?? place.value?.postId ?? homePostId.value);
+const homeLocationId = computed(() => (teamId.value !== null ? live.teamState(teamId.value)?.stayLocationId : null) ?? team.value?.locationId ?? null);
+const locationId = computed(() => chosen.value ?? place.value?.locationId ?? homeLocationId.value);
 const placeText = computed(() => {
   if (chosen.value === null && place.value) return place.value.name;
-  return posts.value.find((p) => p.id === postId.value)?.name ?? null;
+  return locations.value.find((p) => p.id === locationId.value)?.name ?? null;
 });
 
 let stopped = false;
@@ -53,10 +53,10 @@ onMounted(() => {
 onBeforeUnmount(() => { stopped = true; });
 
 async function start() {
-  if (teamId.value === null || postId.value === null) return;
+  if (teamId.value === null || locationId.value === null) return;
   const useGps = chosen.value === null ? gps.value : null;
   let id = 0;
-  const ok = await run(async () => { id = await live.selfStart({ teamId: teamId.value!, postId: postId.value!, position: useGps, ...form }); });
+  const ok = await run(async () => { id = await live.selfStart({ teamId: teamId.value!, locationId: locationId.value!, position: useGps, ...form }); });
   if (ok) void router.replace({ name: 'close-incident', params: { id } });
 }
 </script>
@@ -77,7 +77,7 @@ async function start() {
         <p class="card where"><Icon name="pin" :size="18" /><span>{{ placeText ?? (locating ? 'Locatie bepalen…' : 'Kies hieronder een plek') }}</span></p>
         <select id="plek" v-model="chosen" class="input">
           <option :value="null">{{ team?.kind === 'fixed' ? 'Eigen locatie' : 'Automatisch' }}</option>
-          <option v-for="p in posts" :key="p.id" :value="p.id">{{ p.name }}</option>
+          <option v-for="p in locations" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
       </div>
 
@@ -105,7 +105,7 @@ async function start() {
     <div class="grow" />
     <div class="stack gap-6 footer">
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-      <button class="btn go" :disabled="busy || postId === null" @click="start">Incident starten</button>
+      <button class="btn go" :disabled="busy || locationId === null" @click="start">Incident starten</button>
       <span class="small center">Je bent er al: hierna ga je direct naar afronden.</span>
     </div>
   </main>

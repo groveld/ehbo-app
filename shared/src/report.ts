@@ -5,7 +5,7 @@ import type { HelpRequestType, RequestKind } from './request.ts';
 export interface ReportIncident {
   /** Volgnummer in het rapport (1 = eerste melding). */
   number: number;
-  postName: string;
+  locationName: string;
   km: number | null;
   what: IncidentWhat | null;
   persons: IncidentPersons | null;
@@ -29,17 +29,17 @@ export interface ReportIncident {
 }
 
 /** All passes of one post, per run. For the permit. */
-export interface ReportPostPassages {
-  postName: string;
+export interface ReportLocationPassages {
+  locationName: string;
   runs: { runName: string; km: number[] }[];
 }
 
 export interface Report {
   event: { name: string; startDate: string | null; endDate: string | null };
   generatedAt: string;
-  counts: { posts: number; staff: number; teams: number };
+  counts: { locations: number; staff: number; teams: number };
   incidents: ReportIncident[];
-  passages: ReportPostPassages[];
+  passages: ReportLocationPassages[];
   /** To name the requests by their type (#86). */
   helpRequestTypes: HelpRequestType[];
   totals: {
@@ -50,7 +50,7 @@ export interface Report {
     maxResponseSeconds: number | null;
     avgTravelSeconds: number | null;
     byOutcome: Partial<Record<Outcome, number>>;
-    byPost: { postName: string; count: number }[];
+    byLocation: { locationName: string; count: number }[];
     requestsByKind: Partial<Record<RequestKind, number>>;
   };
   /** Proefoproepen en -aanvragen die zijn weggelaten. */

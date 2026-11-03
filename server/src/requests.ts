@@ -12,7 +12,7 @@ export interface RequestsOptions {
   /** De live stand is veranderd: iedereen het nieuwe overzicht sturen. */
   changed: () => void;
   /** Opens a post that closed by time; false if a person closed it. */
-  reopen: (postId: number) => boolean;
+  reopen: (locationId: number) => boolean;
   now?: () => Date;
 }
 
@@ -27,13 +27,13 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
   const iso = () => now().toISOString();
 
   const personName = (phone: string) => (get('SELECT name FROM people WHERE phone = ?', phone)?.name as string | undefined) || phone;
-  const postName = (postId: number) => (get('SELECT name FROM posts WHERE id = ?', postId)?.name as string | undefined) ?? 'Post';
-  const postPhones = (postId: number) => all('SELECT phone FROM post_contacts WHERE post_id = ?', postId).map((r) => r.phone as string);
+  const locationName = (locationId: number) => (get('SELECT name FROM locations WHERE id = ?', locationId)?.name as string | undefined) ?? 'Post';
+  const locationPhones = (locationId: number) => all('SELECT phone FROM location_contacts WHERE location_id = ?', locationId).map((r) => r.phone as string);
 
   const isCoordinator = (me: Me) => db.coordinatorPhone() === me.phone;
   /** De wachtrij beheren: de evenementcoördinator, het kernteam en beheerders. */
   const handles = (me: Me) => isCoordinator(me) || me.isAdmin || me.assignments.some((a) => a.kind === 'core_team');
-  const atPost = (me: Me, postId: number) => me.assignments.some((a) => a.kind === 'post' && a.postId === postId);
+  const atLocation = (me: Me, locationId: number) => me.assignments.some((a) => a.kind === 'location' && a.locationId === locationId);
 
   function list(): LiveRequest[] {
     const rows = all('SELECT * FROM queue_requests ORDER BY id DESC');
@@ -46,8 +46,8 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
         handling: 'queue' as const,
         type: r.kind as RequestKind,
         isTest: r.is_test === 1,
-        postId: r.post_id as number,
-        postName: postName(r.post_id as number),
+        locationId: r.location_id as number,
+        locationName: locationName(r.location_id as number),
         detail: r.detail as string | null,
         status: r.status as RequestStatus,
         reportedAt: r.created_at as string,
@@ -77,18 +77,18 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
   function create(me: Me, body: NewRequest) {
     const existing = get('SELECT id FROM help_requests WHERE client_id = ?', body.clientId);
     if (existing) return list().find((r) => r.id === existing.id)!;
-    const post = get('SELECT id, is_open FROM posts WHERE id = ?', body.postId);
-    if (!post) throw httpError(404, 'Locatie niet gevonden');
-    if (!atPost(me, body.postId) && !handles(me)) throw httpError(403, 'Je kunt alleen een aanvraag doen vanaf je eigen locatie');
-    if (post.is_open !== 1 && !reopen(body.postId)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
+    const location = get('SELECT id, is_open FROM locations WHERE id = ?', body.locationId);
+    if (!location) throw httpError(404, 'Locatie niet gevonden');
+    if (!atLocation(me, body.locationId) && !handles(me)) throw httpError(403, 'Je kunt alleen een aanvraag doen vanaf je eigen locatie');
+    if (location.is_open !== 1 && !reopen(body.locationId)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
     checkDetail(body.type, body.detail);
     // A request is a help request of a queue type (#86).
-    const id = Number(run(`INSERT INTO help_requests (client_id, type_id, post_id, detail, status, reported_by, reported_at, is_test)
+    const id = Number(run(`INSERT INTO help_requests (client_id, type_id, location_id, detail, status, reported_by, reported_at, is_test)
                            VALUES (?, (SELECT id FROM help_request_types WHERE key = ?), ?, ?, 'sent', ?, ?, ?)`,
-      body.clientId, body.type, body.postId, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);
+      body.clientId, body.type, body.locationId, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);
     const coordinator = db.coordinatorPhone();
     if (coordinator) {
-      notify([coordinator], { title: `${typeOf(body.type).name} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/requests' });
+      notify([coordinator], { title: `${typeOf(body.type).name} · ${locationName(body.locationId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/requests' });
     }
     changed();
     return list().find((r) => r.id === id)!;
@@ -96,7 +96,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
 
   function setDetail(me: Me, id: number, detail: string | null) {
     const r = row(id);
-    if (!atPost(me, r.post_id as number) && !handles(me)) throw httpError(403, 'Alleen de locatie kan de aanvraag aanpassen');
+    if (!atLocation(me, r.location_id as number) && !handles(me)) throw httpError(403, 'Alleen de locatie kan de aanvraag aanpassen');
     if (r.status !== 'sent' && r.status !== 'accepted') throw httpError(409, 'Deze aanvraag is al afgehandeld');
     checkDetail(r.kind as RequestKind, detail);
     run('UPDATE help_requests SET detail = ? WHERE id = ?', detail, id);
@@ -109,7 +109,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     const r = row(id);
     if (r.status !== 'sent') throw httpError(409, r.status === 'accepted' ? `Al opgepakt door ${personName(r.picked_by as string)}` : 'Deze aanvraag is niet meer open');
     run("UPDATE help_requests SET status = 'accepted', accepted_at = ?, accepted_by = ? WHERE id = ?", iso(), me.phone, id);
-    notify(postPhones(r.post_id as number), { title: `${typeOf(r.kind as RequestKind).name} wordt geregeld`, body: `${personName(me.phone)} heeft je aanvraag opgepakt.`, tag: `aanvraag-${id}`, url: `/request/${id}` });
+    notify(locationPhones(r.location_id as number), { title: `${typeOf(r.kind as RequestKind).name} wordt geregeld`, body: `${personName(me.phone)} heeft je aanvraag opgepakt.`, tag: `aanvraag-${id}`, url: `/request/${id}` });
     changed();
     return list();
   }
@@ -119,14 +119,14 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     const r = row(id);
     if (r.status !== 'sent' && r.status !== 'accepted') return list();
     run("UPDATE help_requests SET status = 'closed', closed_at = ?, accepted_at = COALESCE(accepted_at, ?), accepted_by = COALESCE(accepted_by, ?) WHERE id = ?", iso(), iso(), me.phone, id);
-    notify(postPhones(r.post_id as number), { title: `${typeOf(r.kind as RequestKind).name}: afgehandeld`, body: `${personName(me.phone)} heeft je aanvraag afgehandeld.`, tag: `aanvraag-${id}`, url: `/request/${id}` });
+    notify(locationPhones(r.location_id as number), { title: `${typeOf(r.kind as RequestKind).name}: afgehandeld`, body: `${personName(me.phone)} heeft je aanvraag afgehandeld.`, tag: `aanvraag-${id}`, url: `/request/${id}` });
     changed();
     return list();
   }
 
   function withdraw(me: Me, id: number) {
     const r = row(id);
-    if (!atPost(me, r.post_id as number) && !handles(me)) throw httpError(403, 'Alleen de locatie kan de aanvraag intrekken');
+    if (!atLocation(me, r.location_id as number) && !handles(me)) throw httpError(403, 'Alleen de locatie kan de aanvraag intrekken');
     if (r.status !== 'sent' && r.status !== 'accepted') return list();
     run("UPDATE help_requests SET status = 'withdrawn', closed_at = ? WHERE id = ?", iso(), id);
     changed();

@@ -70,7 +70,7 @@ async function deleteTestData() {
           <div v-if="shown.length" class="list">
             <div v-for="i in shown" :key="i.number" class="list-row row">
               <span class="mono at">{{ clock(i.reportedAt) }}</span>
-              <span class="grow"><strong>{{ i.postName.split(' · ')[0] }}</strong> · {{ i.what ? INCIDENT_WHAT[i.what].split(' / ')[0]!.toLowerCase() : 'EHBO' }}</span>
+              <span class="grow"><strong>{{ i.locationName.split(' · ')[0] }}</strong> · {{ i.what ? INCIDENT_WHAT[i.what].split(' / ')[0]!.toLowerCase() : 'EHBO' }}</span>
               <span class="outcome" :class="{ muted: !i.outcome }">{{ i.outcome ? OUTCOME_SHORT[i.outcome] : i.status === 'withdrawn' ? 'ingetrokken' : 'open' }}</span>
             </div>
           </div>

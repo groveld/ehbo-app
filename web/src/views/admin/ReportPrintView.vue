@@ -58,7 +58,7 @@ onMounted(async () => {
         <h2>Evenement</h2>
         <table class="pairs">
           <tbody>
-            <tr><th>Locaties</th><td>{{ report.counts.posts }}</td><th>Medewerkers</th><td>{{ report.counts.staff }}</td><th>EHBO-eenheden</th><td>{{ report.counts.teams }}</td></tr>
+            <tr><th>Locaties</th><td>{{ report.counts.locations }}</td><th>Medewerkers</th><td>{{ report.counts.staff }}</td><th>EHBO-eenheden</th><td>{{ report.counts.teams }}</td></tr>
           </tbody>
         </table>
       </section>
@@ -77,9 +77,9 @@ onMounted(async () => {
             <thead><tr><th>Afloop</th><th class="num">Aantal</th></tr></thead>
             <tbody><tr v-for="[key, n] in outcomes" :key="key"><td>{{ OUTCOMES[key] }}</td><td class="num">{{ n }}</td></tr></tbody>
           </table>
-          <table v-if="report.totals.byPost.length">
+          <table v-if="report.totals.byLocation.length">
             <thead><tr><th>Locatie</th><th class="num">Incidenten</th></tr></thead>
-            <tbody><tr v-for="p in report.totals.byPost" :key="p.postName"><td>{{ p.postName }}</td><td class="num">{{ p.count }}</td></tr></tbody>
+            <tbody><tr v-for="p in report.totals.byLocation" :key="p.locationName"><td>{{ p.locationName }}</td><td class="num">{{ p.count }}</td></tr></tbody>
           </table>
           <table v-if="requests.length">
             <thead><tr><th>Aanvragen</th><th class="num">Aantal</th></tr></thead>
@@ -97,7 +97,7 @@ onMounted(async () => {
           <tbody>
             <tr v-for="i in report.incidents" :key="i.number">
               <td class="num">{{ i.number }}</td>
-              <td>{{ i.postName }}<template v-if="i.km !== null"> (km {{ formatKm(i.km) }})</template></td>
+              <td>{{ i.locationName }}<template v-if="i.km !== null"> (km {{ formatKm(i.km) }})</template></td>
               <td>{{ i.what ? INCIDENT_WHAT[i.what] : '–' }}{{ i.aed ? ' · AED' : '' }}{{ i.escalated ? ' · alle eenheden' : '' }}{{ i.selfStarted ? ' · zelf gestart' : '' }}</td>
               <td class="mono">{{ clock(i.reportedAt) }}</td>
               <td class="mono">{{ clock(i.acceptedAt) }}</td>
@@ -118,9 +118,9 @@ onMounted(async () => {
         <table class="incidents">
           <thead><tr><th>Locatie</th><th>Loop</th><th>Km-punten</th></tr></thead>
           <tbody>
-            <template v-for="p in report.passages" :key="p.postName">
+            <template v-for="p in report.passages" :key="p.locationName">
               <tr v-for="r in p.runs" :key="r.runName">
-                <td>{{ p.postName }}</td>
+                <td>{{ p.locationName }}</td>
                 <td>{{ r.runName }}</td>
                 <td class="mono">{{ formatKmList(r.km) }}</td>
               </tr>

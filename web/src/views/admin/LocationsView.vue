@@ -11,9 +11,9 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
 <template>
   <AdminPage title="Locaties" eyebrow="Beheer" :back="{ name: 'admin' }">
     <template #default="{ state }">
-      <div v-if="state.posts.length" class="list">
-        <RouterLink v-for="p in state.posts" :key="p.id" :to="{ name: 'admin-post', params: { id: p.id } }" class="list-row">
-          <span class="badge letter" :style="{ background: admin.postTypeById.get(p.typeId)?.color }">{{ admin.postTypeById.get(p.typeId)?.letter }}</span>
+      <div v-if="state.locations.length" class="list">
+        <RouterLink v-for="p in state.locations" :key="p.id" :to="{ name: 'admin-location', params: { id: p.id } }" class="list-row">
+          <span class="badge letter" :style="{ background: admin.functionTypeById.get(p.typeId)?.color }">{{ admin.functionTypeById.get(p.typeId)?.letter }}</span>
           <span v-if="p.functionIds.length > 1" class="more-functions" :aria-label="`${p.functionIds.length} functies`">+{{ p.functionIds.length - 1 }}</span>
           <span class="main">
             <span class="title-line">{{ p.name }}</span>
@@ -26,7 +26,7 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
         </RouterLink>
       </div>
       <p v-else class="note">Nog geen locaties. Voeg ze toe ter plaatse, dan legt de app meteen de GPS-positie vast.</p>
-      <RouterLink :to="{ name: 'admin-post', params: { id: 'nieuw' } }" class="add-link">+ Locatie toevoegen</RouterLink>
+      <RouterLink :to="{ name: 'admin-location', params: { id: 'nieuw' } }" class="add-link">+ Locatie toevoegen</RouterLink>
     </template>
   </AdminPage>
 </template>

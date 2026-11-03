@@ -40,7 +40,7 @@ before(async () => {
   app = buildApp({ db, vapid: { ...generateVapidKeys(), subject: 'mailto:test@example.org' }, build: { version: 'test', commit: 'x', builtAt: '' }, mapSource: async () => fakeSource });
   await app.ready();
   adminCookie = await login(DEMO.admin);
-  staffCookie = await login(DEMO.postMember);
+  staffCookie = await login(DEMO.locationMember);
 });
 
 after(async () => {
@@ -110,16 +110,16 @@ test('tegels: gzip, lang te bewaren, alleen voor de huidige kaartversie', async 
 test('evenementpakket: deelnemers zonder namen en nummers, medewerkers met', async () => {
   const pub = (await app.inject({ url: '/api/package' })).json() as EventPackage;
   assert.equal(pub.staff, false);
-  assert.ok(pub.posts.length > 0);
+  assert.ok(pub.locations.length > 0);
   assert.doesNotMatch(JSON.stringify({ ...pub, ehboPhone: null }), /\+316|Wim Water|accessRoute/, 'geen persoonsgegevens, alleen het EHBO-nummer');
   assert.deepEqual([pub.coreTeam, pub.emergencyNumbers], [[], []]);
   // Eenheden alleen met hun soort en post (het kruisje op de kaart), zonder naam of leden.
-  assert.ok(pub.teams.length > 0 && pub.teams.every((u) => u.name === '' && u.members.length === 0 && u.postId !== undefined));
+  assert.ok(pub.teams.length > 0 && pub.teams.every((u) => u.name === '' && u.members.length === 0 && u.locationId !== undefined));
   assert.equal(pub.ehboPhone, DEMO.coordinator, 'zonder EHBO-coördinator met nummer: de evenementcoördinator');
 
   const staff = (await app.inject({ url: '/api/package', headers: { cookie: staffCookie } })).json() as EventPackage;
   assert.equal(staff.staff, true);
-  assert.ok(staff.posts.some((p) => p.contacts?.some((c) => c.name === 'Wim Water')));
+  assert.ok(staff.locations.some((p) => p.contacts?.some((c) => c.name === 'Wim Water')));
   assert.equal(staff.coreTeam[0]?.phone, DEMO.coordinator);
   assert.equal(staff.teams[0]?.members[0]?.name, 'Eva EHBO');
   assert.notEqual(staff.version, pub.version);
@@ -139,6 +139,6 @@ test('evenementpakket: 304 als de telefoon deze versie al heeft, nieuwe versie n
 });
 
 test('standaardletters uit het schermontwerp', () => {
-  const letters = db.raw.prepare("SELECT key, letter FROM post_types WHERE key IN ('start_finish', 'stempel') ORDER BY key").all();
-  assert.deepEqual(letters.map((r) => r.letter), ['S/F', 'St']);
+  const letters = db.raw.prepare("SELECT key, letter FROM function_types WHERE key IN ('start_finish', 'stamp') ORDER BY key").all();
+  assert.deepEqual(letters.map((r) => r.letter), ['St', 'S/F']);
 });

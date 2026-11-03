@@ -8,7 +8,7 @@ import Icon from '../components/Icon.vue';
 import Sos112Bar from '../components/Sos112Bar.vue';
 import { useDirty } from '../composables/useDirty.ts';
 import { useGpsFix } from '../composables/useGpsFix.ts';
-import { atPostM, kmLabel } from '../posts.ts';
+import { atLocationM, kmLabel } from '../locations.ts';
 import { OfflineError, useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -18,14 +18,14 @@ const live = useLiveStore();
 const router = useRouter();
 
 const existing = computed(() => (props.incidentId ? live.incidentById(Number(props.incidentId)) : null));
-const post = computed(() => store.postById.get(existing.value?.postId ?? Number(props.id)) ?? null);
+const location = computed(() => store.locationById.get(existing.value?.locationId ?? Number(props.id)) ?? null);
 /** Help to where you are: no post, no addition. */
 const here = computed(() => !props.id && !props.incidentId);
 const gps = useGpsFix();
 onMounted(() => { if (here.value) void gps.start(); });
 /** Above this the team may not find you: say where you are in the note. */
 const ROUGH_M = 100;
-const place = computed(() => (gps.best.value && store.pkg ? placeOf(store.pkg.posts, [gps.best.value.lng, gps.best.value.lat], atPostM(store.pkg)) : null));
+const place = computed(() => (gps.best.value && store.pkg ? placeOf(store.pkg.locations, [gps.best.value.lng, gps.best.value.lat], atLocationM(store.pkg)) : null));
 const form = reactive<IncidentDetails>({
   what: existing.value?.what ?? null,
   persons: existing.value?.persons ?? null,
@@ -44,7 +44,7 @@ const toggle = <K extends keyof IncidentDetails>(key: K, value: IncidentDetails[
 };
 
 async function send() {
-  if (here.value ? !gps.best.value : !post.value) return;
+  if (here.value ? !gps.best.value : !location.value) return;
   busy.value = true;
   error.value = '';
   const details = { ...form, note: form.note?.trim() || null };
@@ -54,10 +54,10 @@ async function send() {
       router.replace({ name: 'incident', params: { id: existing.value.id } });
     } else if (here.value) {
       const { lat, lng, accuracyM } = gps.best.value!;
-      const incident = await live.report({ postId: null, lat, lng, accuracyM, ...details });
+      const incident = await live.report({ locationId: null, lat, lng, accuracyM, ...details });
       router.replace({ name: 'incident', params: { id: incident.id } });
     } else {
-      const incident = await live.report({ postId: post.value!.id, ...details });
+      const incident = await live.report({ locationId: location.value!.id, ...details });
       router.replace({ name: 'incident', params: { id: incident.id } });
     }
   } catch (err) {
@@ -75,7 +75,7 @@ async function send() {
     <header class="page-header">
       <button class="icon-btn" aria-label="Terug" @click="router.back()"><Icon name="back" /></button>
       <div>
-        <span class="eyebrow">{{ here ? 'Waar je nu bent' : [post?.name, post ? kmLabel(post) : null].filter(Boolean).join(' · ') }}</span>
+        <span class="eyebrow">{{ here ? 'Waar je nu bent' : [location?.name, location ? kmLabel(location) : null].filter(Boolean).join(' · ') }}</span>
         <h1>{{ existing ? 'Melding aanvullen' : here ? 'EHBO hierheen' : 'EHBO aanvragen' }}</h1>
       </div>
     </header>

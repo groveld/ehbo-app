@@ -1,15 +1,15 @@
 <script setup lang="ts">
-// A page per run: details, a map with only this route, the GPX to download, and the posts along it in order.
+// A page per run: details, a map with only this route, the GPX to download, and the locations along it in order.
 import { computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatKm } from '@ehbo/shared';
 import CallFirstAid from '../components/CallFirstAid.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
-import PostBadge from '../components/PostBadge.vue';
+import LocationBadge from '../components/LocationBadge.vue';
 import { useFavorites } from '../composables/useFavorites.ts';
 import { formatDate } from '../format.ts';
-import { routeStops } from '../posts.ts';
+import { routeStops } from '../locations.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
 
@@ -24,7 +24,7 @@ const { favorites, toggleFavorite } = useFavorites();
 
 const run = computed(() => store.pkg?.runs.find((r) => r.id === Number(props.id)) ?? null);
 const stops = computed(() => (store.pkg && run.value ? routeStops(store.pkg, run.value.id) : []));
-const posts = computed(() => [...new Set(stops.value.map((s) => s.post))]);
+const locations = computed(() => [...new Set(stops.value.map((s) => s.location))]);
 const date = computed(() => formatDate(run.value?.date ?? store.pkg?.event.startDate));
 const isFavorite = computed(() => (run.value ? favorites.value.includes(run.value.id) : false));
 </script>
@@ -53,7 +53,7 @@ const isFavorite = computed(() => (run.value ? favorites.value.includes(run.valu
 
       <template v-if="run.line">
         <div class="map">
-          <EventMap :pkg="store.pkg" :posts="posts" :highlight-run-id="run.id" only-highlighted />
+          <EventMap :pkg="store.pkg" :locations="locations" :highlight-run-id="run.id" only-highlighted />
         </div>
         <a :href="`/gpx/${run.id}.gpx`" class="btn" download><Icon name="download" :size="20" />GPX downloaden</a>
       </template>
@@ -62,10 +62,10 @@ const isFavorite = computed(() => (run.value ? favorites.value.includes(run.valu
       <section v-if="run.line && stops.length" class="stack gap-8">
         <h2 class="section-title">Op deze route</h2>
         <div class="list">
-          <div v-for="{ post, km } in stops" :key="`${post.id}-${km}`" class="list-row">
+          <div v-for="{ location, km } in stops" :key="`${location.id}-${km}`" class="list-row">
             <span class="mono km">{{ km !== null ? `km ${formatKm(km)}` : '' }}</span>
-            <PostBadge :type="store.typeById.get(post.typeId)" :size="28" />
-            <span class="post-name">{{ post.name }}</span>
+            <LocationBadge :type="store.typeById.get(location.typeId)" :size="28" />
+            <span class="post-name">{{ location.name }}</span>
           </div>
         </div>
       </section>

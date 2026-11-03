@@ -29,9 +29,9 @@ async function ok<T = LiveState>(phone: string, method: 'GET' | 'POST' | 'PUT', 
   return res.json() as T;
 }
 
-const WATER = () => (db.raw.prepare("SELECT id FROM posts WHERE name = 'Waterpost 3 · brug'").get() as { id: number }).id;
+const WATER = () => (db.raw.prepare("SELECT id FROM locations WHERE name = 'Waterpost 3 · brug'").get() as { id: number }).id;
 let n = 0;
-const water = (detail: string | null = null) => ({ type: 'water', postId: WATER(), detail, clientId: `aanvraag-${++n}-abcdef` });
+const water = (detail: string | null = null) => ({ type: 'water', locationId: WATER(), detail, clientId: `aanvraag-${++n}-abcdef` });
 
 beforeEach(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ehbo-requests-'));
@@ -46,7 +46,7 @@ beforeEach(async () => {
     calls: { notify: (phones, payload) => pushes.push({ phones: [...phones], payload }) },
   });
   await app.ready();
-  await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: true });
+  await ok(DEMO.locationLead, 'PUT', `/api/locations/${WATER()}/open`, { open: true });
 });
 
 afterEach(async () => {
@@ -56,7 +56,7 @@ afterEach(async () => {
 });
 
 test('aanvraag van de post komt in de wachtrij van de coördinator, zonder alarm', async () => {
-  const created = await call(DEMO.postLead, 'POST', '/api/help-requests', water('lots'));
+  const created = await call(DEMO.locationLead, 'POST', '/api/help-requests', water('lots'));
   assert.equal(created.statusCode, 201, created.body);
   const req = created.json() as LiveRequest;
   assert.deepEqual([req.status, req.type, req.detail, req.position], ['sent', 'water', 'lots', 1]);
@@ -65,21 +65,21 @@ test('aanvraag van de post komt in de wachtrij van de coördinator, zonder alarm
   assert.match(push.body, /Flink/);
   assert.ok(!push.urgent, 'geen alarm');
 
-  const second = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/help-requests', { ...water(), type: 'volunteer', detail: 'relief' });
+  const second = await ok<LiveRequest>(DEMO.locationLead, 'POST', '/api/help-requests', { ...water(), type: 'volunteer', detail: 'relief' });
   assert.equal(second.position, 2, 'plek 2 in de wachtrij');
   const state = await ok(DEMO.coordinator, 'GET', '/api/live/state');
   assert.equal(requestsOf(state).length, 2);
 });
 
 test('oppakken en afhandelen: alleen de coördinator, de post hoort het', async () => {
-  const req = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/help-requests', water());
-  assert.equal((await call(DEMO.postMember, 'POST', `/api/help-requests/${req.id}/pick`)).statusCode, 403);
+  const req = await ok<LiveRequest>(DEMO.locationLead, 'POST', '/api/help-requests', water());
+  assert.equal((await call(DEMO.locationMember, 'POST', `/api/help-requests/${req.id}/pick`)).statusCode, 403);
 
   let state = await ok(DEMO.coordinator, 'POST', `/api/help-requests/${req.id}/pick`);
   assert.equal(requestsOf(state)[0]?.status, 'accepted');
   assert.equal(requestsOf(state)[0]?.acceptedBy?.name, 'Cor Coördinator');
   assert.equal(pushes.at(-1)!.payload.title, 'Water wordt geregeld');
-  assert.ok(pushes.at(-1)!.phones.includes(DEMO.postLead));
+  assert.ok(pushes.at(-1)!.phones.includes(DEMO.locationLead));
   assert.equal((await call(DEMO.admin, 'POST', `/api/help-requests/${req.id}/pick`)).statusCode, 409, 'al opgepakt');
 
   state = await ok(DEMO.coordinator, 'POST', `/api/help-requests/${req.id}/done`);
@@ -90,18 +90,18 @@ test('oppakken en afhandelen: alleen de coördinator, de post hoort het', async 
 
 test('de post vult aan of trekt in; een dichte post kan niets aanvragen; dubbel versturen telt één keer', async () => {
   const body = water();
-  const req = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/help-requests', body);
-  assert.equal((await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/help-requests', body)).id, req.id);
+  const req = await ok<LiveRequest>(DEMO.locationLead, 'POST', '/api/help-requests', body);
+  assert.equal((await ok<LiveRequest>(DEMO.locationLead, 'POST', '/api/help-requests', body)).id, req.id);
 
-  let state = await ok(DEMO.postLead, 'PUT', `/api/help-requests/${req.id}`, { detail: 'almost_empty' });
+  let state = await ok(DEMO.locationLead, 'PUT', `/api/help-requests/${req.id}`, { detail: 'almost_empty' });
   assert.equal(requestsOf(state)[0]?.detail, 'almost_empty');
-  assert.equal((await call(DEMO.postLead, 'PUT', `/api/help-requests/${req.id}`, { detail: 'relief' })).statusCode, 400, 'hoort bij vrijwilliger');
-  state = await ok(DEMO.postLead, 'POST', `/api/help-requests/${req.id}/withdraw`);
+  assert.equal((await call(DEMO.locationLead, 'PUT', `/api/help-requests/${req.id}`, { detail: 'relief' })).statusCode, 400, 'hoort bij vrijwilliger');
+  state = await ok(DEMO.locationLead, 'POST', `/api/help-requests/${req.id}/withdraw`);
   assert.equal(requestsOf(state)[0]?.status, 'withdrawn');
 
-  await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: false });
-  assert.equal((await call(DEMO.postLead, 'POST', '/api/help-requests', water())).statusCode, 409);
-  assert.equal((await call(DEMO.postMember, 'POST', '/api/help-requests', water())).statusCode, 403, 'niet je eigen post');
+  await ok(DEMO.locationLead, 'PUT', `/api/locations/${WATER()}/open`, { open: false });
+  assert.equal((await call(DEMO.locationLead, 'POST', '/api/help-requests', water())).statusCode, 409);
+  assert.equal((await call(DEMO.locationMember, 'POST', '/api/help-requests', water())).statusCode, 403, 'niet je eigen post');
 });
 
 test('a new kind of help request is a row, not code: its name, choices and handling come from the table', async () => {
@@ -109,21 +109,21 @@ test('a new kind of help request is a row, not code: its name, choices and handl
   add.run('parking', 'Parkeren', 'queue', 4, 'Hulp bij parkeren', 'Wat is er?', JSON.stringify([{ key: 'full', label: 'Vol' }]), 'more');
   add.run('lost_child', 'Kind kwijt', 'dispatch', 5, null, null, '[]', 'more');
 
-  const pkg = await ok<{ helpRequestTypes: HelpRequestType[] }>(DEMO.postLead, 'GET', '/api/package');
+  const pkg = await ok<{ helpRequestTypes: HelpRequestType[] }>(DEMO.locationLead, 'GET', '/api/package');
   assert.deepEqual(pkg.helpRequestTypes.map((t) => t.key), ['first_aid', 'water', 'traffic', 'volunteer', 'parking', 'lost_child']);
   assert.equal(pkg.helpRequestTypes.find((t) => t.key === 'parking')!.colors.bg, '#F0EFEA', 'no colours of its own: the plain ones');
 
-  const req = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/help-requests', { ...water('full'), type: 'parking' });
+  const req = await ok<LiveRequest>(DEMO.locationLead, 'POST', '/api/help-requests', { ...water('full'), type: 'parking' });
   assert.deepEqual([req.type, req.handling, req.detail], ['parking', 'queue', 'full']);
   const push = pushes.find((p) => p.phones.includes(DEMO.coordinator))!.payload;
   assert.match(push.title, /Parkeren · Waterpost 3/);
   assert.match(push.body, /Vol/);
-  assert.equal((await call(DEMO.postLead, 'PUT', `/api/help-requests/${req.id}`, { detail: 'lots' })).statusCode, 400, 'a choice of water');
+  assert.equal((await call(DEMO.locationLead, 'PUT', `/api/help-requests/${req.id}`, { detail: 'lots' })).statusCode, 400, 'a choice of water');
 
-  const incident = await call(DEMO.postLead, 'POST', '/api/help-requests', {
-    type: 'lost_child', postId: WATER(), clientId: `kind-${++n}-abcdef`, what: 'unknown', persons: '1', responsive: null, note: null,
+  const incident = await call(DEMO.locationLead, 'POST', '/api/help-requests', {
+    type: 'lost_child', locationId: WATER(), clientId: `kind-${++n}-abcdef`, what: 'unknown', persons: '1', responsive: null, note: null,
   });
   assert.equal(incident.statusCode, 201, incident.body);
   assert.deepEqual([incident.json().type, incident.json().handling, incident.json().status], ['lost_child', 'dispatch', 'sent']);
-  assert.equal((await call(DEMO.postLead, 'POST', '/api/help-requests', { ...water(), type: 'pizza' })).statusCode, 400, 'unknown kind');
+  assert.equal((await call(DEMO.locationLead, 'POST', '/api/help-requests', { ...water(), type: 'pizza' })).statusCode, 400, 'unknown kind');
 });

@@ -4,7 +4,7 @@ import { DEMO, seedDemo } from './demo.ts';
 import { openEventDb } from './event-db.ts';
 
 const db = openEventDb(config.dataDir, config.event, { name: 'Silvesterloop 2026' });
-if (db.raw.prepare('SELECT 1 FROM posts').get()) {
+if (db.raw.prepare('SELECT 1 FROM locations').get()) {
   console.log(`${config.event} heeft al locaties; er is niets toegevoegd. Verwijder data/events/${config.event}.sqlite om opnieuw te beginnen.`);
 } else {
   seedDemo(db);

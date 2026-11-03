@@ -6,7 +6,7 @@ import Icon from '../components/Icon.vue';
 import { confirmDialog, messageDialog } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { useLiveStore } from '../stores/live.ts';
-import { manned } from '../posts.ts';
+import { staffed } from '../locations.ts';
 import { usePackageStore } from '../stores/package.ts';
 
 const store = usePackageStore();
@@ -16,11 +16,11 @@ const { busy, error, run } = useSave();
 
 const counts = computed(() => {
   // Only locations with people open and close (#69).
-  const posts = store.pkg?.posts.filter((p) => manned(store.pkg, p)) ?? [];
+  const locations = store.pkg?.locations.filter((p) => staffed(store.pkg, p)) ?? [];
   const teams = store.pkg?.teams ?? [];
   return {
-    posts: posts.length,
-    openPosts: posts.filter((p) => live.postOpen(p.id, p.isOpen)).length,
+    locations: locations.length,
+    openLocations: locations.filter((p) => live.locationOpen(p.id, p.isOpen)).length,
     teams: teams.length,
     onDuty: teams.filter((u) => (live.teamState(u.id)?.availability ?? 'off_duty') !== 'off_duty').length,
   };
@@ -36,18 +36,18 @@ async function act(action: 'open-all' | 'close-all' | 'close-day') {
 }
 
 async function openAll() {
-  const { posts, openPosts, teams, onDuty } = counts.value;
+  const { locations, openLocations, teams, onDuty } = counts.value;
   if (await confirmDialog({
-    title: `${posts - openPosts} locaties en ${teams - onDuty} EHBO-eenheden openen?`,
+    title: `${locations - openLocations} locaties en ${teams - onDuty} EHBO-eenheden openen?`,
     text: 'Alleen waar iemand is aangemeld. Eenheden gaan op Beschikbaar, ook als de EHBO\'er er misschien nog niet is. Wie Niet beschikbaar staat, blijft zo staan. Iedereen krijgt een melding.',
     confirm: 'Alles openen',
   })) await act('open-all');
 }
 
 async function closeAll() {
-  const { openPosts, onDuty } = counts.value;
+  const { openLocations, onDuty } = counts.value;
   if (await confirmDialog({
-    title: `${openPosts} locaties en ${onDuty} EHBO-eenheden sluiten?`,
+    title: `${openLocations} locaties en ${onDuty} EHBO-eenheden sluiten?`,
     text: 'Bijvoorbeeld voor een lange pauze in het programma. Wat met een oproep bezig is, blijft open.',
     reassure: 'Je kunt daarna alles weer openen.',
     confirm: 'Alles sluiten',
@@ -74,7 +74,7 @@ async function closeDay() {
     </header>
 
     <div class="facts" style="--facts: 2">
-      <div class="fact"><span class="value mono">{{ counts.openPosts }}/{{ counts.posts }}</span><span class="label">Locaties open</span></div>
+      <div class="fact"><span class="value mono">{{ counts.openLocations }}/{{ counts.locations }}</span><span class="label">Locaties open</span></div>
       <div class="fact"><span class="value mono">{{ counts.onDuty }}/{{ counts.teams }}</span><span class="label">EHBO in dienst</span></div>
     </div>
 
