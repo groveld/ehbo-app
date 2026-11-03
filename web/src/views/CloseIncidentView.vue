@@ -29,7 +29,7 @@ const stayHere = ref(true);
 
 /** The status picked during the call is the main button; the other way out is below it. */
 const planned = computed(() => (myTeam.value ? live.teamState(myTeam.value.id)?.nextAvailability ?? null : null));
-const FINISH: Record<TeamAvailability, string> = { available: 'Afronden & weer beschikbaar', unavailable: 'Afronden & pauze', off_duty: 'Afronden & uit dienst' };
+const FINISH: Record<TeamAvailability, string> = { available: 'Afronden & weer beschikbaar', unavailable: 'Afronden & bezet', off_duty: 'Afronden & uit dienst' };
 
 async function finish(then: TeamAvailability) {
   if (!incident.value || !outcome.value) return;
