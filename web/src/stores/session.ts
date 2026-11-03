@@ -6,8 +6,8 @@ import { api, ApiRequestError } from '../api.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
 
-const RANK = { beheerder: 0, kernteam: 1, ehbo: 2, post: 3 } as const;
-const LOGOUT_KEY = 'ehbo.logout';
+const RANK = { admin: 0, core_team: 1, team: 2, post: 3 } as const;
+const LOGOUT_KEY = 'app.logout';
 
 /** This device's push endpoint, so the server stops sending calls here after logging out. */
 async function pushEndpoint() {
@@ -30,15 +30,15 @@ async function sendLogout(endpoint: string | undefined) {
 }
 
 export const useSessionStore = defineStore('session', () => {
-  const stored = load<Omit<PublicEvent, 'style' | 'brand'> & Partial<PublicEvent>>('ehbo.event');
+  const stored = load<Omit<PublicEvent, 'style' | 'brand'> & Partial<PublicEvent>>('app.event');
   // Bewaard door een oudere versie van de app: zonder stijl en logo's.
   const event = ref<PublicEvent | null>(stored && { style: DEFAULT_STYLE, brand: { logo: null, icon: null }, ...stored });
-  const me = ref<Me | null>(load('ehbo.me'));
+  const me = ref<Me | null>(load('app.me'));
   /** Laatste aanmelding met een onbekend nummer, voor het scherm "nummer niet bekend". */
   const unknown = ref<LoginUnknown | null>(null);
 
-  watch(event, (value) => save('ehbo.event', value));
-  watch(me, (value) => save('ehbo.me', value));
+  watch(event, (value) => save('app.event', value));
+  watch(me, (value) => save('app.me', value));
 
   /** Logged out without signal: the cookie is still on the phone, so tell the server as soon as there is a connection. */
   async function finishLogout() {

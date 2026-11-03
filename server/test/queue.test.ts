@@ -92,7 +92,7 @@ test('the server carries out a queued change once, with the time it happened', a
   });
   const cookie = async (phone: string) => {
     const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
-    return `ehbo_sessie=${res.cookies.find((c) => c.name === 'ehbo_sessie')!.value}`;
+    return `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
   };
   const id = (table: string, name: string) => (db.raw.prepare(`SELECT id FROM ${table} WHERE name = ?`).get(name) as { id: number }).id;
   const [post, team] = [id('posts', 'Waterpost 3 · brug'), id('teams', 'Team 2')];

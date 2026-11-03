@@ -18,7 +18,7 @@ const cookies = new Map<string, string>();
 async function call(phone: string, method: 'GET' | 'POST' | 'PUT', url: string, payload?: object) {
   if (!cookies.has(phone)) {
     const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
-    cookies.set(phone, `ehbo_sessie=${res.cookies.find((c) => c.name === 'ehbo_sessie')!.value}`);
+    cookies.set(phone, `session=${res.cookies.find((c) => c.name === 'session')!.value}`);
   }
   return app.inject({ method, url, payload, headers: { cookie: cookies.get(phone)! } });
 }

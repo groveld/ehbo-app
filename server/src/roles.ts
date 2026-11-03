@@ -14,13 +14,13 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
   const assignments: Assignment[] = [];
 
   for (const r of db.coreTeamAssignments(phone)) {
-    assignments.push({ kind: 'kernteam', title: r.function, letter: r.function.charAt(0).toUpperCase(), color: INK });
+    assignments.push({ kind: 'core_team', title: r.function, letter: r.function.charAt(0).toUpperCase(), color: INK });
   }
   for (const r of db.teamAssignments(phone)) {
     const detail = r.kind === 'fixed'
       ? (r.post_name ?? 'Vaste EHBO-post')
       : `${mobilityLabel(r.mobility).replace('m', 'M')}${r.post_name ? ` · Standplaats ${r.post_name}` : ''}`;
-    assignments.push({ kind: 'ehbo', title: `EHBO ${r.team_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, teamId: r.team_id });
+    assignments.push({ kind: 'team', title: `EHBO ${r.team_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, teamId: r.team_id });
   }
   for (const r of db.postAssignments(phone)) {
     assignments.push({
@@ -34,13 +34,13 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
       role: r.role,
     });
   }
-  if (isAdmin) assignments.push({ kind: 'beheerder', title: 'Beheerder', detail: 'Evenement, locaties en mensen beheren', letter: 'B', color: '#3E434B' });
+  if (isAdmin) assignments.push({ kind: 'admin', title: 'Beheerder', detail: 'Evenement, locaties en mensen beheren', letter: 'B', color: '#3E434B' });
 
   if (assignments.length === 0) return undefined;
 
   // Het startscherm is je functie: EHBO als je EHBO'er bent, anders je post; alleen wie geen van beide heeft, begint op de kaart.
-  let home: HomeScreen = 'overzicht';
-  if (assignments.some((a) => a.kind === 'ehbo')) home = 'ehbo';
+  let home: HomeScreen = 'map';
+  if (assignments.some((a) => a.kind === 'team')) home = 'first_aid';
   else if (assignments.some((a) => a.kind === 'post')) home = 'post';
 
   return { phone, name: db.getPerson(phone)?.name ?? '', isAdmin, assignments, home };

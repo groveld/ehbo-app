@@ -6,12 +6,12 @@ import { useSessionStore } from './stores/session.ts';
 export function homeRoute() {
   const session = useSessionStore();
   const me = session.me!;
-  if (me.home === 'ehbo') return { name: 'ehbo' };
+  if (me.home === 'first_aid') return { name: 'first-aid' };
   if (me.home === 'post') {
     const post = me.assignments.find((a) => a.kind === 'post' && a.role === 'lead') ?? me.assignments.find((a) => a.kind === 'post');
     if (post?.postId) return { name: 'post-home', params: { id: post.postId } };
   }
-  return { name: 'kaart' };
+  return { name: 'map' };
 }
 
 declare module 'vue-router' {
@@ -31,68 +31,68 @@ export const router = createRouter({
   scrollBehavior: (to) => ({ top: scrolled.get(to.fullPath) ?? 0 }),
   routes: [
     // Zonder aanmelding opent de app op de deelnemerspagina; daar kun je je als medewerker aanmelden.
-    { path: '/', name: 'deelnemer', component: () => import('./views/DeelnemerView.vue') },
-    { path: '/installeren', name: 'installeren', component: () => import('./views/InstallerenView.vue') },
-    { path: '/aanmelden', name: 'aanmelden', component: () => import('./views/AanmeldenView.vue') },
-    { path: '/onbekend', name: 'onbekend', component: () => import('./views/OnbekendView.vue') },
-    { path: '/herkend', name: 'herkend', component: () => import('./views/HerkendView.vue'), meta: { staff: true } },
+    { path: '/', name: 'participant', component: () => import('./views/ParticipantView.vue') },
+    { path: '/install', name: 'install', component: () => import('./views/InstallView.vue') },
+    { path: '/login', name: 'login', component: () => import('./views/LoginView.vue') },
+    { path: '/unknown', name: 'unknown', component: () => import('./views/UnknownView.vue') },
+    { path: '/recognized', name: 'recognized', component: () => import('./views/RecognizedView.vue'), meta: { staff: true } },
     { path: '/info', name: 'info', component: () => import('./views/InfoView.vue') },
     { path: '/route/:id', name: 'route', component: () => import('./views/RouteView.vue'), props: true },
-    { path: '/toestemmingen', name: 'toestemmingen', component: () => import('./views/ToestemmingenView.vue'), meta: { staff: true } },
+    { path: '/permissions', name: 'permissions', component: () => import('./views/PermissionsView.vue'), meta: { staff: true } },
     // /start stuurt altijd door naar het startscherm van je rol (zie beforeEach).
     { path: '/start', name: 'start', component: () => import('./views/MenuView.vue'), meta: { staff: true } },
     { path: '/menu', name: 'menu', component: () => import('./views/MenuView.vue'), meta: { staff: true } },
     // Overzicht: de tabs van de tabbalk. De postenlijst staat onder de kaart.
     // The map itself stays mounted in App.vue, so it's there at once.
-    { path: '/overzicht/kaart', name: 'kaart', component: { render: () => null }, meta: { staff: true } },
-    { path: '/overzicht/meldingen', name: 'meldingen', component: () => import('./views/overzicht/MeldingenTab.vue'), meta: { staff: true } },
-    { path: '/overzicht/contacten', name: 'contacten', component: () => import('./views/overzicht/ContactenTab.vue'), meta: { staff: true } },
+    { path: '/map', name: 'map', component: { render: () => null }, meta: { staff: true } },
+    { path: '/requests', name: 'requests', component: () => import('./views/tabs/RequestsTab.vue'), meta: { staff: true } },
+    { path: '/contacts', name: 'contacts', component: () => import('./views/tabs/ContactsTab.vue'), meta: { staff: true } },
     { path: '/post/:id', name: 'post', component: () => import('./views/PostDetailView.vue'), props: true, meta: { staff: true } },
     // Post: startscherm (3.1/3.2), EHBO-verzoek (4.1) en de melding daarna (4.2/4.6).
     { path: '/post/:id/start', name: 'post-home', component: () => import('./views/PostHomeView.vue'), props: true, meta: { staff: true } },
     // Eerder vandaag, met de melding of aanvraag eronder: de terugknop blijft in deze groep.
-    { path: '/post/:id/eerder', name: 'post-eerder', component: () => import('./views/PostEerderView.vue'), props: true, meta: { staff: true } },
-    { path: '/post/:postId/eerder/melding/:id', name: 'post-melding', component: () => import('./views/MeldingView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
-    { path: '/post/:postId/eerder/aanvraag/:id', name: 'post-aanvraag', component: () => import('./views/AanvraagView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
-    { path: '/hulp', name: 'hulp', component: () => import('./views/EhboVerzoekView.vue'), meta: { staff: true } },
-    { path: '/post/:id/ehbo', name: 'ehbo-verzoek', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
-    { path: '/melding/:id', name: 'melding', component: () => import('./views/MeldingView.vue'), props: true, meta: { staff: true } },
-    { path: '/aanvraag/:id', name: 'aanvraag', component: () => import('./views/AanvraagView.vue'), props: true, meta: { staff: true } },
-    { path: '/geen-bereik/:clientId', name: 'geen-bereik', component: () => import('./views/GeenBereikView.vue'), props: true, meta: { staff: true } },
-    { path: '/melding/:incidentId/aanvullen', name: 'aanvullen', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
+    { path: '/post/:id/history', name: 'post-history', component: () => import('./views/PostHistoryView.vue'), props: true, meta: { staff: true } },
+    { path: '/post/:postId/history/incident/:id', name: 'post-incident', component: () => import('./views/IncidentView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
+    { path: '/post/:postId/history/request/:id', name: 'post-request', component: () => import('./views/RequestView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
+    { path: '/help', name: 'help', component: () => import('./views/NewIncidentView.vue'), meta: { staff: true } },
+    { path: '/post/:id/first-aid', name: 'new-incident', component: () => import('./views/NewIncidentView.vue'), props: true, meta: { staff: true } },
+    { path: '/incident/:id', name: 'incident', component: () => import('./views/IncidentView.vue'), props: true, meta: { staff: true } },
+    { path: '/request/:id', name: 'request', component: () => import('./views/RequestView.vue'), props: true, meta: { staff: true } },
+    { path: '/no-signal/:clientId', name: 'no-signal', component: () => import('./views/NoSignalView.vue'), props: true, meta: { staff: true } },
+    { path: '/incident/:incidentId/add', name: 'add-to-incident', component: () => import('./views/NewIncidentView.vue'), props: true, meta: { staff: true } },
     // EHBO: het EHBO-scherm (3.3) met je inzetten, oproep (4.3–4.7) en afronden (4.8).
-    { path: '/ehbo', name: 'ehbo', component: () => import('./views/EhboView.vue'), meta: { staff: true } },
-    { path: '/ehbo/incident', name: 'eigen-incident', component: () => import('./views/EigenIncidentView.vue'), meta: { staff: true } },
-    { path: '/ehbo/inzetten', name: 'inzetten', component: () => import('./views/InzettenView.vue'), meta: { staff: true } },
-    { path: '/ehbo/inzetten/:id', name: 'inzet', component: () => import('./views/MeldingView.vue'), props: true, meta: { staff: true } },
-    { path: '/oproep/:id', name: 'oproep', component: () => import('./views/OproepView.vue'), props: true, meta: { staff: true } },
-    { path: '/oproep/:id/afronden', name: 'afronden', component: () => import('./views/AfrondenView.vue'), props: true, meta: { staff: true } },
-    { path: '/sturing', name: 'sturing', component: () => import('./views/SturingView.vue'), meta: { staff: true } },
-    { path: '/controle', name: 'controle', component: () => import('./views/ControleView.vue'), meta: { staff: true } },
-    { path: '/beheer', name: 'beheer', component: () => import('./views/admin/BeheerView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/evenement', name: 'beheer-evenement', component: () => import('./views/admin/EvenementView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/info', name: 'beheer-info', component: () => import('./views/admin/InfoBeheerView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/import', name: 'beheer-import', component: () => import('./views/admin/ImportView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/mensen', name: 'beheer-mensen', component: () => import('./views/admin/MensenView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/kernteam', name: 'beheer-kernteam', component: () => import('./views/admin/KernteamView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/noodnummers', name: 'beheer-noodnummers', component: () => import('./views/admin/NoodnummersView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/beheerders', name: 'beheer-beheerders', component: () => import('./views/admin/BeheerdersView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/rapport', name: 'beheer-rapport', component: () => import('./views/admin/RapportView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/rapport/afdrukken', name: 'beheer-rapport-afdrukken', component: () => import('./views/admin/RapportAfdrukView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/app-icoon', name: 'beheer-app-icoon', component: () => import('./views/admin/AppIcoonView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/lopen/:id', name: 'beheer-loop', component: () => import('./views/admin/LoopView.vue'), props: true, meta: { staff: true, admin: true } },
-    { path: '/beheer/posten', name: 'beheer-posten', component: () => import('./views/admin/PostenView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/posten/:id', name: 'beheer-post', component: () => import('./views/admin/PostView.vue'), props: true, meta: { staff: true, admin: true } },
-    { path: '/beheer/eenheden', name: 'beheer-eenheden', component: () => import('./views/admin/EenhedenView.vue'), meta: { staff: true, admin: true } },
-    { path: '/beheer/eenheden/:id', name: 'beheer-eenheid', component: () => import('./views/admin/EenheidView.vue'), props: true, meta: { staff: true, admin: true } },
-    { path: '/:pad(.*)*', redirect: '/' },
+    { path: '/first-aid', name: 'first-aid', component: () => import('./views/FirstAidView.vue'), meta: { staff: true } },
+    { path: '/first-aid/incident', name: 'self-start', component: () => import('./views/SelfStartView.vue'), meta: { staff: true } },
+    { path: '/first-aid/assign', name: 'assign', component: () => import('./views/AssignView.vue'), meta: { staff: true } },
+    { path: '/first-aid/assign/:id', name: 'assign-incident', component: () => import('./views/IncidentView.vue'), props: true, meta: { staff: true } },
+    { path: '/dispatch/:id', name: 'dispatch', component: () => import('./views/DispatchView.vue'), props: true, meta: { staff: true } },
+    { path: '/dispatch/:id/close', name: 'close-incident', component: () => import('./views/CloseIncidentView.vue'), props: true, meta: { staff: true } },
+    { path: '/control', name: 'control', component: () => import('./views/ControlView.vue'), meta: { staff: true } },
+    { path: '/check', name: 'check', component: () => import('./views/CheckView.vue'), meta: { staff: true } },
+    { path: '/admin', name: 'admin', component: () => import('./views/admin/AdminView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/event', name: 'admin-event', component: () => import('./views/admin/EventView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/info', name: 'admin-info', component: () => import('./views/admin/InfoEditView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/import', name: 'admin-import', component: () => import('./views/admin/ImportView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/people', name: 'admin-people', component: () => import('./views/admin/PeopleView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/core-team', name: 'admin-core-team', component: () => import('./views/admin/CoreTeamView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/emergency-numbers', name: 'admin-emergency-numbers', component: () => import('./views/admin/EmergencyNumbersView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/admins', name: 'admin-admins', component: () => import('./views/admin/AdminsView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/report', name: 'admin-report', component: () => import('./views/admin/ReportView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/report/print', name: 'admin-report-print', component: () => import('./views/admin/ReportPrintView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/app-icon', name: 'admin-app-icon', component: () => import('./views/admin/AppIconView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/runs/:id', name: 'admin-run', component: () => import('./views/admin/RunView.vue'), props: true, meta: { staff: true, admin: true } },
+    { path: '/admin/posts', name: 'admin-posts', component: () => import('./views/admin/PostsView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/posts/:id', name: 'admin-post', component: () => import('./views/admin/PostView.vue'), props: true, meta: { staff: true, admin: true } },
+    { path: '/admin/teams', name: 'admin-teams', component: () => import('./views/admin/TeamsView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/teams/:id', name: 'admin-team', component: () => import('./views/admin/TeamView.vue'), props: true, meta: { staff: true, admin: true } },
+    { path: '/:path(.*)*', redirect: '/' },
   ],
 });
 
 // A new version removed the file of a screen this page still wanted: load the new version. Once, so it can't loop.
 router.onError((err, to) => {
-  if (!/module|import/i.test((err as Error).message) || sessionStorage.getItem('ehbo.reloaded') === to.fullPath) return;
-  sessionStorage.setItem('ehbo.reloaded', to.fullPath);
+  if (!/module|import/i.test((err as Error).message) || sessionStorage.getItem('app.reloaded') === to.fullPath) return;
+  sessionStorage.setItem('app.reloaded', to.fullPath);
   location.assign(to.fullPath);
 });
 
@@ -102,12 +102,12 @@ router.beforeEach((_to, from) => {
 
 router.beforeEach((to) => {
   const session = useSessionStore();
-  if (to.meta.staff && !session.me) return { name: 'deelnemer' };
+  if (to.meta.staff && !session.me) return { name: 'participant' };
   if (to.meta.admin && !session.me?.isAdmin) return { name: 'start' };
   // Aangemeld: het startscherm in plaats van de deelnemerspagina.
-  if (to.name === 'deelnemer' && session.me) return { name: 'start' };
+  if (to.name === 'participant' && session.me) return { name: 'start' };
   // Startscherm volgens de belangrijkste rol: EHBO, de eigen post, of het overzicht.
   if (to.name === 'start' && session.me) return homeRoute();
   // Medewerkers zetten de app eerst op het beginscherm.
-  if (to.name === 'aanmelden' && !canUseAsStaff) return { name: 'installeren' };
+  if (to.name === 'login' && !canUseAsStaff) return { name: 'install' };
 });

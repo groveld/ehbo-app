@@ -65,7 +65,7 @@ async function importNow() {
 </script>
 
 <template>
-  <AdminPage title="Importeren en exporteren" eyebrow="Beheer" :back="{ name: 'beheer' }">
+  <AdminPage title="Importeren en exporteren" eyebrow="Beheer" :back="{ name: 'admin' }">
     <section class="stack gap-8">
       <span class="section-title">Exporteren</span>
       <a href="/api/admin/export.xlsx" class="btn primary" download><Icon name="download" :size="20" />Excel-bestand downloaden</a>

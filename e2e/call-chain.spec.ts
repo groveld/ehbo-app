@@ -10,7 +10,7 @@ async function staffPhone(browser: Browser, phone: string, gps?: { latitude: num
     ...(gps ? { geolocation: { ...gps, accuracy: 15 }, permissions: ['geolocation'] } : {}),
   });
   // Navigeren opent Google Maps; dat vangen we af, zodat de test bij de app blijft.
-  await context.addInitScript(() => localStorage.setItem('ehbo.nav', JSON.stringify('google')));
+  await context.addInitScript(() => localStorage.setItem('app.nav', JSON.stringify('google')));
   await context.route('https://www.google.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Kaarten</title>' }));
   const page = await context.newPage();
   await page.goto('/?browser=1');
@@ -223,14 +223,14 @@ test('closing: the warning on the post, keep open without signal, and everything
   await expect(post.getByText('Wat heb je nodig?')).toBeVisible();
   await installed(post);
   // Opening the post has reached the server; a change still in the queue would go over the warning.
-  await post.waitForFunction(() => !localStorage.getItem('ehbo.queue'));
+  await post.waitForFunction(() => !localStorage.getItem('app.queue'));
 
   // The server's warning, as the phone has saved it.
   await post.context().setOffline(true);
   await post.evaluate(() => {
-    const live = JSON.parse(localStorage.getItem('ehbo.live')!);
+    const live = JSON.parse(localStorage.getItem('app.live')!);
     for (const p of live.posts) p.closesAt = '2026-12-31T13:00:00.000Z';
-    localStorage.setItem('ehbo.live', JSON.stringify(live));
+    localStorage.setItem('app.live', JSON.stringify(live));
   });
   await post.reload();
   await expect(post.getByText(/Deze locatie sluit om/)).toBeVisible();
@@ -255,7 +255,7 @@ test('closing: the warning on the post, keep open without signal, and everything
 
 test('rapport: cijfers, CSV, afdrukpagina en de testmodus', async ({ browser }) => {
   const admin = await staffPhone(browser, PHONE.admin);
-  await admin.goto('/beheer/rapport');
+  await admin.goto('/admin/report');
   await expect(admin.getByRole('heading', { name: 'Rapport' })).toBeVisible();
   // De eerste test rondde een oproep af bij de waterpost.
   await expect(admin.getByText(/Waterpost 3/).first()).toBeVisible();
@@ -279,7 +279,7 @@ test('rapport: cijfers, CSV, afdrukpagina en de testmodus', async ({ browser }) 
 
 test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ browser }) => {
   const admin = await staffPhone(browser, PHONE.admin);
-  await admin.goto('/beheer/info');
+  await admin.goto('/admin/info');
   await admin.getByLabel('Contact voor vragen ({contact})').fill('Bea, beheer@example.org');
   await admin.getByLabel('Kop van onderdeel 1').fill('Over {evenement}');
   await admin.getByRole('button', { name: 'Opslaan' }).click();
@@ -288,7 +288,7 @@ test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ 
   await expect(admin.getByText('Over Silvesterloop 2026')).toBeVisible();
   await expect(admin.getByText(/Bea, beheer@example\.org/)).toBeVisible();
 
-  await admin.goto('/overzicht/kaart');
+  await admin.goto('/map');
   await admin.getByRole('link', { name: /Kruising 4/ }).first().click();
   await expect(admin.getByText('Locatie is dicht')).toBeVisible();
   await admin.getByRole('switch', { name: 'Locatie open' }).click();
@@ -298,7 +298,7 @@ test('beheer: info-pagina aanpassen en een post open en dicht zetten', async ({ 
   await expect(admin.getByText('Locatie is dicht')).toBeVisible();
 
   // Terug naar de standaardtekst, zodat een volgende ronde hetzelfde begint.
-  await admin.goto('/beheer/info');
+  await admin.goto('/admin/info');
   await admin.getByRole('button', { name: 'Terug naar de standaardtekst' }).click();
   await admin.getByRole('dialog').getByRole('button', { name: 'Standaardtekst gebruiken' }).click();
   await expect(admin.getByText('Opgeslagen.')).toBeVisible();
@@ -316,7 +316,7 @@ test('geen vorige pagina om naar te vegen; terug in de app gaat één stap omhoo
   await post.locator('.post-row .main').first().click();
   await expect(post).toHaveURL(/\/post\/\d+$/);
   await terug();
-  await expect(post).toHaveURL(/\/overzicht\/kaart$/);
+  await expect(post).toHaveURL(/\/map$/);
 
   // Menu › Info → terug: het menu.
   await post.getByRole('link', { name: 'Menu' }).click();
@@ -335,9 +335,9 @@ test('geen vorige pagina om naar te vegen; terug in de app gaat één stap omhoo
   await admin.getByRole('link', { name: 'Menu' }).click();
   await admin.getByRole('link', { name: 'Beheer' }).click();
   await admin.getByRole('link', { name: /Locaties/ }).first().click();
-  await admin.locator('a[href^="/beheer/posten/"]').first().click();
-  await expect(admin).toHaveURL(/\/beheer\/posten\/\w+$/);
-  for (const path of [/\/beheer\/posten$/, /\/beheer$/, /\/menu$/]) {
+  await admin.locator('a[href^="/admin/posts/"]').first().click();
+  await expect(admin).toHaveURL(/\/admin\/posts\/\w+$/);
+  for (const path of [/\/admin\/posts$/, /\/admin$/, /\/menu$/]) {
     await admin.getByRole('link', { name: 'Terug' }).click();
     await expect(admin).toHaveURL(path);
   }
@@ -379,7 +379,7 @@ test('a new post in admin: open phones get it by themselves, and a call works be
   const NEW_POST = 'Waterpost 9 · nieuw';
   const coordinator = await staffPhone(browser, PHONE.coordinator);
   await coordinator.getByRole('link', { name: 'Kaart' }).click();
-  await expect(coordinator).toHaveURL(/\/overzicht\/kaart$/);
+  await expect(coordinator).toHaveURL(/\/map$/);
 
   const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
   await ehbo.getByRole('button', { name: 'Beschikbaar', exact: true }).click();
@@ -410,7 +410,7 @@ test('a new post in admin: open phones get it by themselves, and a call works be
   await expect(post.getByRole('heading', { name: "We zoeken een EHBO'er" })).toBeVisible();
 
   await expect(ehbo.getByRole('heading', { name: NEW_POST })).toBeVisible({ timeout: 10_000 });
-  const id = /\/oproep\/(\d+)/.exec(ehbo.url())![1];
+  const id = /\/dispatch\/(\d+)/.exec(ehbo.url())![1];
   await ehbo.getByRole('button', { name: 'Accepteren & navigeren' }).click();
   await ehbo.waitForURL(/google\.com\/maps/);
   await ehbo.goBack();
@@ -483,7 +483,7 @@ test('EHBO starts an incident itself, also without signal, and goes straight to 
   await ehbo.getByRole('button', { name: 'Beschikbaar', exact: true }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
   await installed(ehbo);
-  await ehbo.waitForFunction(() => !localStorage.getItem('ehbo.queue'));
+  await ehbo.waitForFunction(() => !localStorage.getItem('app.queue'));
 
   await ehbo.getByRole('link', { name: 'Incident starten' }).click();
   await ehbo.context().setOffline(true);
@@ -497,7 +497,7 @@ test('EHBO starts an incident itself, also without signal, and goes straight to 
 
   await ehbo.context().setOffline(false);
   await expect(ehbo.locator('.offline-pill')).toBeHidden({ timeout: 20_000 });
-  await ehbo.waitForFunction(() => !localStorage.getItem('ehbo.queue'));
+  await ehbo.waitForFunction(() => !localStorage.getItem('app.queue'));
   const coordinator = await staffPhone(browser, PHONE.coordinator);
   await coordinator.getByRole('link', { name: 'Meldingen' }).click();
   await expect(coordinator.locator('.incident').filter({ hasText: 'zelf gestart' }).filter({ hasText: 'afgerond' })).toBeVisible();
@@ -658,14 +658,14 @@ test('help to where you are: from the map tab, with the position, and the report
 
 test('Beheer › Mensen: everyone with where they are, and what is still missing', async ({ browser }) => {
   const admin = await staffPhone(browser, PHONE.admin);
-  await admin.goto('/beheer');
+  await admin.goto('/admin');
   await admin.getByRole('link', { name: /^Mensen/ }).click();
   const wim = admin.locator('.person').filter({ hasText: 'Wim Water' });
   await expect(wim.getByRole('link', { name: 'Waterpost 3 · brug · locatieverantwoordelijke' })).toBeVisible();
   await expect(admin.getByText('Kruising 4: nog geen locatieverantwoordelijke')).toBeVisible();
   if (process.env.SHOTS) await admin.screenshot({ path: `${process.env.SHOTS}/mensen.png`, fullPage: true });
   await wim.getByRole('link', { name: 'Waterpost 3 · brug · locatieverantwoordelijke' }).click();
-  await expect(admin).toHaveURL(/\/beheer\/posten\/\d+/);
+  await expect(admin).toHaveURL(/\/admin\/posts\/\d+/);
 });
 
 test('an AED on the map: for participants in the legend, and no open or closed', async ({ browser }) => {
@@ -696,7 +696,7 @@ test('an AED on the map: for participants in the legend, and no open or closed',
 
 test('import and export: the export comes back unchanged, and a CSV adds what is in it', async ({ browser }) => {
   const admin = await staffPhone(browser, PHONE.admin);
-  await admin.goto('/beheer');
+  await admin.goto('/admin');
   await admin.getByRole('link', { name: /Importeren en exporteren/ }).click();
   const download = admin.waitForEvent('download');
   await admin.getByRole('link', { name: 'Excel-bestand downloaden' }).click();
@@ -720,8 +720,12 @@ test('updating the app: a change still waiting in the old words is converted and
   const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
   const { teams } = await (await ehbo.request.get('/api/package')).json() as { teams: { id: number; name: string }[] };
   const secondTeamId = teams.find((u) => u.name === 'Team 2')!.id;
-  // As the oldest version of the app left it: Dutch values, a unit instead of a team, and no storage version yet.
+  // As the oldest version of the app left it: its keys under ehbo., Dutch values, a unit instead of a team, and no storage version yet.
   await ehbo.evaluate((id) => {
+    for (const key of Object.keys(localStorage).filter((k) => k.startsWith('app.'))) {
+      localStorage.setItem(`ehbo.${key.slice(4)}`, localStorage.getItem(key)!);
+      localStorage.removeItem(key);
+    }
     localStorage.setItem('ehbo.queue', JSON.stringify([{ id: crypto.randomUUID(), at: new Date().toISOString(), action: { type: 'availability', unitId: id, availability: 'pauze' } }]));
     // An EHBO request that was waiting in the separate outbox of that version, without a type: from where this team member is.
     localStorage.setItem('ehbo.outbox', JSON.stringify([{
@@ -742,7 +746,7 @@ test('updating the app: a change still waiting in the old words is converted and
   };
   await expect.poll(async () => (await mine())?.what, { timeout: 15_000 }).toBe('unwell');
   expect((await mine())!.responsive).toBe('no');
-  expect(await ehbo.evaluate(() => [localStorage.getItem('ehbo.outbox'), localStorage.getItem('ehbo.queue')])).toEqual([null, null]);
+  expect(await ehbo.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('ehbo.') || k === 'app.outbox' || k === 'app.queue'))).toEqual([]);
   expect((await ehbo.request.post(`/api/help-requests/${(await mine())!.id}/withdraw`)).ok()).toBe(true);
   expect((await ehbo.request.put(`/api/teams/${secondTeamId}/availability`, { data: { availability: 'off_duty' } })).ok()).toBe(true);
 });

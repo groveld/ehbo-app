@@ -16,7 +16,7 @@ import TabBar from './components/TabBar.vue';
 import { applyTheme } from './theme.ts';
 import { holdScreen, keepAwake } from './wakeLock.ts';
 
-const KaartView = defineAsyncComponent(() => import('./views/overzicht/KaartView.vue'));
+const MapTab = defineAsyncComponent(() => import('./views/tabs/MapTab.vue'));
 
 const push = usePushStore();
 const pkg = usePackageStore();
@@ -27,7 +27,7 @@ const router = useRouter();
 
 // Eén tabbalk op elke pagina van een aangemelde medewerker. Niet tijdens het aanmelden (tot "Klaar, naar mijn startscherm")
 // en niet op de afdrukpagina van het rapport.
-const NO_TABS = ['herkend', 'toestemmingen', 'beheer-rapport-afdrukken'];
+const NO_TABS = ['recognized', 'permissions', 'admin-report-print'];
 const tabs = computed(() => Boolean(session.me) && (route.meta.staff || route.name === 'info' || route.name === 'route') && !NO_TABS.includes(String(route.name)));
 
 const liveBar = useLiveBar();
@@ -37,7 +37,7 @@ const MAP_DELAY_MS = 500;
 const mapMounted = ref(false);
 watch(() => Boolean(session.me), (staff) => {
   if (!staff) mapMounted.value = false;
-  else setTimeout(() => { mapMounted.value = Boolean(session.me); }, route.name === 'kaart' ? 0 : MAP_DELAY_MS);
+  else setTimeout(() => { mapMounted.value = Boolean(session.me); }, route.name === 'map' ? 0 : MAP_DELAY_MS);
 }, { immediate: true });
 
 // Intro bij elk openen zonder aanmelding (deelnemers, en medewerkers voor het aanmelden); niet als je al aangemeld bent.
@@ -48,7 +48,7 @@ watch(() => session.event, applyTheme, { immediate: true });
 
 // Sessie verlopen of nummer niet meer ingepland: terug naar het begin.
 watch(() => session.me, (me) => {
-  if (!me && route.meta.staff) router.replace({ name: 'deelnemer' });
+  if (!me && route.meta.staff) router.replace({ name: 'participant' });
 });
 
 // Nieuwe oproep voor mijn eenheid terwijl de app open is: meteen naar het oproepscherm.
@@ -57,8 +57,8 @@ const seen = new Set<number>(live.invitations.map((i) => i.id));
 watch(() => live.invitations.map((i) => i.id), (ids) => {
   const fresh = ids.find((id) => !seen.has(id));
   for (const id of ids) seen.add(id);
-  if (fresh === undefined || route.name === 'afronden') return;
-  if (!(route.name === 'oproep' && route.params.id === String(fresh))) router.push({ name: 'oproep', params: { id: fresh } });
+  if (fresh === undefined || route.name === 'close-incident') return;
+  if (!(route.name === 'dispatch' && route.params.id === String(fresh))) router.push({ name: 'dispatch', params: { id: fresh } });
 });
 
 // Zolang een oproep op reactie wacht: geluid en trillen, tot accepteren of "kan niet". Op de achtergrond doet de pushmelding dat.
@@ -100,12 +100,12 @@ onMounted(() => {
 
 <template>
   <!-- Testmodus: op elk scherm zichtbaar, zodat niemand een proefoproep voor echt aanziet. Niet op de afdrukpagina. -->
-  <div v-if="live.state?.testMode && route.name !== 'beheer-rapport-afdrukken'" class="test-banner" role="status">Testmodus · oproepen zijn proef</div>
+  <div v-if="live.state?.testMode && route.name !== 'admin-report-print'" class="test-banner" role="status">Testmodus · oproepen zijn proef</div>
   <div :class="{ 'with-tabs': tabs, 'with-live': tabs && liveBar }">
     <RouterView />
-    <KaartView v-if="mapMounted" :active="route.name === 'kaart'" :class="{ 'map-waiting': route.name !== 'kaart' }" />
+    <MapTab v-if="mapMounted" :active="route.name === 'map'" :class="{ 'map-waiting': route.name !== 'map' }" />
     <LiveBar v-if="tabs && liveBar" :bar="liveBar" />
-    <OfflinePill v-if="route.name !== 'beheer-rapport-afdrukken'" :tabs="tabs" />
+    <OfflinePill v-if="route.name !== 'admin-report-print'" :tabs="tabs" />
   </div>
   <TabBar v-if="tabs" />
   <IntroSplash v-if="intro" @done="intro = false" />

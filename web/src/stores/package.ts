@@ -20,9 +20,9 @@ function mapUrls(map: PackageMap) {
 }
 
 export const usePackageStore = defineStore('package', () => {
-  const pkg = ref<EventPackage | null>(load('ehbo.package'));
+  const pkg = ref<EventPackage | null>(load('app.package'));
   /** Versie van de kaart die volledig op de telefoon staat. */
-  const cachedMapVersion = ref<number | null>(load('ehbo.mapCached'));
+  const cachedMapVersion = ref<number | null>(load('app.mapCached'));
   let downloading: Promise<void> | null = null;
 
   const typeById = computed(() => new Map<number, PostTypeInfo>(pkg.value?.postTypes.map((t) => [t.id, t]) ?? []));
@@ -30,7 +30,7 @@ export const usePackageStore = defineStore('package', () => {
 
   function setPackage(value: EventPackage | null) {
     pkg.value = value;
-    save('ehbo.package', value);
+    save('app.package', value);
   }
 
   /** Does the package on this phone match the data version in the live state? */
@@ -77,7 +77,7 @@ export const usePackageStore = defineStore('package', () => {
           }
         }));
         cachedMapVersion.value = map.version;
-        save('ehbo.mapCached', map.version);
+        save('app.mapCached', map.version);
         for (const key of await caches.keys()) {
           if (key.startsWith(MAP_CACHE_PREFIX) && key !== `${MAP_CACHE_PREFIX}${map.version}`) await caches.delete(key);
         }

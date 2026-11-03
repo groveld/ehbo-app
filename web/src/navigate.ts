@@ -2,17 +2,17 @@
 import { isAndroid, isIOS } from './platform.ts';
 import { load, save } from './storage.ts';
 
-export type NavApp = 'telefoon' | 'google' | 'waze' | 'apple';
+export type NavApp = 'phone' | 'google' | 'waze' | 'apple';
 
 export const NAV_APPS: { value: NavApp; label: string }[] = [
-  { value: 'telefoon', label: 'Standaard van de telefoon' },
+  { value: 'phone', label: 'Standaard van de telefoon' },
   { value: 'google', label: 'Google Maps' },
   { value: 'waze', label: 'Waze' },
   { value: 'apple', label: 'Apple Kaarten' },
 ];
 
-export const getNavApp = (): NavApp => load<NavApp>('ehbo.nav') ?? 'telefoon';
-export const setNavApp = (app: NavApp) => save('ehbo.nav', app);
+export const getNavApp = (): NavApp => load<NavApp>('app.nav') ?? 'phone';
+export const setNavApp = (app: NavApp) => save('app.nav', app);
 
 /** Link die de navigatie-app opent met de route naar dit punt. */
 export function navigationUrl(lat: number, lng: number, label: string, app: NavApp = getNavApp()) {

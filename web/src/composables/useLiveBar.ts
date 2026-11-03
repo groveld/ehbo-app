@@ -25,20 +25,20 @@ export function useLiveBar() {
 
   const onScreen = (incidentId: number) => {
     const param = Number(route.params.id ?? route.params.incidentId);
-    return ['melding', 'oproep', 'afronden', 'inzet', 'aanvullen'].includes(String(route.name)) && live.incidentById(param)?.id === incidentId;
+    return ['incident', 'dispatch', 'close-incident', 'assign-incident', 'add-to-incident'].includes(String(route.name)) && live.incidentById(param)?.id === incidentId;
   };
 
   function teamBar(incident: LiveIncident): LiveBar {
     const name = postOf(store.postById, incident).name;
     if (incident.status === 'on_site') {
-      return { tone: 'red', title: `Ter plaatse · ${name}`, sub: 'Tik om af te ronden', to: { name: 'afronden', params: { id: incident.id } }, more: 0 };
+      return { tone: 'red', title: `Ter plaatse · ${name}`, sub: 'Tik om af te ronden', to: { name: 'close-incident', params: { id: incident.id } }, more: 0 };
     }
     const since = incident.dispatches.find((d) => live.myTeamIds.includes(d.teamId))?.acceptedAt;
-    return { tone: 'red', title: `Onderweg · ${name}`, sub: `${incidentSummary(incident)} · sinds ${clock(since)}`, to: { name: 'oproep', params: { id: incident.id } }, more: 0 };
+    return { tone: 'red', title: `Onderweg · ${name}`, sub: `${incidentSummary(incident)} · sinds ${clock(since)}`, to: { name: 'dispatch', params: { id: incident.id } }, more: 0 };
   }
 
   function postBar(incident: LiveIncident, more: number): LiveBar {
-    const to: RouteLocationRaw = more ? { name: 'post-home', params: { id: incident.postId } } : { name: 'melding', params: { id: incident.id } };
+    const to: RouteLocationRaw = more ? { name: 'post-home', params: { id: incident.postId } } : { name: 'incident', params: { id: incident.id } };
     const last = live.offline ? 'Laatst bekende stand' : null;
     if (incident.status === 'sent') {
       const left = live.secondsLeft(incident);
@@ -61,7 +61,7 @@ export function useLiveBar() {
     if (!waiting || route.params.clientId === waiting.clientId) return null;
     return {
       tone: 'orange', title: 'Melding wacht op bereik', sub: store.postById.get(waiting.postId ?? -1)?.name ?? 'Tik om de EHBO te bellen',
-      to: { name: 'geen-bereik', params: { clientId: waiting.clientId } }, more: live.outbox.length - 1,
+      to: { name: 'no-signal', params: { clientId: waiting.clientId } }, more: live.outbox.length - 1,
     };
   });
 }

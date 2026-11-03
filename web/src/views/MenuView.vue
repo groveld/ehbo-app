@@ -29,7 +29,7 @@ function chooseNavApp(app: NavApp) {
 
 async function logout() {
   // Who is the last one of a post or team closes it: nobody is there any more to get a call.
-  const placed = me.value.assignments.some((a) => a.kind === 'post' || a.kind === 'ehbo');
+  const placed = me.value.assignments.some((a) => a.kind === 'post' || a.kind === 'team');
   if (placed && !await confirmDialog({
     title: 'Afmelden?',
     text: 'Je wordt op al je toestellen afgemeld en krijgt geen meldingen meer. Ben jij de laatste van je locatie of EHBO-eenheid, dan gaat die dicht.',
@@ -38,7 +38,7 @@ async function logout() {
     tone: 'danger',
   })) return;
   await session.logout();
-  router.replace({ name: 'deelnemer' });
+  router.replace({ name: 'participant' });
 }
 </script>
 
@@ -60,10 +60,10 @@ async function logout() {
     </div>
 
     <nav class="stack gap-10 menu">
-      <RouterLink v-if="me.isAdmin || isCoordinator" :to="{ name: 'sturing' }" class="btn item"><Icon name="list" :size="20" />Locaties en EHBO openen of sluiten</RouterLink>
-      <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn item"><Icon name="settings" :size="20" />Beheer</RouterLink>
+      <RouterLink v-if="me.isAdmin || isCoordinator" :to="{ name: 'control' }" class="btn item"><Icon name="list" :size="20" />Locaties en EHBO openen of sluiten</RouterLink>
+      <RouterLink v-if="me.isAdmin" :to="{ name: 'admin' }" class="btn item"><Icon name="settings" :size="20" />Beheer</RouterLink>
       <RouterLink :to="{ name: 'info' }" class="btn item"><Icon name="info" :size="20" />Info &amp; voorwaarden</RouterLink>
-      <RouterLink :to="{ name: 'controle' }" class="btn item"><Icon name="check" :size="20" />Pushmeldingen, locatie en controle</RouterLink>
+      <RouterLink :to="{ name: 'check' }" class="btn item"><Icon name="check" :size="20" />Pushmeldingen, locatie en controle</RouterLink>
     </nav>
 
     <div class="form-field nav-app">

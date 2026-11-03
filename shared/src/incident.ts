@@ -228,8 +228,8 @@ export function awayPostIds(
   return [...postIds].filter((id) => teams.filter((u) => u.postId === id).every((u) => away.has(u.id)));
 }
 
-/** GET /api/ehbo-status: voor iedereen, ook deelnemers. Alleen welke posten nu zonder EHBO zijn; geen posities of namen. */
-export interface EhboStatus {
+/** GET /api/first-aid-status: voor iedereen, ook deelnemers. Alleen welke posten nu zonder EHBO zijn; geen posities of namen. */
+export interface FirstAidStatus {
   awayPostIds: number[];
   /** Same as in the live state: participants have no live connection. */
   dataVersion: string;

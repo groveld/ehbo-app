@@ -27,19 +27,19 @@ const COLORS = { ehbo: '#C8261E', kaart: '#0E7C86', meldingen: '#A16207', contac
 /** Het kruis van de EHBO-tab in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
 const STATUS = { available: '#0A7D4F', unavailable: '#C8261E', off_duty: 'var(--ink)' } as const;
 
-const EHBO = ['ehbo', 'eigen-incident', 'inzetten', 'inzet', 'oproep', 'afronden'];
-const MENU = ['menu', 'info', 'controle', 'sturing'];
+const EHBO = ['first-aid', 'self-start', 'assign', 'assign-incident', 'dispatch', 'close-incident'];
+const MENU = ['menu', 'info', 'check', 'control'];
 
 /** Bij welke post het huidige scherm hoort (startscherm, verzoek, melding, aanvraag of geen bereik), of null. */
 const routePostId = computed(() => {
   const p = route.params;
   switch (route.name) {
-    case 'post-home': case 'ehbo-verzoek': case 'post-eerder': return Number(p.id);
-    case 'post-melding': case 'post-aanvraag': return Number(p.postId);
-    case 'melding': return live.incidentById(Number(p.id))?.postId ?? null;
-    case 'aanvullen': return live.incidentById(Number(p.incidentId))?.postId ?? null;
-    case 'aanvraag': return live.requestById(Number(p.id))?.postId ?? null;
-    case 'geen-bereik': return live.outbox.find((i) => i.clientId === p.clientId)?.postId ?? null;
+    case 'post-home': case 'new-incident': case 'post-history': return Number(p.id);
+    case 'post-incident': case 'post-request': return Number(p.postId);
+    case 'incident': return live.incidentById(Number(p.id))?.postId ?? null;
+    case 'add-to-incident': return live.incidentById(Number(p.incidentId))?.postId ?? null;
+    case 'request': return live.requestById(Number(p.id))?.postId ?? null;
+    case 'no-signal': return live.outbox.find((i) => i.clientId === p.clientId)?.postId ?? null;
     default: return null;
   }
 });
@@ -53,8 +53,8 @@ const tabs = computed<Tab[]>(() => {
   const me = session.me!;
   const name = String(route.name ?? '');
   const tabs: Tab[] = [];
-  if (me.assignments.some((a) => a.kind === 'ehbo')) {
-    tabs.push({ key: 'ehbo', to: { name: 'ehbo' }, label: 'EHBO', icon: 'ehbo', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
+  if (me.assignments.some((a) => a.kind === 'team')) {
+    tabs.push({ key: 'ehbo', to: { name: 'first-aid' }, label: 'EHBO', icon: 'ehbo', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
   }
   const posts = me.assignments.filter((a) => a.kind === 'post');
   for (const a of posts) {
@@ -67,12 +67,12 @@ const tabs = computed<Tab[]>(() => {
       count: live.openIncidents.filter((i) => i.postId === postId && !i.offPost).length,
     });
   }
-  tabs.push({ key: 'kaart', to: { name: 'kaart' }, label: 'Kaart', icon: 'map', active: name === 'kaart' || name === 'post', color: COLORS.kaart });
+  tabs.push({ key: 'map', to: { name: 'map' }, label: 'Kaart', icon: 'map', active: name === 'map' || name === 'post', color: COLORS.kaart });
   if (me.isAdmin || coordinatorOf(pkg.pkg)?.phone === me.phone) {
-    tabs.push({ key: 'meldingen', to: { name: 'meldingen' }, label: 'Meldingen', icon: 'bell', active: name === 'meldingen', color: COLORS.meldingen, count: live.requests.filter((r) => r.status === 'sent').length });
+    tabs.push({ key: 'requests', to: { name: 'requests' }, label: 'Meldingen', icon: 'bell', active: name === 'requests', color: COLORS.meldingen, count: live.requests.filter((r) => r.status === 'sent').length });
   }
-  tabs.push({ key: 'contacten', to: { name: 'contacten' }, label: 'Contacten', icon: 'people', active: name === 'contacten', color: COLORS.contacten });
-  tabs.push({ key: 'menu', to: { name: 'menu' }, label: 'Menu', icon: 'menu', active: MENU.includes(name) || name.startsWith('beheer'), color: COLORS.menu });
+  tabs.push({ key: 'contacts', to: { name: 'contacts' }, label: 'Contacten', icon: 'people', active: name === 'contacts', color: COLORS.contacten });
+  tabs.push({ key: 'menu', to: { name: 'menu' }, label: 'Menu', icon: 'menu', active: MENU.includes(name) || name.startsWith('admin'), color: COLORS.menu });
   return tabs;
 });
 </script>

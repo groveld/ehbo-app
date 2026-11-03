@@ -32,7 +32,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
 
   const isCoordinator = (me: Me) => db.coordinatorPhone() === me.phone;
   /** De wachtrij beheren: de evenementcoördinator, het kernteam en beheerders. */
-  const handles = (me: Me) => isCoordinator(me) || me.isAdmin || me.assignments.some((a) => a.kind === 'kernteam');
+  const handles = (me: Me) => isCoordinator(me) || me.isAdmin || me.assignments.some((a) => a.kind === 'core_team');
   const atPost = (me: Me, postId: number) => me.assignments.some((a) => a.kind === 'post' && a.postId === postId);
 
   function list(): LiveRequest[] {
@@ -88,7 +88,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
       body.clientId, body.type, body.postId, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);
     const coordinator = db.coordinatorPhone();
     if (coordinator) {
-      notify([coordinator], { title: `${typeOf(body.type).name} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/overzicht/meldingen' });
+      notify([coordinator], { title: `${typeOf(body.type).name} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/requests' });
     }
     changed();
     return list().find((r) => r.id === id)!;
@@ -109,7 +109,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     const r = row(id);
     if (r.status !== 'sent') throw httpError(409, r.status === 'accepted' ? `Al opgepakt door ${personName(r.picked_by as string)}` : 'Deze aanvraag is niet meer open');
     run("UPDATE help_requests SET status = 'accepted', accepted_at = ?, accepted_by = ? WHERE id = ?", iso(), me.phone, id);
-    notify(postPhones(r.post_id as number), { title: `${typeOf(r.kind as RequestKind).name} wordt geregeld`, body: `${personName(me.phone)} heeft je aanvraag opgepakt.`, tag: `aanvraag-${id}`, url: `/aanvraag/${id}` });
+    notify(postPhones(r.post_id as number), { title: `${typeOf(r.kind as RequestKind).name} wordt geregeld`, body: `${personName(me.phone)} heeft je aanvraag opgepakt.`, tag: `aanvraag-${id}`, url: `/request/${id}` });
     changed();
     return list();
   }
@@ -119,7 +119,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     const r = row(id);
     if (r.status !== 'sent' && r.status !== 'accepted') return list();
     run("UPDATE help_requests SET status = 'closed', closed_at = ?, accepted_at = COALESCE(accepted_at, ?), accepted_by = COALESCE(accepted_by, ?) WHERE id = ?", iso(), iso(), me.phone, id);
-    notify(postPhones(r.post_id as number), { title: `${typeOf(r.kind as RequestKind).name}: afgehandeld`, body: `${personName(me.phone)} heeft je aanvraag afgehandeld.`, tag: `aanvraag-${id}`, url: `/aanvraag/${id}` });
+    notify(postPhones(r.post_id as number), { title: `${typeOf(r.kind as RequestKind).name}: afgehandeld`, body: `${personName(me.phone)} heeft je aanvraag afgehandeld.`, tag: `aanvraag-${id}`, url: `/request/${id}` });
     changed();
     return list();
   }

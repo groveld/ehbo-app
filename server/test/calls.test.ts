@@ -49,7 +49,7 @@ async function login(phone: string) {
   if (!cookies.has(phone)) {
     const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
     assert.equal(res.statusCode, 200, res.body);
-    cookies.set(phone, `ehbo_sessie=${res.cookies.find((c) => c.name === 'ehbo_sessie')!.value}`);
+    cookies.set(phone, `session=${res.cookies.find((c) => c.name === 'session')!.value}`);
   }
   return cookies.get(phone)!;
 }
@@ -385,7 +385,7 @@ test('live stand via SSE: direct de stand, en elke wijziging', async () => {
 test('deelnemers zien welke standplaats leeg is, zonder posities of namen', async () => {
   const KRUISING = () => idOf('posts', 'Kruising 4');
   const status = async () => {
-    const res = await app.inject({ url: '/api/ehbo-status' });
+    const res = await app.inject({ url: '/api/first-aid-status' });
     assert.equal(res.statusCode, 200, 'ook zonder aanmelding');
     return res.json().awayPostIds;
   };
@@ -419,7 +419,7 @@ test('the data version in the live state and for participants follows changes in
 
   const after = await ok(DEMO.admin, 'GET', '/api/live/state');
   assert.notEqual(after.dataVersion, before.dataVersion);
-  assert.equal((await app.inject({ url: '/api/ehbo-status' })).json().dataVersion, after.dataVersion);
+  assert.equal((await app.inject({ url: '/api/first-aid-status' })).json().dataVersion, after.dataVersion);
   const fresh = (await app.inject({ url: '/api/package' })).json() as EventPackage;
   assert.ok(fresh.version.startsWith(`${after.dataVersion}.`));
 });

@@ -3,7 +3,7 @@
 import { ref } from 'vue';
 import { load, save } from './storage.ts';
 
-const KEY = 'ehbo.awake';
+const KEY = 'app.awake';
 
 export const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
 /** The switch "Scherm aan houden" on this device. */

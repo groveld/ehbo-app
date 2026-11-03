@@ -3,7 +3,7 @@
 import { computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatKm } from '@ehbo/shared';
-import CallEhbo from '../components/CallEhbo.vue';
+import CallFirstAid from '../components/CallFirstAid.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import PostBadge from '../components/PostBadge.vue';
@@ -70,7 +70,7 @@ const isFavorite = computed(() => (run.value ? favorites.value.includes(run.valu
         </div>
       </section>
     </div>
-    <CallEhbo v-if="!session.me" />
+    <CallFirstAid v-if="!session.me" />
   </main>
 </template>
 

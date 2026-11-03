@@ -37,7 +37,7 @@ const start = async () => {
 async function login(phone: string) {
   const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
   assert.equal(res.statusCode, 200, res.body);
-  return `ehbo_sessie=${res.cookies.find((c) => c.name === 'ehbo_sessie')!.value}`;
+  return `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
 }
 const logout = (cookie: string, payload?: object) => app.inject({ url: '/api/session', method: 'DELETE', payload, headers: { cookie } });
 const me = (cookie: string) => app.inject({ url: '/api/me', headers: { cookie } });

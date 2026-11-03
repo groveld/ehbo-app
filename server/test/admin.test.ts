@@ -18,7 +18,7 @@ let staffCookie: string;
 async function login(phone: string) {
   const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
   assert.equal(res.statusCode, 200, res.body);
-  return `ehbo_sessie=${res.cookies.find((c) => c.name === 'ehbo_sessie')!.value}`;
+  return `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
 }
 
 const call = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: object | string, cookie = adminCookie, headers: Record<string, string> = {}) =>
@@ -229,7 +229,7 @@ test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
   assert.equal(saved.members[0]?.phone, '+31687654321');
 
   const me = (await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0687654321' } })).json();
-  assert.equal(me.home, 'ehbo');
+  assert.equal(me.home, 'first_aid');
   assert.match(me.assignments[0].detail, /Mobiel \(fiets\) · Standplaats Kruising 4/);
 
   assert.equal((await call('POST', '/api/admin/teams', { ...team, kind: 'fixed', postId: null })).statusCode, 400);

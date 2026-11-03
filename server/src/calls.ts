@@ -15,7 +15,7 @@ import {
   type CloseIncident,
   type ControlResult,
   type Dispatch,
-  type EhboStatus,
+  type FirstAidStatus,
   type DispatchReason,
   type IncidentDetails,
   type IncidentEvent,
@@ -289,7 +289,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   }
 
   /** Voor deelnemers: welke standplaatsen nu leeg zijn. Zonder de oproepen, dus licht genoeg om vaak op te vragen. */
-  function ehboStatus(): EhboStatus {
+  function ehboStatus(): FirstAidStatus {
     return { awayPostIds: awayPostIds(teams(), liveTeams(), [...posts().values()], now().getTime(), atPostM()), dataVersion: db.dataVersion() };
   }
 
@@ -351,7 +351,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   }
 
   const tag = (id: number) => `oproep-${id}`;
-  const teamUrl = (id: number) => `/oproep/${id}`;
+  const teamUrl = (id: number) => `/dispatch/${id}`;
 
   function cancelTimer(id: number) {
     timers.get(id)?.();
@@ -390,7 +390,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function copyToCoordinator(row: Row, body: string, urgent = false) {
     const phone = coordinator();
     if (!phone) return;
-    notify([phone], { title: `EHBO-oproep · ${placeName(row)}`, body, tag: `kopie-${row.id as number}`, url: `/melding/${row.id as number}`, urgent });
+    notify([phone], { title: `EHBO-oproep · ${placeName(row)}`, body, tag: `kopie-${row.id as number}`, url: `/incident/${row.id as number}`, urgent });
   }
 
   /** Eenheden die nog op deze oproep kunnen reageren: opgeroepen, niet geweigerd, niet aangenomen. */
@@ -458,7 +458,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   // ---- Rechten ----
 
   const isCoordinator = (me: Me) => coordinator() === me.phone;
-  const memberOf = (me: Me, teamId: number) => me.assignments.some((a) => a.kind === 'ehbo' && a.teamId === teamId);
+  const memberOf = (me: Me, teamId: number) => me.assignments.some((a) => a.kind === 'team' && a.teamId === teamId);
   const atPost = (me: Me, postId: number) => me.assignments.some((a) => a.kind === 'post' && a.postId === postId);
 
   /** The post, who asked for help, the coordinator or an admin. */
@@ -673,7 +673,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     for (const other of teams().filter((u) => released.includes(u.id))) {
       notify(other.members, { title: 'Oproep is al aangenomen', body: `${team.name} gaat naar ${placeName(row)}. Je hoeft niet te komen.`, tag: tag(id), url: teamUrl(id) });
     }
-    notify(followers(row), { title: 'Hulp is onderweg', body: `${helper} komt eraan.`, tag: `melding-${id}`, url: `/melding/${id}` });
+    notify(followers(row), { title: 'Hulp is onderweg', body: `${helper} komt eraan.`, tag: `melding-${id}`, url: `/incident/${id}` });
     copyToCoordinator(updated, `${manual ? 'Toegewezen aan' : 'Aangenomen door'} ${helper}.`);
     changed();
     return state();
@@ -883,10 +883,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       } else if (step === 'close') {
         db.transaction(() => closeTeamAuto(team));
         closed.push(team.name);
-        notify(team.members, { title: 'Je bent uit dienst gezet', body: 'Je dienst is voorbij. Nog bezig? Zet jezelf weer op Beschikbaar.', tag: `dienst-${team.id}`, url: '/ehbo' });
+        notify(team.members, { title: 'Je bent uit dienst gezet', body: 'Je dienst is voorbij. Nog bezig? Zet jezelf weer op Beschikbaar.', tag: `dienst-${team.id}`, url: '/first-aid' });
       } else {
         run('UPDATE teams SET closes_at = ? WHERE id = ?', step.toISOString(), team.id);
-        notify(team.members, { title: `Je dienst stopt om ${clockText(step.getTime())}`, body: 'Nog nodig? Tik om in dienst te blijven.', tag: `dienst-${team.id}`, url: '/ehbo' });
+        notify(team.members, { title: `Je dienst stopt om ${clockText(step.getTime())}`, body: 'Nog nodig? Tik om in dienst te blijven.', tag: `dienst-${team.id}`, url: '/first-aid' });
       }
     }
     for (const post of [...postMap.values()].filter((p) => p.isOpen && !fixedPosts.has(p.id))) {
@@ -905,7 +905,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       }
     }
     const phone = coordinator();
-    if (closed.length && phone) notify([phone], { title: 'Automatisch gesloten', body: closed.join(', '), tag: 'gesloten', url: '/sturing' });
+    if (closed.length && phone) notify([phone], { title: 'Automatisch gesloten', body: closed.join(', '), tag: 'gesloten', url: '/control' });
     if (touched) changed();
   }
 
@@ -964,7 +964,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     });
     for (const post of openPosts) notify(postPhones(post.id), { title: `${post.name} is geopend`, body: 'De coördinator heeft je locatie geopend.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
     offerOpenCalls(onDuty.map((u) => u.id));
-    for (const team of onDuty) notify(team.members, { title: 'Je staat op Beschikbaar', body: 'De coördinator heeft je op Beschikbaar gezet.', tag: `dienst-${team.id}`, url: '/ehbo' });
+    for (const team of onDuty) notify(team.members, { title: 'Je staat op Beschikbaar', body: 'De coördinator heeft je op Beschikbaar gezet.', tag: `dienst-${team.id}`, url: '/first-aid' });
     changed();
     return { state: state(), skipped };
   }
@@ -1055,7 +1055,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const closed = closeUnattended(phones);
     if (!closed.length) return;
     const phone = coordinator();
-    if (phone) notify([phone], { title: 'Gesloten: niemand meer aangemeld', body: closed.join(', '), tag: 'afgemeld', url: '/sturing' });
+    if (phone) notify([phone], { title: 'Gesloten: niemand meer aangemeld', body: closed.join(', '), tag: 'afgemeld', url: '/control' });
     changed();
   }
 
