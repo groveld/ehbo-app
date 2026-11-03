@@ -64,11 +64,10 @@ export const useLiveStore = defineStore('live', () => {
   const queue = ref<QueuedAction[]>(load('ehbo.queue') ?? []);
   watch(queue, (value) => save('ehbo.queue', value.length ? value : null), { deep: true });
   /** A request made without signal has a temporary id; this maps it to the real one, so its screen keeps working. */
-  const requestIds = ref<Record<number, number>>(load('ehbo.requestIds') ?? {});
-  watch(requestIds, (value) => save('ehbo.requestIds', Object.keys(value).length ? value : null), { deep: true });
+  /** A help request made on the phone has a negative id until the server gives it its own (#86: one map for every type). */
+  const tempIds = ref<Record<number, number>>(load('ehbo.tempIds') ?? {});
+  watch(tempIds, (value) => save('ehbo.tempIds', Object.keys(value).length ? value : null), { deep: true });
   /** The same for an incident an EHBO team started without signal. */
-  const incidentIds = ref<Record<number, number>>(load('ehbo.incidentIds') ?? {});
-  watch(incidentIds, (value) => save('ehbo.incidentIds', Object.keys(value).length ? value : null), { deep: true });
   /** What every screen shows: the server's state with this phone's own changes on top, so nothing ever waits for the network. */
   const state = computed<LiveState | null>(() => {
     if (!queue.value.length) return base.value;
@@ -78,8 +77,11 @@ export const useLiveStore = defineStore('live', () => {
     });
   });
   /** Nog niet bij de server aangekomen. De server telt dezelfde clientId maar één keer, dus opnieuw versturen kan altijd. */
-  const outbox = ref<NewIncident[]>(load('ehbo.outbox') ?? []);
-  watch(outbox, (value) => save('ehbo.outbox', value.length ? value : null), { deep: true });
+  /** Wat later alsnog is aangekomen (clientId → melding), of door de server is geweigerd (clientId → reden). */
+  const delivered = ref<Record<string, number>>({});
+  const refused = ref<Record<string, string>>({});
+  /** EHBO requests still on their way: they wait in the same queue as every other change, in order. */
+  const outbox = computed(() => queue.value.flatMap((q) => (q.action.type === 'report' ? [q.action.body] : [])));
   const connected = ref(false);
   const browserOnline = ref(navigator.onLine);
   /** The server can't be reached, although the phone may think it has a network. */
@@ -171,10 +173,8 @@ export const useLiveStore = defineStore('live', () => {
       disconnect();
       base.value = null;
       save('ehbo.live', null);
-      outbox.value = [];
       queue.value = [];
-      requestIds.value = {};
-      incidentIds.value = {};
+      tempIds.value = {};
     }
   }, { immediate: true });
 
@@ -222,7 +222,7 @@ export const useLiveStore = defineStore('live', () => {
   const requests = computed(() => (state.value ? requestsOf(state.value) : []));
   const openIncidents = computed(() => incidents.value.filter(isOpen));
   const incidentById = (id: number) => {
-    const real = incidentIds.value[id] ?? id;
+    const real = tempIds.value[id] ?? id;
     return incidents.value.find((i) => i.id === real) ?? null;
   };
   const teamState = (id: number) => state.value?.teams.find((u) => u.id === id) ?? null;
@@ -296,7 +296,7 @@ export const useLiveStore = defineStore('live', () => {
   });
 
   const requestById = (id: number) => {
-    const real = requestIds.value[id] ?? id;
+    const real = tempIds.value[id] ?? id;
     return requests.value.find((r) => r.id === real) ?? null;
   };
 
@@ -323,11 +323,19 @@ export const useLiveStore = defineStore('live', () => {
   async function sendAction(item: QueuedAction) {
     const { method, path, body } = actionRequest(item.action);
     const headers = { [ACTION_ID_HEADER]: item.id, [ACTION_AT_HEADER]: item.at };
-    const answer = await api<LiveState | LiveRequest | LiveIncident>(path, { method, body, headers, timeoutMs: SEND_TIMEOUT_MS });
+    // Asking for EHBO waits less long: with bad signal the phone offers calling instead.
+    const timeoutMs = item.action.type === 'report' ? REPORT_TIMEOUT_MS : SEND_TIMEOUT_MS;
+    const answer = await api<LiveState | LiveRequest | LiveIncident>(path, { method, body, headers, timeoutMs });
+    if (item.action.type === 'report') {
+      const created = answer as LiveIncident;
+      delivered.value[item.action.body.clientId] = created.id;
+      if (base.value && !base.value.helpRequests.some((h) => h.id === created.id)) base.value = { ...base.value, helpRequests: [created, ...base.value.helpRequests] };
+      return;
+    }
     if (item.action.type === 'selfStart') {
       const created = answer as LiveIncident;
       const { tempId } = item.action;
-      incidentIds.value[tempId] = created.id;
+      tempIds.value[tempId] = created.id;
       for (const { action } of queue.value) if ('incidentId' in action && action.incidentId === tempId) action.incidentId = created.id;
       // Until the next state from the server, so the screen of this incident doesn't lose it for a moment.
       if (base.value && !base.value.helpRequests.some((h) => h.id === created.id)) base.value = { ...base.value, helpRequests: [created, ...base.value.helpRequests] };
@@ -339,7 +347,7 @@ export const useLiveStore = defineStore('live', () => {
     }
     const created = answer as LiveRequest;
     const { tempId } = item.action;
-    requestIds.value[tempId] = created.id;
+    tempIds.value[tempId] = created.id;
     for (const { action } of queue.value) if ('requestId' in action && action.requestId === tempId) action.requestId = created.id;
     // Until the next state from the server, so the screen of this request doesn't lose it for a moment.
     if (base.value && !base.value.helpRequests.some((h) => h.id === created.id)) base.value = { ...base.value, helpRequests: [created, ...base.value.helpRequests] };
@@ -351,7 +359,10 @@ export const useLiveStore = defineStore('live', () => {
     // What came after it on the same incident can't work any more, and one message is enough.
     const incidentId = incidentOf(item.action);
     queue.value = queue.value.filter((q) => q.id !== item.id && (incidentId === null || incidentOf(q.action) !== incidentId));
+    // A refused EHBO request says so on the screen that offers calling.
+    if (item.action.type === 'report') refused.value[item.action.body.clientId] = reason;
     if (waitedFor.has(item.id)) waitedFor.set(item.id, reason);
+    else if (item.action.type === 'report') return;
     else void messageDialog({ title: 'Wijziging niet doorgevoerd', text: `Je wijziging kon niet worden verwerkt: ${reason}`, confirm: 'Begrepen' });
   }
 
@@ -382,76 +393,46 @@ export const useLiveStore = defineStore('live', () => {
 
   // ---- Melding zonder bereik: blijft op de telefoon staan en gaat vanzelf weg zodra er bereik is ----
 
-  /** Wat later alsnog is aangekomen (clientId → melding), of door de server is geweigerd (clientId → reden). */
-  const delivered = ref<Record<string, number>>({});
-  const refused = ref<Record<string, string>>({});
 
-  async function post(item: NewIncident) {
-    // Slecht bereik: niet eindeloos wachten. Komt hij toch aan, dan telt de server hem bij de volgende poging niet dubbel.
-    const res = await fetch('/api/help-requests', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item), signal: AbortSignal.timeout(REPORT_TIMEOUT_MS),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new ApiRequestError(res.status, body);
-    return body as LiveIncident;
-  }
-
-  const drop = (clientId: string) => { outbox.value = outbox.value.filter((i) => i.clientId !== clientId); };
-
-  /** Gooit OfflineError als de melding (nog) niet is aangekomen; hij staat dan in de outbox. */
+  /**
+   * Asking for EHBO: in the queue behind what came before (a post opened without signal is open first on the server), and
+   * sent the same way, once by its clientId. Throws OfflineError when it hasn't arrived yet: the phone then offers calling.
+   */
   async function report(request: Omit<NewIncident, 'type' | 'clientId' | 'reportedAt'>) {
-    const item: NewIncident = { ...request, type: 'first_aid', clientId: crypto.randomUUID(), reportedAt: new Date(serverNow.value).toISOString() };
-    outbox.value.push(item);
+    const body: NewIncident = { ...request, type: 'first_aid', clientId: crypto.randomUUID(), reportedAt: new Date(serverNow.value).toISOString() };
+    const item: QueuedAction = { id: crypto.randomUUID(), at: body.reportedAt!, action: { type: 'report', body } };
+    queue.value.push(item);
     // No connection: straight to calling. Every second counts, so don't try first.
     if (offline.value) {
       startRetrying();
-      throw new OfflineError(item.clientId);
+      throw new OfflineError(body.clientId);
     }
-    try {
-      // A post opened without signal has to be open on the server before it can ask for help.
-      await sendQueueBriefly(ACTION_WAIT_MS);
-      const incident = await post(item);
-      drop(item.clientId);
-      delivered.value[item.clientId] = incident.id;
-      await refresh();
-      return incident;
-    } catch (err) {
-      if (!noAnswer(err)) {
-        drop(item.clientId);
-        throw err;
-      }
+    waitedFor.set(item.id, null);
+    await sendQueueBriefly(ACTION_WAIT_MS + REPORT_TIMEOUT_MS);
+    const refusal = waitedFor.get(item.id);
+    waitedFor.delete(item.id);
+    if (refusal) throw new Error(refusal);
+    const id = delivered.value[body.clientId];
+    if (id === undefined) {
       startRetrying();
-      throw new OfflineError(item.clientId);
+      throw new OfflineError(body.clientId);
     }
+    await refresh();
+    return incidentById(id) ?? state.value!.helpRequests.find((h) => h.id === id) as LiveIncident;
   }
 
-  let flushing = false;
-  /** Everything that's waiting: first the changes, then the EHBO requests (a post opened without signal must be open first). */
+  /** Everything that's waiting, in order. */
   async function flush() {
-    if (flushing || !session.me) return;
-    flushing = true;
-    try {
-      await sendQueue();
-      for (const item of [...outbox.value]) {
-        try {
-          delivered.value[item.clientId] = (await post(item)).id;
-          drop(item.clientId);
-        } catch (err) {
-          if (noAnswer(err)) break; // nog geen bereik: later opnieuw
-          refused.value[item.clientId] = (err as Error).message;
-          drop(item.clientId);
-        }
-      }
-      if (Object.keys(delivered.value).length) await refresh();
-    } finally {
-      flushing = false;
-    }
+    if (!session.me) return;
+    const before = Object.keys(delivered.value).length;
+    await sendQueue();
+    if (Object.keys(delivered.value).length > before) await refresh();
   }
 
   let retryTimer: ReturnType<typeof setInterval> | null = null;
   function startRetrying() {
     retryTimer ??= setInterval(() => {
-      if (!outbox.value.length && !queue.value.length) {
+      if (!queue.value.length) {
         clearInterval(retryTimer!);
         retryTimer = null;
         return;
@@ -459,7 +440,7 @@ export const useLiveStore = defineStore('live', () => {
       void flush();
     }, RETRY_MS);
   }
-  if (outbox.value.length || queue.value.length) {
+  if (queue.value.length) {
     startRetrying();
     void flush();
   }
@@ -491,7 +472,7 @@ export const useLiveStore = defineStore('live', () => {
         },
         body: { clientId: crypto.randomUUID(), teamId, postId, lat: position?.[1] ?? null, lng: position?.[0] ?? null, ...details },
       });
-      return incidentIds.value[tempId] ?? tempId;
+      return tempIds.value[tempId] ?? tempId;
     },
     setAvailability: (teamId: number, availability: TeamAvailability) => act({ type: 'availability', teamId, availability }),
     setPostOpen: (postId: number, open: boolean) => act({ type: 'postOpen', postId, open }),
@@ -510,7 +491,7 @@ export const useLiveStore = defineStore('live', () => {
     async request(postId: number, kind: RequestKind) {
       const tempId = -Date.now();
       await act({ type: 'requestNew', tempId, clientId: crypto.randomUUID(), postId, postName: pkg.postById.get(postId)?.name ?? 'Post', kind });
-      return { id: requestIds.value[tempId] ?? tempId };
+      return { id: tempIds.value[tempId] ?? tempId };
     },
     setRequestDetail: (requestId: number, detail: string | null) => act({ type: 'requestDetail', requestId, detail }),
     pickRequest: (requestId: number) => act({ type: 'requestPick', requestId }),

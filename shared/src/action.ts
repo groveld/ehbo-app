@@ -1,7 +1,7 @@
 // Changes a phone makes to the live state. The phone applies each one to its own state at once and queues it for the server,
 // so nothing ever waits for the network; the queue goes out in order as soon as there is a connection.
 import { incidentsOf, requestsOf } from './incident.ts';
-import type { CloseIncident, Dispatch, IncidentDetails, IncidentEventType, IncidentPost, LiveIncident, LiveState, LiveTeam, NewSelfIncident, TeamAvailability } from './incident.ts';
+import type { CloseIncident, Dispatch, IncidentDetails, IncidentEventType, IncidentPost, LiveIncident, LiveState, LiveTeam, NewIncident, NewSelfIncident, TeamAvailability } from './incident.ts';
 import type { LiveRequest, NewRequest, RequestKind } from './request.ts';
 
 export type LiveAction =
@@ -18,6 +18,8 @@ export type LiveAction =
   | { type: 'keepTeam'; teamId: number }
   /** tempId: a negative id until the server has given the real one. */
   | { type: 'requestNew'; tempId: number; clientId: string; postId: number; postName: string; kind: RequestKind }
+  /** Asking for EHBO. Nothing shows before the server answers: who gets the call is decided there, and the phone offers calling instead. */
+  | { type: 'report'; body: NewIncident }
   | { type: 'requestDetail'; requestId: number; detail: string | null }
   | { type: 'requestPick' | 'requestDone' | 'requestWithdraw'; requestId: number };
 
@@ -164,6 +166,7 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
       }, ...state.helpRequests],
     };
     case 'requestDetail': return changeRequest(state, action.requestId, (r) => ({ ...r, detail: action.detail }));
+    case 'report': return state;
     case 'requestPick': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'accepted', acceptedAt: at, acceptedBy: context.me }));
     case 'requestDone': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'closed', closedAt: at, position: null, acceptedAt: r.acceptedAt ?? at, acceptedBy: r.acceptedBy ?? context.me }));
     case 'requestWithdraw': return changeRequest(state, action.requestId, (r) => ({ ...r, status: 'withdrawn', closedAt: at, position: null }));
@@ -189,6 +192,7 @@ export function actionRequest(action: LiveAction): { method: 'POST' | 'PUT'; pat
       method: 'POST', path: '/api/help-requests',
       body: { type: action.kind, postId: action.postId, detail: null, clientId: action.clientId } satisfies NewRequest,
     };
+    case 'report': return { method: 'POST', path: '/api/help-requests', body: action.body };
     case 'requestDetail': return { method: 'PUT', path: `/api/help-requests/${action.requestId}`, body: { detail: action.detail } };
     case 'requestPick': return { method: 'POST', path: `/api/help-requests/${action.requestId}/pick` };
     case 'requestDone': return { method: 'POST', path: `/api/help-requests/${action.requestId}/done` };

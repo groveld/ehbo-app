@@ -723,6 +723,11 @@ test('updating the app: a change still waiting in the old words is converted and
   // As the oldest version of the app left it: Dutch values, a unit instead of a team, and no storage version yet.
   await ehbo.evaluate((id) => {
     localStorage.setItem('ehbo.queue', JSON.stringify([{ id: crypto.randomUUID(), at: new Date().toISOString(), action: { type: 'availability', unitId: id, availability: 'pauze' } }]));
+    // An EHBO request that was waiting in the separate outbox of that version, without a type: from where this team member is.
+    localStorage.setItem('ehbo.outbox', JSON.stringify([{
+      postId: null, lat: 53.1445, lng: 5.8111, accuracyM: 10, clientId: crypto.randomUUID(), reportedAt: new Date().toISOString(),
+      what: 'onwel', persons: '1', responsive: 'nee', note: null,
+    }]));
     localStorage.removeItem('ehbo.storage');
   }, secondTeamId);
   await ehbo.reload();
@@ -730,5 +735,14 @@ test('updating the app: a change still waiting in the old words is converted and
     const state = await (await ehbo.request.get('/api/live/state')).json() as { teams: { id: number; availability: string }[] };
     return state.teams.find((u) => u.id === secondTeamId)!.availability;
   }, { timeout: 15_000 }).toBe('unavailable');
+  // The EHBO request went after it, from the one queue, in the new words.
+  const mine = async () => {
+    const state = await (await ehbo.request.get('/api/live/state')).json() as { helpRequests: { id: number; type: string; reportedBy: string; what: string; responsive: string; status: string }[] };
+    return state.helpRequests.find((h) => h.type === 'first_aid' && h.reportedBy === '+31600000006' && h.status !== 'withdrawn');
+  };
+  await expect.poll(async () => (await mine())?.what, { timeout: 15_000 }).toBe('unwell');
+  expect((await mine())!.responsive).toBe('no');
+  expect(await ehbo.evaluate(() => [localStorage.getItem('ehbo.outbox'), localStorage.getItem('ehbo.queue')])).toEqual([null, null]);
+  expect((await ehbo.request.post(`/api/help-requests/${(await mine())!.id}/withdraw`)).ok()).toBe(true);
   expect((await ehbo.request.put(`/api/teams/${secondTeamId}/availability`, { data: { availability: 'off_duty' } })).ok()).toBe(true);
 });
