@@ -93,7 +93,7 @@ Other values: stage `nearest`, `all` (was `dichtstbij`, `alle`); dispatch reason
 
 ## Names in the code
 
-- **Screens** are named in English after what they are, not after the design screen number: `PostHomeView` → `LocationHomeView`, `DispatchView` → `DispatchView`, `NewIncidentView` → `NewIncidentView`, `RequestView` → `RequestView`, `IncidentView` → `IncidentView`, `FirstAidView` → `FirstAidView`, and so on. `CLAUDE.md` changes its rule that a file follows the design screen.
+- **Screens** are named in English after what they are, not after the design screen number: `PostHomeView` → `LocationHomeView`, `OproepView` → `DispatchView`, `EhboVerzoekView` → `NewIncidentView`, `AanvraagView` → `RequestView`, `MeldingView` → `IncidentView`, `EhboView` → `FirstAidView`, and so on. `CLAUDE.md` changes its rule that a file follows the design screen.
 - **Routes and URLs** are English: `/first-aid`, `/location/:id`, `/admin/...`, `/map`.
 - **`localStorage` keys** start with `app.` instead of `ehbo.` (`app.outbox`, `app.queue`, `app.live`, `app.package`, `app.me`, `app.event`, `app.nav`, `app.awake`, `app.logout`, `app.seen-additions`). A phone converts its old keys once on start, so a waiting incident in the outbox survives the update.
 - **`request`** in the server only means the HTTP request (`request.me`).
