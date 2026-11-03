@@ -20,7 +20,7 @@ const history = computed(() => [
     to: { name: 'post-melding', params: { postId: postId.value, id: i.id } },
   })),
   ...live.requests.filter((r) => r.postId === postId.value && (r.status === 'closed' || r.status === 'withdrawn')).map((r) => ({
-    key: `r${r.id}`, at: r.createdAt, text: [REQUEST_KINDS[r.kind].label, requestDetailLabel(r.kind, r.detail)].filter(Boolean).join(' · '), done: r.status === 'closed',
+    key: `r${r.id}`, at: r.reportedAt, text: [REQUEST_KINDS[r.type].label, requestDetailLabel(r.type, r.detail)].filter(Boolean).join(' · '), done: r.status === 'closed',
     state: r.status === 'closed' ? 'afgehandeld' : 'ingetrokken', to: { name: 'post-aanvraag', params: { postId: postId.value, id: r.id } },
   })),
 ].sort((a, b) => b.at.localeCompare(a.at)));

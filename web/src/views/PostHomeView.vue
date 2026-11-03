@@ -137,8 +137,8 @@ async function setOpen(value: boolean) {
 
         <div class="card requests">
           <RouterLink v-for="r in openRequests" :key="`r${r.id}`" :to="{ name: 'aanvraag', params: { id: r.id } }" class="request">
-            <span class="mono at">{{ clock(r.createdAt) }}</span>
-            <span class="grow">{{ [REQUEST_KINDS[r.kind].label, requestDetailLabel(r.kind, r.detail)].filter(Boolean).join(' · ') }}</span>
+            <span class="mono at">{{ clock(r.reportedAt) }}</span>
+            <span class="grow">{{ [REQUEST_KINDS[r.type].label, requestDetailLabel(r.type, r.detail)].filter(Boolean).join(' · ') }}</span>
             <span class="state blue">{{ r.status === 'accepted' ? 'wordt geregeld' : `plek ${r.position}` }}</span>
             <Icon name="forward" :size="16" />
           </RouterLink>

@@ -39,20 +39,21 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     const rows = all('SELECT * FROM queue_requests ORDER BY id DESC');
     const queue = rows.filter((r) => r.status === 'sent' || r.status === 'accepted').map((r) => r.id as number).reverse();
     return rows.map((r) => {
-      const pickedBy = r.picked_by as string | null;
+      const acceptedBy = r.picked_by as string | null;
       const position = queue.indexOf(r.id as number);
       return {
         id: r.id as number,
+        handling: 'queue' as const,
+        type: r.kind as RequestKind,
         isTest: r.is_test === 1,
         postId: r.post_id as number,
         postName: postName(r.post_id as number),
-        kind: r.kind as RequestKind,
         detail: r.detail as string | null,
         status: r.status as RequestStatus,
-        createdAt: r.created_at as string,
-        pickedAt: r.picked_at as string | null,
-        pickedBy: pickedBy ? { name: personName(pickedBy), phone: pickedBy } : null,
-        doneAt: r.done_at as string | null,
+        reportedAt: r.created_at as string,
+        acceptedAt: r.picked_at as string | null,
+        acceptedBy: acceptedBy ? { name: personName(acceptedBy), phone: acceptedBy } : null,
+        closedAt: r.done_at as string | null,
         position: position >= 0 ? position + 1 : null,
       };
     });
@@ -78,14 +79,14 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     if (!post) throw httpError(404, 'Locatie niet gevonden');
     if (!atPost(me, body.postId) && !handles(me)) throw httpError(403, 'Je kunt alleen een aanvraag doen vanaf je eigen locatie');
     if (post.is_open !== 1 && !reopen(body.postId)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
-    checkDetail(body.kind, body.detail);
+    checkDetail(body.type, body.detail);
     // A request is a help request of a queue type (#86).
     const id = Number(run(`INSERT INTO help_requests (client_id, type_id, post_id, detail, status, reported_by, reported_at, is_test)
                            VALUES (?, (SELECT id FROM help_request_types WHERE key = ?), ?, ?, 'sent', ?, ?, ?)`,
-      body.clientId, body.kind, body.postId, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);
+      body.clientId, body.type, body.postId, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);
     const coordinator = db.coordinatorPhone();
     if (coordinator) {
-      notify([coordinator], { title: `${REQUEST_KINDS[body.kind].label} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/overzicht/meldingen' });
+      notify([coordinator], { title: `${REQUEST_KINDS[body.type].label} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/overzicht/meldingen' });
     }
     changed();
     return list().find((r) => r.id === id)!;

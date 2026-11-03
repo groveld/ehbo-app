@@ -17,7 +17,7 @@ import { callRoutes } from './routes/calls.ts';
 import { mapRoutes } from './routes/map.ts';
 import { packageRoutes } from './routes/package.ts';
 import { pushRoutes } from './routes/push.ts';
-import { requestRoutes } from './routes/requests.ts';
+import { helpRequestRoutes } from './routes/help-requests.ts';
 import { sessionRoutes } from './routes/session.ts';
 import type { Vapid } from './webpush.ts';
 
@@ -94,7 +94,7 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   app.register(sessionRoutes, { db, calls });
   app.register(pushRoutes, { db, notifier, allowInsecureEndpoints });
   app.register(callRoutes, { calls, requests });
-  app.register(requestRoutes, { calls, requests });
+  app.register(helpRequestRoutes, { calls, requests });
   app.register(adminRoutes, { db, calls });
   app.register(brandRoutes, { db });
   app.register(packageRoutes, { db, calls });

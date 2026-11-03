@@ -2,6 +2,7 @@
 // Every change happens on the phone first and goes into a queue, so the app never waits for the network (shared/src/action.ts).
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
+import { incidentsOf, requestsOf } from '@ehbo/shared';
 import type {
   CloseIncident,
   ControlResult,
@@ -73,7 +74,7 @@ export const useLiveStore = defineStore('live', () => {
     if (!queue.value.length) return base.value;
     const context = { me: session.me, teams: pkg.pkg?.teams ?? [] };
     return queue.value.reduce((s, item) => applyAction(s, item, context), base.value ?? {
-      version: 0, dataVersion: '', serverTime: new Date().toISOString(), incidents: [], teams: [], posts: [], requests: [], testMode: false,
+      version: 0, dataVersion: '', serverTime: new Date().toISOString(), helpRequests: [], teams: [], posts: [], testMode: false,
     });
   });
   /** Nog niet bij de server aangekomen. De server telt dezelfde clientId maar één keer, dus opnieuw versturen kan altijd. */
@@ -216,7 +217,9 @@ export const useLiveStore = defineStore('live', () => {
   // ---- Afgeleid ----
 
   const serverNow = computed(() => now.value + clockOffset.value);
-  const incidents = computed(() => state.value?.incidents ?? []);
+  // One list on the server (#86); the screens look at incidents and requests apart.
+  const incidents = computed(() => (state.value ? incidentsOf(state.value) : []));
+  const requests = computed(() => (state.value ? requestsOf(state.value) : []));
   const openIncidents = computed(() => incidents.value.filter(isOpen));
   const incidentById = (id: number) => {
     const real = incidentIds.value[id] ?? id;
@@ -247,7 +250,7 @@ export const useLiveStore = defineStore('live', () => {
   const unknownData = computed(() => {
     if (!pkg.pkg) return '';
     const assignments = session.me?.assignments ?? [];
-    const posts = [...incidents.value.map((i) => i.postId), ...(state.value?.requests ?? []).map((r) => r.postId), ...myPostIds.value];
+    const posts = [...incidents.value.map((i) => i.postId), ...requests.value.map((r) => r.postId), ...myPostIds.value];
     const teams = [...(state.value?.teams ?? []).map((u) => u.id), ...assignments.flatMap((a) => (a.teamId == null ? [] : [a.teamId]))];
     return [
       ...posts.filter((id) => !pkg.postById.has(id)).map((id) => `post ${id}`),
@@ -294,7 +297,7 @@ export const useLiveStore = defineStore('live', () => {
 
   const requestById = (id: number) => {
     const real = requestIds.value[id] ?? id;
-    return state.value?.requests?.find((r) => r.id === real) ?? null;
+    return requests.value.find((r) => r.id === real) ?? null;
   };
 
   const secondsLeft = (incident: LiveIncident) =>
@@ -327,7 +330,7 @@ export const useLiveStore = defineStore('live', () => {
       incidentIds.value[tempId] = created.id;
       for (const { action } of queue.value) if ('incidentId' in action && action.incidentId === tempId) action.incidentId = created.id;
       // Until the next state from the server, so the screen of this incident doesn't lose it for a moment.
-      if (base.value && !base.value.incidents.some((i) => i.id === created.id)) base.value = { ...base.value, incidents: [created, ...base.value.incidents] };
+      if (base.value && !base.value.helpRequests.some((h) => h.id === created.id)) base.value = { ...base.value, helpRequests: [created, ...base.value.helpRequests] };
       return;
     }
     if (item.action.type !== 'requestNew') {
@@ -339,7 +342,7 @@ export const useLiveStore = defineStore('live', () => {
     requestIds.value[tempId] = created.id;
     for (const { action } of queue.value) if ('requestId' in action && action.requestId === tempId) action.requestId = created.id;
     // Until the next state from the server, so the screen of this request doesn't lose it for a moment.
-    if (base.value && !base.value.requests.some((r) => r.id === created.id)) base.value = { ...base.value, requests: [created, ...base.value.requests] };
+    if (base.value && !base.value.helpRequests.some((h) => h.id === created.id)) base.value = { ...base.value, helpRequests: [created, ...base.value.helpRequests] };
   }
 
   const incidentOf = (action: LiveAction) => (action.type === 'selfStart' ? action.tempId : 'incidentId' in action ? action.incidentId : null);
@@ -385,7 +388,7 @@ export const useLiveStore = defineStore('live', () => {
 
   async function post(item: NewIncident) {
     // Slecht bereik: niet eindeloos wachten. Komt hij toch aan, dan telt de server hem bij de volgende poging niet dubbel.
-    const res = await fetch('/api/incidents', {
+    const res = await fetch('/api/help-requests', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item), signal: AbortSignal.timeout(REPORT_TIMEOUT_MS),
     });
     const body = await res.json().catch(() => ({}));
@@ -396,8 +399,8 @@ export const useLiveStore = defineStore('live', () => {
   const drop = (clientId: string) => { outbox.value = outbox.value.filter((i) => i.clientId !== clientId); };
 
   /** Gooit OfflineError als de melding (nog) niet is aangekomen; hij staat dan in de outbox. */
-  async function report(request: Omit<NewIncident, 'clientId' | 'reportedAt'>) {
-    const item: NewIncident = { ...request, clientId: crypto.randomUUID(), reportedAt: new Date(serverNow.value).toISOString() };
+  async function report(request: Omit<NewIncident, 'type' | 'clientId' | 'reportedAt'>) {
+    const item: NewIncident = { ...request, type: 'first_aid', clientId: crypto.randomUUID(), reportedAt: new Date(serverNow.value).toISOString() };
     outbox.value.push(item);
     // No connection: straight to calling. Every second counts, so don't try first.
     if (offline.value) {
@@ -501,7 +504,7 @@ export const useLiveStore = defineStore('live', () => {
       return answer.skipped;
     },
     // Aanvragen (water, verkeer, vrijwilliger) gaan ook zonder bereik door: ze wachten in de wachtrij.
-    requests: computed(() => state.value?.requests ?? []),
+    requests,
     requestById,
     /** Gives the id to open the request with; without signal that's a temporary one, which keeps working afterwards. */
     async request(postId: number, kind: RequestKind) {

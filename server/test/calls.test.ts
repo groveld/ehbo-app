@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { AdminState, EventPackage, LiveIncident, LiveRequest, LiveState, NewIncident, PushPayload } from '@ehbo/shared';
+import { incidentsOf, type AdminState, type EventPackage, type LiveIncident, type LiveRequest, type LiveState, type NewIncident, type PushPayload } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import type { Schedule } from '../src/calls.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
@@ -71,15 +71,15 @@ const TEAM2 = () => idOf('teams', 'Team 2');
 
 let clientIds = 0;
 const request = (details: Partial<NewIncident> = {}): NewIncident => ({
-  postId: WATER(), clientId: `test-${++clientIds}-abcdef`, what: 'unwell', persons: '1', responsive: null, note: null, ...details,
+  type: 'first_aid', postId: WATER(), clientId: `test-${++clientIds}-abcdef`, what: 'unwell', persons: '1', responsive: null, note: null, ...details,
 });
 
 const pushesTo = (phone: string) => pushes.filter((p) => p.phones.includes(phone));
-const incident = async (id: number) => (await ok(DEMO.coordinator, 'GET', '/api/live/state')).incidents.find((i) => i.id === id)!;
+const incident = async (id: number) => incidentsOf(await ok(DEMO.coordinator, 'GET', '/api/live/state')).find((i) => i.id === id)!;
 
 test('a team that becomes available gets a waiting call at once, unless another available team has it', async () => {
   await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: true });
-  const waiting = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  const waiting = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
   assert.equal(waiting.dispatches.length, 0, 'nobody on duty');
   pushes.length = 0;
 
@@ -97,15 +97,15 @@ test('a team that becomes available gets a waiting call at once, unless another 
 test('a team that finishes a call gets the one that was waiting, and a team that said no gets asked again', async () => {
   await onDuty();
   await ok(DEMO.ehbo, 'PUT', `/api/teams/${TEAM1()}/availability`, { availability: 'unavailable' });
-  const first = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${first.id}/accept`, { teamId: TEAM2() });
-  const second = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  const first = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
+  await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${first.id}/accept`, { teamId: TEAM2() });
+  const second = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
   assert.equal((await incident(second.id)).dispatches.length, 0, 'nobody free');
 
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${first.id}/close`, { outcome: 'treated', persons: '1', note: null, stayHere: false });
+  await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${first.id}/close`, { outcome: 'treated', persons: '1', note: null, stayHere: false });
   assert.deepEqual((await incident(second.id)).dispatches.map((d) => d.teamId), [TEAM2()]);
 
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${second.id}/decline`, { teamId: TEAM2() });
+  await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${second.id}/decline`, { teamId: TEAM2() });
   await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${TEAM2()}/availability`, { availability: 'unavailable' });
   await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${TEAM2()}/availability`, { availability: 'available' });
   assert.equal((await incident(second.id)).dispatches.find((d) => d.teamId === TEAM2())?.declinedAt, null);
@@ -138,12 +138,12 @@ afterEach(async () => {
 });
 
 test('post open en dicht: alleen de locatieverantwoordelijke; een dichte post kan geen verzoek doen', async () => {
-  assert.equal((await call(DEMO.postLead, 'POST', '/api/incidents', request())).statusCode, 409, 'post is nog dicht');
+  assert.equal((await call(DEMO.postLead, 'POST', '/api/help-requests', request())).statusCode, 409, 'post is nog dicht');
   const traffic = idOf('posts', 'Kruising 4');
   assert.equal((await call(DEMO.postMember, 'PUT', `/api/posts/${traffic}/open`, { open: true })).statusCode, 403, 'lid, geen verantwoordelijke');
   const state = await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: true });
   assert.equal(state.posts.find((p) => p.id === WATER())?.isOpen, true);
-  assert.equal((await call(DEMO.postMember, 'POST', '/api/incidents', request())).statusCode, 403, 'niet je eigen post');
+  assert.equal((await call(DEMO.postMember, 'POST', '/api/help-requests', request())).statusCode, 403, 'niet je eigen post');
 });
 
 test('vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde', async () => {
@@ -157,7 +157,7 @@ test('vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde', async
 
 test('oproep naar de dichtstbijzijnde beschikbare eenheid, kopie naar de coördinator, accepteren', async () => {
   await onDuty();
-  const created = await call(DEMO.postLead, 'POST', '/api/incidents', request());
+  const created = await call(DEMO.postLead, 'POST', '/api/help-requests', request());
   assert.equal(created.statusCode, 201, created.body);
   const inc = created.json() as LiveIncident;
   assert.equal(inc.status, 'sent');
@@ -173,8 +173,8 @@ test('oproep naar de dichtstbijzijnde beschikbare eenheid, kopie naar de coördi
   assert.equal(pushesTo(DEMO.ehbo).length, 0, 'Team 1 nog niet');
   assert.match(pushesTo(DEMO.coordinator)[0]!.payload.body, /Naar Team 2/);
 
-  const state = await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM2() });
-  const accepted = state.incidents.find((i) => i.id === inc.id)!;
+  const state = await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM2() });
+  const accepted = incidentsOf(state).find((i) => i.id === inc.id)!;
   assert.equal(accepted.status, 'accepted');
   assert.equal(accepted.teamId, TEAM2());
   assert.equal(accepted.acceptedBy?.name, 'Mo Mobiel');
@@ -182,14 +182,14 @@ test('oproep naar de dichtstbijzijnde beschikbare eenheid, kopie naar de coördi
   assert.equal(pending().length, 0, 'geen escalatie meer');
   assert.match(pushesTo(DEMO.postLead).at(-1)!.payload.body, /Team 2 \(Mo Mobiel\) komt eraan/);
 
-  const late = await call(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM1() });
+  const late = await call(DEMO.ehbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM1() });
   assert.equal(late.statusCode, 409);
   assert.match(late.json().error, /al aangenomen door Team 2/);
 });
 
 test('geen reactie binnen de escalatietijd: naar alle beschikbare eenheden; de eerste die accepteert gaat', async () => {
   await onDuty();
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
   runNextTimer();
   let current = await incident(inc.id);
   assert.equal(current.stage, 'all');
@@ -198,7 +198,7 @@ test('geen reactie binnen de escalatietijd: naar alle beschikbare eenheden; de e
   assert.match(pushesTo(DEMO.ehbo)[0]!.payload.title, /alle eenheden/);
   assert.match(pushesTo(DEMO.coordinator).at(-1)!.payload.body, /Geen reactie binnen 30 s/);
 
-  await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM1() });
+  await ok(DEMO.ehbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM1() });
   current = await incident(inc.id);
   assert.equal(current.teamId, TEAM1());
   const released = pushesTo(DEMO.mobileEhbo).at(-1)!.payload;
@@ -209,9 +209,9 @@ test('geen reactie binnen de escalatietijd: naar alle beschikbare eenheden; de e
 
 test('"Kan niet" gaat meteen naar alle eenheden', async () => {
   await onDuty();
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
-  const state = await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/decline`, { teamId: TEAM2() });
-  const current = state.incidents.find((i) => i.id === inc.id)!;
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
+  const state = await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/decline`, { teamId: TEAM2() });
+  const current = incidentsOf(state).find((i) => i.id === inc.id)!;
   assert.equal(current.stage, 'all');
   assert.ok(current.dispatches.find((d) => d.teamId === TEAM2())?.declinedAt);
   assert.equal(pushesTo(DEMO.ehbo).length, 1, 'Team 1 krijgt de oproep');
@@ -220,27 +220,27 @@ test('"Kan niet" gaat meteen naar alle eenheden', async () => {
 
 test('niet aanspreekbaar: ook de dichtstbijzijnde AED-eenheid, die blijft opgeroepen tot er een AED komt', async () => {
   await onDuty();
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request({ responsive: 'no' }));
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request({ responsive: 'no' }));
   assert.equal(inc.aed, true);
   assert.deepEqual(inc.dispatches.map((d) => [d.teamId, d.reason]), [[TEAM2(), 'nearest'], [TEAM1(), 'aed']]);
   assert.match(pushesTo(DEMO.ehbo)[0]!.payload.body, /^AED meenemen/);
   assert.doesNotMatch(pushesTo(DEMO.mobileEhbo)[0]!.payload.body, /AED/, 'Team 2 heeft geen AED');
 
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM2() });
+  await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM2() });
   assert.equal(pushesTo(DEMO.ehbo).length, 1, 'Team 1 hoort niet "al aangenomen": de AED moet nog komen');
-  const state = await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM1() });
-  const current = state.incidents.find((i) => i.id === inc.id)!;
+  const state = await ok(DEMO.ehbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM1() });
+  const current = incidentsOf(state).find((i) => i.id === inc.id)!;
   assert.equal(current.teamId, TEAM2(), 'Team 2 blijft de eerste');
   assert.equal(current.dispatches.filter((d) => d.acceptedAt).length, 2);
 });
 
 test('aanvullen met "niet aanspreekbaar" roept alsnog de AED-eenheid op', async () => {
   await onDuty();
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM2() });
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
+  await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM2() });
   pushes.length = 0;
-  const state = await ok(DEMO.postLead, 'PUT', `/api/incidents/${inc.id}`, { what: 'unwell', persons: '1', responsive: 'no', note: 'Reageert niet meer' });
-  const current = state.incidents.find((i) => i.id === inc.id)!;
+  const state = await ok(DEMO.postLead, 'PUT', `/api/help-requests/${inc.id}`, { what: 'unwell', persons: '1', responsive: 'no', note: 'Reageert niet meer' });
+  const current = incidentsOf(state).find((i) => i.id === inc.id)!;
   assert.equal(current.aed, true);
   assert.equal(current.note, 'Reageert niet meer');
   assert.ok(current.dispatches.some((d) => d.teamId === TEAM1() && d.reason === 'aed'));
@@ -252,63 +252,63 @@ test('aanvullen met "niet aanspreekbaar" roept alsnog de AED-eenheid op', async 
   assert.ok(current.events.some((e) => e.text === 'Aangevuld: niet aanspreekbaar, notitie toegevoegd'));
 
   pushes.length = 0;
-  const again = await ok(DEMO.postLead, 'PUT', `/api/incidents/${inc.id}`, { what: 'unwell', persons: '1', responsive: 'no', note: 'Reageert niet meer ' });
+  const again = await ok(DEMO.postLead, 'PUT', `/api/help-requests/${inc.id}`, { what: 'unwell', persons: '1', responsive: 'no', note: 'Reageert niet meer ' });
   assert.equal(pushes.length, 0, 'nothing changed: no alert');
-  assert.equal(again.incidents.find((i) => i.id === inc.id)!.events.length, current.events.length);
+  assert.equal(incidentsOf(again).find((i) => i.id === inc.id)!.events.length, current.events.length);
 });
 
 test('ter plaatse en afronden; een vaste eenheid die blijft, telt vanaf die post', async () => {
   await onDuty();
   // Team 2 ver weg: dan is Team 1 het dichtstbij.
   assert.equal((await call(DEMO.mobileEhbo, 'PUT', '/api/position', { lat: 52.0, lng: 4.0 })).statusCode, 204);
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
   assert.equal(inc.dispatches[0]?.teamId, TEAM1(), 'recente GPS-positie telt boven de standplaats');
 
-  assert.equal((await call(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/on-site`)).statusCode, 403);
-  await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM1() });
+  assert.equal((await call(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/on-site`)).statusCode, 403);
+  await ok(DEMO.ehbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM1() });
   clock = new Date(clock.getTime() + 4 * 60_000);
-  let state = await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/on-site`);
-  assert.equal(state.incidents[0]?.status, 'on_site');
-  assert.equal(state.incidents[0]?.onSiteAt, '2026-12-31T11:06:00.000Z');
+  let state = await ok(DEMO.ehbo, 'POST', `/api/help-requests/${inc.id}/on-site`);
+  assert.equal(incidentsOf(state)[0]?.status, 'on_site');
+  assert.equal(incidentsOf(state)[0]?.onSiteAt, '2026-12-31T11:06:00.000Z');
 
-  state = await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/close`, { outcome: 'treated', persons: '1', note: 'Gekoeld en drinken gegeven', stayHere: true });
-  assert.equal(state.incidents[0]?.status, 'closed');
-  assert.equal(state.incidents[0]?.outcome, 'treated');
+  state = await ok(DEMO.ehbo, 'POST', `/api/help-requests/${inc.id}/close`, { outcome: 'treated', persons: '1', note: 'Gekoeld en drinken gegeven', stayHere: true });
+  assert.equal(incidentsOf(state)[0]?.status, 'closed');
+  assert.equal(incidentsOf(state)[0]?.outcome, 'treated');
   const firstTeam = state.teams.find((u) => u.id === TEAM1())!;
   assert.deepEqual([firstTeam.incidentId, firstTeam.stayPostId, firstTeam.availability], [null, WATER(), 'available'], 'weer vrij, bij de waterpost');
 
   // Een GPS-positie ouder dan 3 minuten telt niet meer: Team 2 staat weer bij zijn standplaats.
   clock = new Date(clock.getTime() + 4 * 60_000);
-  const next = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  const next = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
   assert.equal(next.dispatches[0]?.teamId, TEAM1(), 'Team 1 blijft bij de waterpost en is nu het dichtstbij');
   assert.equal(next.dispatches[0]?.distanceKm, 0);
 });
 
 test('melding intrekken: opgeroepen eenheden horen het, de escalatie stopt', async () => {
   await onDuty();
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
-  assert.equal((await call(DEMO.postMember, 'POST', `/api/incidents/${inc.id}/withdraw`)).statusCode, 403);
-  const state = await ok(DEMO.postLead, 'POST', `/api/incidents/${inc.id}/withdraw`);
-  assert.equal(state.incidents[0]?.status, 'withdrawn');
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
+  assert.equal((await call(DEMO.postMember, 'POST', `/api/help-requests/${inc.id}/withdraw`)).statusCode, 403);
+  const state = await ok(DEMO.postLead, 'POST', `/api/help-requests/${inc.id}/withdraw`);
+  assert.equal(incidentsOf(state)[0]?.status, 'withdrawn');
   assert.equal(pending().length, 0);
   assert.equal(pushesTo(DEMO.mobileEhbo).at(-1)!.payload.title, 'Melding ingetrokken');
-  assert.equal((await call(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM2() })).statusCode, 409);
+  assert.equal((await call(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM2() })).statusCode, 409);
 });
 
 test('dezelfde melding twee keer versturen (zonder bereik bewaard) telt één keer', async () => {
   await onDuty();
   const body = request({ reportedAt: '2026-12-31T11:01:30.000Z' });
-  const first = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', body);
-  const again = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', body);
+  const first = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', body);
+  const again = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', body);
   assert.equal(again.id, first.id);
   assert.equal(first.reportedAt, '2026-12-31T11:01:30.000Z', 'tijd van de post');
   assert.equal(first.sentAt, '2026-12-31T11:02:00.000Z', 'tijd van aankomst bij de server');
-  assert.equal((await ok(DEMO.coordinator, 'GET', '/api/live/state')).incidents.length, 1);
+  assert.equal(incidentsOf(await ok(DEMO.coordinator, 'GET', '/api/live/state')).length, 1);
 });
 
 test('geen beschikbare eenheid: meteen alle eenheden, de coördinator krijgt een alarm; daarna blijft het herhalen', async () => {
   await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: true });
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
   assert.equal(inc.stage, 'all');
   assert.equal(inc.dispatches.length, 0);
   const alarm = pushesTo(DEMO.coordinator).at(-1)!.payload;
@@ -327,10 +327,10 @@ test('geen beschikbare eenheid: meteen alle eenheden, de coördinator krijgt een
 
 test('de coördinator wijst een eenheid toe', async () => {
   await onDuty();
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
-  assert.equal((await call(DEMO.postLead, 'POST', `/api/incidents/${inc.id}/assign`, { teamId: TEAM1() })).statusCode, 403);
-  const state = await ok(DEMO.coordinator, 'POST', `/api/incidents/${inc.id}/assign`, { teamId: TEAM1() });
-  const current = state.incidents[0]!;
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
+  assert.equal((await call(DEMO.postLead, 'POST', `/api/help-requests/${inc.id}/assign`, { teamId: TEAM1() })).statusCode, 403);
+  const state = await ok(DEMO.coordinator, 'POST', `/api/help-requests/${inc.id}/assign`, { teamId: TEAM1() });
+  const current = incidentsOf(state)[0]!;
   assert.equal(current.teamId, TEAM1());
   assert.equal(current.dispatches.find((d) => d.teamId === TEAM1())?.reason, 'manual');
   assert.match(pushesTo(DEMO.ehbo).at(-1)!.payload.title, /^Ingezet/);
@@ -339,7 +339,7 @@ test('de coördinator wijst een eenheid toe', async () => {
 
 test('na een herstart gaat de escalatie verder', async () => {
   await onDuty();
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
   await app.close();
   timers = [];
   clock = new Date(clock.getTime() + 10_000);
@@ -426,14 +426,14 @@ test('the data version in the live state and for participants follows changes in
 
 test('a call and a request say which post they are about, for a phone without the new package', async () => {
   await onDuty();
-  const { id } = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
+  const { id } = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
   const state = await ok(DEMO.ehbo, 'GET', '/api/live/state');
-  const incident = state.incidents.find((i) => i.id === id)!;
+  const incident = incidentsOf(state).find((i) => i.id === id)!;
   assert.deepEqual({ name: incident.post.name, km: Math.round(incident.post.km! * 10) / 10 }, { name: 'Waterpost 3 · brug', km: 2 });
   assert.equal(typeof incident.post.lat, 'number');
   assert.equal(typeof incident.post.typeId, 'number');
 
-  const water = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/requests', { postId: WATER(), kind: 'water', detail: null, clientId: 'test-sync-abcdef' });
+  const water = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/help-requests', { type: 'water', postId: WATER(), detail: null, clientId: 'test-sync-abcdef' });
   assert.equal(water.postName, 'Waterpost 3 · brug');
 });
 
@@ -450,11 +450,11 @@ test('a position is shared by a person, and only on a mobile team on duty', asyn
 
 test('help from where you are: the nearest team from that position, the place kept, and the reporter follows it', async () => {
   await onDuty();
-  assert.equal((await call(DEMO.postMember, 'POST', '/api/incidents', request({ postId: null }))).statusCode, 400, 'a position is needed');
+  assert.equal((await call(DEMO.postMember, 'POST', '/api/help-requests', request({ postId: null }))).statusCode, 400, 'a position is needed');
 
   // About 400 m north of the start, far from Kruising 4: Team 1 at the EHBO post by the start is nearest.
   const [lat, lng] = [53.1445, 5.8111];
-  const inc = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request({ postId: null, lat, lng, accuracyM: 12 }));
+  const inc = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/help-requests', request({ postId: null, lat, lng, accuracyM: 12 }));
   assert.equal(inc.offPost, true);
   assert.equal(inc.accuracyM, 12);
   assert.match(inc.post.name, /^\d+ m van /);
@@ -463,12 +463,12 @@ test('help from where you are: the nearest team from that position, the place ke
   assert.match(pushesTo(DEMO.ehbo)[0]!.payload.title, / m van /);
   assert.match(inc.events[0]!.text, /^Gemeld door Vera Verkeer · \d+ m van /);
 
-  await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM1() });
+  await ok(DEMO.ehbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM1() });
   assert.ok(pushesTo(DEMO.postMember).some((p) => p.payload.title === 'Hulp is onderweg'), 'the reporter hears it');
-  await ok(DEMO.postMember, 'POST', `/api/incidents/${inc.id}/withdraw`);
+  await ok(DEMO.postMember, 'POST', `/api/help-requests/${inc.id}/withdraw`);
 
   // Within 30 m of a post (the default) it counts as that post, which needn't be open.
-  const atPost = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request({ postId: null, lat: 53.1512, lng: 5.8345, accuracyM: 30 }));
+  const atPost = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/help-requests', request({ postId: null, lat: 53.1512, lng: 5.8345, accuracyM: 30 }));
   assert.deepEqual([atPost.offPost, atPost.postId, atPost.post.name], [false, WATER(), 'Waterpost 3 · brug']);
 });
 
@@ -476,11 +476,11 @@ test('how close counts as at a post follows the setting', async () => {
   await onDuty();
   // About 80 m north of the water post.
   const near = { postId: null, lat: 53.15192, lng: 5.8344, accuracyM: 10 };
-  const off = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request(near));
+  const off = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/help-requests', request(near));
   assert.equal(off.offPost, true, 'outside the default 30 m');
-  await ok(DEMO.postMember, 'POST', `/api/incidents/${off.id}/withdraw`);
+  await ok(DEMO.postMember, 'POST', `/api/help-requests/${off.id}/withdraw`);
   db.raw.prepare('UPDATE event SET at_post_m = 100').run();
-  const at = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request(near));
+  const at = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/help-requests', request(near));
   assert.deepEqual([at.offPost, at.postId], [false, WATER()]);
 });
 
@@ -496,4 +496,20 @@ test('a location with EHBO and water: the water lead opening it does not make th
   await ok(DEMO.ehbo, 'PUT', `/api/teams/${TEAM1()}/availability`, { availability: 'available' });
   await ok(DEMO.postLead, 'PUT', `/api/posts/${EHBO_POST()}/open`, { open: false });
   assert.equal(await firstTeam(), 'available', 'and closing the water post does not take it off duty');
+});
+
+test('one list of help requests, and each way of handling refuses the other one\'s actions', async () => {
+  await onDuty();
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/help-requests', request());
+  const water = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/help-requests', { type: 'water', postId: WATER(), detail: null, clientId: 'one-list-abcdef' });
+  const state = await ok(DEMO.coordinator, 'GET', '/api/live/state');
+  assert.deepEqual(state.helpRequests.map((h) => [h.id, h.type, h.handling]), [[water.id, 'water', 'queue'], [inc.id, 'first_aid', 'dispatch']], 'newest first');
+
+  assert.equal((await call(DEMO.mobileEhbo, 'POST', `/api/help-requests/${water.id}/accept`, { teamId: TEAM2() })).statusCode, 409, 'a request goes to the queue, not a team');
+  assert.equal((await call(DEMO.coordinator, 'POST', `/api/help-requests/${inc.id}/pick`)).statusCode, 409, 'an incident is not picked from the queue');
+  assert.equal((await call(DEMO.coordinator, 'POST', '/api/help-requests/999999/pick')).statusCode, 404);
+  assert.equal((await call(DEMO.postLead, 'PUT', `/api/help-requests/${water.id}`, { detail: 'lots' })).statusCode, 200, 'adding to a request');
+  assert.equal((await call(DEMO.postLead, 'PUT', `/api/help-requests/${inc.id}`, { detail: 'lots' })).statusCode, 400, 'an incident needs its details');
+  assert.equal((await call(DEMO.postLead, 'POST', '/api/help-requests', { type: 'water', postId: WATER(), clientId: 'no-detail-abcdef' })).statusCode, 400, 'a request says its detail, or null');
+  for (const id of [inc.id, water.id]) await ok(DEMO.postLead, 'POST', `/api/help-requests/${id}/withdraw`);
 });

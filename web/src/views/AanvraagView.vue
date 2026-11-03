@@ -21,7 +21,7 @@ const route = useRoute();
 const { busy, error, run } = useSave();
 
 const request = computed(() => live.requestById(Number(props.id)));
-const kind = computed(() => (request.value ? REQUEST_KINDS[request.value.kind] : null));
+const kind = computed(() => (request.value ? REQUEST_KINDS[request.value.type] : null));
 const open = computed(() => request.value?.status === 'sent' || request.value?.status === 'accepted');
 const coordinator = computed(() => coordinatorOf(store.pkg));
 
@@ -45,7 +45,7 @@ const atPost = computed(() => live.myPostIds.includes(request.value?.postId ?? -
   <main class="screen tight">
     <NotOnPhone v-if="!request || !kind" class="top-gap">Deze aanvraag staat (nog) niet op deze telefoon.</NotOnPhone>
     <template v-else>
-      <StatusBlock :tone="request.status === 'closed' ? 'green' : request.status === 'withdrawn' ? 'dark' : 'blue'" :label="`Aanvraag · ${clock(request.createdAt)}`" :title="title" />
+      <StatusBlock :tone="request.status === 'closed' ? 'green' : request.status === 'withdrawn' ? 'dark' : 'blue'" :label="`Aanvraag · ${clock(request.reportedAt)}`" :title="title" />
 
       <div v-if="open" class="stack gap-8 gap-top">
         <span class="section-title">{{ kind.ask }} (optioneel)</span>
@@ -54,7 +54,7 @@ const atPost = computed(() => live.myPostIds.includes(request.value?.postId ?? -
         </div>
       </div>
 
-      <p v-if="request.status === 'accepted'" class="note info gap-top">{{ request.pickedBy?.name ?? 'De coördinator' }} regelt het.</p>
+      <p v-if="request.status === 'accepted'" class="note info gap-top">{{ request.acceptedBy?.name ?? 'De coördinator' }} regelt het.</p>
       <p v-else-if="request.position" class="note info gap-top">Plek {{ request.position }} in de wachtrij van de coördinator.</p>
       <ActivityLog :entries="requestLog(request)" />
 

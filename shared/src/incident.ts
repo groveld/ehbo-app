@@ -1,7 +1,7 @@
 // EHBO-oproepen: van verzoek tot afronden, en de live stand die alle medewerkers zien.
 import type { TeamKind } from './event.ts';
 import { distanceKm, formatKm } from './geo.ts';
-import type { LiveRequest } from './request.ts';
+import type { LiveRequest, NewRequest } from './request.ts';
 
 /** Gemeld (op de telefoon) → verstuurd → geaccepteerd → ter plaatse → afgerond, of ingetrokken. */
 export type IncidentStatus = 'sent' | 'accepted' | 'on_site' | 'closed' | 'withdrawn';
@@ -47,7 +47,9 @@ export interface IncidentDetails {
 }
 
 /** POST /api/incidents */
+/** A help request of the first-aid type (#86): POST /api/help-requests. */
 export interface NewIncident extends IncidentDetails {
+  type: 'first_aid';
   /** The post asking for help; null for a request from where you are, with a GPS position. */
   postId: number | null;
   /** From where you are (#102): the position, sent once with the request and kept as the place of the incident. */
@@ -118,6 +120,8 @@ export interface IncidentPost {
 
 export interface LiveIncident extends IncidentDetails {
   id: number;
+  type: 'first_aid';
+  handling: 'dispatch';
   /** Gedaan in de testmodus: telt niet mee in het rapport. */
   isTest: boolean;
   /** Started by the team that was there, not reported by a post. */
@@ -177,11 +181,10 @@ export interface LiveState {
   /** Version of the fixed data; when it differs from the event package, the phone fetches the new one. */
   dataVersion: string;
   serverTime: string;
-  incidents: LiveIncident[];
+  /** Every help request, newest first: incidents (dispatch) and requests in the coordinator's queue (#86). */
+  helpRequests: LiveHelpRequest[];
   teams: LiveTeam[];
   posts: LivePost[];
-  /** Aanvragen voor water, verkeer en vrijwilligers (wachtrij van de coördinator). */
-  requests: LiveRequest[];
   /** Testmodus: oproepen en aanvragen zijn proef en komen niet in het rapport. */
   testMode: boolean;
 }
@@ -294,3 +297,10 @@ export function lacksPosition(team: { kind: TeamKind }, live: LiveTeam | undefin
   if (team.kind !== 'mobile' || !live || live.availability === 'off_duty') return false;
   return !live.position || now - new Date(live.position.at).getTime() > POSITION_MAX_AGE_MS;
 }
+
+/** One help request (#86): the type decides the handling, dispatch (an incident) or queue (a request). */
+export type LiveHelpRequest = LiveIncident | LiveRequest;
+export type NewHelpRequest = NewIncident | NewRequest;
+
+export const incidentsOf = (state: { helpRequests: LiveHelpRequest[] }) => state.helpRequests.filter((h): h is LiveIncident => h.handling === 'dispatch');
+export const requestsOf = (state: { helpRequests: LiveHelpRequest[] }) => state.helpRequests.filter((h): h is LiveRequest => h.handling === 'queue');

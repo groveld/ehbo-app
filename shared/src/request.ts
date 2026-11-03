@@ -11,9 +11,10 @@ export type RequestKind = keyof typeof REQUEST_KINDS;
 export type RequestStatus = 'sent' | 'accepted' | 'closed' | 'withdrawn';
 
 /** POST /api/requests */
+/** A help request of a queue type (#86): POST /api/help-requests. */
 export interface NewRequest {
+  type: RequestKind;
   postId: number;
-  kind: RequestKind;
   /** Een van de keuzes bij deze soort (REQUEST_KINDS[kind].details), of null. */
   detail: string | null;
   /** Door de telefoon gekozen id: twee keer versturen telt één keer. */
@@ -22,18 +23,20 @@ export interface NewRequest {
 
 export interface LiveRequest {
   id: number;
+  handling: 'queue';
+  type: RequestKind;
   /** Gedaan in de testmodus. */
   isTest: boolean;
   postId: number;
   /** Shown before the new event package has arrived. */
   postName: string;
-  kind: RequestKind;
   detail: string | null;
   status: RequestStatus;
-  createdAt: string;
-  pickedAt: string | null;
-  pickedBy: { name: string; phone: string } | null;
-  doneAt: string | null;
+  reportedAt: string;
+  /** Picked up by the coordinator. */
+  acceptedAt: string | null;
+  acceptedBy: { name: string; phone: string } | null;
+  closedAt: string | null;
   /** Plek in de wachtrij (1 = eerstvolgende), zolang de aanvraag open is. */
   position: number | null;
 }
