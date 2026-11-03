@@ -54,6 +54,7 @@ const matches = (p: PackagePost) => {
 const mapPosts = computed(() => store.pkg?.posts.filter((p) => (typeof filter.value !== 'number' || p.typeId === filter.value) && matches(p)) ?? []);
 /** In the list: only the chosen route, in its order. Open calls always stay, on top. */
 const routeKm = (p: PackagePost) => p.passages.find((r) => r.runId === route.value)?.km[0] ?? Infinity;
+const helpHere = computed(() => !session.me?.assignments.some((a) => a.kind === 'ehbo'));
 const isLead = computed(() => Boolean(session.me?.isAdmin || coordinatorOf(store.pkg)?.phone === session.me?.phone));
 /** For the coordinator: a post that should be open by now, and a team nobody can locate. */
 const latePosts = computed(() => {
@@ -178,11 +179,18 @@ const banner = computed(() => {
       </div>
     </template>
     <p v-else class="note">Geen bereik, en de gegevens van het evenement staan nog niet op deze telefoon. Probeer het opnieuw met internet.</p>
+    <!-- Help to where you are (#102). An EHBO team starts an incident itself instead. -->
+    <RouterLink v-if="active && helpHere" :to="{ name: 'hulp' }" class="help-here"><Icon name="ehbo" :size="24" />EHBO hierheen</RouterLink>
   </main>
 </template>
 
 <style scoped>
 .counters { --facts: 4; margin-bottom: 10px; }
+.help-here {
+  position: fixed; z-index: 10; right: max(16px, calc((100% - 720px) / 2 + 16px)); bottom: calc(var(--tabbar) + 12px);
+  height: 56px; padding: 0 18px 0 14px; border-radius: 16px; background: var(--danger); box-shadow: 0 4px 12px rgba(0, 0, 0, .3);
+  display: flex; align-items: center; gap: 8px; color: #FFFFFF; font-size: 16px; font-weight: 700; white-space: nowrap; text-decoration: none;
+}
 .counters .fact { padding: 8px 6px; align-items: center; min-width: 0; }
 .counters .label { font-size: 11px; }
 .map { position: relative; height: clamp(240px, 40dvh, 480px); }

@@ -48,7 +48,12 @@ export interface IncidentDetails {
 
 /** POST /api/incidents */
 export interface NewIncident extends IncidentDetails {
-  postId: number;
+  /** The post asking for help; null for a request from where you are, with a GPS position. */
+  postId: number | null;
+  /** From where you are (#102): the position, sent once with the request and kept as the place of the incident. */
+  lat?: number | null;
+  lng?: number | null;
+  accuracyM?: number | null;
   /** Door de telefoon gekozen id: een melding die zonder bereik is bewaard en later opnieuw wordt verstuurd, telt maar één keer. */
   clientId: string;
   /** Wanneer de post op versturen tikte (ISO), als dat eerder was dan nu. */
@@ -119,6 +124,8 @@ export interface LiveIncident extends IncidentDetails {
   selfStarted: boolean;
   /** Not at its post: post then says where it was, and postId is only the nearest post, for the report. */
   offPost: boolean;
+  /** How precise the place was, in metres, for a request from a GPS position. */
+  accuracyM: number | null;
   postId: number;
   post: IncidentPost;
   /** Phone number of who reported it. */

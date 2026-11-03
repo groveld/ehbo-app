@@ -111,7 +111,8 @@ Where the main pieces live:
   - An admin can't remove their own number.
 - **Nearest unit** = straight-line distance, which works offline. Only units with status *free* count.
   - Fixed unit: its own EHBO post.
-  - Mobile unit: last GPS fix (shared every minute while on duty), otherwise its standplaats post.
+  - Mobile unit: the freshest GPS fix of its members (shared every minute while on duty, `PUT /api/position`, kept per person in `calls.ts`), otherwise its standplaats post.
+  - A help request from a GPS position (`postId: null`, `/hulp`): counted from that position (`targetOf` in `calls.ts`).
 - **AED rule:** when the person is not responsive, the call goes to the nearest free unit and the nearest free AED unit at once.
 - **Statuses:** reported → sent → accepted → on site (one tap) → closed, or withdrawn. Every step is timestamped.
 - **No signal:** maps, contacts, calling and navigating all work offline. The help button goes straight to calling the nearest EHBO unit and the coordinator (with bad signal after 4 s), while the request keeps being sent.
@@ -124,7 +125,7 @@ Where the main pieces live:
 - **Waiting calls:** `offerOpenCalls` in `calls.ts`: a team that becomes available gets a call nobody available can react to at once; otherwise the call waits for the round to all teams.
 - **Scroll:** every page keeps its own position (`scrolled` in `router.ts`).
 - **Self-started incident** (`selfStart` in `calls.ts`, `views/EigenIncidentView.vue`): an EHBO team on duty starts it itself; it's on site at once and goes straight to closing, with no call to others (only an AED unit when the person isn't responsive). The place: a fixed team's own post; a mobile team's GPS, which is the post itself within the home radius (`placeOf`), otherwise a distance from the nearest post (`offPost`; `post_id` is then only for the report), or else its standplaats. Works offline through the queue.
-- **Privacy:** no casualty names or medical details are stored. Positions are not stored: a mobile unit's last GPS fix lives only in server memory and is shown live to staff on the map (as an ambulance) while it is fresh (3 min). The one exception is the place of a self-started incident away from a post.
+- **Privacy:** no casualty names or medical details are stored. Positions are not stored: the last GPS fix of a member of a mobile unit on duty lives only in server memory and is shown live to staff on the map (as an ambulance) while it is fresh (3 min); nobody else shares one. Your own position on the map (Mijn locatie, `EventMap.vue`) never leaves the phone. The exceptions are the place of an incident away from a post: self-started, or a help request from a GPS position (with its accuracy).
 
 ## Commands
 

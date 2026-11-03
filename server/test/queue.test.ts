@@ -20,7 +20,7 @@ const context: ActionContext = {
 };
 
 const incident = (changes: Partial<LiveIncident> = {}): LiveIncident => ({
-  id: 7, isTest: false, selfStarted: false, offPost: false, reportedBy: '0600000004', postId: 20, post: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'verstuurd', stage: 'dichtstbij', aed: false,
+  id: 7, isTest: false, selfStarted: false, offPost: false, accuracyM: null, reportedBy: '0600000004', postId: 20, post: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'verstuurd', stage: 'dichtstbij', aed: false,
   reportedAt: AT, sentAt: AT, escalatesAt: AT, unitId: null, acceptedBy: null, acceptedAt: null, onSiteAt: null, closedAt: null, outcome: null,
   dispatches: [{ unitId: 2, at: AT, reason: 'dichtstbij', distanceKm: 1, declinedAt: null, acceptedAt: null }], events: [],
   what: 'onwel', persons: '1', responsive: null, note: null, ...changes,

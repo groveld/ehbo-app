@@ -1,11 +1,13 @@
 <script setup lang="ts">
 // 4.1 · Post: EHBO-verzoek invullen. Alles is optioneel; versturen kan meteen. Met incidentId: een verstuurde melding aanvullen.
-import { computed, reactive, ref } from 'vue';
+// Without a post (/hulp, #102): help to where you are, with the GPS position sent once with the request.
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { INCIDENT_PERSONS, INCIDENT_WHAT, NOTE_MAX, RESPONSIVE, type IncidentDetails } from '@ehbo/shared';
+import { INCIDENT_PERSONS, INCIDENT_WHAT, NOTE_MAX, RESPONSIVE, placeOf, type IncidentDetails } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import Sos112Bar from '../components/Sos112Bar.vue';
 import { useDirty } from '../composables/useDirty.ts';
+import { useGpsFix } from '../composables/useGpsFix.ts';
 import { kmLabel } from '../posts.ts';
 import { OfflineError, useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -17,6 +19,13 @@ const router = useRouter();
 
 const existing = computed(() => (props.incidentId ? live.incidentById(Number(props.incidentId)) : null));
 const post = computed(() => store.postById.get(existing.value?.postId ?? Number(props.id)) ?? null);
+/** Help to where you are: no post, no addition. */
+const here = computed(() => !props.id && !props.incidentId);
+const gps = useGpsFix();
+onMounted(() => { if (here.value) void gps.start(); });
+/** Above this the team may not find you: say where you are in the note. */
+const ROUGH_M = 100;
+const place = computed(() => (gps.best.value && store.pkg ? placeOf(store.pkg.posts, [gps.best.value.lng, gps.best.value.lat]) : null));
 const form = reactive<IncidentDetails>({
   what: existing.value?.what ?? null,
   persons: existing.value?.persons ?? null,
@@ -35,7 +44,7 @@ const toggle = <K extends keyof IncidentDetails>(key: K, value: IncidentDetails[
 };
 
 async function send() {
-  if (!post.value) return;
+  if (here.value ? !gps.best.value : !post.value) return;
   busy.value = true;
   error.value = '';
   const details = { ...form, note: form.note?.trim() || null };
@@ -43,8 +52,12 @@ async function send() {
     if (existing.value) {
       await live.update(existing.value.id, details);
       router.replace({ name: 'melding', params: { id: existing.value.id } });
+    } else if (here.value) {
+      const { lat, lng, accuracyM } = gps.best.value!;
+      const incident = await live.report({ postId: null, lat, lng, accuracyM, ...details });
+      router.replace({ name: 'melding', params: { id: incident.id } });
     } else {
-      const incident = await live.report({ postId: post.value.id, ...details });
+      const incident = await live.report({ postId: post.value!.id, ...details });
       router.replace({ name: 'melding', params: { id: incident.id } });
     }
   } catch (err) {
@@ -62,10 +75,28 @@ async function send() {
     <header class="page-header">
       <button class="icon-btn" aria-label="Terug" @click="router.back()"><Icon name="back" /></button>
       <div>
-        <span class="eyebrow">{{ [post?.name, post ? kmLabel(post) : null].filter(Boolean).join(' · ') }}</span>
-        <h1>{{ existing ? 'Melding aanvullen' : 'EHBO aanvragen' }}</h1>
+        <span class="eyebrow">{{ here ? 'Waar je nu bent' : [post?.name, post ? kmLabel(post) : null].filter(Boolean).join(' · ') }}</span>
+        <h1>{{ existing ? 'Melding aanvullen' : here ? 'EHBO hierheen' : 'EHBO aanvragen' }}</h1>
       </div>
     </header>
+
+    <!-- Where you are: the team navigates to this position. -->
+    <div v-if="here" class="card where" :class="{ rough: gps.best.value && gps.best.value.accuracyM > ROUGH_M }" role="status">
+      <Icon name="pin" :size="20" />
+      <span class="stack grow">
+        <template v-if="gps.best.value">
+          <strong>{{ place?.name ?? 'Je locatie' }}</strong>
+          <span class="small">Nauwkeurig op ± {{ gps.best.value.accuracyM }} m<template v-if="gps.measuring.value"> · nog aan het verbeteren</template></span>
+          <span v-if="gps.best.value.accuracyM > ROUGH_M" class="small">Onnauwkeurig: zeg in de toelichting waar je bent.</span>
+        </template>
+        <template v-else-if="gps.measuring.value"><strong>Locatie zoeken…</strong><span class="small">Even geduld, of bel 112 bij levensgevaar.</span></template>
+        <template v-else>
+          <strong>Geen locatie</strong>
+          <span class="small">{{ gps.error.value }} Vraag hulp vanaf je post, of bel de EHBO.</span>
+          <button class="btn link" @click="gps.start()">Opnieuw zoeken</button>
+        </template>
+      </span>
+    </div>
 
     <Sos112Bar class="sos"><strong>Levensgevaar?</strong> <span class="normal">Bel eerst 112, vul daarna dit in.</span></Sos112Bar>
 
@@ -99,7 +130,7 @@ async function send() {
     <div class="grow" />
     <div class="stack gap-6 footer">
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
-      <button v-if="!existing || dirty" class="btn danger" :disabled="busy" @click="send">
+      <button v-if="!existing || dirty" class="btn danger" :disabled="busy || (here && !gps.best.value)" @click="send">
         <Icon name="bell" :size="20" />{{ busy ? 'Versturen…' : existing ? 'Aanvulling versturen' : 'EHBO-verzoek versturen' }}
       </button>
       <span v-if="!existing" class="small center">Alles is optioneel: versturen kan meteen</span>
@@ -109,6 +140,9 @@ async function send() {
 
 <style scoped>
 .sos { margin-top: 6px; }
+.where { display: flex; align-items: flex-start; gap: 12px; margin-top: 10px; }
+.where.rough { box-shadow: 0 0 0 2px var(--warn-line); }
+.where .btn.link { align-self: flex-start; padding: 0; min-height: 44px; }
 .sos :deep(.text) { font-size: 14px; font-weight: 400; }
 .normal { font-weight: 400; }
 .fields { padding-top: 16px; }

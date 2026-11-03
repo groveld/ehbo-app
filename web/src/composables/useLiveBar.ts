@@ -60,7 +60,7 @@ export function useLiveBar() {
     const waiting = live.outbox.at(-1);
     if (!waiting || route.params.clientId === waiting.clientId) return null;
     return {
-      tone: 'orange', title: 'Melding wacht op bereik', sub: store.postById.get(waiting.postId)?.name ?? 'Tik om de EHBO te bellen',
+      tone: 'orange', title: 'Melding wacht op bereik', sub: store.postById.get(waiting.postId ?? -1)?.name ?? 'Tik om de EHBO te bellen',
       to: { name: 'geen-bereik', params: { clientId: waiting.clientId } }, more: live.outbox.length - 1,
     };
   });

@@ -1,11 +1,14 @@
 // De oproepketen van begin tot eind, met twee telefoons: een post en een EHBO-eenheid (testgegevens uit server/src/demo.ts).
 import { devices, expect, test, type Browser, type Page } from '@playwright/test';
 
-const PHONE = { admin: '0600000001', postLead: '0600000004', mobileEhbo: '0600000006', coordinator: '0600000002' } as const;
+const PHONE = { admin: '0600000001', postLead: '0600000004', postMember: '0600000005', mobileEhbo: '0600000006', coordinator: '0600000002' } as const;
 
 /** Nieuwe telefoon: aanmelden zoals een medewerker, tot het startscherm. */
-async function staffPhone(browser: Browser, phone: string): Promise<Page> {
-  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL', timezoneId: 'Europe/Amsterdam' });
+async function staffPhone(browser: Browser, phone: string, gps?: { latitude: number; longitude: number }): Promise<Page> {
+  const context = await browser.newContext({
+    ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL', timezoneId: 'Europe/Amsterdam',
+    ...(gps ? { geolocation: { ...gps, accuracy: 15 }, permissions: ['geolocation'] } : {}),
+  });
   // Navigeren opent Google Maps; dat vangen we af, zodat de test bij de app blijft.
   await context.addInitScript(() => localStorage.setItem('ehbo.nav', JSON.stringify('google')));
   await context.route('https://www.google.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Kaarten</title>' }));
@@ -623,4 +626,22 @@ test('route page: details, posts in order, GPX download and the star', async ({ 
   await page.getByRole('button', { name: 'Terug' }).click();
   await expect(page).toHaveURL((url) => url.pathname === '/');
   await context.close();
+});
+
+test('help to where you are: from the map tab, with the position, and the reporter follows it', async ({ browser }) => {
+  // About 400 m north of the start, away from every post.
+  const vera = await staffPhone(browser, PHONE.postMember, { latitude: 53.1445, longitude: 5.8111 });
+  await vera.getByRole('link', { name: 'Kaart' }).click();
+  await expect(vera.getByRole('button', { name: 'Mijn locatie' })).toBeVisible();
+  await vera.getByRole('link', { name: 'EHBO hierheen' }).click();
+  await expect(vera.getByRole('heading', { name: 'EHBO hierheen' })).toBeVisible();
+  await expect(vera.getByText(/^\d+ m van /)).toBeVisible({ timeout: 10_000 });
+  await expect(vera.getByText(/Nauwkeurig op ± 15 m/)).toBeVisible();
+  await vera.getByRole('button', { name: 'Onwel / flauw' }).click();
+  await vera.getByRole('button', { name: 'EHBO-verzoek versturen' }).click();
+  await expect(vera.getByRole('heading', { name: "We zoeken een EHBO'er" })).toBeVisible();
+
+  // Clean up: the reporter can withdraw it.
+  await vera.getByRole('button', { name: 'Melding intrekken' }).click();
+  await vera.getByRole('dialog').getByRole('button', { name: 'Melding intrekken' }).click();
 });

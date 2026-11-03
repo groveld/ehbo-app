@@ -291,6 +291,10 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   ALTER TABLE incidents ADD COLUMN place_lat REAL;
   ALTER TABLE incidents ADD COLUMN place_lng REAL;
   `,
+  // 17: anyone on staff can ask for help from where they are (#102). The place is kept like a self-started incident, with its accuracy.
+  `
+  ALTER TABLE incidents ADD COLUMN place_accuracy_m REAL;
+  `,
 ];
 
 export interface EventRow {

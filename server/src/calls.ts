@@ -103,8 +103,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   const moment = () => happenedAt ?? now();
   const stamp = () => moment().toISOString();
 
-  /** Laatste GPS-positie per mobiele eenheid; bewust niet in de database. */
-  const positions = new Map<number, { lng: number; lat: number; at: number }>();
+  /** Last GPS position per person; on purpose not in the database. Only members of a mobile team on duty share one (#101). */
+  const positions = new Map<string, { lng: number; lat: number; at: number }>();
   /** Teams whose last member logged out during a call: they go off duty once the call is over. */
   const leftDuringCall = new Set<number>();
   const timers = new Map<number, () => void>();
@@ -164,18 +164,30 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       .map((r) => [r.unit_id as number, r.incident_id as number]));
   }
 
+  /** A mobile team's position: the freshest of its members. */
+  function unitFix(unit: Unit) {
+    if (unit.kind !== 'mobiel') return undefined;
+    return unit.members.map((m) => positions.get(m)).filter((f) => f !== undefined).sort((a, b) => b.at - a.at)[0];
+  }
+
+  /** A team goes off duty: its members stop sharing, unless they're on another mobile team on duty. */
+  function forgetPositions(unit: Unit) {
+    const sharing = new Set(units().filter((u) => u.id !== unit.id && u.kind === 'mobiel' && u.availability !== 'uit_dienst').flatMap((u) => u.members));
+    for (const member of unit.members) if (!sharing.has(member)) positions.delete(member);
+  }
+
   /** Waar een eenheid nu is: vast = eigen post (of waar ze bleef), mobiel = recente GPS, anders de standplaats. */
   function unitPosition(unit: Unit, postMap: Map<number, Post>): [number, number] | null {
     if (unit.kind === 'mobiel') {
-      const fix = positions.get(unit.id);
+      const fix = unitFix(unit);
       if (fix && now().getTime() - fix.at <= POSITION_MAX_AGE_MS) return [fix.lng, fix.lat];
     }
     const post = postMap.get((unit.kind === 'vast' ? unit.stayPostId : null) ?? unit.postId ?? -1);
     return post?.lat != null && post.lng != null ? [post.lng, post.lat] : null;
   }
 
-  /** Beschikbare eenheden met hun afstand tot de post (null als die onbekend is). */
-  function freeUnits(post: Post) {
+  /** Beschikbare eenheden met hun afstand tot de plek van de hulpvraag (null als die onbekend is). */
+  function freeUnits(post: { lat: number | null; lng: number | null }) {
     const busy = busyUnits();
     const postMap = posts();
     return units()
@@ -195,6 +207,14 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (!row) throw httpError(404, 'Melding niet gevonden');
     return row;
   }
+
+  /** Where help is needed: the place of the incident when that's away from its post, otherwise the post. */
+  function targetOf(row: Row) {
+    return row.place_lat != null && row.place_lng != null ? { lat: row.place_lat as number, lng: row.place_lng as number } : posts().get(row.post_id as number)!;
+  }
+  const placeName = (row: Row) => (row.place_name as string | null) ?? posts().get(row.post_id as number)!.name;
+  /** Who follows the call: the post, and who asked for help, also from away from a post. */
+  const followers = (row: Row) => new Set([...postPhones(row.post_id as number), row.reported_by as string]);
 
   function dispatchesOf(id: number): Dispatch[] {
     return all('SELECT * FROM incident_dispatches WHERE incident_id = ? ORDER BY at, rowid', id).map((d) => ({
@@ -221,6 +241,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       reportedBy: row.reported_by as string,
       selfStarted: row.self_started === 1,
       offPost: place !== null,
+      accuracyM: row.place_accuracy_m as number | null,
       status: row.status as LiveIncident['status'],
       stage: row.stage as LiveIncident['stage'],
       what: row.what as LiveIncident['what'],
@@ -246,7 +267,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function liveUnits(): LiveUnit[] {
     const busy = busyUnits();
     return units().map((u) => {
-      const fix = u.kind === 'mobiel' ? positions.get(u.id) : undefined;
+      const fix = unitFix(u);
       return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null, closesAt: u.closesAt };
     });
   }
@@ -317,13 +338,12 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** Alarm naar eenheden (alle leden), met de afstand per eenheid. */
   function alarmUnits(row: Row, unitIds: number[], intro: string) {
-    const post = posts().get(row.post_id as number)!;
     const distances = new Map(dispatchesOf(row.id as number).map((d) => [d.unitId, d.distanceKm]));
     for (const unit of units().filter((u) => unitIds.includes(u.id))) {
       const km = distances.get(unit.id);
       const parts = [row.aed === 1 && unit.hasAed ? 'AED meenemen' : null, summary(row), km != null ? `${formatKm(km)} km` : null];
       notify(unit.members, {
-        title: `${intro} · ${post.name}`,
+        title: `${intro} · ${placeName(row)}`,
         body: `${parts.filter(Boolean).join(' · ')}. Tik om te reageren.`,
         tag: tag(row.id as number),
         url: unitUrl(row.id as number),
@@ -335,8 +355,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function copyToCoordinator(row: Row, body: string, urgent = false) {
     const phone = coordinator();
     if (!phone) return;
-    const post = posts().get(row.post_id as number)!;
-    notify([phone], { title: `EHBO-oproep · ${post.name}`, body, tag: `kopie-${row.id as number}`, url: `/melding/${row.id as number}`, urgent });
+    notify([phone], { title: `EHBO-oproep · ${placeName(row)}`, body, tag: `kopie-${row.id as number}`, url: `/melding/${row.id as number}`, urgent });
   }
 
   /** Eenheden die nog op deze oproep kunnen reageren: opgeroepen, niet geweigerd, niet aangenomen. */
@@ -347,10 +366,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function escalate(id: number, reason: string) {
     const row = incidentRow(id);
     if (row.status !== 'verstuurd') return;
-    const post = posts().get(row.post_id as number)!;
     db.transaction(() => {
       run("UPDATE incidents SET stage = 'alle', escalates_at = NULL WHERE id = ?", id);
-      for (const { unit, km } of freeUnits(post)) addDispatch(id, unit.id, 'alle', km);
+      for (const { unit, km } of freeUnits(targetOf(row))) addDispatch(id, unit.id, 'alle', km);
       log(id, 'geescaleerd', `${reason} → naar alle beschikbare eenheden`);
     });
     const updated = incidentRow(id);
@@ -367,9 +385,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function repeat(id: number, count: number) {
     const row = incidentRow(id);
     if (row.status !== 'verstuurd') return;
-    const post = posts().get(row.post_id as number)!;
     db.transaction(() => {
-      for (const { unit, km } of freeUnits(post)) addDispatch(id, unit.id, 'alle', km);
+      for (const { unit, km } of freeUnits(targetOf(row))) addDispatch(id, unit.id, 'alle', km);
       log(id, 'herhaald', `Nog niemand heeft aangenomen; alarm opnieuw (${count})`);
     });
     alarmUnits(row, invited(id), 'EHBO-oproep · nog niemand');
@@ -386,7 +403,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function offerOpenCalls(unitIds: number[]) {
     for (const row of all("SELECT * FROM incidents WHERE status = 'verstuurd' ORDER BY id")) {
       const id = row.id as number;
-      const free = freeUnits(posts().get(row.post_id as number)!);
+      const free = freeUnits(targetOf(row));
       const pending = invited(id);
       if (free.some((c) => pending.includes(c.unit.id))) continue;
       const fresh = free.filter((c) => unitIds.includes(c.unit.id));
@@ -409,6 +426,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   const memberOf = (me: Me, unitId: number) => me.assignments.some((a) => a.kind === 'ehbo' && a.unitId === unitId);
   const atPost = (me: Me, postId: number) => me.assignments.some((a) => a.kind === 'post' && a.postId === postId);
 
+  /** The post, who asked for help, the coordinator or an admin. */
+  const canFollow = (me: Me, row: Row) => atPost(me, row.post_id as number) || row.reported_by === me.phone || me.isAdmin || isCoordinator(me);
+
   function requireUnitMember(me: Me, unitId: number) {
     if (!memberOf(me, unitId) && !me.isAdmin) throw httpError(403, 'Je hoort niet bij deze EHBO-eenheid');
     const unit = unitById(unitId);
@@ -430,10 +450,18 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const existing = get('SELECT id FROM incidents WHERE client_id = ?', body.clientId);
     if (existing) return state().incidents.find((i) => i.id === existing.id)!;
 
-    const post = posts().get(body.postId);
-    if (!post) throw httpError(404, 'Post niet gevonden');
-    if (!atPost(me, post.id) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Je kunt alleen een verzoek doen vanaf je eigen post');
-    if (!post.isOpen && !reopenAutoClosed(post.id)) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
+    // From a post, or from where you are (#102): anyone on staff, with a GPS position. That place is kept for the report;
+    // within the radius of a post it counts as that post.
+    const position: [number, number] | null = body.lat != null && body.lng != null ? [body.lng, body.lat] : null;
+    if (body.postId === null && !position) throw httpError(400, 'Zonder post is je locatie nodig');
+    const place = body.postId === null && position ? placeOf([...posts().values()], position) : null;
+    const post = posts().get(body.postId ?? place?.postId ?? -1);
+    if (!post) throw body.postId === null ? httpError(409, 'Er zijn nog geen posten met een plek') : httpError(404, 'Post niet gevonden');
+    if (body.postId !== null) {
+      if (!atPost(me, post.id) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Je kunt alleen een verzoek doen vanaf je eigen post');
+      if (!post.isOpen && !reopenAutoClosed(post.id)) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
+    }
+    const offPost = place !== null && !place.atPost;
 
     const sentAt = iso();
     // Een melding die zonder bereik is bewaard, houdt het moment van versturen; nooit in de toekomst of meer dan een uur terug.
@@ -441,18 +469,20 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const reportedAt = reported && reported <= now() && now().getTime() - reported.getTime() < 3600_000 ? reported.toISOString() : sentAt;
     const aed = body.responsive === 'nee';
 
-    const candidates = freeUnits(post);
+    const candidates = freeUnits(offPost ? { lat: position![1], lng: position![0] } : post);
     const first = nearest(candidates);
     const aedUnit = aed ? nearest(candidates.filter((c) => c.unit.hasAed)) : undefined;
     const escalatesAt = first ? new Date(now().getTime() + escalationMs()).toISOString() : null;
 
     const id = db.transaction(() => {
       const incidentId = Number(run(`
-        INSERT INTO incidents (client_id, post_id, reported_by, what, persons, responsive, note, aed, status, stage, reported_at, sent_at, escalates_at, is_test)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'verstuurd', 'dichtstbij', ?, ?, ?, ?)`,
+        INSERT INTO incidents (client_id, post_id, reported_by, what, persons, responsive, note, aed, status, stage, reported_at, sent_at, escalates_at, is_test,
+                               place_name, place_lat, place_lng, place_accuracy_m)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'verstuurd', 'dichtstbij', ?, ?, ?, ?, ?, ?, ?, ?)`,
       body.clientId, post.id, me.phone, body.what, body.persons, body.responsive, body.note?.trim() || null, aed ? 1 : 0, reportedAt, sentAt, escalatesAt,
-      db.testMode() ? 1 : 0).lastInsertRowid);
-      log(incidentId, 'gemeld', `Gemeld door ${post.name}`);
+      db.testMode() ? 1 : 0, offPost ? place.name : null, offPost ? position![1] : null, offPost ? position![0] : null,
+      place ? body.accuracyM ?? null : null).lastInsertRowid);
+      log(incidentId, 'gemeld', body.postId === null ? `Gemeld door ${personName(me.phone)} · ${offPost ? place.name : post.name}` : `Gemeld door ${post.name}`);
       if (first) {
         addDispatch(incidentId, first.unit.id, 'dichtstbij', first.km);
         if (aedUnit && aedUnit.unit.id !== first.unit.id) addDispatch(incidentId, aedUnit.unit.id, 'aed', aedUnit.km);
@@ -508,7 +538,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
     const row = incidentRow(id);
     if (aed && !unit.hasAed) {
-      const aedUnit = nearest(freeUnits(post).filter((c) => c.unit.hasAed && c.unit.id !== unit.id));
+      const aedUnit = nearest(freeUnits(targetOf(row)).filter((c) => c.unit.hasAed && c.unit.id !== unit.id));
       if (aedUnit) {
         addDispatch(id, aedUnit.unit.id, 'aed', aedUnit.km);
         log(id, 'verstuurd', `Naar ${aedUnit.unit.name} (AED) gestuurd`, aedUnit.unit.id);
@@ -534,7 +564,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function update(me: Me, id: number, details: IncidentDetails) {
     const row = incidentRow(id);
-    if (!atPost(me, row.post_id as number) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Alleen de post kan de melding aanvullen');
+    if (!canFollow(me, row)) throw httpError(403, 'Alleen de post kan de melding aanvullen');
     if (!['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string)) throw httpError(409, 'Deze melding is al afgesloten');
     const note = details.note?.trim() || null;
     const differences = changes(row, details, note);
@@ -550,7 +580,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     // Niet aanspreekbaar geworden: de dichtstbijzijnde beschikbare AED-eenheid alsnog oproepen, als er nog geen AED komt.
     if (becameAed) {
       const comingWithAed = dispatchesOf(id).some((d) => !d.declinedAt && unitById(d.unitId)?.hasAed);
-      const aedUnit = comingWithAed ? undefined : nearest(freeUnits(posts().get(updated.post_id as number)!).filter((c) => c.unit.hasAed));
+      const aedUnit = comingWithAed ? undefined : nearest(freeUnits(targetOf(updated)).filter((c) => c.unit.hasAed));
       if (aedUnit) {
         addDispatch(id, aedUnit.unit.id, 'aed', aedUnit.km);
         log(id, 'verstuurd', `Naar ${aedUnit.unit.name} (AED) gestuurd`, aedUnit.unit.id);
@@ -559,9 +589,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     }
     const accepted = dispatchesOf(id).filter((d) => d.acceptedAt).map((d) => d.unitId);
     // The app plays its own short sound when it's in view; the push then stays silent (quietInApp).
-    const post = posts().get(updated.post_id as number)!;
     for (const unit of units().filter((u) => accepted.includes(u.id))) {
-      notify(unit.members, { title: `Melding aangevuld · ${post.name}`, body: differences.join(' · '), tag: `aangevuld-${id}`, url: unitUrl(id), quietInApp: true });
+      notify(unit.members, { title: `Melding aangevuld · ${placeName(updated)}`, body: differences.join(' · '), tag: `aangevuld-${id}`, url: unitUrl(id), quietInApp: true });
     }
     changed();
     return state();
@@ -587,7 +616,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const at = stamp();
     const post = posts().get(row.post_id as number)!;
     db.transaction(() => {
-      const km = freeUnits(post).find((c) => c.unit.id === unit.id)?.km ?? null;
+      const km = freeUnits(targetOf(row)).find((c) => c.unit.id === unit.id)?.km ?? null;
       addDispatch(id, unit.id, manual ? 'handmatig' : 'alle', km);
       run('UPDATE incident_dispatches SET accepted_at = ?, declined_at = NULL WHERE incident_id = ? AND unit_id = ?', at, id, unit.id);
       // Wie aanneemt, is in dienst; een vaste eenheid gaat na afloop terug naar haar eigen post.
@@ -604,15 +633,15 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const updated = incidentRow(id);
     const helper = manual ? unit.name : `${unit.name} (${personName(by.phone)})`;
     if (manual) {
-      notify(unit.members, { title: `Ingezet · ${post.name}`, body: `${summary(updated)}. De coördinator heeft jullie gestuurd.`, tag: tag(id), url: unitUrl(id), urgent: true });
+      notify(unit.members, { title: `Ingezet · ${placeName(row)}`, body: `${summary(updated)}. De coördinator heeft jullie gestuurd.`, tag: tag(id), url: unitUrl(id), urgent: true });
     }
     // Anderen hoeven niet meer te komen, behalve een AED-eenheid zolang er nog geen AED onderweg is.
     const aedComing = row.aed !== 1 || dispatchesOf(id).some((d) => d.acceptedAt && unitById(d.unitId)?.hasAed);
     const released = invited(id).filter((unitId) => aedComing || !unitById(unitId)?.hasAed);
     for (const other of units().filter((u) => released.includes(u.id))) {
-      notify(other.members, { title: 'Oproep is al aangenomen', body: `${unit.name} gaat naar ${post.name}. Je hoeft niet te komen.`, tag: tag(id), url: unitUrl(id) });
+      notify(other.members, { title: 'Oproep is al aangenomen', body: `${unit.name} gaat naar ${placeName(row)}. Je hoeft niet te komen.`, tag: tag(id), url: unitUrl(id) });
     }
-    notify(postPhones(post.id), { title: 'Hulp is onderweg', body: `${helper} komt eraan.`, tag: `melding-${id}`, url: `/melding/${id}` });
+    notify(followers(row), { title: 'Hulp is onderweg', body: `${helper} komt eraan.`, tag: `melding-${id}`, url: `/melding/${id}` });
     copyToCoordinator(updated, `${manual ? 'Toegewezen aan' : 'Aangenomen door'} ${helper}.`);
     changed();
     return state();
@@ -684,7 +713,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function withdraw(me: Me, id: number) {
     const row = incidentRow(id);
-    if (!atPost(me, row.post_id as number) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Alleen de post kan de melding intrekken');
+    if (!canFollow(me, row)) throw httpError(403, 'Alleen de post kan de melding intrekken');
     if (!['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string)) return state();
     const post = posts().get(row.post_id as number)!;
     db.transaction(() => {
@@ -694,9 +723,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     cancelTimer(id);
     const reached = dispatchesOf(id).filter((d) => !d.declinedAt).map((d) => d.unitId);
     for (const unit of units().filter((u) => reached.includes(u.id))) {
-      notify(unit.members, { title: 'Melding ingetrokken', body: `${post.name} heeft geen hulp meer nodig.`, tag: tag(id), url: unitUrl(id) });
+      notify(unit.members, { title: 'Melding ingetrokken', body: `${placeName(row)}: geen hulp meer nodig.`, tag: tag(id), url: unitUrl(id) });
     }
-    copyToCoordinator(row, `Ingetrokken door ${post.name}.`);
+    copyToCoordinator(row, `Ingetrokken door ${row.place_name ? personName(me.phone) : post.name}.`);
     changed();
     return state();
   }
@@ -710,7 +739,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       if (unit.kind === 'vast' && unit.postId !== null && availability === 'uit_dienst' && !otherShiftOnDuty(unit)) setPost(unit.postId, false);
       if (availability === 'uit_dienst') {
         run('UPDATE ehbo_units SET stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?', unit.id);
-        positions.delete(unit.id);
+        forgetPositions(unit);
       } else if (unit.availability === 'uit_dienst') {
         run('UPDATE ehbo_units SET keep_until = ?, closes_at = NULL WHERE id = ?', keepAfterOpening(planOf(unit)), unit.id);
       }
@@ -720,10 +749,12 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     return state();
   }
 
-  function setPosition(me: Me, unitId: number, position: { lat: number; lng: number }) {
-    const unit = requireUnitMember(me, unitId);
-    if (unit.kind !== 'mobiel') return;
-    positions.set(unit.id, { lat: position.lat, lng: position.lng, at: now().getTime() });
+  /** Sharing belongs to a person (#101), but only when there's a reason: being on a mobile team on duty. Nobody else is tracked. */
+  function setPosition(me: Me, position: { lat: number; lng: number }) {
+    if (!units().some((u) => u.kind === 'mobiel' && u.availability !== 'uit_dienst' && u.members.includes(me.phone))) {
+      throw httpError(409, 'Alleen een mobiele EHBO-eenheid in dienst deelt haar positie');
+    }
+    positions.set(me.phone, { lat: position.lat, lng: position.lng, at: now().getTime() });
     // Iedereen ziet de mobiele eenheid op de kaart meebewegen.
     changed();
   }
@@ -960,7 +991,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function takeOffDuty(unit: Unit) {
     run("UPDATE ehbo_units SET availability = 'uit_dienst', stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", unit.id);
-    positions.delete(unit.id);
+    forgetPositions(unit);
   }
 
   /** Closes what nobody is logged in for; a team in the middle of a call waits until it's over. Gives the names of what closed. */

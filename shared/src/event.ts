@@ -40,7 +40,7 @@ export const DEFAULT_INFO: InfoSection[] = [
   { title: 'Waarvoor is deze app?', body: 'Ter ondersteuning van de EHBO en de posten tijdens {evenement}. De app vervangt 112 niet.' },
   {
     title: 'Welke gegevens?',
-    body: 'Van medewerkers: naam, telefoonnummer, functie en post. Locatie: mobiele EHBO-eenheden delen hun positie zolang ze in dienst zijn; van anderen alleen om je eigen positie op de kaart te tonen. Posities worden niet bewaard.',
+    body: 'Van medewerkers: naam, telefoonnummer, functie en post. Locatie: mobiele EHBO-eenheden delen hun positie zolang ze in dienst zijn; van anderen alleen om je eigen positie op de kaart te tonen, en één keer bij een hulpvraag vanaf je plek. Posities worden niet bewaard, behalve de plek van een incident buiten een post.',
   },
   {
     title: 'Wie ziet wat?',

@@ -89,9 +89,12 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
         type: 'object',
         required: ['postId', 'clientId', ...detailsRequired],
         properties: {
-          postId: { type: 'integer', minimum: 1 },
+          postId: { type: ['integer', 'null'], minimum: 1 },
           clientId: { type: 'string', minLength: 8, maxLength: 64 },
           reportedAt: { type: 'string', format: 'date-time' },
+          lat: { type: ['number', 'null'], minimum: -90, maximum: 90 },
+          lng: { type: ['number', 'null'], minimum: -180, maximum: 180 },
+          accuracyM: { type: ['number', 'null'], minimum: 0, maximum: 100000 },
           ...details,
         },
       },
@@ -145,14 +148,13 @@ export async function callRoutes(app: FastifyInstance, { calls, requests }: { ca
     schema: { params: idParams, body: { type: 'object', required: ['availability'], properties: { availability: { enum: ['vrij', 'pauze', 'uit_dienst'] } } } },
   }, async (request) => calls.once(...actionHeaders(request), () => calls.setAvailability(request.me!, request.params.id, request.body.availability)));
 
-  // Mobiele eenheden delen elke minuut hun positie; de server bewaart alleen de laatste, in het geheugen.
-  app.put<Id & { Body: { lat: number; lng: number } }>('/api/units/:id/position', {
+  // Members of a mobile team on duty share their position every minute; the server keeps only the last one, in memory.
+  app.put<{ Body: { lat: number; lng: number } }>('/api/position', {
     schema: {
-      params: idParams,
       body: { type: 'object', required: ['lat', 'lng'], properties: { lat: { type: 'number', minimum: -90, maximum: 90 }, lng: { type: 'number', minimum: -180, maximum: 180 } } },
     },
   }, async (request, reply) => {
-    calls.setPosition(request.me!, request.params.id, request.body);
+    calls.setPosition(request.me!, request.body);
     return reply.code(204).send();
   });
 

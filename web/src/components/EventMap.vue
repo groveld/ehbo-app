@@ -1,6 +1,9 @@
 <script setup lang="ts">
 // Kaart met parcours en posten. Tegels, lettertypen en iconen komen van de eigen server (en staan offline in de cache).
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { messageDialog } from '../composables/useDialog.ts';
+import { isIOS } from '../platform.ts';
+import Icon from './Icon.vue';
 import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -55,6 +58,11 @@ let userMarker: maplibregl.Marker | null = null;
 let pickedMarker: maplibregl.Marker | null = null;
 let watchId: number | null = null;
 let contextLost = false;
+/** Own position (#38): only on this phone, never sent. Mijn locatie centres once; a second tap follows until you move the map. */
+const locating = ref<'off' | 'shown' | 'follow'>('off');
+let userFix: { lng: number; lat: number; accuracy: number } | null = null;
+/** A fix worse than this shows a greyer dot. */
+const ROUGH_FIX_M = 50;
 
 const GREY = '#9A9CA3';
 const CROSS = iconSvg('ehbo', 16);
@@ -265,22 +273,76 @@ function frame(animate = false) {
   else if (props.pkg.map) map.fitBounds(props.pkg.map.bbox as Bbox, { duration: 0 });
 }
 
-/** Eigen positie als blauwe stip, maar alleen als de app al toestemming heeft (niet ongevraagd vragen). */
-async function startUserLocation() {
-  if (!props.showUser || props.paused || watchId !== null || !('geolocation' in navigator) || !navigator.permissions) return;
-  try {
-    if ((await navigator.permissions.query({ name: 'geolocation' })).state !== 'granted' || props.paused) return;
-  } catch {
+/** The light circle around the dot: the accuracy in metres, at this zoom. MapLibre has 512 px tiles. */
+function drawAccuracy() {
+  const ring = userMarker?.getElement().querySelector<HTMLElement>('.accuracy');
+  if (!map || !ring || !userFix) return;
+  const metresPerPixel = (40_075_016.686 * Math.cos((userFix.lat * Math.PI) / 180)) / (512 * 2 ** map.getZoom());
+  const size = Math.max(0, Math.min(2000, (2 * userFix.accuracy) / metresPerPixel));
+  ring.style.width = ring.style.height = `${size}px`;
+  userMarker!.getElement().classList.toggle('rough', userFix.accuracy > ROUGH_FIX_M);
+}
+
+const centreOnUser = () => {
+  if (map && userFix) map.easeTo({ center: [userFix.lng, userFix.lat], zoom: Math.max(map.getZoom(), 15), duration: 400 });
+};
+
+function explainLocation(denied: boolean) {
+  void messageDialog({
+    title: denied ? 'Geen toestemming voor locatie' : 'Geen locatie gevonden',
+    text: denied
+      ? `Zet locatie aan voor deze app: ${isIOS ? 'Instellingen › Privacy en beveiliging › Locatievoorzieningen' : 'tik op het slotje of de instellingen van de app › Locatie'}. Je positie blijft op je telefoon.`
+      : 'Ga naar buiten of probeer het zo opnieuw. De kaart werkt ook zonder.',
+    confirm: 'Begrepen',
+  });
+}
+
+/** Own position as a blue dot. Without asking only when the app already may; Mijn locatie asks. */
+async function startUserLocation(ask = false) {
+  if (!props.showUser || props.paused || watchId !== null || !('geolocation' in navigator)) return;
+  if (!ask) {
+    try {
+      if (!navigator.permissions || (await navigator.permissions.query({ name: 'geolocation' })).state !== 'granted' || props.paused) return;
+    } catch {
+      return;
+    }
+  }
+  watchId = navigator.geolocation.watchPosition(({ coords }) => {
+    userFix = { lng: coords.longitude, lat: coords.latitude, accuracy: coords.accuracy };
+    if (!map) return;
+    if (!userMarker) {
+      const el = document.createElement('div');
+      el.className = 'user-dot';
+      el.style.zIndex = String(UNIT_LAYER);
+      el.innerHTML = '<span class="accuracy"></span>';
+      userMarker = new maplibregl.Marker({ element: el }).setLngLat([coords.longitude, coords.latitude]).addTo(map);
+      if (locating.value !== 'off') centreOnUser();
+    }
+    userMarker.setLngLat([coords.longitude, coords.latitude]);
+    drawAccuracy();
+    if (locating.value === 'follow') map.easeTo({ center: [coords.longitude, coords.latitude], duration: 300 });
+  }, (err) => {
+    if (locating.value === 'off') return;
+    locating.value = 'off';
+    stopUserLocation();
+    explainLocation(err.code === err.PERMISSION_DENIED);
+  }, { enableHighAccuracy: true, maximumAge: 10_000 });
+}
+
+/** Mijn locatie: first centre on you (asking for permission when needed), then follow you. */
+function myLocation() {
+  if (!('geolocation' in navigator)) {
+    explainLocation(false);
     return;
   }
-  const el = document.createElement('div');
-  el.className = 'user-dot';
-  el.style.zIndex = String(UNIT_LAYER);
-  watchId = navigator.geolocation.watchPosition(({ coords }) => {
-    if (!map) return;
-    userMarker ??= new maplibregl.Marker({ element: el }).setLngLat([coords.longitude, coords.latitude]).addTo(map);
-    userMarker.setLngLat([coords.longitude, coords.latitude]);
-  }, () => {}, { enableHighAccuracy: true, maximumAge: 10_000 });
+  if (locating.value !== 'off' && userFix) {
+    locating.value = 'follow';
+    centreOnUser();
+    return;
+  }
+  locating.value = 'shown';
+  if (watchId === null) void startUserLocation(true);
+  else centreOnUser();
 }
 
 function createMap() {
@@ -298,6 +360,9 @@ function createMap() {
     dragRotate: false,
   });
   map.on('webglcontextlost', () => { contextLost = true; });
+  map.on('zoom', drawAccuracy);
+  // Moving the map yourself stops following.
+  map.on('dragstart', () => { if (locating.value === 'follow') locating.value = 'shown'; });
   map.on('webglcontextrestored', () => { contextLost = false; });
   map.touchZoomRotate.disableRotation();
   map.keyboard.disableRotation();
@@ -431,10 +496,23 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="container" class="event-map" :class="{ picking }" />
+  <div class="event-map-wrap">
+    <div ref="container" class="event-map" :class="{ picking }" />
+    <button
+      v-if="showUser && interactive" class="locate" :class="{ on: locating !== 'off', follow: locating === 'follow' }"
+      :aria-label="locating === 'shown' ? 'Mijn locatie volgen' : 'Mijn locatie'" :aria-pressed="locating !== 'off'" @click="myLocation"
+    ><Icon name="gps" :size="22" /></button>
+  </div>
 </template>
 
 <style scoped>
+.event-map-wrap { position: relative; width: 100%; height: 100%; }
+.locate {
+  position: absolute; right: 10px; bottom: 10px; z-index: 1; width: 44px; height: 44px; border-radius: 12px; border: 0;
+  background: #FFFFFF; color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, .3); display: flex; align-items: center; justify-content: center;
+}
+.locate.on { color: #1F6FB2; }
+.locate.follow { background: #1F6FB2; color: #FFFFFF; }
 /* Geen position op de markers zelf: MapLibre zet ze absoluut; relatief maken laat ze verschuiven. */
 /* isolate: the markers' z-index only counts inside the map, so a banner or button over the map stays on top. */
 .event-map { isolation: isolate; width: 100%; height: 100%; border-radius: 18px; overflow: hidden; background: #E9E7E1; }
@@ -468,6 +546,12 @@ onBeforeUnmount(() => {
   .event-map :deep(.post-marker.alert), .event-map :deep(.post-marker.task) { animation: none; }
 }
 .event-map :deep(.user-dot) {
-  width: 16px; height: 16px; border-radius: 50%; background: #1F6FB2; border: 3px solid #FFFFFF; box-shadow: 0 0 0 6px rgba(31, 111, 178, .25);
+  width: 16px; height: 16px; border-radius: 50%; background: #1F6FB2; border: 3px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+}
+.event-map :deep(.user-dot.rough) { background: #7D8FA3; }
+/* How precise the fix is: a light circle in metres, drawn under the dot. */
+.event-map :deep(.user-dot .accuracy) {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: -1; border-radius: 50%; pointer-events: none;
+  background: rgba(31, 111, 178, .14); border: 1px solid rgba(31, 111, 178, .35);
 }
 </style>
