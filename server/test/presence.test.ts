@@ -88,15 +88,18 @@ test('an EHBO team goes off duty with its post when its last member logs out', a
   assert.equal(isOpen(EHBO_POST), false);
 });
 
-test('logging out stops the pushes of that phone, and of a number logged in nowhere', async () => {
+test('logging out is everywhere: a forgotten session on another device keeps nothing open, and no device gets pushes', async () => {
   const phone = await login(DEMO.postLead);
-  const tablet = await login(DEMO.postLead);
+  // An old install, or Safari next to the app, that was never logged out.
+  const forgotten = await login(DEMO.postLead);
   subscribe(DEMO.postLead, 'https://push.example/phone');
-  subscribe(DEMO.postLead, 'https://push.example/tablet');
+  subscribe(DEMO.postLead, 'https://push.example/old');
+  set('UPDATE posts SET is_open = 1 WHERE name = ?', WATER);
+
   await logout(phone, { endpoint: 'https://push.example/phone' });
-  assert.equal(subscriptions(DEMO.postLead), 1, 'the tablet still gets calls');
-  await logout(tablet);
+  assert.equal((await me(forgotten)).statusCode, 401, 'the other device is logged out too');
   assert.equal(subscriptions(DEMO.postLead), 0);
+  assert.equal(isOpen(WATER), false, 'so the post closes');
 });
 
 test('sessions that ran out count as logging out', async () => {
