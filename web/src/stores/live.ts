@@ -38,7 +38,7 @@ const RETRY_MS = 10_000;
 /** After a change in admin: wait a moment, spread over the phones, so a series of edits doesn't fetch the package every time. */
 const SYNC_DELAY_MS = 3_000;
 const SYNC_SPREAD_MS = 5_000;
-const OPEN = ['verstuurd', 'geaccepteerd', 'ter_plaatse'] as const;
+const OPEN = ['sent', 'accepted', 'on_site'] as const;
 
 export const isOpen = (incident: LiveIncident) => (OPEN as readonly string[]).includes(incident.status);
 
@@ -238,7 +238,7 @@ export const useLiveStore = defineStore('live', () => {
 
   /** Oproepen waar een eenheid van mij op kan reageren: opgeroepen, niet geweigerd, nog niet aangenomen. */
   const invitations = computed(() => openIncidents.value.filter((i) => i.dispatches.some((d) =>
-    myTeamIds.value.includes(d.teamId) && !d.declinedAt && !d.acceptedAt && (i.status === 'verstuurd' || needsAed(i, d.teamId)))));
+    myTeamIds.value.includes(d.teamId) && !d.declinedAt && !d.acceptedAt && (i.status === 'sent' || needsAed(i, d.teamId)))));
 
   /** Oproep waar een eenheid van mij mee bezig is. */
   const myActive = computed(() => openIncidents.value.find((i) => i.dispatches.some((d) => myTeamIds.value.includes(d.teamId) && d.acceptedAt)) ?? null);

@@ -31,7 +31,7 @@ const nearest = computed(() => (store.pkg && post.value ? nearestTeam(store.pkg,
 const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id && !i.offPost));
 /** Eerder vandaag, op een eigen scherm. */
 const earlier = computed(() => live.incidents.filter((i) => i.postId === post.value?.id && !i.offPost && !isOpen(i)).length
-  + live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'afgehandeld' || r.status === 'ingetrokken')).length);
+  + live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'closed' || r.status === 'withdrawn')).length);
 /** Meldingen die zonder bereik op deze telefoon wachten. */
 const waiting = computed(() => live.outbox.filter((i) => i.postId === post.value?.id));
 
@@ -47,11 +47,11 @@ const planned = computed(() => {
 // Water, verkeer en vrijwilliger: een aanvraag in de wachtrij van de coördinator (5.1). Kleuren uit het schermontwerp.
 const TILES = [
   { key: 'water', bg: '#E4EEF7', line: '#B8D0E6', icon: '#1F6FB2', iconText: '#FFFFFF', iconName: 'drop' },
-  { key: 'verkeer', bg: '#FBE6D2', line: '#EDC7A2', icon: '#D9781C', iconText: '#16181D', iconName: 'cone' },
-  { key: 'vrijwilliger', bg: '#EDE4F7', line: '#D2C1EA', icon: '#7A4BB7', iconText: '#FFFFFF', iconName: 'personAdd' },
+  { key: 'traffic', bg: '#FBE6D2', line: '#EDC7A2', icon: '#D9781C', iconText: '#16181D', iconName: 'cone' },
+  { key: 'volunteer', bg: '#EDE4F7', line: '#D2C1EA', icon: '#7A4BB7', iconText: '#FFFFFF', iconName: 'personAdd' },
 ] as const satisfies readonly { key: RequestKind; bg: string; line: string; icon: string; iconText: string; iconName: IconName }[];
 /** Open aanvragen van deze post, onder de tegels. */
-const openRequests = computed(() => live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'aangevraagd' || r.status === 'opgepakt')));
+const openRequests = computed(() => live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'sent' || r.status === 'accepted')));
 
 async function ask(kind: RequestKind) {
   if (!post.value) return;
@@ -139,7 +139,7 @@ async function setOpen(value: boolean) {
           <RouterLink v-for="r in openRequests" :key="`r${r.id}`" :to="{ name: 'aanvraag', params: { id: r.id } }" class="request">
             <span class="mono at">{{ clock(r.createdAt) }}</span>
             <span class="grow">{{ [REQUEST_KINDS[r.kind].label, requestDetailLabel(r.kind, r.detail)].filter(Boolean).join(' · ') }}</span>
-            <span class="state blue">{{ r.status === 'opgepakt' ? 'wordt geregeld' : `plek ${r.position}` }}</span>
+            <span class="state blue">{{ r.status === 'accepted' ? 'wordt geregeld' : `plek ${r.position}` }}</span>
             <Icon name="forward" :size="16" />
           </RouterLink>
           <RouterLink v-for="w in waiting" :key="w.clientId" :to="{ name: 'geen-bereik', params: { clientId: w.clientId } }" class="request">
@@ -152,7 +152,7 @@ async function setOpen(value: boolean) {
             <RouterLink v-for="i in openIncidents" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="request">
               <span class="mono at">{{ clock(i.reportedAt) }}</span>
               <span class="grow">EHBO · {{ incidentSummary(i) }}</span>
-              <span class="state">{{ i.status === 'verstuurd' ? 'zoeken' : i.status === 'geaccepteerd' ? 'onderweg' : 'ter plaatse' }}</span>
+              <span class="state">{{ i.status === 'sent' ? 'zoeken' : i.status === 'accepted' ? 'onderweg' : 'ter plaatse' }}</span>
               <Icon name="forward" :size="16" />
             </RouterLink>
           </template>

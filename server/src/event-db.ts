@@ -375,6 +375,125 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   ALTER TABLE incident_dispatches RENAME COLUMN unit_id TO team_id;
   ALTER TABLE incident_events RENAME COLUMN unit_id TO team_id;
   `,
+  // 23: one help request with a type (#86). What a location asks for is a help request; its type says how it's handled:
+  // dispatch (to a team: an incident) or queue (to the coordinator: water, traffic, volunteer). What only incidents have is in
+  // dispatch_details. Values become English (docs/begrippen.md). Incidents keep their id; requests move up by 1,000,000, so a
+  // phone can convert the ids it kept. The views incidents and queue_requests read them the way the code did.
+  `
+  CREATE TABLE help_request_types (
+    id       INTEGER PRIMARY KEY,
+    key      TEXT NOT NULL UNIQUE,
+    name     TEXT NOT NULL,
+    handling TEXT NOT NULL CHECK (handling IN ('dispatch', 'queue')),
+    sort     INTEGER NOT NULL DEFAULT 0
+  );
+  INSERT INTO help_request_types (key, name, handling, sort) VALUES
+    ('first_aid', 'EHBO', 'dispatch', 0), ('water', 'Water', 'queue', 1), ('traffic', 'Verkeer', 'queue', 2), ('volunteer', 'Vrijwilliger', 'queue', 3);
+
+  CREATE TABLE help_requests (
+    id               INTEGER PRIMARY KEY,
+    client_id        TEXT NOT NULL UNIQUE,
+    type_id          INTEGER NOT NULL REFERENCES help_request_types(id),
+    post_id          INTEGER NOT NULL REFERENCES posts(id),
+    reported_by      TEXT NOT NULL,
+    status           TEXT NOT NULL CHECK (status IN ('sent', 'accepted', 'on_site', 'closed', 'withdrawn')),
+    detail           TEXT,
+    is_test          INTEGER NOT NULL DEFAULT 0,
+    reported_at      TEXT NOT NULL,
+    accepted_at      TEXT,
+    accepted_by      TEXT,
+    closed_at        TEXT,
+    place_name       TEXT,
+    place_lat        REAL,
+    place_lng        REAL,
+    place_accuracy_m REAL
+  );
+  CREATE TABLE dispatch_details (
+    help_request_id INTEGER PRIMARY KEY REFERENCES help_requests(id) ON DELETE CASCADE,
+    what            TEXT,
+    persons         TEXT,
+    responsive      TEXT,
+    note            TEXT,
+    aed             INTEGER NOT NULL DEFAULT 0,
+    stage           TEXT NOT NULL CHECK (stage IN ('nearest', 'all')),
+    sent_at         TEXT NOT NULL,
+    escalates_at    TEXT,
+    team_id         INTEGER REFERENCES teams(id) ON DELETE SET NULL,
+    on_site_at      TEXT,
+    outcome         TEXT,
+    outcome_persons TEXT,
+    outcome_note    TEXT,
+    self_started    INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE TABLE dispatches (
+    help_request_id INTEGER NOT NULL REFERENCES help_requests(id) ON DELETE CASCADE,
+    team_id         INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    at              TEXT NOT NULL,
+    reason          TEXT NOT NULL CHECK (reason IN ('nearest', 'aed', 'all', 'manual')),
+    distance_km     REAL,
+    declined_at     TEXT,
+    accepted_at     TEXT,
+    PRIMARY KEY (help_request_id, team_id)
+  );
+  CREATE TABLE help_request_events (
+    id              INTEGER PRIMARY KEY,
+    help_request_id INTEGER NOT NULL REFERENCES help_requests(id) ON DELETE CASCADE,
+    at              TEXT NOT NULL,
+    type            TEXT NOT NULL,
+    team_id         INTEGER,
+    text            TEXT NOT NULL
+  );
+
+  INSERT INTO help_requests (id, client_id, type_id, post_id, reported_by, status, is_test, reported_at, accepted_at, accepted_by, closed_at,
+                             place_name, place_lat, place_lng, place_accuracy_m)
+    SELECT id, client_id, (SELECT id FROM help_request_types WHERE key = 'first_aid'), post_id, reported_by,
+           CASE status WHEN 'verstuurd' THEN 'sent' WHEN 'geaccepteerd' THEN 'accepted' WHEN 'ter_plaatse' THEN 'on_site' WHEN 'afgerond' THEN 'closed' ELSE 'withdrawn' END,
+           is_test, reported_at, accepted_at, accepted_by, closed_at, place_name, place_lat, place_lng, place_accuracy_m
+    FROM incidents;
+  INSERT INTO dispatch_details (help_request_id, what, persons, responsive, note, aed, stage, sent_at, escalates_at, team_id, on_site_at,
+                                outcome, outcome_persons, outcome_note, self_started)
+    SELECT id,
+           CASE what WHEN 'onwel' THEN 'unwell' WHEN 'letsel' THEN 'injury' WHEN 'kramp' THEN 'cramp' WHEN 'onbekend' THEN 'unknown' END,
+           persons, CASE responsive WHEN 'ja' THEN 'yes' WHEN 'nee' THEN 'no' WHEN 'onbekend' THEN 'unknown' END,
+           note, aed, CASE stage WHEN 'alle' THEN 'all' ELSE 'nearest' END, sent_at, escalates_at, team_id, on_site_at,
+           CASE outcome WHEN 'geholpen' THEN 'treated' WHEN 'gestopt' THEN 'stopped' WHEN 'ambulance' THEN 'ambulance' WHEN 'doorverwezen' THEN 'referred'
+                        WHEN 'geweigerd' THEN 'refused' WHEN 'loos' THEN 'false_alarm' END,
+           outcome_persons, outcome_note, self_started
+    FROM incidents;
+  INSERT INTO dispatches (help_request_id, team_id, at, reason, distance_km, declined_at, accepted_at)
+    SELECT incident_id, team_id, at, CASE reason WHEN 'dichtstbij' THEN 'nearest' WHEN 'alle' THEN 'all' WHEN 'handmatig' THEN 'manual' ELSE 'aed' END,
+           distance_km, declined_at, accepted_at
+    FROM incident_dispatches;
+  INSERT INTO help_request_events (id, help_request_id, at, type, team_id, text)
+    SELECT id, incident_id, at,
+           CASE type WHEN 'gemeld' THEN 'reported' WHEN 'verstuurd' THEN 'sent' WHEN 'aangevuld' THEN 'added' WHEN 'geweigerd' THEN 'declined'
+                     WHEN 'geescaleerd' THEN 'escalated' WHEN 'herhaald' THEN 'repeated' WHEN 'geaccepteerd' THEN 'accepted' WHEN 'toegewezen' THEN 'assigned'
+                     WHEN 'ter_plaatse' THEN 'on_site' WHEN 'afgerond' THEN 'closed' WHEN 'ingetrokken' THEN 'withdrawn' ELSE type END,
+           team_id, text
+    FROM incident_events;
+  INSERT INTO help_requests (id, client_id, type_id, post_id, reported_by, status, detail, is_test, reported_at, accepted_at, accepted_by, closed_at)
+    SELECT r.id + 1000000, r.client_id, t.id, r.post_id, r.reported_by,
+           CASE r.status WHEN 'aangevraagd' THEN 'sent' WHEN 'opgepakt' THEN 'accepted' WHEN 'afgehandeld' THEN 'closed' ELSE 'withdrawn' END,
+           CASE r.detail WHEN 'beetje' THEN 'little' WHEN 'flink' THEN 'lots' WHEN 'bijna_op' THEN 'almost_empty' WHEN 'druk' THEN 'busy' WHEN 'onveilig' THEN 'unsafe'
+                         WHEN 'afzetting' THEN 'closure' WHEN 'aflossing' THEN 'relief' WHEN 'uitval' THEN 'dropout' ELSE r.detail END,
+           r.is_test, r.created_at, r.picked_at, r.picked_by, r.done_at
+    FROM requests r JOIN help_request_types t ON t.key = CASE r.kind WHEN 'verkeer' THEN 'traffic' WHEN 'vrijwilliger' THEN 'volunteer' ELSE r.kind END;
+  DROP TABLE incident_events;
+  DROP TABLE incident_dispatches;
+  DROP TABLE incidents;
+  DROP TABLE requests;
+
+  CREATE VIEW incidents AS
+    SELECT h.id, h.client_id, h.post_id, h.reported_by, h.status, h.is_test, h.reported_at, h.accepted_at, h.accepted_by, h.closed_at,
+           h.place_name, h.place_lat, h.place_lng, h.place_accuracy_m, d.what, d.persons, d.responsive, d.note, d.aed, d.stage, d.sent_at,
+           d.escalates_at, d.team_id, d.on_site_at, d.outcome, d.outcome_persons, d.outcome_note, d.self_started
+    FROM help_requests h JOIN dispatch_details d ON d.help_request_id = h.id;
+  CREATE VIEW queue_requests AS
+    SELECT h.id, h.client_id, h.post_id, t.key AS kind, h.detail, h.status, h.reported_by, h.reported_at AS created_at,
+           h.accepted_at AS picked_at, h.accepted_by AS picked_by, h.closed_at AS done_at, h.is_test
+    FROM help_requests h JOIN help_request_types t ON t.id = h.type_id
+    WHERE t.handling = 'queue';
+  `,
 ];
 
 export interface EventRow {

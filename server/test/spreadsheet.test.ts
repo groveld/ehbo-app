@@ -136,7 +136,8 @@ test('one CSV changes only its own sheet; removing what is missing is a choice',
   const locations = 'Naam;Functie 1\r\nWaterpost 3 · brug;Waterpost\r\n';
   const removing = await check([{ name: 'locaties.csv', data: locations }], true);
   assert.equal(removing.sheets[0]!.removed, 3);
-  db.raw.prepare("INSERT INTO requests (client_id, post_id, kind, status, reported_by, created_at) VALUES ('h', (SELECT id FROM posts WHERE name = 'Kruising 4'), 'water', 'afgehandeld', ?, '2026-12-31T10:00:00Z')").run(DEMO.postLead);
+  db.raw.prepare(`INSERT INTO help_requests (client_id, type_id, post_id, status, reported_by, reported_at)
+    VALUES ('h', (SELECT id FROM help_request_types WHERE key = 'water'), (SELECT id FROM posts WHERE name = 'Kruising 4'), 'closed', ?, '2026-12-31T10:00:00Z')`).run(DEMO.postLead);
   const blocked = await check([{ name: 'locaties.csv', data: locations }], true);
   assert.ok(blocked.problems.some((p) => /Kruising 4 heeft oproepen of aanvragen/.test(p.message)));
 });

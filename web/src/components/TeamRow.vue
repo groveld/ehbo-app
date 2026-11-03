@@ -16,7 +16,7 @@ const incident = computed(() => (state.value?.incidentId != null ? live.incident
 const postOf = (id: number | null | undefined) => props.pkg.posts.find((p) => p.id === id);
 
 const status = computed(() => {
-  if (incident.value) return { tone: 'busy', label: incident.value.status === 'ter_plaatse' ? 'Ter plaatse' : 'Onderweg' };
+  if (incident.value) return { tone: 'busy', label: incident.value.status === 'on_site' ? 'Ter plaatse' : 'Onderweg' };
   const availability = state.value?.availability ?? 'off_duty';
   return { tone: availability, label: TEAM_AVAILABILITY[availability] };
 });

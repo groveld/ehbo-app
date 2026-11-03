@@ -69,7 +69,7 @@ const tabs = computed<Tab[]>(() => {
   }
   tabs.push({ key: 'kaart', to: { name: 'kaart' }, label: 'Kaart', icon: 'map', active: name === 'kaart' || name === 'post', color: COLORS.kaart });
   if (me.isAdmin || coordinatorOf(pkg.pkg)?.phone === me.phone) {
-    tabs.push({ key: 'meldingen', to: { name: 'meldingen' }, label: 'Meldingen', icon: 'bell', active: name === 'meldingen', color: COLORS.meldingen, count: live.requests.filter((r) => r.status === 'aangevraagd').length });
+    tabs.push({ key: 'meldingen', to: { name: 'meldingen' }, label: 'Meldingen', icon: 'bell', active: name === 'meldingen', color: COLORS.meldingen, count: live.requests.filter((r) => r.status === 'sent').length });
   }
   tabs.push({ key: 'contacten', to: { name: 'contacten' }, label: 'Contacten', icon: 'people', active: name === 'contacten', color: COLORS.contacten });
   tabs.push({ key: 'menu', to: { name: 'menu' }, label: 'Menu', icon: 'menu', active: MENU.includes(name) || name.startsWith('beheer'), color: COLORS.menu });

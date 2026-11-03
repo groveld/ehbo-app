@@ -71,7 +71,7 @@ const TEAM2 = () => idOf('teams', 'Team 2');
 
 let clientIds = 0;
 const request = (details: Partial<NewIncident> = {}): NewIncident => ({
-  postId: WATER(), clientId: `test-${++clientIds}-abcdef`, what: 'onwel', persons: '1', responsive: null, note: null, ...details,
+  postId: WATER(), clientId: `test-${++clientIds}-abcdef`, what: 'unwell', persons: '1', responsive: null, note: null, ...details,
 });
 
 const pushesTo = (phone: string) => pushes.filter((p) => p.phones.includes(phone));
@@ -102,7 +102,7 @@ test('a team that finishes a call gets the one that was waiting, and a team that
   const second = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   assert.equal((await incident(second.id)).dispatches.length, 0, 'nobody free');
 
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${first.id}/close`, { outcome: 'geholpen', persons: '1', note: null, stayHere: false });
+  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${first.id}/close`, { outcome: 'treated', persons: '1', note: null, stayHere: false });
   assert.deepEqual((await incident(second.id)).dispatches.map((d) => d.teamId), [TEAM2()]);
 
   await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${second.id}/decline`, { teamId: TEAM2() });
@@ -160,9 +160,9 @@ test('oproep naar de dichtstbijzijnde beschikbare eenheid, kopie naar de coördi
   const created = await call(DEMO.postLead, 'POST', '/api/incidents', request());
   assert.equal(created.statusCode, 201, created.body);
   const inc = created.json() as LiveIncident;
-  assert.equal(inc.status, 'verstuurd');
-  assert.equal(inc.stage, 'dichtstbij');
-  assert.deepEqual(inc.dispatches.map((d) => [d.teamId, d.reason]), [[TEAM2(), 'dichtstbij']], 'Team 2 staat bij Kruising 4, vlak bij de waterpost');
+  assert.equal(inc.status, 'sent');
+  assert.equal(inc.stage, 'nearest');
+  assert.deepEqual(inc.dispatches.map((d) => [d.teamId, d.reason]), [[TEAM2(), 'nearest']], 'Team 2 staat bij Kruising 4, vlak bij de waterpost');
   assert.equal(inc.escalatesAt, '2026-12-31T11:02:30.000Z');
   assert.equal(pending()[0]?.ms, 30_000);
 
@@ -175,7 +175,7 @@ test('oproep naar de dichtstbijzijnde beschikbare eenheid, kopie naar de coördi
 
   const state = await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM2() });
   const accepted = state.incidents.find((i) => i.id === inc.id)!;
-  assert.equal(accepted.status, 'geaccepteerd');
+  assert.equal(accepted.status, 'accepted');
   assert.equal(accepted.teamId, TEAM2());
   assert.equal(accepted.acceptedBy?.name, 'Mo Mobiel');
   assert.equal(state.teams.find((u) => u.id === TEAM2())?.incidentId, inc.id, 'Team 2 is bezet');
@@ -192,7 +192,7 @@ test('geen reactie binnen de escalatietijd: naar alle beschikbare eenheden; de e
   const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   runNextTimer();
   let current = await incident(inc.id);
-  assert.equal(current.stage, 'alle');
+  assert.equal(current.stage, 'all');
   assert.equal(current.escalatesAt, null);
   assert.deepEqual(current.dispatches.map((d) => d.teamId).sort(), [TEAM1(), TEAM2()].sort());
   assert.match(pushesTo(DEMO.ehbo)[0]!.payload.title, /alle eenheden/);
@@ -204,7 +204,7 @@ test('geen reactie binnen de escalatietijd: naar alle beschikbare eenheden; de e
   const released = pushesTo(DEMO.mobileEhbo).at(-1)!.payload;
   assert.equal(released.title, 'Oproep is al aangenomen');
   assert.equal(released.tag, `oproep-${inc.id}`, 'vervangt het alarm');
-  assert.ok(current.events.some((e) => e.type === 'geescaleerd'));
+  assert.ok(current.events.some((e) => e.type === 'escalated'));
 });
 
 test('"Kan niet" gaat meteen naar alle eenheden', async () => {
@@ -212,7 +212,7 @@ test('"Kan niet" gaat meteen naar alle eenheden', async () => {
   const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   const state = await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/decline`, { teamId: TEAM2() });
   const current = state.incidents.find((i) => i.id === inc.id)!;
-  assert.equal(current.stage, 'alle');
+  assert.equal(current.stage, 'all');
   assert.ok(current.dispatches.find((d) => d.teamId === TEAM2())?.declinedAt);
   assert.equal(pushesTo(DEMO.ehbo).length, 1, 'Team 1 krijgt de oproep');
   assert.equal(pushesTo(DEMO.mobileEhbo).length, 1, 'wie weigerde, krijgt niet opnieuw een alarm');
@@ -220,9 +220,9 @@ test('"Kan niet" gaat meteen naar alle eenheden', async () => {
 
 test('niet aanspreekbaar: ook de dichtstbijzijnde AED-eenheid, die blijft opgeroepen tot er een AED komt', async () => {
   await onDuty();
-  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request({ responsive: 'nee' }));
+  const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request({ responsive: 'no' }));
   assert.equal(inc.aed, true);
-  assert.deepEqual(inc.dispatches.map((d) => [d.teamId, d.reason]), [[TEAM2(), 'dichtstbij'], [TEAM1(), 'aed']]);
+  assert.deepEqual(inc.dispatches.map((d) => [d.teamId, d.reason]), [[TEAM2(), 'nearest'], [TEAM1(), 'aed']]);
   assert.match(pushesTo(DEMO.ehbo)[0]!.payload.body, /^AED meenemen/);
   assert.doesNotMatch(pushesTo(DEMO.mobileEhbo)[0]!.payload.body, /AED/, 'Team 2 heeft geen AED');
 
@@ -239,7 +239,7 @@ test('aanvullen met "niet aanspreekbaar" roept alsnog de AED-eenheid op', async 
   const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM2() });
   pushes.length = 0;
-  const state = await ok(DEMO.postLead, 'PUT', `/api/incidents/${inc.id}`, { what: 'onwel', persons: '1', responsive: 'nee', note: 'Reageert niet meer' });
+  const state = await ok(DEMO.postLead, 'PUT', `/api/incidents/${inc.id}`, { what: 'unwell', persons: '1', responsive: 'no', note: 'Reageert niet meer' });
   const current = state.incidents.find((i) => i.id === inc.id)!;
   assert.equal(current.aed, true);
   assert.equal(current.note, 'Reageert niet meer');
@@ -252,7 +252,7 @@ test('aanvullen met "niet aanspreekbaar" roept alsnog de AED-eenheid op', async 
   assert.ok(current.events.some((e) => e.text === 'Aangevuld: niet aanspreekbaar, notitie toegevoegd'));
 
   pushes.length = 0;
-  const again = await ok(DEMO.postLead, 'PUT', `/api/incidents/${inc.id}`, { what: 'onwel', persons: '1', responsive: 'nee', note: 'Reageert niet meer ' });
+  const again = await ok(DEMO.postLead, 'PUT', `/api/incidents/${inc.id}`, { what: 'unwell', persons: '1', responsive: 'no', note: 'Reageert niet meer ' });
   assert.equal(pushes.length, 0, 'nothing changed: no alert');
   assert.equal(again.incidents.find((i) => i.id === inc.id)!.events.length, current.events.length);
 });
@@ -268,12 +268,12 @@ test('ter plaatse en afronden; een vaste eenheid die blijft, telt vanaf die post
   await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM1() });
   clock = new Date(clock.getTime() + 4 * 60_000);
   let state = await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/on-site`);
-  assert.equal(state.incidents[0]?.status, 'ter_plaatse');
+  assert.equal(state.incidents[0]?.status, 'on_site');
   assert.equal(state.incidents[0]?.onSiteAt, '2026-12-31T11:06:00.000Z');
 
-  state = await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/close`, { outcome: 'geholpen', persons: '1', note: 'Gekoeld en drinken gegeven', stayHere: true });
-  assert.equal(state.incidents[0]?.status, 'afgerond');
-  assert.equal(state.incidents[0]?.outcome, 'geholpen');
+  state = await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/close`, { outcome: 'treated', persons: '1', note: 'Gekoeld en drinken gegeven', stayHere: true });
+  assert.equal(state.incidents[0]?.status, 'closed');
+  assert.equal(state.incidents[0]?.outcome, 'treated');
   const firstTeam = state.teams.find((u) => u.id === TEAM1())!;
   assert.deepEqual([firstTeam.incidentId, firstTeam.stayPostId, firstTeam.availability], [null, WATER(), 'available'], 'weer vrij, bij de waterpost');
 
@@ -289,7 +289,7 @@ test('melding intrekken: opgeroepen eenheden horen het, de escalatie stopt', asy
   const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   assert.equal((await call(DEMO.postMember, 'POST', `/api/incidents/${inc.id}/withdraw`)).statusCode, 403);
   const state = await ok(DEMO.postLead, 'POST', `/api/incidents/${inc.id}/withdraw`);
-  assert.equal(state.incidents[0]?.status, 'ingetrokken');
+  assert.equal(state.incidents[0]?.status, 'withdrawn');
   assert.equal(pending().length, 0);
   assert.equal(pushesTo(DEMO.mobileEhbo).at(-1)!.payload.title, 'Melding ingetrokken');
   assert.equal((await call(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: TEAM2() })).statusCode, 409);
@@ -309,7 +309,7 @@ test('dezelfde melding twee keer versturen (zonder bereik bewaard) telt één ke
 test('geen beschikbare eenheid: meteen alle eenheden, de coördinator krijgt een alarm; daarna blijft het herhalen', async () => {
   await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: true });
   const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
-  assert.equal(inc.stage, 'alle');
+  assert.equal(inc.stage, 'all');
   assert.equal(inc.dispatches.length, 0);
   const alarm = pushesTo(DEMO.coordinator).at(-1)!.payload;
   assert.equal(alarm.urgent, true);
@@ -332,7 +332,7 @@ test('de coördinator wijst een eenheid toe', async () => {
   const state = await ok(DEMO.coordinator, 'POST', `/api/incidents/${inc.id}/assign`, { teamId: TEAM1() });
   const current = state.incidents[0]!;
   assert.equal(current.teamId, TEAM1());
-  assert.equal(current.dispatches.find((d) => d.teamId === TEAM1())?.reason, 'handmatig');
+  assert.equal(current.dispatches.find((d) => d.teamId === TEAM1())?.reason, 'manual');
   assert.match(pushesTo(DEMO.ehbo).at(-1)!.payload.title, /^Ingezet/);
   assert.equal(pushesTo(DEMO.mobileEhbo).at(-1)!.payload.title, 'Oproep is al aangenomen');
 });
@@ -347,7 +347,7 @@ test('na een herstart gaat de escalatie verder', async () => {
   await app.ready();
   assert.equal(pending()[0]?.ms, 20_000, 'de resterende tijd');
   runNextTimer();
-  assert.equal((await incident(inc.id)).stage, 'alle');
+  assert.equal((await incident(inc.id)).stage, 'all');
 });
 
 test('live stand via SSE: direct de stand, en elke wijziging', async () => {

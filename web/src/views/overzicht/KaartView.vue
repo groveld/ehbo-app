@@ -41,7 +41,7 @@ const chips = computed(() => {
 /** Posten met een open oproep rood en bovenaan. */
 const alertIds = computed(() => [...new Set(live.openIncidents.filter((i) => !i.offPost).map((i) => i.postId))]);
 /** Posts with a request that's still open. */
-const taskIds = computed(() => [...new Set(live.requests.filter((r) => r.status === 'aangevraagd' || r.status === 'opgepakt').map((r) => r.postId))]);
+const taskIds = computed(() => [...new Set(live.requests.filter((r) => r.status === 'sent' || r.status === 'accepted').map((r) => r.postId))]);
 /** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
 const mobile = computed(() => mobileTeams(store.pkg, live.teams, live.serverNow));
 /** Only locations with people can be open or closed (#69). */
@@ -114,7 +114,7 @@ const counters = computed(() => {
     { label: 'Locaties', value: `${mannedPosts.value.length - closedIds.value.length}/${mannedPosts.value.length}`, full: 'Locaties open' },
     { label: 'EHBO', value: `${free.length}/${pkg.teams.length}`, full: 'EHBO beschikbaar' },
     { label: 'Oproepen', value: String(live.openIncidents.length), full: 'Open oproepen' },
-    { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'aangevraagd').length), full: 'Aanvragen nog niet opgepakt' },
+    { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'sent').length), full: 'Aanvragen nog niet opgepakt' },
   ];
 });
 /** What the map shows. Out of view none of this is read, so nothing live reaches the map; opening the tab brings it up to date in one go. */

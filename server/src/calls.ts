@@ -172,8 +172,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** Eenheden die nu met een oproep bezig zijn: team id → incident id. */
   function busyTeams() {
-    return new Map(all(`SELECT d.team_id, d.incident_id FROM incident_dispatches d JOIN incidents i ON i.id = d.incident_id
-                        WHERE d.accepted_at IS NOT NULL AND i.status IN ('geaccepteerd', 'ter_plaatse')`)
+    return new Map(all(`SELECT d.team_id, d.help_request_id AS incident_id FROM dispatches d JOIN incidents i ON i.id = d.help_request_id
+                        WHERE d.accepted_at IS NOT NULL AND i.status IN ('accepted', 'on_site')`)
       .map((r) => [r.team_id as number, r.incident_id as number]));
   }
 
@@ -230,7 +230,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   const followers = (row: Row) => new Set([...postPhones(row.post_id as number), row.reported_by as string]);
 
   function dispatchesOf(id: number): Dispatch[] {
-    return all('SELECT * FROM incident_dispatches WHERE incident_id = ? ORDER BY at, rowid', id).map((d) => ({
+    return all('SELECT * FROM dispatches WHERE help_request_id = ? ORDER BY at, rowid', id).map((d) => ({
       teamId: d.team_id as number,
       at: d.at as string,
       reason: d.reason as DispatchReason,
@@ -292,7 +292,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function state(): LiveState {
     const eventsById = new Map<number, IncidentEvent[]>();
-    for (const e of all('SELECT incident_id, at, type, team_id, text FROM incident_events ORDER BY id')) {
+    for (const e of all('SELECT help_request_id AS incident_id, at, type, team_id, text FROM help_request_events ORDER BY id')) {
       const list = eventsById.get(e.incident_id as number) ?? [];
       list.push({ at: e.at as string, type: e.type as IncidentEventType, teamId: e.team_id as number | null, text: e.text as string });
       eventsById.set(e.incident_id as number, list);
@@ -319,8 +319,28 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   // ---- Bouwstenen ----
 
+  /** An incident is a help request of the first-aid type (#86); what only incidents have is in dispatch_details. */
+  const SHARED = new Set(['client_id', 'post_id', 'reported_by', 'status', 'is_test', 'reported_at', 'accepted_by', 'accepted_at', 'closed_at',
+    'place_name', 'place_lat', 'place_lng', 'place_accuracy_m']);
+  const split = (values: Row): [string[], string[]] => {
+    const keys = Object.keys(values);
+    return [keys.filter((k) => SHARED.has(k)), keys.filter((k) => !SHARED.has(k))];
+  };
+  function insertIncident(values: Row) {
+    const [shared, details] = split(values);
+    const type = get("SELECT id FROM help_request_types WHERE key = 'first_aid'")!.id as number;
+    const id = Number(run(`INSERT INTO help_requests (type_id, ${shared.join(', ')}) VALUES (?, ${shared.map(() => '?').join(', ')})`, type, ...shared.map((k) => values[k]!)).lastInsertRowid);
+    run(`INSERT INTO dispatch_details (help_request_id, ${details.join(', ')}) VALUES (?, ${details.map(() => '?').join(', ')})`, id, ...details.map((k) => values[k]!));
+    return id;
+  }
+  function setIncident(id: number, values: Row) {
+    const [shared, details] = split(values);
+    if (shared.length) run(`UPDATE help_requests SET ${shared.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...shared.map((k) => values[k]!), id);
+    if (details.length) run(`UPDATE dispatch_details SET ${details.map((k) => `${k} = ?`).join(', ')} WHERE help_request_id = ?`, ...details.map((k) => values[k]!), id);
+  }
+
   const log = (incidentId: number, type: IncidentEventType, text: string, teamId: number | null = null) =>
-    run('INSERT INTO incident_events (incident_id, at, type, team_id, text) VALUES (?, ?, ?, ?, ?)', incidentId, stamp(), type, teamId, text);
+    run('INSERT INTO help_request_events (help_request_id, at, type, team_id, text) VALUES (?, ?, ?, ?, ?)', incidentId, stamp(), type, teamId, text);
 
   function summary(row: Row) {
     const what = row.what ? INCIDENT_WHAT[row.what as keyof typeof INCIDENT_WHAT] : null;
@@ -345,8 +365,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   }
 
   function addDispatch(incidentId: number, teamId: number, reason: DispatchReason, km: number | null) {
-    run(`INSERT INTO incident_dispatches (incident_id, team_id, at, reason, distance_km) VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(incident_id, team_id) DO NOTHING`, incidentId, teamId, iso(), reason, km);
+    run(`INSERT INTO dispatches (help_request_id, team_id, at, reason, distance_km) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(help_request_id, team_id) DO NOTHING`, incidentId, teamId, iso(), reason, km);
   }
 
   /** Alarm naar eenheden (alle leden), met de afstand per eenheid. */
@@ -378,11 +398,11 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function escalate(id: number, reason: string) {
     const row = incidentRow(id);
-    if (row.status !== 'verstuurd') return;
+    if (row.status !== 'sent') return;
     db.transaction(() => {
-      run("UPDATE incidents SET stage = 'alle', escalates_at = NULL WHERE id = ?", id);
-      for (const { team, km } of freeTeams(targetOf(row))) addDispatch(id, team.id, 'alle', km);
-      log(id, 'geescaleerd', `${reason} → naar alle beschikbare eenheden`);
+      setIncident(id, { stage: 'all', escalates_at: null });
+      for (const { team, km } of freeTeams(targetOf(row))) addDispatch(id, team.id, 'all', km);
+      log(id, 'escalated', `${reason} → naar alle beschikbare eenheden`);
     });
     const updated = incidentRow(id);
     const targets = invited(id);
@@ -397,10 +417,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   /** Nog niemand aangenomen: alarm herhalen bij alle eenheden (ook wie inmiddels vrij is gekomen). */
   function repeat(id: number, count: number) {
     const row = incidentRow(id);
-    if (row.status !== 'verstuurd') return;
+    if (row.status !== 'sent') return;
     db.transaction(() => {
-      for (const { team, km } of freeTeams(targetOf(row))) addDispatch(id, team.id, 'alle', km);
-      log(id, 'herhaald', `Nog niemand heeft aangenomen; alarm opnieuw (${count})`);
+      for (const { team, km } of freeTeams(targetOf(row))) addDispatch(id, team.id, 'all', km);
+      log(id, 'repeated', `Nog niemand heeft aangenomen; alarm opnieuw (${count})`);
     });
     alarmTeams(row, invited(id), 'EHBO-oproep · nog niemand');
     // Bij de eerste herhaling (dus na twee keer de escalatietijd) belt de coördinator zelf.
@@ -414,7 +434,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
    * A call that another available team still has stays with that team, and goes to everyone with the escalation as usual.
    */
   function offerOpenCalls(teamIds: number[]) {
-    for (const row of all("SELECT * FROM incidents WHERE status = 'verstuurd' ORDER BY id")) {
+    for (const row of all("SELECT * FROM incidents WHERE status = 'sent' ORDER BY id")) {
       const id = row.id as number;
       const free = freeTeams(targetOf(row));
       const pending = invited(id);
@@ -423,10 +443,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       if (!fresh.length) continue;
       db.transaction(() => {
         for (const { team, km } of fresh) {
-          addDispatch(id, team.id, 'alle', km);
+          addDispatch(id, team.id, 'all', km);
           // Who said "kan niet" and is available now, gets the question again.
-          run('UPDATE incident_dispatches SET declined_at = NULL WHERE incident_id = ? AND team_id = ?', id, team.id);
-          log(id, 'verstuurd', `Naar ${team.name} gestuurd: nu beschikbaar`, team.id);
+          run('UPDATE dispatches SET declined_at = NULL WHERE help_request_id = ? AND team_id = ?', id, team.id);
+          log(id, 'sent', `Naar ${team.name} gestuurd: nu beschikbaar`, team.id);
         }
       });
       alarmTeams(row, fresh.map((c) => c.team.id), 'EHBO-oproep');
@@ -480,7 +500,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     // Een melding die zonder bereik is bewaard, houdt het moment van versturen; nooit in de toekomst of meer dan een uur terug.
     const reported = body.reportedAt ? new Date(body.reportedAt) : null;
     const reportedAt = reported && reported <= now() && now().getTime() - reported.getTime() < 3600_000 ? reported.toISOString() : sentAt;
-    const aed = body.responsive === 'nee';
+    const aed = body.responsive === 'no';
 
     const candidates = freeTeams(offPost ? { lat: position![1], lng: position![0] } : post);
     const first = nearest(candidates);
@@ -488,20 +508,19 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const escalatesAt = first ? new Date(now().getTime() + escalationMs()).toISOString() : null;
 
     const id = db.transaction(() => {
-      const incidentId = Number(run(`
-        INSERT INTO incidents (client_id, post_id, reported_by, what, persons, responsive, note, aed, status, stage, reported_at, sent_at, escalates_at, is_test,
-                               place_name, place_lat, place_lng, place_accuracy_m)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'verstuurd', 'dichtstbij', ?, ?, ?, ?, ?, ?, ?, ?)`,
-      body.clientId, post.id, me.phone, body.what, body.persons, body.responsive, body.note?.trim() || null, aed ? 1 : 0, reportedAt, sentAt, escalatesAt,
-      db.testMode() ? 1 : 0, offPost ? place.name : null, offPost ? position![1] : null, offPost ? position![0] : null,
-      place ? body.accuracyM ?? null : null).lastInsertRowid);
-      log(incidentId, 'gemeld', body.postId === null ? `Gemeld door ${personName(me.phone)} · ${offPost ? place.name : post.name}` : `Gemeld door ${post.name}`);
+      const incidentId = insertIncident({
+        client_id: body.clientId, post_id: post.id, reported_by: me.phone, what: body.what, persons: body.persons, responsive: body.responsive,
+        note: body.note?.trim() || null, aed: aed ? 1 : 0, status: 'sent', stage: 'nearest', reported_at: reportedAt, sent_at: sentAt, escalates_at: escalatesAt,
+        is_test: db.testMode() ? 1 : 0, place_name: offPost ? place.name : null, place_lat: offPost ? position![1] : null, place_lng: offPost ? position![0] : null,
+        place_accuracy_m: place ? body.accuracyM ?? null : null,
+      });
+      log(incidentId, 'reported', body.postId === null ? `Gemeld door ${personName(me.phone)} · ${offPost ? place.name : post.name}` : `Gemeld door ${post.name}`);
       if (first) {
-        addDispatch(incidentId, first.team.id, 'dichtstbij', first.km);
+        addDispatch(incidentId, first.team.id, 'nearest', first.km);
         if (aedTeam && aedTeam.team.id !== first.team.id) addDispatch(incidentId, aedTeam.team.id, 'aed', aedTeam.km);
         const names = [`${first.team.name} (dichtstbij)`];
         if (aedTeam && aedTeam.team.id !== first.team.id) names.push(`${aedTeam.team.name} (AED)`);
-        log(incidentId, 'verstuurd', `Naar ${names.join(' en ')} gestuurd + evenementcoördinator`);
+        log(incidentId, 'sent', `Naar ${names.join(' en ')} gestuurd + evenementcoördinator`);
       }
       return incidentId;
     });
@@ -533,19 +552,19 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (!post) throw httpError(404, 'Locatie niet gevonden');
     const offPost = place !== null && !place.atPost;
     const at = stamp();
-    const aed = body.responsive === 'nee';
+    const aed = body.responsive === 'no';
 
     const id = db.transaction(() => {
-      const incidentId = Number(run(`
-        INSERT INTO incidents (client_id, post_id, reported_by, what, persons, responsive, note, aed, status, stage, reported_at, sent_at,
-                               team_id, accepted_by, accepted_at, on_site_at, is_test, self_started, place_name, place_lat, place_lng)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ter_plaatse', 'dichtstbij', ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
-      body.clientId, post.id, me.phone, body.what, body.persons, body.responsive, body.note?.trim() || null, aed ? 1 : 0, at, at,
-      team.id, me.phone, at, at, db.testMode() ? 1 : 0, offPost ? place.name : null, offPost ? position![1] : null, offPost ? position![0] : null).lastInsertRowid);
-      addDispatch(incidentId, team.id, 'handmatig', 0);
-      run('UPDATE incident_dispatches SET accepted_at = ? WHERE incident_id = ? AND team_id = ?', at, incidentId, team.id);
+      const incidentId = insertIncident({
+        client_id: body.clientId, post_id: post.id, reported_by: me.phone, what: body.what, persons: body.persons, responsive: body.responsive,
+        note: body.note?.trim() || null, aed: aed ? 1 : 0, status: 'on_site', stage: 'nearest', reported_at: at, sent_at: at,
+        team_id: team.id, accepted_by: me.phone, accepted_at: at, on_site_at: at, is_test: db.testMode() ? 1 : 0, self_started: 1,
+        place_name: offPost ? place.name : null, place_lat: offPost ? position![1] : null, place_lng: offPost ? position![0] : null,
+      });
+      addDispatch(incidentId, team.id, 'manual', 0);
+      run('UPDATE dispatches SET accepted_at = ? WHERE help_request_id = ? AND team_id = ?', at, incidentId, team.id);
       run("UPDATE teams SET availability = 'available', stay_post_id = NULL WHERE id = ?", team.id);
-      log(incidentId, 'gemeld', `Zelf gestart door ${team.name} · ${offPost ? place.name : post.name}`, team.id);
+      log(incidentId, 'reported', `Zelf gestart door ${team.name} · ${offPost ? place.name : post.name}`, team.id);
       return incidentId;
     });
 
@@ -554,7 +573,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       const aedTeam = nearest(freeTeams(targetOf(row)).filter((c) => c.team.hasAed && c.team.id !== team.id));
       if (aedTeam) {
         addDispatch(id, aedTeam.team.id, 'aed', aedTeam.km);
-        log(id, 'verstuurd', `Naar ${aedTeam.team.name} (AED) gestuurd`, aedTeam.team.id);
+        log(id, 'sent', `Naar ${aedTeam.team.name} (AED) gestuurd`, aedTeam.team.id);
         alarmTeams(row, [aedTeam.team.id], 'EHBO-oproep · AED nodig');
       }
     }
@@ -569,7 +588,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (details.what !== row.what) list.push(details.what ? INCIDENT_WHAT[details.what] : 'Wat er is: weggehaald');
     if (details.persons !== row.persons) list.push(details.persons ? PERSONS_TEXT[details.persons] : 'Aantal personen: weggehaald');
     if (details.responsive !== row.responsive) {
-      list.push(details.responsive === 'nee' ? 'Niet aanspreekbaar' : details.responsive === 'ja' ? 'Aanspreekbaar' : 'Aanspreekbaar: weet niet');
+      list.push(details.responsive === 'no' ? 'Niet aanspreekbaar' : details.responsive === 'yes' ? 'Aanspreekbaar' : 'Aanspreekbaar: weet niet');
     }
     if (note !== row.note) list.push(!row.note ? 'Notitie toegevoegd' : note ? 'Notitie gewijzigd' : 'Notitie weggehaald');
     return list;
@@ -578,16 +597,15 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function update(me: Me, id: number, details: IncidentDetails) {
     const row = incidentRow(id);
     if (!canFollow(me, row)) throw httpError(403, 'Alleen de locatie of wie de melding deed, kan hem aanvullen');
-    if (!['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string)) throw httpError(409, 'Deze melding is al afgesloten');
+    if (!['sent', 'accepted', 'on_site'].includes(row.status as string)) throw httpError(409, 'Deze melding is al afgesloten');
     const note = details.note?.trim() || null;
     const differences = changes(row, details, note);
     // Sent again without a change (say from the queue): nothing to log, and no alert.
     if (!differences.length) return state();
-    const becameAed = row.aed !== 1 && details.responsive === 'nee';
+    const becameAed = row.aed !== 1 && details.responsive === 'no';
     db.transaction(() => {
-      run('UPDATE incidents SET what = ?, persons = ?, responsive = ?, note = ?, aed = ? WHERE id = ?',
-        details.what, details.persons, details.responsive, note, row.aed === 1 || becameAed ? 1 : 0, id);
-      log(id, 'aangevuld', `Aangevuld: ${differences.join(', ').toLowerCase()}`);
+      setIncident(id, { what: details.what, persons: details.persons, responsive: details.responsive, note, aed: row.aed === 1 || becameAed ? 1 : 0 });
+      log(id, 'added', `Aangevuld: ${differences.join(', ').toLowerCase()}`);
     });
     const updated = incidentRow(id);
     // Niet aanspreekbaar geworden: de dichtstbijzijnde beschikbare AED-eenheid alsnog oproepen, als er nog geen AED komt.
@@ -596,7 +614,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       const aedTeam = comingWithAed ? undefined : nearest(freeTeams(targetOf(updated)).filter((c) => c.team.hasAed));
       if (aedTeam) {
         addDispatch(id, aedTeam.team.id, 'aed', aedTeam.km);
-        log(id, 'verstuurd', `Naar ${aedTeam.team.name} (AED) gestuurd`, aedTeam.team.id);
+        log(id, 'sent', `Naar ${aedTeam.team.name} (AED) gestuurd`, aedTeam.team.id);
         alarmTeams(updated, [aedTeam.team.id], 'EHBO-oproep · AED nodig');
       }
     }
@@ -612,8 +630,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   /** Accepteren door een eenheid, of toewijzen door de coördinator (by = null). */
   function take(id: number, team: Team, by: Me, manual: boolean) {
     const row = incidentRow(id);
-    const open = ['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string);
-    if (!open) throw httpError(409, row.status === 'ingetrokken' ? 'De melding is ingetrokken' : 'Deze melding is al afgerond');
+    const open = ['sent', 'accepted', 'on_site'].includes(row.status as string);
+    if (!open) throw httpError(409, row.status === 'withdrawn' ? 'De melding is ingetrokken' : 'Deze melding is al afgerond');
     const busy = busyTeams().get(team.id);
     if (busy !== undefined && busy !== id) throw httpError(409, `${team.name} is al bezig met een andere oproep`);
     const dispatches = dispatchesOf(id);
@@ -622,7 +640,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     // Al aangenomen: alleen nog een eenheid met AED als die nodig is en nog niet komt, of een toewijzing door de coördinator.
     const acceptedTeams = dispatches.filter((d) => d.acceptedAt).map((d) => teamById(d.teamId));
     const aedStillNeeded = row.aed === 1 && team.hasAed && !acceptedTeams.some((u) => u?.hasAed);
-    if (row.status !== 'verstuurd' && !manual && !aedStillNeeded) {
+    if (row.status !== 'sent' && !manual && !aedStillNeeded) {
       throw httpError(409, `Oproep is al aangenomen door ${acceptedTeams[0]?.name ?? 'een andere eenheid'}`);
     }
 
@@ -630,15 +648,14 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const post = posts().get(row.post_id as number)!;
     db.transaction(() => {
       const km = freeTeams(targetOf(row)).find((c) => c.team.id === team.id)?.km ?? null;
-      addDispatch(id, team.id, manual ? 'handmatig' : 'alle', km);
-      run('UPDATE incident_dispatches SET accepted_at = ?, declined_at = NULL WHERE incident_id = ? AND team_id = ?', at, id, team.id);
+      addDispatch(id, team.id, manual ? 'manual' : 'all', km);
+      run('UPDATE dispatches SET accepted_at = ?, declined_at = NULL WHERE help_request_id = ? AND team_id = ?', at, id, team.id);
       // Wie aanneemt, is in dienst; een vaste eenheid gaat na afloop terug naar haar eigen post.
       run("UPDATE teams SET availability = 'available', stay_post_id = NULL WHERE id = ?", team.id);
-      if (row.status === 'verstuurd') {
-        run("UPDATE incidents SET status = 'geaccepteerd', team_id = ?, accepted_by = ?, accepted_at = ?, escalates_at = NULL WHERE id = ?",
-          team.id, manual ? null : by.phone, at, id);
+      if (row.status === 'sent') {
+        setIncident(id, { status: 'accepted', team_id: team.id, accepted_by: manual ? null : by.phone, accepted_at: at, escalates_at: null });
       }
-      log(id, manual ? 'toegewezen' : 'geaccepteerd',
+      log(id, manual ? 'assigned' : 'accepted',
         manual ? `Toegewezen aan ${team.name} door ${personName(by.phone)}` : `Geaccepteerd door ${team.name} (${personName(by.phone)})`, team.id);
     });
     cancelTimer(id);
@@ -674,13 +691,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function decline(me: Me, id: number, teamId: number) {
     const team = requireTeamMember(me, teamId);
     const row = incidentRow(id);
-    if (row.status !== 'verstuurd') return state();
+    if (row.status !== 'sent') return state();
     db.transaction(() => {
-      run(`INSERT INTO incident_dispatches (incident_id, team_id, at, reason, declined_at) VALUES (?, ?, ?, 'alle', ?)
-           ON CONFLICT(incident_id, team_id) DO UPDATE SET declined_at = excluded.declined_at`, id, team.id, stamp(), stamp());
-      log(id, 'geweigerd', `${team.name}: kan niet`, team.id);
+      run(`INSERT INTO dispatches (help_request_id, team_id, at, reason, declined_at) VALUES (?, ?, ?, 'all', ?)
+           ON CONFLICT(help_request_id, team_id) DO UPDATE SET declined_at = excluded.declined_at`, id, team.id, stamp(), stamp());
+      log(id, 'declined', `${team.name}: kan niet`, team.id);
     });
-    if (row.stage === 'dichtstbij') {
+    if (row.stage === 'nearest') {
       cancelTimer(id);
       escalate(id, `${team.name} kan niet`);
     } else {
@@ -692,11 +709,11 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function onSite(me: Me, id: number) {
     const row = incidentRow(id);
     const teamId = acceptedTeamOf(me, id);
-    if (row.status !== 'geaccepteerd' && row.status !== 'ter_plaatse') throw httpError(409, 'Deze melding is niet meer open');
+    if (row.status !== 'accepted' && row.status !== 'on_site') throw httpError(409, 'Deze melding is niet meer open');
     const team = teamById(teamId)!;
     db.transaction(() => {
-      if (row.status === 'geaccepteerd') run("UPDATE incidents SET status = 'ter_plaatse', on_site_at = ? WHERE id = ?", stamp(), id);
-      log(id, 'ter_plaatse', `${team.name} is ter plaatse`, teamId);
+      if (row.status === 'accepted') setIncident(id, { status: 'on_site', on_site_at: stamp() });
+      log(id, 'on_site', `${team.name} is ter plaatse`, teamId);
     });
     copyToCoordinator(incidentRow(id), `${team.name} is ter plaatse.`);
     changed();
@@ -706,17 +723,16 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function close(me: Me, id: number, body: CloseIncident) {
     const row = incidentRow(id);
     const teamId = acceptedTeamOf(me, id);
-    if (row.status !== 'geaccepteerd' && row.status !== 'ter_plaatse') throw httpError(409, 'Deze melding is niet meer open');
+    if (row.status !== 'accepted' && row.status !== 'on_site') throw httpError(409, 'Deze melding is niet meer open');
     const team = teamById(teamId)!;
     db.transaction(() => {
-      run(`UPDATE incidents SET status = 'afgerond', closed_at = ?, outcome = ?, outcome_persons = ?, outcome_note = ?, on_site_at = COALESCE(on_site_at, ?)
-           WHERE id = ?`, stamp(), body.outcome, body.persons, body.note?.trim() || null, stamp(), id);
+      setIncident(id, { status: 'closed', closed_at: stamp(), outcome: body.outcome, outcome_persons: body.persons, outcome_note: body.note?.trim() || null, on_site_at: row.on_site_at ?? stamp() });
       // Alleen een vaste eenheid "blijft hier"; een mobiele eenheid geeft haar positie zelf door.
       const stay = body.stayHere && team.kind === 'fixed' && row.post_id !== team.postId ? (row.post_id as number) : null;
       run('UPDATE teams SET stay_post_id = ? WHERE id = ?', stay, teamId);
       // In dezelfde stap op pauze, zodat er tussendoor geen oproep binnenkomt.
       if (body.pause) run("UPDATE teams SET availability = 'unavailable' WHERE id = ?", teamId);
-      log(id, 'afgerond', `Afgerond door ${team.name}${body.pause ? ', daarna pauze' : ''}`, teamId);
+      log(id, 'closed', `Afgerond door ${team.name}${body.pause ? ', daarna pauze' : ''}`, teamId);
     });
     copyToCoordinator(incidentRow(id), `Afgerond door ${team.name}.`);
     offerOpenCalls([teamId]);
@@ -727,11 +743,11 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function withdraw(me: Me, id: number) {
     const row = incidentRow(id);
     if (!canFollow(me, row)) throw httpError(403, 'Alleen de locatie of wie de melding deed, kan hem intrekken');
-    if (!['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string)) return state();
+    if (!['sent', 'accepted', 'on_site'].includes(row.status as string)) return state();
     const post = posts().get(row.post_id as number)!;
     db.transaction(() => {
-      run("UPDATE incidents SET status = 'ingetrokken', closed_at = ?, escalates_at = NULL WHERE id = ?", stamp(), id);
-      log(id, 'ingetrokken', `Ingetrokken door ${personName(me.phone)}`);
+      setIncident(id, { status: 'withdrawn', closed_at: stamp(), escalates_at: null });
+      log(id, 'withdrawn', `Ingetrokken door ${personName(me.phone)}`);
     });
     cancelTimer(id);
     const reached = dispatchesOf(id).filter((d) => !d.declinedAt).map((d) => d.teamId);
@@ -851,8 +867,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const allTeams = teams();
     const busy = busyTeams();
     const fixedPosts = new Set(allTeams.filter((u) => u.kind === 'fixed').map((u) => u.postId));
-    const inUsePosts = new Set(all(`SELECT post_id FROM incidents WHERE status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse')
-                                    UNION SELECT post_id FROM requests WHERE status IN ('aangevraagd', 'opgepakt')`).map((r) => r.post_id as number));
+    const inUsePosts = new Set(all(`SELECT post_id FROM incidents WHERE status IN ('sent', 'accepted', 'on_site')
+                                    UNION SELECT post_id FROM queue_requests WHERE status IN ('sent', 'accepted')`).map((r) => r.post_id as number));
     const closed: string[] = [];
     let touched = sweepLeft();
 
@@ -954,7 +970,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   /** Everything except what's in the middle of a call: that says so instead. */
   function closeEverything(): ControlResult {
     const busy = busyTeams();
-    const openPosts = new Set(all("SELECT post_id FROM incidents WHERE status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse')").map((r) => r.post_id as number));
+    const openPosts = new Set(all("SELECT post_id FROM incidents WHERE status IN ('sent', 'accepted', 'on_site')").map((r) => r.post_id as number));
     const skipped = [...teams().filter((u) => busy.has(u.id)).map((u) => u.name), ...[...posts().values()].filter((p) => openPosts.has(p.id)).map((p) => p.name)];
     db.transaction(() => {
       for (const post of posts().values()) if (!openPosts.has(post.id)) setPost(post.id, false);
@@ -974,7 +990,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function closeDay(me: Me, finishRequests: () => void) {
     requireLead(me);
-    const open = all("SELECT post_id, reported_at FROM incidents WHERE status IN ('verstuurd', 'geaccepteerd', 'ter_plaatse') ORDER BY id");
+    const open = all("SELECT post_id, reported_at FROM incidents WHERE status IN ('sent', 'accepted', 'on_site') ORDER BY id");
     const postMap = posts();
     if (open.length) {
       throw httpError(409, `Eerst afronden: ${open.map((i) => `${postMap.get(i.post_id as number)?.name}, ${clockText(new Date(i.reported_at as string).getTime())}`).join('; ')}`);
@@ -1085,9 +1101,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** Na een herstart: lopende escalaties en herhalingen opnieuw inplannen. */
   function resume() {
-    for (const row of all("SELECT id, stage, escalates_at FROM incidents WHERE status = 'verstuurd'")) {
+    for (const row of all("SELECT id, stage, escalates_at FROM incidents WHERE status = 'sent'")) {
       const id = row.id as number;
-      if (row.stage === 'dichtstbij' && row.escalates_at) {
+      if (row.stage === 'nearest' && row.escalates_at) {
         setTimer(id, new Date(row.escalates_at as string).getTime() - now().getTime(), () => escalate(id, 'Geen reactie op tijd'));
       } else {
         setTimer(id, escalationMs(), () => repeat(id, 1));

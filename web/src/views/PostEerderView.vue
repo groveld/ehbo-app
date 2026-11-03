@@ -15,13 +15,13 @@ const postId = computed(() => Number(props.id));
 const post = computed(() => store.postById.get(postId.value));
 /** Nieuwste eerst. */
 const history = computed(() => [
-  ...live.incidents.filter((i) => i.postId === postId.value && !i.offPost && (i.status === 'afgerond' || i.status === 'ingetrokken')).map((i) => ({
-    key: `i${i.id}`, at: i.reportedAt, text: `EHBO · ${incidentSummary(i)}`, done: i.status === 'afgerond', state: i.status === 'afgerond' ? 'afgerond' : 'ingetrokken',
+  ...live.incidents.filter((i) => i.postId === postId.value && !i.offPost && (i.status === 'closed' || i.status === 'withdrawn')).map((i) => ({
+    key: `i${i.id}`, at: i.reportedAt, text: `EHBO · ${incidentSummary(i)}`, done: i.status === 'closed', state: i.status === 'closed' ? 'afgerond' : 'ingetrokken',
     to: { name: 'post-melding', params: { postId: postId.value, id: i.id } },
   })),
-  ...live.requests.filter((r) => r.postId === postId.value && (r.status === 'afgehandeld' || r.status === 'ingetrokken')).map((r) => ({
-    key: `r${r.id}`, at: r.createdAt, text: [REQUEST_KINDS[r.kind].label, requestDetailLabel(r.kind, r.detail)].filter(Boolean).join(' · '), done: r.status === 'afgehandeld',
-    state: r.status === 'afgehandeld' ? 'afgehandeld' : 'ingetrokken', to: { name: 'post-aanvraag', params: { postId: postId.value, id: r.id } },
+  ...live.requests.filter((r) => r.postId === postId.value && (r.status === 'closed' || r.status === 'withdrawn')).map((r) => ({
+    key: `r${r.id}`, at: r.createdAt, text: [REQUEST_KINDS[r.kind].label, requestDetailLabel(r.kind, r.detail)].filter(Boolean).join(' · '), done: r.status === 'closed',
+    state: r.status === 'closed' ? 'afgehandeld' : 'ingetrokken', to: { name: 'post-aanvraag', params: { postId: postId.value, id: r.id } },
   })),
 ].sort((a, b) => b.at.localeCompare(a.at)));
 </script>

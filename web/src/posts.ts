@@ -90,7 +90,7 @@ export function mobileTeams(pkg: EventPackage | null, teams: LiveTeam[], now: nu
 export function callLines(pkg: EventPackage | null, teams: LiveTeam[], incidents: LiveIncident[], now: number): [LngLat, LngLat][] {
   if (!pkg) return [];
   return teams.flatMap((u) => {
-    const incident = incidents.find((i) => i.id === u.incidentId && i.status === 'geaccepteerd');
+    const incident = incidents.find((i) => i.id === u.incidentId && i.status === 'accepted');
     if (!incident || incident.post.lat === null || incident.post.lng === null) return [];
     const fresh = u.position && now - new Date(u.position.at).getTime() <= POSITION_MAX_AGE_MS ? u.position : null;
     const home = pkg.posts.find((p) => p.id === pkg.teams.find((x) => x.id === u.id)?.postId);

@@ -11,7 +11,7 @@ export const incidentSummary = (d: IncidentDetails) =>
 export const personsText = (persons: IncidentPersons | null) => (persons ? PERSONS[persons] : null);
 
 /** When the post last added to the incident, or null. */
-export const lastAddition = (incident: LiveIncident) => incident.events.filter((e) => e.type === 'aangevuld').at(-1)?.at ?? null;
+export const lastAddition = (incident: LiveIncident) => incident.events.filter((e) => e.type === 'added').at(-1)?.at ?? null;
 
 export const clock = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }) : '–';
@@ -32,7 +32,7 @@ export const teamOf = (pkg: EventPackage | null, id: number | null) => (id === n
 
 /** De inzetten van een eenheid: afgeronde of ingetrokken oproepen die ze had aangenomen, nieuwste eerst. */
 export const myDeployments = (incidents: LiveIncident[], teamId: number) =>
-  incidents.filter((i) => (i.status === 'afgerond' || i.status === 'ingetrokken') && i.dispatches.some((d) => d.teamId === teamId && d.acceptedAt));
+  incidents.filter((i) => (i.status === 'closed' || i.status === 'withdrawn') && i.dispatches.some((d) => d.teamId === teamId && d.acceptedAt));
 
 /** One step in a log (ActivityLog.vue). */
 export interface LogEntry {
@@ -42,7 +42,7 @@ export interface LogEntry {
   tone?: 'done' | 'warn' | 'stop' | 'waiting';
 }
 
-const EVENT_TONE: Partial<Record<IncidentEventType, LogEntry['tone']>> = { geescaleerd: 'warn', herhaald: 'warn', geweigerd: 'warn', ingetrokken: 'stop' };
+const EVENT_TONE: Partial<Record<IncidentEventType, LogEntry['tone']>> = { escalated: 'warn', repeated: 'warn', declined: 'warn', withdrawn: 'stop' };
 
 export function incidentLog(incident: LiveIncident): LogEntry[] {
   const log = incident.events.map((e): LogEntry => ({ at: e.at, text: e.text, tone: EVENT_TONE[e.type] ?? 'done' }));
@@ -53,8 +53,8 @@ export function incidentLog(incident: LiveIncident): LogEntry[] {
 export function requestLog(request: LiveRequest): LogEntry[] {
   const log: LogEntry[] = [{ at: request.createdAt, text: `${REQUEST_KINDS[request.kind].label} aangevraagd door ${request.postName}` }];
   if (request.pickedAt) log.push({ at: request.pickedAt, text: `Opgepakt door ${request.pickedBy?.name ?? 'de coördinator'}` });
-  if (request.status === 'afgehandeld') log.push({ at: request.doneAt, text: 'Afgehandeld' });
-  else if (request.status === 'ingetrokken') log.push({ at: request.doneAt, text: 'Ingetrokken', tone: 'stop' });
+  if (request.status === 'closed') log.push({ at: request.doneAt, text: 'Afgehandeld' });
+  else if (request.status === 'withdrawn') log.push({ at: request.doneAt, text: 'Ingetrokken', tone: 'stop' });
   else log.push({ at: null, text: request.pickedAt ? 'Nog af te handelen' : 'Wacht in de rij', tone: 'waiting' });
   return log;
 }

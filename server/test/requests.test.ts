@@ -56,16 +56,16 @@ afterEach(async () => {
 });
 
 test('aanvraag van de post komt in de wachtrij van de coördinator, zonder alarm', async () => {
-  const created = await call(DEMO.postLead, 'POST', '/api/requests', water('flink'));
+  const created = await call(DEMO.postLead, 'POST', '/api/requests', water('lots'));
   assert.equal(created.statusCode, 201, created.body);
   const req = created.json() as LiveRequest;
-  assert.deepEqual([req.status, req.kind, req.detail, req.position], ['aangevraagd', 'water', 'flink', 1]);
+  assert.deepEqual([req.status, req.kind, req.detail, req.position], ['sent', 'water', 'lots', 1]);
   const push = pushes.find((p) => p.phones.includes(DEMO.coordinator))!.payload;
   assert.match(push.title, /Water · Waterpost 3/);
   assert.match(push.body, /Flink/);
   assert.ok(!push.urgent, 'geen alarm');
 
-  const second = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/requests', { ...water(), kind: 'vrijwilliger', detail: 'aflossing' });
+  const second = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/requests', { ...water(), kind: 'volunteer', detail: 'relief' });
   assert.equal(second.position, 2, 'plek 2 in de wachtrij');
   const state = await ok(DEMO.coordinator, 'GET', '/api/live/state');
   assert.equal(state.requests.length, 2);
@@ -76,14 +76,14 @@ test('oppakken en afhandelen: alleen de coördinator, de post hoort het', async 
   assert.equal((await call(DEMO.postMember, 'POST', `/api/requests/${req.id}/pick`)).statusCode, 403);
 
   let state = await ok(DEMO.coordinator, 'POST', `/api/requests/${req.id}/pick`);
-  assert.equal(state.requests[0]?.status, 'opgepakt');
+  assert.equal(state.requests[0]?.status, 'accepted');
   assert.equal(state.requests[0]?.pickedBy?.name, 'Cor Coördinator');
   assert.equal(pushes.at(-1)!.payload.title, 'Water wordt geregeld');
   assert.ok(pushes.at(-1)!.phones.includes(DEMO.postLead));
   assert.equal((await call(DEMO.admin, 'POST', `/api/requests/${req.id}/pick`)).statusCode, 409, 'al opgepakt');
 
   state = await ok(DEMO.coordinator, 'POST', `/api/requests/${req.id}/done`);
-  assert.equal(state.requests[0]?.status, 'afgehandeld');
+  assert.equal(state.requests[0]?.status, 'closed');
   assert.equal(state.requests[0]?.position, null);
   assert.equal(pushes.at(-1)!.payload.title, 'Water: afgehandeld');
 });
@@ -93,11 +93,11 @@ test('de post vult aan of trekt in; een dichte post kan niets aanvragen; dubbel 
   const req = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/requests', body);
   assert.equal((await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/requests', body)).id, req.id);
 
-  let state = await ok(DEMO.postLead, 'PUT', `/api/requests/${req.id}`, { detail: 'bijna_op' });
-  assert.equal(state.requests[0]?.detail, 'bijna_op');
-  assert.equal((await call(DEMO.postLead, 'PUT', `/api/requests/${req.id}`, { detail: 'aflossing' })).statusCode, 400, 'hoort bij vrijwilliger');
+  let state = await ok(DEMO.postLead, 'PUT', `/api/requests/${req.id}`, { detail: 'almost_empty' });
+  assert.equal(state.requests[0]?.detail, 'almost_empty');
+  assert.equal((await call(DEMO.postLead, 'PUT', `/api/requests/${req.id}`, { detail: 'relief' })).statusCode, 400, 'hoort bij vrijwilliger');
   state = await ok(DEMO.postLead, 'POST', `/api/requests/${req.id}/withdraw`);
-  assert.equal(state.requests[0]?.status, 'ingetrokken');
+  assert.equal(state.requests[0]?.status, 'withdrawn');
 
   await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: false });
   assert.equal((await call(DEMO.postLead, 'POST', '/api/requests', water())).statusCode, 409);

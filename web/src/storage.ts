@@ -48,6 +48,58 @@ const STORAGE_STEPS: ((read: <T>(key: string) => T | null, write: (key: string, 
       if (value !== null) write(key, rename(value));
     }
   },
+  // 3: one help request with a type (#86): statuses and values in English, and a request's id is 1,000,000 higher.
+  (read, write) => {
+    const STATUS: Record<string, string> = {
+      verstuurd: 'sent', geaccepteerd: 'accepted', ter_plaatse: 'on_site', afgerond: 'closed', ingetrokken: 'withdrawn', aangevraagd: 'sent', opgepakt: 'accepted', afgehandeld: 'closed',
+    };
+    const STAGE: Record<string, string> = { dichtstbij: 'nearest', alle: 'all' };
+    const REASON: Record<string, string> = { dichtstbij: 'nearest', alle: 'all', handmatig: 'manual' };
+    const EVENT: Record<string, string> = {
+      gemeld: 'reported', verstuurd: 'sent', aangevuld: 'added', geweigerd: 'declined', geescaleerd: 'escalated', herhaald: 'repeated',
+      geaccepteerd: 'accepted', toegewezen: 'assigned', ter_plaatse: 'on_site', afgerond: 'closed', ingetrokken: 'withdrawn',
+    };
+    const WHAT: Record<string, string> = { onwel: 'unwell', letsel: 'injury', kramp: 'cramp', onbekend: 'unknown' };
+    const RESPONSIVE: Record<string, string> = { ja: 'yes', nee: 'no', onbekend: 'unknown' };
+    const OUTCOME: Record<string, string> = { geholpen: 'treated', gestopt: 'stopped', doorverwezen: 'referred', geweigerd: 'refused', loos: 'false_alarm' };
+    const KIND: Record<string, string> = { verkeer: 'traffic', vrijwilliger: 'volunteer' };
+    const DETAIL: Record<string, string> = {
+      beetje: 'little', flink: 'lots', bijna_op: 'almost_empty', druk: 'busy', onveilig: 'unsafe', afzetting: 'closure', aflossing: 'relief', uitval: 'dropout',
+    };
+    type Any = Record<string, any>;
+    const map = (table: Record<string, string>, value: unknown) => (typeof value === 'string' ? table[value] ?? value : value);
+    /** A request id on the server; a negative one is a request still waiting on this phone. */
+    const requestId = (id: unknown) => (typeof id === 'number' && id > 0 ? id + 1_000_000 : id);
+    const details = (d: Any | undefined) => (d ? { ...d, what: map(WHAT, d.what), responsive: map(RESPONSIVE, d.responsive) } : d);
+    const incident = (i: Any) => ({
+      ...details(i), status: map(STATUS, i.status), stage: map(STAGE, i.stage), outcome: map(OUTCOME, i.outcome),
+      dispatches: i.dispatches?.map((d: Any) => ({ ...d, reason: map(REASON, d.reason) })),
+      events: i.events?.map((e: Any) => ({ ...e, type: map(EVENT, e.type) })),
+    });
+    const request = (r: Any) => ({ ...r, id: requestId(r.id), kind: map(KIND, r.kind), detail: map(DETAIL, r.detail), status: map(STATUS, r.status) });
+
+    const live = read<Any>('ehbo.live');
+    if (live) write('ehbo.live', { ...live, incidents: live.incidents?.map(incident), requests: live.requests?.map(request) });
+    const queue = read<Any[]>('ehbo.queue');
+    if (queue) {
+      write('ehbo.queue', queue.map((q) => {
+        const a = q.action ?? {};
+        const action = {
+          ...a,
+          ...(a.details ? { details: details(a.details) } : {}),
+          ...(a.body ? { body: { ...details(a.body), outcome: map(OUTCOME, a.body.outcome) } } : {}),
+          ...('requestId' in a ? { requestId: requestId(a.requestId) } : {}),
+          ...(a.kind ? { kind: map(KIND, a.kind) } : {}),
+          ...('detail' in a ? { detail: map(DETAIL, a.detail) } : {}),
+        };
+        return { ...q, action };
+      }));
+    }
+    const outbox = read<Any[]>('ehbo.outbox');
+    if (outbox) write('ehbo.outbox', outbox.map(details));
+    const ids = read<Record<string, number>>('ehbo.requestIds');
+    if (ids) write('ehbo.requestIds', Object.fromEntries(Object.entries(ids).map(([temp, id]) => [temp, requestId(id) as number])));
+  },
 ];
 
 export function upgradeStorage() {

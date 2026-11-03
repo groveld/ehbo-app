@@ -70,6 +70,7 @@ Other values: stage `nearest`, `all` (was `dichtstbij`, `alle`); dispatch reason
 | Aanspreekbaar: Ja, Nee, Weet niet | `yes`, `no`, `unknown` | `ja`, `nee`, `onbekend` |
 | Afloop: Ter plaatse geholpen, Gestopt, Ambulance, Doorverwezen, Hulp geweigerd, Loos alarm | `treated`, `stopped`, `ambulance`, `referred`, `refused`, `false_alarm` | `geholpen`, `gestopt`, `doorverwezen`, `geweigerd`, `loos` |
 | Water, Verkeer, Vrijwilliger | types `water`, `traffic`, `volunteer` | `verkeer`, `vrijwilliger` |
+| Beetje, Flink, Bijna op · Druk, Onveilig, Afzetting nodig · Aflossing nodig, Iemand valt uit, Extra hulp | `little`, `lots`, `almost_empty` · `busy`, `unsafe`, `closure` · `relief`, `dropout`, `extra` | `beetje`, `flink`, `bijna_op`, `druk`, `onveilig`, `afzetting`, `aflossing`, `uitval` |
 
 ## Being there
 

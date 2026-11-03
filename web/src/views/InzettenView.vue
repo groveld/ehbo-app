@@ -30,7 +30,7 @@ const deployments = computed(() => (teamId.value !== null ? myDeployments(live.i
           <span class="title-line">{{ i.post.name }}</span>
           <span class="sub">{{ clock(i.reportedAt) }} · {{ incidentSummary(i) }}</span>
         </span>
-        <span class="tag" :class="{ ok: i.status === 'afgerond' }">{{ i.status === 'afgerond' ? 'afgerond' : 'ingetrokken' }}</span>
+        <span class="tag" :class="{ ok: i.status === 'closed' }">{{ i.status === 'closed' ? 'afgerond' : 'ingetrokken' }}</span>
         <Icon name="forward" :size="16" />
       </RouterLink>
     </div>
