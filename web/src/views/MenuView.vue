@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatPhone } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
+import { confirmDialog } from '../composables/useDialog.ts';
 import { getNavApp, NAV_APPS, setNavApp, type NavApp } from '../navigate.ts';
 import { coordinatorOf } from '../posts.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -25,6 +26,15 @@ function chooseNavApp(app: NavApp) {
 }
 
 async function logout() {
+  // Who is the last one of a post or team closes it: nobody is there any more to get a call.
+  const placed = me.value.assignments.some((a) => a.kind === 'post' || a.kind === 'ehbo');
+  if (placed && !await confirmDialog({
+    title: 'Afmelden?',
+    text: 'Ben jij de laatste van je post of EHBO-eenheid die nog is aangemeld, dan gaat die dicht. Je krijgt op dit toestel geen meldingen meer.',
+    reassure: 'Weer aanmelden kan altijd; zet je post daarna zelf weer open.',
+    confirm: 'Afmelden',
+    tone: 'danger',
+  })) return;
   await session.logout();
   router.replace({ name: 'deelnemer' });
 }

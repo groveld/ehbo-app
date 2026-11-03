@@ -137,7 +137,10 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 8.2 | B | Rechtsboven **Post sluiten** › bevestigen | Post is dicht; op de kaart grijs; de verzoektegels werken niet meer | |
 | 8.3 | A | Kaart › Post 1 › schakelaar **Post open** | De post gaat open; B ziet het direct | |
 | 8.x | B | Only with the event date set to today: give the post an end time 25 minutes ago | Within a few minutes a push; the post shows when it closes and **Open houden**; without a tap it closes after 10 minutes and says so | |
-| 8.y | A | Menu › **Posten en EHBO openen of sluiten**: **Alles openen**, then **Dag sluiten** | Counts are right, everyone gets a push, and all posts are closed | |
+| 8.y | A | Menu › **Posten en EHBO openen of sluiten**: **Alles openen**, then **Dag sluiten** | Counts are right, everyone gets a push, and all posts are closed. What nobody is logged in for is named and stays closed | |
+| 8.z | B, C | Post 1 open. C: Menu › **Afmelden**. Then B: Menu › **Afmelden** | A question first. After C the post stays open; after B it closes and A gets "Gesloten: niemand meer aangemeld". B and C get no pushes any more | |
+| 8.z2 | B | Log in again | Post 1 is closed: open it yourself | |
+| 8.z3 | C | Airplane mode on, **Afmelden**, airplane mode off | The logout still reaches the server: A's overview shows nobody logged in for C | |
 
 ## Blok 9 · Aanvragen (B, A)
 
@@ -170,6 +173,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 11.4 | A | Beheer › **Info & voorwaarden** aanpassen; op een telefoon Menu › Info | De nieuwe tekst | |
 | 11.5 | A | Beheer › Rapport | Geen proefoproepen in de cijfers (testmodus) | |
 | 11.6 | A | Testmodus uit; één echte oproep (blok 4, kort) | Die oproep staat wél in het rapport | |
+| 11.7 | A | Rapport en testmodus › **Iedereen afmelden** › bevestigen | All other phones show the participant page at their next tap, get no pushes, and their posts and teams are closed. A stays logged in | |
 | 11.7 | A | **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en het incident; CSV opent met kolommen en goede tekens (ë, ö) | |
 
 ## Na afloop

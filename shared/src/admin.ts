@@ -135,6 +135,8 @@ export interface AdminState {
   brand: Brand;
   /** Testmodus aan: oproepen en aanvragen zijn proef en komen niet in het rapport. */
   testMode: boolean;
+  /** Devices logged in now, for "Iedereen afmelden". */
+  sessions: number;
   info: InfoSettings;
 }
 

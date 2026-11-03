@@ -1,15 +1,16 @@
 // Evenement (openbaar), aanmelden, afmelden en wie ben ik.
 import type { FastifyInstance } from 'fastify';
 import { DEFAULT_INFO, normalizePhone, type ApiError, type InfoSection, type LoginRequest, type LoginUnknown, type Me, type PublicEvent } from '@ehbo/shared';
-import { SESSION_COOKIE, hashSessionToken, newSessionToken, requireMe, sessionExpiry, sqliteTime } from '../auth.ts';
+import { SESSION_COOKIE, hashSessionToken, newSessionToken, requireMe, sessionExpiry, sessionsEnded, sqliteTime } from '../auth.ts';
 import { getBrand, getStyle } from '../brand.ts';
+import type { Calls } from '../calls.ts';
 import type { EventDb } from '../event-db.ts';
 import { resolveMe } from '../roles.ts';
 
 const LOGIN_LIMIT = 10;
 const LOGIN_WINDOW_MS = 60_000;
 
-export async function sessionRoutes(app: FastifyInstance, { db }: { db: EventDb }) {
+export async function sessionRoutes(app: FastifyInstance, { db, calls }: { db: EventDb; calls: Calls }) {
   // Mislukte pogingen afremmen per IP-adres, zodat niemand de lijst met nummers kan aflopen.
   // Gelukte aanmeldingen tellen niet mee: bij een briefing zitten twintig mensen achter één wifi-adres.
   const failures = new Map<string, number[]>();
@@ -58,8 +59,10 @@ export async function sessionRoutes(app: FastifyInstance, { db }: { db: EventDb 
     }
 
     if (request.sessionHash) db.deleteSession(request.sessionHash);
+    // The first one in for a post or team finds it closed: opening it means "I'm here".
+    calls.arrive(phone);
     const token = newSessionToken();
-    const expires = sessionExpiry(db.getEvent().end_date);
+    const expires = sessionExpiry(db.getEvent().end_date, new Date(), db.testMode());
     db.createSession(hashSessionToken(token), phone, userAgent, sqliteTime(expires));
     db.logLogin(phone, userAgent, 'ok');
     request.log.info({ phone: `…${phone.slice(-4)}` }, 'aangemeld');
@@ -76,8 +79,15 @@ export async function sessionRoutes(app: FastifyInstance, { db }: { db: EventDb 
 
   app.get('/api/me', { preHandler: requireMe }, async (request) => request.me!);
 
-  app.delete('/api/session', async (request, reply) => {
-    if (request.sessionHash) db.deleteSession(request.sessionHash);
+  // The phone sends its push endpoint along: a logged-out phone gets no calls, also when the same person is still logged in elsewhere.
+  app.delete<{ Body: { endpoint?: unknown } | undefined }>('/api/session', async (request, reply) => {
+    const me = request.me;
+    if (me && request.sessionHash) {
+      const endpoint = request.body?.endpoint;
+      if (typeof endpoint === 'string' && db.getSubscription(endpoint)?.phone === me.phone) db.deleteSubscription(endpoint);
+      db.deleteSession(request.sessionHash);
+      sessionsEnded(db, calls, [me.phone]);
+    }
     reply.clearCookie(SESSION_COOKIE, { path: '/' });
     return reply.code(204).send();
   });
