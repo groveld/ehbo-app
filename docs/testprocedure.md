@@ -78,7 +78,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 3.2 | A–E | Kaart, Contacten, een postpagina openen | Kaart met posten en parcours; contacten en postgegevens staan er | |
 | 3.3 | A–E | Op een contact **bellen**; op een post **Navigeer** | De telefoon-app en de navigatie-app openen | |
 | 3.4 | A–E | Vliegtuigmodus uit | Na enkele seconden weer live (bijv. een open melding verschijnt) | |
-| 3.5 | E | Accept a call, flight mode on, **Ik ben ter plaatse**, then **Afronden & weer beschikbaar** | Everything works at once; a pill **Offline** on every screen; the EHBO screen is green again | |
+| 3.5 | E | Accept a call, flight mode on, **Ik ben ter plaatse**, then **Afronden & beschikbaar** | Everything works at once; a pill **Offline** on every screen; the EHBO screen is green again | |
 | 3.6 | B | Flight mode on, tap **Water** | The request opens as normal, with a pill **Offline** | |
 | 3.7 | E, B | Close the app, open it again, flight mode off | Nothing is lost: within seconds the pill is gone, the call is closed with the times of step 3.5, and the coordinator sees the water request | |
 | 3.8 | A–E | Weak signal (a basement, a lift): close and open the app | The app opens at once, no white or black wait | |
@@ -99,7 +99,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 4.8c | B | Send the same addition again without changing anything | E gets nothing | |
 | 4.8d | E | Leave the phone on the en route screen for 5 minutes (in the car holder) | The screen stays on. Menu › **Scherm aan houden** off: it goes off as usual | |
 | 4.9 | E | Terug naar de app › **Ik ben ter plaatse** | B ziet dat de EHBO er is | |
-| 4.10 | E | **Incident afronden** › afloop kiezen › **Afronden & weer beschikbaar** | E staat op Beschikbaar; de oproep staat onder *Vandaag* | |
+| 4.10 | E | **Incident afronden** › afloop kiezen › **Afronden & beschikbaar** | E staat op Beschikbaar; de oproep staat onder *Vandaag* | |
 | 4.11 | A | Meldingen | De oproep staat onder *Afgerond* | |
 
 ## Blok 5 · Escalatie en "kan niet" (B, D, E, A)
