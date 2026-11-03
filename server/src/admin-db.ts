@@ -17,7 +17,7 @@ import type {
   RunData,
   UnitData,
 } from '@ehbo/shared';
-import { mainFunction } from '@ehbo/shared';
+import { isManned, mainFunction } from '@ehbo/shared';
 import { getBrand, getStyle, saveStyle } from './brand.ts';
 import type { EventDb } from './event-db.ts';
 import { recomputePassages, type Track } from './gpx.ts';
@@ -61,8 +61,8 @@ export function adminDb(events: EventDb) {
       gpx: r.track_json ? { filename: (r.gpx_filename as string) ?? 'parcours.gpx', points: r.track_points as number, km: r.track_km as number } : null,
     }));
 
-    const postTypes: PostTypeInfo[] = all('SELECT id, key, name, letter, color FROM post_types ORDER BY sort, id').map((t) => ({
-      id: t.id as number, key: t.key as string | null, name: t.name as string, letter: t.letter as string, color: t.color as string,
+    const postTypes: PostTypeInfo[] = all('SELECT id, key, name, letter, color, manned FROM post_types ORDER BY sort, id').map((t) => ({
+      id: t.id as number, key: t.key as string | null, name: t.name as string, letter: t.letter as string, color: t.color as string, manned: t.manned === 1,
     }));
 
     const contactsByPost = new Map<number, PostData['contacts']>();
@@ -89,6 +89,7 @@ export function adminDb(events: EventDb) {
       id: p.id as number,
       typeId: p.type_id as number,
       functionIds: functionsByPost.get(p.id as number) ?? [p.type_id as number],
+      runId: p.run_id as number | null,
       name: p.name as string,
       km: p.km as number | null,
       passages: passagesByPost.get(p.id as number) ?? [],
@@ -175,22 +176,26 @@ export function adminDb(events: EventDb) {
     if (id !== null && !exists('posts', id)) return null;
     return events.transaction(() => {
       // The main function goes first, so lists and the package can take the first one.
-      const types = all('SELECT id, key FROM post_types').map((t) => ({ id: t.id as number, key: t.key as string | null }));
+      const types = all('SELECT id, key, manned FROM post_types').map((t) => ({ id: t.id as number, key: t.key as string | null, manned: t.manned === 1 }));
       const main = mainFunction(p.functionIds, types);
       const functionIds = [main, ...p.functionIds.filter((id) => id !== main)];
-      const values = [main, p.name.trim(), p.lat, p.lng, p.accuracyM, p.address?.trim() || null, p.accessRoute?.trim() || null, p.timeFrom, p.timeTo] as const;
+      // Nobody at an AED or a turnaround (#69): no people and no times. Only a turnaround has a run.
+      const manned = isManned(p, types);
+      const turnaround = p.functionIds.some((id) => types.find((t) => t.id === id)?.key === 'keerpunt');
+      const values = [main, p.name.trim(), p.lat, p.lng, p.accuracyM, p.address?.trim() || null, p.accessRoute?.trim() || null,
+        manned ? p.timeFrom : null, manned ? p.timeTo : null, turnaround ? p.runId : null] as const;
       let postId = id;
       if (postId === null) {
-        postId = Number(run(`INSERT INTO posts (type_id, name, lat, lng, accuracy_m, address, access_route, time_from, time_to)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, ...values).lastInsertRowid);
+        postId = Number(run(`INSERT INTO posts (type_id, name, lat, lng, accuracy_m, address, access_route, time_from, time_to, run_id)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, ...values).lastInsertRowid);
       } else {
-        run(`UPDATE posts SET type_id = ?, name = ?, lat = ?, lng = ?, accuracy_m = ?, address = ?, access_route = ?, time_from = ?, time_to = ?
+        run(`UPDATE posts SET type_id = ?, name = ?, lat = ?, lng = ?, accuracy_m = ?, address = ?, access_route = ?, time_from = ?, time_to = ?, run_id = ?
              WHERE id = ?`, ...values, postId);
         run('DELETE FROM post_contacts WHERE post_id = ?', postId);
         run('DELETE FROM post_functions WHERE post_id = ?', postId);
       }
       functionIds.forEach((typeId, i) => run('INSERT INTO post_functions (post_id, type_id, sort) VALUES (?, ?, ?)', postId, typeId, i));
-      for (const c of p.contacts) {
+      for (const c of manned ? p.contacts : []) {
         upsertPerson(c.phone, c.name);
         run('INSERT INTO post_contacts (post_id, phone, role, time_from, time_to) VALUES (?, ?, ?, ?, ?)', postId, c.phone, c.role, c.timeFrom, c.timeTo);
       }
@@ -257,6 +262,7 @@ export function adminDb(events: EventDb) {
     savePost,
     deletePost: (id: number) => run('DELETE FROM posts WHERE id = ?', id).changes > 0,
     postTypeExists: (id: number) => exists('post_types', id),
+    runExists: (id: number) => exists('runs', id),
     postExists: (id: number) => exists('posts', id),
     /** The report needs them: a post with incidents or requests can't be deleted. */
     postHasHistory: (id: number) => db.prepare('SELECT 1 FROM incidents WHERE post_id = ? UNION SELECT 1 FROM requests WHERE post_id = ?').get(id, id) !== undefined,

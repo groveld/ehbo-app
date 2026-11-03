@@ -46,6 +46,8 @@ export interface PostTypeInfo {
   name: string;
   letter: string;
   color: string;
+  /** People are there (#69). An AED, toilets or a turnaround aren't. */
+  manned: boolean;
 }
 
 /** Bij opslaan mag het nummer in elke schrijfwijze; de server maakt er E.164 van. */
@@ -66,6 +68,8 @@ export interface PostPassages {
 export interface PostData {
   /** What's at this location (#83), at least one. The main function follows from MARKER_ORDER. */
   functionIds: number[];
+  /** A turnaround belongs to one run (#69); null otherwise. */
+  runId: number | null;
   name: string;
   lat: number | null;
   lng: number | null;

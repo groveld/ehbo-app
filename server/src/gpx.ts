@@ -128,6 +128,9 @@ const SYMBOLS: Record<string, string> = {
   ehbo: 'First Aid',
   stempel: 'Flag, Green',
   verkeer: 'Danger Area',
+  aed: 'Medical Facility',
+  toilet: 'Restroom',
+  keerpunt: 'Flag, Red',
 };
 
 const xml = (text: string) => text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);

@@ -26,7 +26,7 @@ export function travelMinutes(km: number | null, unit: PackageUnit | undefined) 
 
 /** The post of an incident; until the new event package has arrived, what the incident itself says about it. */
 export const postOf = (posts: Map<number, PackagePost>, incident: LiveIncident): PackagePost =>
-  (incident.offPost ? undefined : posts.get(incident.postId)) ?? { id: incident.postId, isOpen: true, timeFrom: null, timeTo: null, passages: [], functionIds: [incident.post.typeId], ...incident.post };
+  (incident.offPost ? undefined : posts.get(incident.postId)) ?? { id: incident.postId, isOpen: true, timeFrom: null, timeTo: null, passages: [], functionIds: [incident.post.typeId], runId: null, ...incident.post };
 
 export const unitOf = (pkg: EventPackage | null, id: number | null) => (id === null ? undefined : pkg?.units.find((u) => u.id === id));
 

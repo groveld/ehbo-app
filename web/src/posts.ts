@@ -1,5 +1,5 @@
 // Posten in het evenementpakket: contactpersoon, eenheden, dichtstbijzijnde EHBO.
-import { DEFAULT_AT_POST_M, POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, sameFunction } from '@ehbo/shared';
+import { DEFAULT_AT_POST_M, POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, isManned, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageUnit, type LiveUnit, sameFunction } from '@ehbo/shared';
 
 /** "km 2,1", and "+1" when the longest run comes by more often. */
 export function kmLabel(post: Pick<PackagePost, 'km' | 'passages'>) {
@@ -9,9 +9,13 @@ export function kmLabel(post: Pick<PackagePost, 'km' | 'passages'>) {
 }
 export const lngLat = (p: PackagePost): LngLat | null => (p.lat !== null && p.lng !== null ? [p.lng, p.lat] : null);
 
-/** Is this post part of this run? It comes by according to the GPX, and start/finish always belongs. */
+/** Is this post part of this run? It comes by according to the GPX, and start/finish always belongs. A turnaround belongs to its own run only. */
 export const isOnRun = (pkg: EventPackage, post: PackagePost, runId: number) =>
-  post.passages.some((r) => r.runId === runId) || pkg.postTypes.find((t) => t.id === post.typeId)?.key === 'start_finish';
+  (post.runId === null || post.runId === runId)
+  && (post.passages.some((r) => r.runId === runId) || pkg.postTypes.find((t) => t.id === post.typeId)?.key === 'start_finish');
+
+/** People are there (#69): an AED, toilets or a turnaround have nobody, so no open or closed. */
+export const manned = (pkg: EventPackage | null, post: PackagePost) => (pkg ? isManned(post, pkg.postTypes) : true);
 
 /** The posts along a run in its order: a post it passes twice is there twice. Start/finish without a pass comes last. */
 export function routeStops(pkg: EventPackage, runId: number) {

@@ -156,7 +156,7 @@ test('a location with several functions: the main one from the marker order, and
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   const type = (key: string) => state.postTypes.find((t) => t.key === key)!.id;
   const post: PostData = {
-    functionIds: [type('water'), type('ehbo'), type('stempel')], name: 'Brug', lat: 53.17, lng: 5.86, accuracyM: null, address: null,
+    functionIds: [type('water'), type('ehbo'), type('stempel')], runId: null, name: 'Brug', lat: 53.17, lng: 5.86, accuracyM: null, address: null,
     accessRoute: null, timeFrom: null, timeTo: null, contacts: [],
   };
   const saved = ((await call('POST', '/api/admin/posts', post)).json() as AdminState).posts.find((p) => p.name === 'Brug')!;
@@ -180,7 +180,7 @@ test('post met contactpersonen; nieuw nummer kan daarna aanmelden', async () => 
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   const water = state.postTypes.find((t) => t.key === 'water')!;
   const post: PostData = {
-    functionIds: [water.id], name: 'Waterpost 5', lat: 53.16, lng: 5.85, accuracyM: 4, address: null,
+    functionIds: [water.id], runId: null, name: 'Waterpost 5', lat: 53.16, lng: 5.85, accuracyM: 4, address: null,
     accessRoute: 'Via de dijk', timeFrom: '11:00', timeTo: '14:00',
     contacts: [{ name: 'Nieuwe Vrijwilliger', phone: '06-1234 5678', role: 'verantwoordelijke', timeFrom: null, timeTo: null }],
   };
@@ -362,4 +362,28 @@ test('Beheer › Mensen: everyone with where they are, what is missing, and the 
   const csv = await call('GET', '/api/admin/people.csv');
   assert.match(csv.headers['content-type'] as string, /text\/csv/);
   assert.match(csv.body, /Wim Water;\+31 6/);
+});
+
+test('unmanned functions: an AED has no people, never opens, and a turnaround belongs to one run', async () => {
+  const state = (await call('GET', '/api/admin')).json() as AdminState;
+  const type = (key: string) => state.postTypes.find((t) => t.key === key)!;
+  assert.deepEqual(['aed', 'toilet', 'keerpunt'].map((k) => type(k).manned), [false, false, false]);
+  assert.equal(type('stempel').name, 'Stempel-/controlepost', 'the checkpoint is the stamp post');
+
+  const run = state.runs.find((r) => r.name === '10 km')!;
+  const aed: PostData = {
+    functionIds: [type('aed').id], runId: run.id, name: 'AED dorpshuis', lat: 53.145, lng: 5.82, accuracyM: null, address: null, accessRoute: null,
+    timeFrom: '10:00', timeTo: '12:00', contacts: [{ name: 'Niemand', phone: '0611111199', role: 'verantwoordelijke', timeFrom: null, timeTo: null }],
+  };
+  const saved = ((await call('POST', '/api/admin/posts', aed)).json() as AdminState).posts.find((p) => p.name === 'AED dorpshuis')!;
+  assert.deepEqual([saved.contacts.length, saved.timeFrom, saved.runId], [0, null, null], 'no people, no times, and only a turnaround has a run');
+
+  const turn = ((await call('POST', '/api/admin/posts', { ...aed, functionIds: [type('keerpunt').id], name: 'Keerpunt 10 km' })).json() as AdminState)
+    .posts.find((p) => p.name === 'Keerpunt 10 km')!;
+  assert.equal(turn.runId, run.id);
+  assert.equal((await call('POST', '/api/admin/posts', { ...aed, runId: 9999 })).statusCode, 400);
+
+  const opened = await app.inject({ method: 'PUT', url: `/api/posts/${saved.id}/open`, payload: { open: true }, headers: { cookie: adminCookie } });
+  assert.equal(opened.statusCode, 409, 'nobody there, so it never opens');
+  for (const id of [saved.id, turn.id]) await call('DELETE', `/api/admin/posts/${id}`);
 });

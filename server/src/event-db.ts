@@ -313,6 +313,19 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   UPDATE post_contacts SET role = 'lid'
     WHERE role = 'verantwoordelijke' AND id NOT IN (SELECT MIN(id) FROM post_contacts WHERE role = 'verantwoordelijke' GROUP BY post_id);
   `,
+  // 20: AED, toilets and a turnaround, without people (#69). A turnaround belongs to a run. The checkpoint is the stamp post.
+  // A new event gets its types after the migrations, so this only adds them to an event that has types already.
+  (db) => {
+    db.exec(`
+      ALTER TABLE post_types ADD COLUMN manned INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE posts ADD COLUMN run_id INTEGER REFERENCES runs(id) ON DELETE SET NULL;
+      UPDATE post_types SET name = 'Stempel-/controlepost' WHERE key = 'stempel' AND name = 'Stempelpost';
+    `);
+    if (!db.prepare('SELECT 1 FROM post_types').get()) return;
+    const add = db.prepare(`INSERT INTO post_types (key, name, letter, color, manned, sort)
+                            SELECT ?, ?, ?, ?, 0, (SELECT COALESCE(MAX(sort), 0) + 1 FROM post_types) WHERE NOT EXISTS (SELECT 1 FROM post_types WHERE key = ?)`);
+    for (const t of DEFAULT_POST_TYPES.filter((t) => !t.manned)) add.run(t.key, t.name, t.letter, t.color, t.key);
+  },
 ];
 
 export interface EventRow {
@@ -397,8 +410,8 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
   if (!db.prepare('SELECT 1 FROM event').get()) {
     transaction(() => {
       db.prepare('INSERT INTO event (id, name) VALUES (1, ?)').run(name);
-      const type = db.prepare('INSERT INTO post_types (key, name, letter, color, person_label, sort) VALUES (?, ?, ?, ?, ?, ?)');
-      DEFAULT_POST_TYPES.forEach((t, i) => type.run(t.key, t.name, t.letter, t.color, 'personLabel' in t ? t.personLabel : null, i));
+      const type = db.prepare('INSERT INTO post_types (key, name, letter, color, person_label, manned, sort) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      DEFAULT_POST_TYPES.forEach((t, i) => type.run(t.key, t.name, t.letter, t.color, 'personLabel' in t ? t.personLabel : null, t.manned ? 1 : 0, i));
       const core = db.prepare('INSERT INTO core_team (function, is_coordinator, sort) VALUES (?, ?, ?)');
       DEFAULT_CORE_TEAM.forEach((f, i) => core.run(f, i === 0 ? 1 : 0, i));
     });

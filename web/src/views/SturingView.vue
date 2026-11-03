@@ -6,6 +6,7 @@ import Icon from '../components/Icon.vue';
 import { confirmDialog, messageDialog } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { useLiveStore } from '../stores/live.ts';
+import { manned } from '../posts.ts';
 import { usePackageStore } from '../stores/package.ts';
 
 const store = usePackageStore();
@@ -14,7 +15,8 @@ const router = useRouter();
 const { busy, error, run } = useSave();
 
 const counts = computed(() => {
-  const posts = store.pkg?.posts ?? [];
+  // Only locations with people open and close (#69).
+  const posts = store.pkg?.posts.filter((p) => manned(store.pkg, p)) ?? [];
   const units = store.pkg?.units ?? [];
   return {
     posts: posts.length,

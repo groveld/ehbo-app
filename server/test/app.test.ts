@@ -134,14 +134,14 @@ test('openbare evenementgegevens met ingevulde info-tekst', async () => {
 
 test('nieuw evenement krijgt standaardsoorten, kernteam en de eerste beheerder', () => {
   const types = db.raw.prepare('SELECT name FROM post_types ORDER BY sort').all().map((r) => r.name);
-  assert.deepEqual(types, ['Start/finish', 'Waterpost', 'Stempelpost', 'Verkeer', 'EHBO-post', 'Anders']);
+  assert.deepEqual(types, ['Start/finish', 'Waterpost', 'Stempel-/controlepost', 'Verkeer', 'EHBO-post', 'AED', 'Toiletten', 'Keerpunt', 'Anders']);
   assert.equal(db.coordinatorPhone(), DEMO.coordinator);
   assert.ok(db.isAdmin('+31699999999'), 'ADMIN_PHONE is beheerder');
 
   // Opnieuw openen voegt geen tweede set toe en maakt een verwijderde beheerder niet opnieuw aan.
   db.raw.prepare('DELETE FROM admins WHERE phone = ?').run('+31699999999');
   const again = openEventDb(dir, 'test', { name: 'Testloop', adminPhone: '+31699999999' });
-  assert.equal((again.raw.prepare('SELECT COUNT(*) AS n FROM post_types').get() as { n: number }).n, 6);
+  assert.equal((again.raw.prepare('SELECT COUNT(*) AS n FROM post_types').get() as { n: number }).n, 9);
   assert.equal(again.isAdmin('+31699999999'), false);
   again.close();
 });
