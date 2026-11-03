@@ -7,6 +7,7 @@ import '@fontsource/ibm-plex-sans/latin-700.css';
 import '@fontsource/ibm-plex-mono/latin-500.css';
 import App from './App.vue';
 import { upgradeStorage } from './storage.ts';
+import './colorScheme.ts';
 import { installNavigation } from './navigation.ts';
 import { router } from './router.ts';
 import './style.css';

@@ -77,7 +77,7 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await ehbo.getByRole('link', { name: 'Incident afronden' }).click();
   await ehbo.getByRole('button', { name: 'Ter plaatse geholpen' }).click();
   await ehbo.getByLabel('Korte notitie').fill('Gekoeld en drinken gegeven');
-  await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
+  await ehbo.getByRole('button', { name: 'Afronden & beschikbaar' }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
   await ehbo.getByRole('link', { name: /Mijn inzetten/ }).click();
   const deployment = ehbo.locator('.deployment').filter({ hasText: 'Waterpost 3 · brug' }).filter({ hasText: 'Onwel' }).first();
@@ -181,7 +181,7 @@ test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later
   await expect(ehbo.locator('.offline-pill')).toBeVisible();
   await ehbo.getByRole('button', { name: 'Ik ben ter plaatse' }).click();
   await ehbo.getByRole('button', { name: 'Ter plaatse geholpen' }).click();
-  await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
+  await ehbo.getByRole('button', { name: 'Afronden & beschikbaar' }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
 
   await location.locator('.tabbar').getByRole('link', { name: 'Waterpost 3' }).click();
@@ -492,7 +492,7 @@ test('EHBO starts an incident itself, also without signal, and goes straight to 
   await ehbo.getByRole('button', { name: 'Incident starten' }).click();
   await expect(ehbo.getByRole('heading', { name: 'Incident afronden' })).toBeVisible();
   await ehbo.getByRole('button', { name: 'Loos alarm' }).click();
-  await ehbo.getByRole('button', { name: 'Afronden & weer beschikbaar' }).click();
+  await ehbo.getByRole('button', { name: 'Afronden & beschikbaar' }).click();
   await expect(ehbo.getByRole('heading', { name: 'Beschikbaar' })).toBeVisible();
 
   await ehbo.context().setOffline(false);

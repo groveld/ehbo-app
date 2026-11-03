@@ -151,7 +151,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'fixed' ? `E
 
 <style scoped>
 .open-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.open-row .dot { width: 10px; height: 10px; border-radius: 50%; background: #A8A59C; }
+.open-row .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
 .open-row .dot.on { background: var(--ok); }
 .top { display: flex; align-items: center; gap: 4px; padding: max(14px, env(safe-area-inset-top)) 0 6px; margin-left: -12px; }
 .top-title { flex-grow: 1; font-size: 16px; font-weight: 700; }

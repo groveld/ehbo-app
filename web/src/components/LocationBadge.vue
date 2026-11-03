@@ -25,4 +25,6 @@ const fontSize = computed(() => Math.round(props.size * ((props.type?.letter.len
 <style scoped>
 .post-badge { flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #FFFFFF; font-weight: 700; letter-spacing: -0.02em; }
 .post-badge.ehbo { border-radius: 25%; }
+/* In dark a near-black function (start/finish) would vanish: a faint light edge keeps every badge in sight. */
+:root[data-theme="dark"] .post-badge { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .28); }
 </style>

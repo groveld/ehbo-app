@@ -113,7 +113,7 @@ onMounted(() => {
 .quiet { border: 2px solid var(--warn-line); }
 .icon { width: 40px; height: 40px; border-radius: 12px; }
 .icon.good { background: var(--ok-bg); color: var(--ok-text); }
-.icon.bad { background: #F8DEDC; color: var(--danger); }
+.icon.bad { background: var(--danger-bg); color: var(--danger); }
 .icon.warn { background: var(--warn-bg); color: var(--warn); }
 .text { gap: 1px; flex-grow: 1; }
 .name { font-size: 15px; font-weight: 600; }

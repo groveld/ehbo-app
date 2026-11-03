@@ -3,15 +3,31 @@
   --ink: #16181D; --ink-2: #3E434B; --muted: #555A63; --soft-text: #C9CBD0;
   --line: #DEDBD2; --divider: #ECE9E1;
   --bg: #F6F5F1; --card: #FFFFFF; --soft: #EFEDE6;
+  /* Fields, choices and small marks. */
+  --field: #FFFFFF; --field-line: #D4D1C7; --dot: #A8A59C; --switch-off: #C9C6BD;
   /* Hoofd- en accentkleur: per evenement in te stellen (theme.ts). Op de hoofdkleur staat witte tekst, op het accent donkere. */
-  --primary: #16181D; --accent: #F2C230;
+  --primary: var(--event-primary, #16181D); --accent: #F2C230;
   /* Signaalkleuren: vast, nooit per evenement aan te passen. */
-  --danger: #C8261E; --off: #16181D; --ok: #0A7D4F; --ok-text: #0A5C3B; --ok-bg: #E2EFE7;
+  --danger: #C8261E; --off: #16181D; --ok: #0A7D4F; --ok-text: #0A5C3B; --ok-bg: #E2EFE7; --ok-note: #0A4D33;
+  --danger-bg: #FBE3E1; --danger-soft: #FDF1F0; --danger-line: #EDB9B4; --danger-text: #8A1A14;
   --warn: #7A3F06; --warn-bg: #FBE6D2; --warn-line: #D9781C;
   --info: #124A78; --info-bg: #E4EEF7; --info-icon: #1F6FB2;
   --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   color-scheme: light;
+}
+/* Dark (colorScheme.ts sets data-theme). Red and green stay the same signal colours; dark (off duty) is lifted so it shows on the dark background. */
+:root[data-theme="dark"] {
+  --ink: #ECEDEF; --ink-2: #C4C7CC; --muted: #9A9EA6; --soft-text: #5A5E66;
+  --line: #3A3D44; --divider: #2C2F35;
+  --bg: #121317; --card: #1D1F24; --soft: #2A2C32;
+  --field: #24262C; --field-line: #44474E; --dot: #6A6D73; --switch-off: #4A4D55;
+  --primary: var(--event-primary-dark, #5F636B);
+  --off: #4A4E57; --ok-text: #5FD3A0; --ok-bg: #12352A; --ok-note: #8FE0BC;
+  --danger-bg: #3A1B19; --danger-soft: #2E1816; --danger-line: #6B2A25; --danger-text: #F4A29B;
+  --warn: #F2B072; --warn-bg: #3D2A16;
+  --info: #8EC1EC; --info-bg: #15283A;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
@@ -63,7 +79,7 @@ h1, h2, p { margin: 0; }
 .chip { align-self: flex-start; font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--soft); padding: 6px 10px; border-radius: 999px; }
 .note { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border-radius: 14px; background: var(--soft); font-size: 13px; color: var(--ink-2); line-height: 1.4; }
 .note.info { background: var(--info-bg); color: var(--info); }
-.note.ok { background: var(--ok-bg); color: #0A4D33; }
+.note.ok { background: var(--ok-bg); color: var(--ok-note); }
 .note.warn { background: var(--warn-bg); color: var(--warn); }
 
 /* Buttons: primary 56, secondary 48, icon button 44 × 44. Secondary is white with a line in the primary color, so it stands out on the background and on a white card, and follows the event color. */
@@ -98,8 +114,8 @@ h1, h2, p { margin: 0; }
 .form-field { display: flex; flex-direction: column; gap: 6px; }
 .form-field > label, .form-field > .section-label { font-size: 13px; font-weight: 600; }
 .input {
-  height: 44px; width: 100%; min-width: 0; border-radius: 10px; border: 1px solid #D4D1C7; padding: 0 12px;
-  font: 400 16px var(--sans); background: #FFFFFF; color: var(--ink);
+  height: 44px; width: 100%; min-width: 0; border-radius: 10px; border: 1px solid var(--field-line); padding: 0 12px;
+  font: 400 16px var(--sans); background: var(--field); color: var(--ink);
 }
 /* iOS gives date and time fields their own width until the native look is off, and then they run over each other. */
 input[type='date'].input, input[type='time'].input { -webkit-appearance: none; appearance: none; max-width: 100%; }
@@ -111,10 +127,10 @@ textarea.input { height: auto; min-height: 72px; padding: 10px 12px; line-height
 .choice-grid.two { grid-template-columns: 1fr 1fr; }
 .choice-grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .option {
-  min-height: 48px; padding: 4px 6px; border-radius: 10px; border: 1px solid #D4D1C7; background: #FFFFFF;
+  min-height: 48px; padding: 4px 6px; border-radius: 10px; border: 1px solid var(--field-line); background: var(--field);
   font: 500 14px var(--sans); color: var(--ink); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
-.option[aria-pressed="true"] { border: 2px solid var(--option-color, var(--ink)); background: var(--option-bg, #FFFFFF); font-weight: 600; }
+.option[aria-pressed="true"] { border: 2px solid var(--option-color, var(--ink)); background: var(--option-bg, var(--field)); font-weight: 600; }
 .option .hint { font-size: 12px; color: var(--muted); font-weight: 400; }
 .list { background: var(--card); border-radius: 16px; overflow: hidden; }
 .list > * + * { border-top: 1px solid var(--divider); }
@@ -126,7 +142,7 @@ textarea.input { height: auto; min-height: 72px; padding: 10px 12px; line-height
 .tag.ok { background: var(--ok-bg); color: var(--ok-text); }
 .tag.warn { background: var(--warn-bg); color: var(--warn); }
 .add-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--ok-text); background: none; border: none; padding: 0; cursor: pointer; }
-.switch { width: 52px; height: 32px; flex-shrink: 0; border-radius: 999px; border: none; background: #C9C6BD; position: relative; padding: 0; cursor: pointer; }
+.switch { width: 52px; height: 32px; flex-shrink: 0; border-radius: 999px; border: none; background: var(--switch-off); position: relative; padding: 0; cursor: pointer; }
 .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; transition: transform .15s; }
 .switch[aria-checked="true"] { background: var(--primary); }
 .switch[aria-checked="true"]::after { transform: translateX(20px); }

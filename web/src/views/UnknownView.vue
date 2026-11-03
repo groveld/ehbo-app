@@ -34,7 +34,7 @@ const session = useSessionStore();
 
 <style scoped>
 .top { padding-top: 72px; }
-.alert { width: 56px; height: 56px; background: var(--warn-bg); color: #8A4A0B; }
+.alert { width: 56px; height: 56px; background: var(--warn-bg); color: var(--warn); }
 .phone { font-size: 15px; color: var(--muted); }
 .actions { margin-top: 28px; }
 .participant { font-size: 14px; }

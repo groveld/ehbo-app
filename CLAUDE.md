@@ -78,6 +78,7 @@ Where the main pieces live:
 
 - **Theme:** neutral event theme. Anthracite `#16181D` with yellow accent `#F2C230`, background `#F6F5F1`, font IBM Plex Sans (Plex Mono for numbers).
   - The theme can be configured per event: large logo, square logo used as app icon, and colors.
+- **Dark mode:** `web/src/colorScheme.ts` sets `data-theme` on `<html>` (`app.appearance`; index.html does it before the app loads), `style.css` has the dark tokens under `:root[data-theme="dark"]`. Use the tokens (`--card`, `--field`, `--field-line`, `--dot`, `--danger-bg` …), never a light hex. The event's primary colour is `--event-primary`/`--event-primary-dark` (`theme.ts`). The map has `MAP_FLAVOR_DARK`; the print page sets `forceLight`.
 - **Signal colors** are fixed and never themed: red `#C8261E` for urgent, green `#0A7D4F` for OK. Each post type has its own color and icon (`web/src/icons.ts`: flag, drop, stamp, cone, ehbo, aed, toilet, uturn, more); a custom type without an icon shows its letter.
 - **Colored header blocks** (call, sent, en route, EHBO screen, no signal): always 84 px tall, text vertically centered, title 26 px, no subtext.
 - **EHBO status colors** are fixed, never the event's primary color: dark (`--off`) is not here, red is here but not available (also during a call), green is here and available.

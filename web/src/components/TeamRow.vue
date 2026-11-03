@@ -60,7 +60,7 @@ const phone = computed(() => props.team.members[0]?.phone ?? null);
 .sub.attention { color: var(--warn); font-weight: 600; }
 .status { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--ink-2); }
 .status.available { background: var(--ok-bg); color: var(--ok-text); }
-.status.unavailable, .status.busy { background: #FBE3E1; color: #8A1A14; }
+.status.unavailable, .status.busy { background: var(--danger-bg); color: var(--danger-text); }
 .status.off_duty { background: var(--off); color: #FFFFFF; }
 .round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--ink); }
 </style>

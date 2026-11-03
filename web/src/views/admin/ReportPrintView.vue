@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // Rapport als afdrukpagina: "Opslaan als PDF" in het afdrukvenster geeft het PDF-rapport. Op A4, met het groot logo.
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { INCIDENT_WHAT, OUTCOMES, formatDuration, helpRequestType, formatKm, formatKmList, type Report, type RequestKind } from '@ehbo/shared';
+import { forceLight } from '../../colorScheme.ts';
 import { formatDate } from '../../format.ts';
 import { clock } from '../../incidents.ts';
 import { useAdminStore } from '../../stores/admin.ts';
@@ -22,6 +23,10 @@ const period = computed(() => {
   if (!e?.startDate) return '';
   return e.endDate && e.endDate !== e.startDate ? `${formatDate(e.startDate)} t/m ${formatDate(e.endDate)}` : formatDate(e.startDate);
 });
+
+// Paper is white: the report prints light, also in dark mode.
+forceLight.value = true;
+onUnmounted(() => { forceLight.value = false; });
 
 onMounted(async () => {
   try {

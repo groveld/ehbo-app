@@ -58,7 +58,7 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div v-for="r in openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'accepted' && r.acceptedBy?.phone === session.me?.phone }">
         <div class="request-top">
-          <span class="kind" :style="{ background: typeOf(r).colors.chip, color: typeOf(r).colors.chipText }">{{ typeOf(r).name }}</span>
+          <span class="kind typed" :style="{ '--chip': typeOf(r).colors.chip, '--chip-text': typeOf(r).colors.chipText, '--chip-icon': typeOf(r).colors.icon }">{{ typeOf(r).name }}</span>
           <span class="picked grow">{{ pickedText(r) }}</span>
           <span class="mono at">{{ clock(r.reportedAt) }}</span>
         </div>
@@ -83,7 +83,7 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
         </RouterLink>
         <div v-for="r in doneRequests" :key="r.id" class="card request">
           <div class="request-top">
-            <span class="kind" :style="{ background: typeOf(r).colors.chip, color: typeOf(r).colors.chipText }">{{ typeOf(r).name }}</span>
+            <span class="kind typed" :style="{ '--chip': typeOf(r).colors.chip, '--chip-text': typeOf(r).colors.chipText, '--chip-icon': typeOf(r).colors.icon }">{{ typeOf(r).name }}</span>
             <span class="picked grow">{{ pickedText(r) }}</span>
             <span class="mono at">{{ clock(r.reportedAt) }}</span>
           </div>
@@ -100,13 +100,15 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
 .state { font-weight: 700; color: var(--danger); }
 .state.geaccepteerd, .state.ter_plaatse { color: var(--ok-text); }
 /* As tall as an open item, so the list looks the same with or without calls. */
-.nothing-open { display: flex; align-items: center; gap: 8px; min-height: 80px; background: var(--ok-bg); color: #0A4D33; font-size: 15px; font-weight: 600; }
+.nothing-open { display: flex; align-items: center; gap: 8px; min-height: 80px; background: var(--ok-bg); color: var(--ok-note); font-size: 15px; font-weight: 600; }
 .later { margin-top: 8px; }
 .request { display: flex; flex-direction: column; gap: 10px; }
 .request.mine { border: 2px solid var(--ink); }
 .request-top { display: flex; align-items: center; gap: 8px; }
 .kind { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
-.kind.ehbo { background: #FBE3E1; color: #8A1A14; }
+.kind.ehbo { background: var(--danger-bg); color: var(--danger-text); }
+.kind.typed { background: var(--chip); color: var(--chip-text); }
+:root[data-theme="dark"] .kind.typed { background: color-mix(in srgb, var(--chip-icon) 30%, var(--card)); color: color-mix(in srgb, var(--chip-icon) 40%, #FFFFFF); }
 .picked { font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .request-line { font-size: 15px; font-weight: 600; }
 .open-link { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--ink); text-decoration: none; }

@@ -151,7 +151,7 @@ async function remove() {
 .option.tall { min-height: 56px; border-radius: 12px; }
 .member { display: grid; grid-template-columns: 1fr 1fr 44px; gap: 8px; align-items: center; }
 .aed { display: flex; align-items: center; gap: 12px; }
-.heart { width: 40px; height: 40px; border-radius: 12px; background: #F8DEDC; color: var(--danger); }
+.heart { width: 40px; height: 40px; border-radius: 12px; background: var(--danger-bg); color: var(--danger); }
 .main { display: flex; flex-direction: column; gap: 1px; flex-grow: 1; }
 .label { font-size: 15px; font-weight: 600; }
 select.input { appearance: auto; }

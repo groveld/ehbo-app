@@ -1,13 +1,14 @@
 <script setup lang="ts">
 // Kaart met parcours en posten. Tegels, lettertypen en iconen komen van de eigen server (en staan offline in de cache).
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { dark } from '../colorScheme.ts';
 import { messageDialog } from '../composables/useDialog.ts';
 import { isIOS } from '../platform.ts';
 import Icon from './Icon.vue';
 import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { LIGHT, layers, type Flavor } from '@protomaps/basemaps';
+import { DARK, LIGHT, layers, type Flavor } from '@protomaps/basemaps';
 // MapLibre laadt zijn worker als los bestand; Vite ziet dat adres niet vanzelf, dus geven we het mee.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { MARKER_ORDER, markerRank, type Bbox, type EventPackage, type LngLat, type PackageLocation } from '@ehbo/shared';
@@ -95,9 +96,21 @@ const MAP_FLAVOR: Flavor = {
   pois: undefined,
 };
 
+/** The same calm map in dark: Protomaps' dark flavour, with blue water and labels that still read, and no POI icons. */
+const MAP_FLAVOR_DARK: Flavor = {
+  ...DARK,
+  background: '#1A1C20', water: '#22303C', ocean_label: '#7D8FA3',
+  city_label: '#A3A7AE', subplace_label: '#858990', roads_label_minor: '#7A7E85', roads_label_major: '#8A8E95',
+  pois: undefined,
+};
+
+/** The selected run: dark on the light map, light on the dark one. */
+const runColor = () => (dark.value ? '#ECEDEF' : '#16181D');
+
 function style(): StyleSpecification {
   const m = props.pkg.map;
-  const background = { id: 'achtergrond', type: 'background', paint: { 'background-color': MAP_FLAVOR.background } } as const;
+  const flavor = dark.value ? MAP_FLAVOR_DARK : MAP_FLAVOR;
+  const background = { id: 'achtergrond', type: 'background', paint: { 'background-color': flavor.background } } as const;
   if (!m) return { version: 8, sources: {}, layers: [background] };
   return {
     version: 8,
@@ -106,7 +119,7 @@ function style(): StyleSpecification {
     sources: {
       protomaps: { type: 'vector', tiles: [tileUrl(m)], maxzoom: m.maxZoom, bounds: m.bbox },
     },
-    layers: layers('protomaps', MAP_FLAVOR, { lang: 'nl' }),
+    layers: layers('protomaps', flavor, { lang: 'nl' }),
   };
 }
 
@@ -405,6 +418,8 @@ function createMap() {
   // Moving the map yourself stops following.
   map.on('dragstart', () => { if (locating.value === 'follow') locating.value = 'shown'; });
   map.on('webglcontextrestored', () => { contextLost = false; });
+  // A new style (light or dark) that couldn't keep the images asks for the arrow again.
+  map.on('styleimagemissing', (e) => { if (e.id === 'route-arrow' && !map!.hasImage('route-arrow')) map!.addImage('route-arrow', arrowImage(), { pixelRatio: 2 }); });
   map.touchZoomRotate.disableRotation();
   map.keyboard.disableRotation();
   map.on('load', () => {
@@ -420,7 +435,7 @@ function createMap() {
       // De gekozen loop bovenop, zodat hij nergens onder een andere loop verdwijnt.
       layout: { 'line-cap': 'round', 'line-join': 'round', 'line-sort-key': ['case', ['get', 'highlight'], 1, 0] },
       paint: {
-        'line-color': ['case', ['get', 'highlight'], '#16181D', '#9A9CA3'],
+        'line-color': ['case', ['get', 'highlight'], runColor(), '#9A9CA3'],
         'line-width': ['case', ['get', 'highlight'], 4, 3],
         'line-opacity': ['case', ['get', 'highlight'], 1, 0.35],
       },
@@ -464,6 +479,19 @@ function createMap() {
   drawPicked();
   frame();
 }
+
+// Light or dark changed: the new base map under what we drew on it (sources, layers and images stay).
+watch(dark, () => {
+  if (!map) return;
+  map.setStyle(style(), {
+    transformStyle: (previous, next) => ({
+      ...next,
+      sources: { ...previous?.sources, ...next.sources },
+      layers: [...next.layers, ...(previous?.layers ?? []).filter((l) => !next.layers.some((n) => n.id === l.id))],
+    }),
+  });
+  if (map.getLayer('lopen')) map.setPaintProperty('lopen', 'line-color', ['case', ['get', 'highlight'], runColor(), '#9A9CA3']);
+});
 
 // A phone can take the graphics memory of an app in the background, which leaves the map black. It usually comes back by itself; if not, start the map again.
 function restoreMap() {
@@ -550,13 +578,14 @@ onBeforeUnmount(() => {
 .event-map-wrap { position: relative; width: 100%; height: 100%; }
 .locate {
   position: absolute; right: 10px; bottom: 10px; z-index: 1; width: 44px; height: 44px; border-radius: 12px; border: 0;
-  background: #FFFFFF; color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, .3); display: flex; align-items: center; justify-content: center;
+  background: var(--card); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, .3); display: flex; align-items: center; justify-content: center;
 }
 .locate.on { color: #1F6FB2; }
 .locate.follow { background: #1F6FB2; color: #FFFFFF; }
 /* Geen position op de markers zelf: MapLibre zet ze absoluut; relatief maken laat ze verschuiven. */
 /* isolate: the markers' z-index only counts inside the map, so a banner or button over the map stays on top. */
 .event-map { isolation: isolate; width: 100%; height: 100%; border-radius: 18px; overflow: hidden; background: #E9E7E1; }
+:root[data-theme="dark"] .event-map { background: #1A1C20; }
 .event-map.picking :deep(.maplibregl-canvas) { cursor: crosshair; }
 .event-map :deep(.post-marker) {
   width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 2px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
