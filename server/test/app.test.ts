@@ -149,13 +149,13 @@ test('nieuw evenement krijgt standaardsoorten, kernteam en de eerste beheerder',
 test('aanmelden met een bekend nummer: rollen, startscherm en cookie', async () => {
   const lead = await login('06-00 00 00 04');
   assert.equal(lead.me.name, 'Wim Water');
-  assert.equal(lead.me.home, 'post', 'postverantwoordelijke start bij de eigen post');
+  assert.equal(lead.me.home, 'post', 'locatieverantwoordelijke start bij de eigen post');
   assert.equal(lead.raw.httpOnly, true);
   assert.equal(lead.raw.sameSite, 'Lax');
   const [first, second] = lead.me.assignments;
   assert.equal(first?.title, 'Verkeersregelaar', 'vroegste dienst eerst; verkeerspost toont de eigen benaming');
   assert.equal(first?.times, '08:30 – 10:00');
-  assert.equal(second?.title, 'Postverantwoordelijke');
+  assert.equal(second?.title, 'Locatieverantwoordelijke');
   assert.equal(second?.detail, 'Waterpost 3 · brug · km 2');
   assert.equal(second?.letter, 'W');
 

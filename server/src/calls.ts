@@ -81,6 +81,8 @@ interface Post {
   lng: number | null;
   isOpen: boolean;
   isEhbo: boolean;
+  /** EHBO is all that's there: the location and its fixed team open and close together. */
+  onlyEhbo: boolean;
   timeTo: string | null;
   keepUntil: string | null;
   closesAt: string | null;
@@ -139,7 +141,11 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   }
 
   function posts(): Map<number, Post> {
-    return new Map(all(`SELECT p.id, p.type_id, p.name, p.km, p.lat, p.lng, p.is_open, p.time_to, p.keep_until, p.closes_at, p.auto_closed_at, t.key FROM posts p JOIN post_types t ON t.id = p.type_id`).map((p) => [p.id as number, {
+    // An EHBO post is a location with an EHBO function, also when that isn't its main function (#83).
+    return new Map(all(`SELECT p.id, p.type_id, p.name, p.km, p.lat, p.lng, p.is_open, p.time_to, p.keep_until, p.closes_at, p.auto_closed_at,
+                               EXISTS (SELECT 1 FROM post_functions f JOIN post_types t ON t.id = f.type_id WHERE f.post_id = p.id AND t.key = 'ehbo') AS ehbo,
+                               (SELECT COUNT(*) FROM post_functions f WHERE f.post_id = p.id) AS functions
+                        FROM posts p`).map((p) => [p.id as number, {
       id: p.id as number,
       typeId: p.type_id as number,
       name: p.name as string,
@@ -147,7 +153,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       lat: p.lat as number | null,
       lng: p.lng as number | null,
       isOpen: p.is_open === 1,
-      isEhbo: p.key === 'ehbo',
+      isEhbo: p.ehbo === 1,
+      onlyEhbo: p.ehbo === 1 && p.functions === 1,
       timeTo: p.time_to as string | null,
       keepUntil: p.keep_until as string | null,
       closesAt: p.closes_at as string | null,
@@ -461,7 +468,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (!post) throw body.postId === null ? httpError(409, 'Er zijn nog geen posten met een plek') : httpError(404, 'Post niet gevonden');
     if (body.postId !== null) {
       if (!atPost(me, post.id) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Je kunt alleen een verzoek doen vanaf je eigen post');
-      if (!post.isOpen && !reopenAutoClosed(post.id)) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
+      if (!post.isOpen && !reopenAutoClosed(post.id)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
     }
     const offPost = place !== null && !place.atPost;
 
@@ -766,18 +773,20 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (!post) throw httpError(404, 'Post niet gevonden');
     const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
     const ownEhboPost = post.isEhbo && units().some((u) => u.kind === 'vast' && u.postId === postId && memberOf(me, u.id));
-    if (!lead && !ownEhboPost && !me.isAdmin) throw httpError(403, 'Alleen de postverantwoordelijke kan de post open of dicht zetten');
+    if (!lead && !ownEhboPost && !me.isAdmin) throw httpError(403, 'Alleen de locatieverantwoordelijke kan de locatie open of dicht zetten');
     const fixed = units().filter((u) => u.kind === 'vast' && u.postId === postId);
     // Openen: je eigen eenheid, als je daarbij hoort; een andere dienst op dezelfde post blijft zoals hij is.
+    // On a location with more than EHBO (#83), someone else opening or closing it doesn't make the team available or take it off duty.
     const mine = fixed.filter((u) => memberOf(me, u.id));
+    const teams = mine.length ? (open ? mine : fixed) : post.onlyEhbo ? fixed : [];
     db.transaction(() => {
       setPost(postId, open);
       // Een vaste eenheid op deze EHBO-post gaat mee in dienst of uit dienst.
-      for (const unit of open && mine.length ? mine : fixed) {
+      for (const unit of teams) {
         if (unit.availability !== 'pauze') run('UPDATE ehbo_units SET availability = ? WHERE id = ?', open ? 'vrij' : 'uit_dienst', unit.id);
       }
     });
-    if (open) offerOpenCalls(fixed.map((u) => u.id));
+    if (open) offerOpenCalls(teams.map((u) => u.id));
     changed();
     return state();
   }
@@ -881,7 +890,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const post = posts().get(postId);
     if (!post) throw httpError(404, 'Post niet gevonden');
     const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
-    if (!lead && !isLead(me)) throw httpError(403, 'Alleen de postverantwoordelijke of de coördinator kan de post open houden');
+    if (!lead && !isLead(me)) throw httpError(403, 'Alleen de locatieverantwoordelijke of de coördinator kan de locatie open houden');
     const until = new Date(now().getTime() + KEEP_OPEN_MIN * 60_000).toISOString();
     run('UPDATE posts SET is_open = 1, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', until, postId);
     changed();

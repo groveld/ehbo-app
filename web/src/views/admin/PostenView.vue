@@ -9,11 +9,12 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
 </script>
 
 <template>
-  <AdminPage title="Posten" eyebrow="Beheer" :back="{ name: 'beheer' }">
+  <AdminPage title="Locaties" eyebrow="Beheer" :back="{ name: 'beheer' }">
     <template #default="{ state }">
       <div v-if="state.posts.length" class="list">
         <RouterLink v-for="p in state.posts" :key="p.id" :to="{ name: 'beheer-post', params: { id: p.id } }" class="list-row">
           <span class="badge letter" :style="{ background: admin.postTypeById.get(p.typeId)?.color }">{{ admin.postTypeById.get(p.typeId)?.letter }}</span>
+          <span v-if="p.functionIds.length > 1" class="more-functions" :aria-label="`${p.functionIds.length} functies`">+{{ p.functionIds.length - 1 }}</span>
           <span class="main">
             <span class="title-line">{{ p.name }}</span>
             <span class="sub">
@@ -24,7 +25,7 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
           <Icon name="forward" :size="18" />
         </RouterLink>
       </div>
-      <p v-else class="note">Nog geen posten. Voeg ze toe ter plaatse, dan legt de app meteen de GPS-positie vast.</p>
+      <p v-else class="note">Nog geen locaties. Voeg ze toe ter plaatse, dan legt de app meteen de GPS-positie vast.</p>
       <RouterLink :to="{ name: 'beheer-post', params: { id: 'nieuw' } }" class="add-link">+ Post toevoegen</RouterLink>
     </template>
   </AdminPage>
@@ -33,4 +34,5 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
 <style scoped>
 .letter { width: 40px; height: 40px; color: #FFFFFF; font-size: 15px; }
 .tag { margin-left: 0; flex-shrink: 0; }
+.more-functions { margin-left: -18px; align-self: flex-end; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; border: 2px solid var(--card); background: var(--ink-2); color: #FFFFFF; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 </style>

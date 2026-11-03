@@ -17,6 +17,7 @@ import type {
   RunData,
   UnitData,
 } from '@ehbo/shared';
+import { mainFunction } from '@ehbo/shared';
 import { getBrand, getStyle, saveStyle } from './brand.ts';
 import type { EventDb } from './event-db.ts';
 import { recomputePassages, type Track } from './gpx.ts';
@@ -80,9 +81,14 @@ export function adminDb(events: EventDb) {
       else list.push({ runId: r.run_id as number, km: [r.km as number] });
       passagesByPost.set(r.post_id as number, list);
     }
+    const functionsByPost = new Map<number, number[]>();
+    for (const f of all('SELECT post_id, type_id FROM post_functions ORDER BY sort, rowid')) {
+      functionsByPost.set(f.post_id as number, [...(functionsByPost.get(f.post_id as number) ?? []), f.type_id as number]);
+    }
     const posts: AdminPost[] = all('SELECT * FROM posts ORDER BY km IS NULL, km, sort, id').map((p) => ({
       id: p.id as number,
       typeId: p.type_id as number,
+      functionIds: functionsByPost.get(p.id as number) ?? [p.type_id as number],
       name: p.name as string,
       km: p.km as number | null,
       passages: passagesByPost.get(p.id as number) ?? [],
@@ -168,7 +174,11 @@ export function adminDb(events: EventDb) {
   function savePost(id: number | null, p: PostData): number | null {
     if (id !== null && !exists('posts', id)) return null;
     return events.transaction(() => {
-      const values = [p.typeId, p.name.trim(), p.lat, p.lng, p.accuracyM, p.address?.trim() || null, p.accessRoute?.trim() || null, p.timeFrom, p.timeTo] as const;
+      // The main function goes first, so lists and the package can take the first one.
+      const types = all('SELECT id, key FROM post_types').map((t) => ({ id: t.id as number, key: t.key as string | null }));
+      const main = mainFunction(p.functionIds, types);
+      const functionIds = [main, ...p.functionIds.filter((id) => id !== main)];
+      const values = [main, p.name.trim(), p.lat, p.lng, p.accuracyM, p.address?.trim() || null, p.accessRoute?.trim() || null, p.timeFrom, p.timeTo] as const;
       let postId = id;
       if (postId === null) {
         postId = Number(run(`INSERT INTO posts (type_id, name, lat, lng, accuracy_m, address, access_route, time_from, time_to)
@@ -177,7 +187,9 @@ export function adminDb(events: EventDb) {
         run(`UPDATE posts SET type_id = ?, name = ?, lat = ?, lng = ?, accuracy_m = ?, address = ?, access_route = ?, time_from = ?, time_to = ?
              WHERE id = ?`, ...values, postId);
         run('DELETE FROM post_contacts WHERE post_id = ?', postId);
+        run('DELETE FROM post_functions WHERE post_id = ?', postId);
       }
+      functionIds.forEach((typeId, i) => run('INSERT INTO post_functions (post_id, type_id, sort) VALUES (?, ?, ?)', postId, typeId, i));
       for (const c of p.contacts) {
         upsertPerson(c.phone, c.name);
         run('INSERT INTO post_contacts (post_id, phone, role, time_from, time_to) VALUES (?, ?, ?, ?, ?)', postId, c.phone, c.role, c.timeFrom, c.timeTo);

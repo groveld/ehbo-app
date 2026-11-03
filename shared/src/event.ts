@@ -6,10 +6,23 @@ export type UnitKind = 'vast' | 'mobiel';
 export type UnitMobility = 'te_voet' | 'fiets' | 'auto' | 'anders';
 
 export const POST_CONTACT_ROLE_LABEL: Record<PostContactRole, string> = {
-  verantwoordelijke: 'Postverantwoordelijke',
+  verantwoordelijke: 'Locatieverantwoordelijke',
   lid: 'Posthouder',
   reserve: 'Reserve',
 };
+
+/**
+ * Which function of a location matters most, lowest first: it goes on top on the map (#72), and it's the main function of a
+ * location with several (#83), which gives its marker the icon and colour. A custom type counts as "anders".
+ */
+export const MARKER_ORDER = ['anders', 'verkeer', 'water', 'stempel', 'ehbo', 'start_finish'];
+export const markerRank = (key: string | null | undefined) => Math.max(MARKER_ORDER.indexOf(key ?? ''), 0);
+
+/** The main function of a location: the highest in MARKER_ORDER; between equals the first chosen. */
+export function mainFunction(functionIds: number[], types: { id: number; key: string | null }[]) {
+  const rank = (id: number) => markerRank(types.find((t) => t.id === id)?.key);
+  return functionIds.reduce((best, id) => (rank(id) > rank(best) ? id : best), functionIds[0]!);
+}
 
 /** Standaardsoorten posten bij een nieuw evenement; de beheerder kan ze aanpassen en aanvullen. */
 export const DEFAULT_POST_TYPES = [
@@ -147,7 +160,7 @@ export interface Assignment {
   color: string;
   postId?: number;
   unitId?: number;
-  /** Alleen bij posten: de postverantwoordelijke zet de post open en dicht. */
+  /** Alleen bij posten: de locatieverantwoordelijke zet de post open en dicht. */
   role?: PostContactRole;
 }
 

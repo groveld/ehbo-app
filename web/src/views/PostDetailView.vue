@@ -30,6 +30,8 @@ async function setOpen(open: boolean) {
 
 const post = computed(() => store.postById.get(Number(props.id)) ?? null);
 const type = computed(() => (post.value ? store.typeById.get(post.value.typeId) : undefined));
+/** Every function of this location, the main one first (#83). */
+const functionNames = computed(() => post.value?.functionIds.map((id) => store.typeById.get(id)?.name).filter(Boolean).join(' · ') ?? '');
 const contact = computed(() => (post.value ? primaryContact(post.value) : null));
 const here = computed(() => (store.pkg && post.value ? unitsAt(store.pkg, post.value.id) : []));
 const nearest = computed(() => (store.pkg && post.value && !here.value.length ? nearestUnit(store.pkg, post.value) : null));
@@ -37,7 +39,7 @@ const isOpen = computed(() => (post.value ? live.postOpen(post.value.id, post.va
 const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
 /** Zoals op de kaart van het overzicht: open oproepen rood, dichte posten grijs. */
 const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
-/** Zoals de server: de postverantwoordelijke van deze post, of een beheerder. */
+/** Zoals de server: de locatieverantwoordelijke van deze post, of een beheerder. */
 const canToggle = computed(() => session.me?.isAdmin
   || session.me?.assignments.some((a) => a.kind === 'post' && a.postId === post.value?.id && a.role === 'verantwoordelijke'));
 
@@ -70,12 +72,12 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <RouterLink v-if="session.me?.isAdmin && post" :to="{ name: 'beheer-post', params: { id: post.id } }" class="edit">Bewerken</RouterLink>
     </header>
 
-    <NotOnPhone v-if="!post || !store.pkg">Deze post bestaat niet (meer).</NotOnPhone>
+    <NotOnPhone v-if="!post || !store.pkg">Deze locatie bestaat niet (meer).</NotOnPhone>
     <template v-else>
       <div class="title">
         <PostBadge :type="type" :size="56" />
         <div class="stack">
-          <span class="type" :style="{ color: type?.color }">{{ type?.name }}</span>
+          <span class="type" :style="{ color: type?.color }">{{ functionNames }}</span>
           <h1>{{ post.name }}</h1>
           <span v-if="subtitle" class="small">{{ subtitle }}</span>
         </div>
@@ -105,9 +107,9 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <!-- Open of dicht, live. Een beheerder kan elke post open en dicht zetten, voor wie minder technisch is. -->
       <div class="card open-row">
         <span class="dot" :class="{ on: isOpen }" />
-        <span class="grow"><strong>{{ isOpen ? 'Post is open' : 'Post is dicht' }}</strong></span>
+        <span class="grow"><strong>{{ isOpen ? 'Locatie is open' : 'Locatie is dicht' }}</strong></span>
         <button
-          v-if="canToggle" class="switch" role="switch" :aria-checked="isOpen" aria-label="Post open"
+          v-if="canToggle" class="switch" role="switch" :aria-checked="isOpen" aria-label="Locatie open"
           :disabled="toggle.busy.value" @click="setOpen(!isOpen)"
         />
       </div>

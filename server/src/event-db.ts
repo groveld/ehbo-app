@@ -300,6 +300,19 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   `
   ALTER TABLE event ADD COLUMN at_post_m INTEGER NOT NULL DEFAULT 30;
   `,
+  // 19: a location has one or more functions (#83). posts.type_id stays as the main function, kept by the server.
+  // One lead per location: where there were more, the first stays and the others become members.
+  `
+  CREATE TABLE post_functions (
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    type_id INTEGER NOT NULL REFERENCES post_types(id),
+    sort    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (post_id, type_id)
+  );
+  INSERT INTO post_functions (post_id, type_id) SELECT id, type_id FROM posts;
+  UPDATE post_contacts SET role = 'lid'
+    WHERE role = 'verantwoordelijke' AND id NOT IN (SELECT MIN(id) FROM post_contacts WHERE role = 'verantwoordelijke' GROUP BY post_id);
+  `,
 ];
 
 export interface EventRow {

@@ -35,7 +35,7 @@ const chips = computed(() => {
   const pkg = store.pkg;
   if (!pkg) return [];
   return pkg.postTypes
-    .map((t) => ({ id: t.id, label: t.name.replace(/-?post$/i, ''), count: pkg.posts.filter((p) => p.typeId === t.id).length }))
+    .map((t) => ({ id: t.id, label: t.name.replace(/-?post$/i, ''), count: pkg.posts.filter((p) => p.functionIds.includes(t.id)).length }))
     .filter((c) => c.count > 0);
 });
 /** Posten met een open oproep rood en bovenaan. */
@@ -51,7 +51,7 @@ const matches = (p: PackagePost) => {
   return !q || p.name.toLowerCase().includes(q) || p.passages.some((r) => r.km.some((k) => String(Math.round(k * 10) / 10).startsWith(km)));
 };
 /** On the map; what isn't on the chosen route steps back there. */
-const mapPosts = computed(() => store.pkg?.posts.filter((p) => (typeof filter.value !== 'number' || p.typeId === filter.value) && matches(p)) ?? []);
+const mapPosts = computed(() => store.pkg?.posts.filter((p) => (typeof filter.value !== 'number' || p.functionIds.includes(filter.value)) && matches(p)) ?? []);
 /** In the list: only the chosen route, in its order. Open calls always stay, on top. */
 const routeKm = (p: PackagePost) => p.passages.find((r) => r.runId === route.value)?.km[0] ?? Infinity;
 const helpHere = computed(() => !session.me?.assignments.some((a) => a.kind === 'ehbo'));
@@ -109,7 +109,7 @@ const counters = computed(() => {
     return state?.availability === 'vrij' && state.incidentId === null;
   });
   return [
-    { label: 'Posten', value: `${pkg.posts.length - closedIds.value.length}/${pkg.posts.length}`, full: 'Posten open' },
+    { label: 'Locaties', value: `${pkg.posts.length - closedIds.value.length}/${pkg.posts.length}`, full: 'Locaties open' },
     { label: 'EHBO', value: `${free.length}/${pkg.units.length}`, full: 'EHBO beschikbaar' },
     { label: 'Oproepen', value: String(live.openIncidents.length), full: 'Open oproepen' },
     { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'aangevraagd').length), full: 'Aanvragen nog niet opgepakt' },
@@ -148,7 +148,7 @@ const banner = computed(() => {
       <div v-if="active && store.pkg.posts.length" class="find">
         <label class="search">
           <Icon name="search" :size="18" />
-          <input v-model="query" class="input" type="search" placeholder="Zoek post of km" aria-label="Zoek een post">
+          <input v-model="query" class="input" type="search" placeholder="Zoek locatie of km" aria-label="Zoek een locatie">
         </label>
         <select v-model="filter" class="input type" aria-label="Soort post">
           <option :value="null">Alle</option>
@@ -170,7 +170,7 @@ const banner = computed(() => {
         </section>
         <template v-if="filter !== 'teams'">
           <section v-if="posts.length" class="stack gap-8">
-            <h2 class="section-title">Posten</h2>
+            <h2 class="section-title">Locaties</h2>
             <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="latePosts.includes(p.id)" :quiet-minutes="quietPost(p.id)" /></div>
           </section>
           <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen posten ingevoerd.</p>

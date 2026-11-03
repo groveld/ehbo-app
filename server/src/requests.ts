@@ -77,7 +77,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     const post = get('SELECT id, is_open FROM posts WHERE id = ?', body.postId);
     if (!post) throw httpError(404, 'Post niet gevonden');
     if (!atPost(me, body.postId) && !handles(me)) throw httpError(403, 'Je kunt alleen een aanvraag doen vanaf je eigen post');
-    if (post.is_open !== 1 && !reopen(body.postId)) throw httpError(409, 'Deze post is dicht. Zet de post eerst open.');
+    if (post.is_open !== 1 && !reopen(body.postId)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
     checkDetail(body.kind, body.detail);
     const id = Number(run(`INSERT INTO requests (client_id, post_id, kind, detail, status, reported_by, created_at, is_test)
                            VALUES (?, ?, ?, ?, 'aangevraagd', ?, ?, ?)`, body.clientId, body.postId, body.kind, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);

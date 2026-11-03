@@ -8,7 +8,7 @@ import { cleanGpx, type GpxWaypoint } from '../gpx.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
-const PACKAGE_FORMAT = 6;
+const PACKAGE_FORMAT = 7;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
@@ -30,7 +30,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
     event: { name: state.event.name, startDate: state.event.startDate, endDate: state.event.endDate, startLocation: state.event.startLocation, atPostM: state.event.atPostM },
     postTypes: state.postTypes,
     posts: state.posts.map((p) => ({
-      id: p.id, typeId: p.typeId, name: p.name, km: p.km, passages: p.passages, lat: p.lat, lng: p.lng, isOpen: p.isOpen, timeFrom: p.timeFrom, timeTo: p.timeTo,
+      id: p.id, typeId: p.typeId, functionIds: p.functionIds, name: p.name, km: p.km, passages: p.passages, lat: p.lat, lng: p.lng, isOpen: p.isOpen, timeFrom: p.timeFrom, timeTo: p.timeTo,
       // Namen, nummers en aanrijroutes alleen voor medewerkers.
       ...(staff ? { address: p.address, accessRoute: p.accessRoute, contacts: p.contacts.map(({ name, phone, role }) => ({ name, phone, role })) } : {}),
     })),
@@ -59,9 +59,10 @@ export async function packageRoutes(app: FastifyInstance, { db, calls }: { db: E
     const id = /^(\d+)\.gpx$/.exec(request.params.file)?.[1];
     const run = id ? db.raw.prepare('SELECT name, gpx, track_json FROM runs WHERE id = ? AND track_json IS NOT NULL').get(Number(id)) as { name: string; gpx: string | null; track_json: string } | undefined : undefined;
     if (!run) return reply.code(404).send({ error: 'Geen route gevonden' });
-    // Every post this run passes, in the order you meet them.
+    // Every post this run passes, in the order you meet them; the symbol of its main function, and all its functions in the text (#83).
     const waypoints = (db.raw.prepare(`
-      SELECT p.name, p.lat, p.lng, t.key, t.name AS type_name, json_group_array(pp.km) AS km
+      SELECT p.name, p.lat, p.lng, t.key, json_group_array(pp.km) AS km,
+             (SELECT group_concat(name, ' · ') FROM (SELECT ft.name FROM post_functions f JOIN post_types ft ON ft.id = f.type_id WHERE f.post_id = p.id ORDER BY f.sort)) AS type_name
       FROM post_passages pp JOIN posts p ON p.id = pp.post_id JOIN post_types t ON t.id = p.type_id
       WHERE pp.run_id = ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL
       GROUP BY p.id ORDER BY MIN(pp.km)`).all(Number(id)) as { name: string; lat: number; lng: number; key: string | null; type_name: string; km: string }[])

@@ -55,7 +55,7 @@ const postsWithContacts = computed(() => store.pkg?.posts.filter((p) => p.contac
       </section>
 
       <section v-if="postsWithContacts.length" class="stack gap-8">
-        <h2 class="section-title">Posten</h2>
+        <h2 class="section-title">Locaties</h2>
         <div class="list">
           <template v-for="p in postsWithContacts" :key="p.id">
             <div v-for="c in p.contacts" :key="`${p.id}-${c.phone}`" class="list-row">

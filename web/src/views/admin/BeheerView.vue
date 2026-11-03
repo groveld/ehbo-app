@@ -30,7 +30,7 @@ function teamSummary(state: AdminState) {
         </RouterLink>
         <RouterLink :to="{ name: 'beheer-posten' }" class="list-row">
           <Icon name="pin" :size="20" />
-          <span class="main"><span class="title-line">Posten</span><span class="sub">{{ state.posts.length }} posten</span></span>
+          <span class="main"><span class="title-line">Locaties</span><span class="sub">{{ state.posts.length }} locaties</span></span>
           <Icon name="forward" :size="18" />
         </RouterLink>
         <RouterLink :to="{ name: 'beheer-eenheden' }" class="list-row">

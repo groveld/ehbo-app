@@ -72,7 +72,7 @@ async function closeDay() {
     </header>
 
     <div class="facts" style="--facts: 2">
-      <div class="fact"><span class="value mono">{{ counts.openPosts }}/{{ counts.posts }}</span><span class="label">Posten open</span></div>
+      <div class="fact"><span class="value mono">{{ counts.openPosts }}/{{ counts.posts }}</span><span class="label">Locaties open</span></div>
       <div class="fact"><span class="value mono">{{ counts.onDuty }}/{{ counts.units }}</span><span class="label">EHBO in dienst</span></div>
     </div>
 
