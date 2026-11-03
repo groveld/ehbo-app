@@ -152,7 +152,7 @@ const banner = computed(() => {
           <Icon name="search" :size="18" />
           <input v-model="query" class="input" type="search" placeholder="Zoek locatie of km" aria-label="Zoek een locatie">
         </label>
-        <select v-model="filter" class="input type" aria-label="Soort post">
+        <select v-model="filter" class="input type" aria-label="Functie">
           <option :value="null">Alle</option>
           <option v-for="c in chips" :key="c.id" :value="c.id">{{ c.label }}</option>
           <option v-if="store.pkg.units.length" value="teams">EHBO</option>
@@ -175,8 +175,8 @@ const banner = computed(() => {
             <h2 class="section-title">Locaties</h2>
             <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="latePosts.includes(p.id)" :quiet-minutes="quietPost(p.id)" /></div>
           </section>
-          <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen posten ingevoerd.</p>
-          <p v-else-if="!posts.length && !teams.length" class="note">{{ filter === 'attention' ? 'Niets vraagt nu aandacht.' : 'Geen post gevonden.' }}</p>
+          <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen locaties ingevoerd.</p>
+          <p v-else-if="!posts.length && !teams.length" class="note">{{ filter === 'attention' ? 'Niets vraagt nu aandacht.' : 'Geen locatie gevonden.' }}</p>
         </template>
       </div>
     </template>

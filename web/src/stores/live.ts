@@ -483,7 +483,7 @@ export const useLiveStore = defineStore('live', () => {
       await act({
         type: 'selfStart', tempId, postId: shown?.id ?? postId, offPost: place !== null && !place.atPost,
         post: {
-          typeId: shown?.typeId ?? 0, name: place?.name ?? shown?.name ?? 'Post', km: shown?.km ?? null,
+          typeId: shown?.typeId ?? 0, name: place?.name ?? shown?.name ?? 'Locatie', km: shown?.km ?? null,
           lat: place && !place.atPost ? position![1] : shown?.lat ?? null, lng: place && !place.atPost ? position![0] : shown?.lng ?? null,
         },
         body: { clientId: crypto.randomUUID(), unitId, postId, lat: position?.[1] ?? null, lng: position?.[0] ?? null, ...details },

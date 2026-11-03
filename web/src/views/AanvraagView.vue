@@ -64,7 +64,7 @@ const atPost = computed(() => live.myPostIds.includes(request.value?.postId ?? -
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div class="stack gap-8 bottom">
         <a v-if="open && coordinator" :href="telHref(coordinator.phone)" class="btn">Bel evenementcoördinator</a>
-        <button class="btn primary" @click="router.back()">{{ atPost && route.name === 'aanvraag' ? 'Terug naar mijn post' : 'Terug' }}</button>
+        <button class="btn primary" @click="router.back()">{{ atPost && route.name === 'aanvraag' ? 'Terug naar mijn locatie' : 'Terug' }}</button>
         <button v-if="open" class="btn link muted" :disabled="busy" @click="withdraw">Aanvraag intrekken</button>
       </div>
     </template>

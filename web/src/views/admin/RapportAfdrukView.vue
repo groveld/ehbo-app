@@ -58,7 +58,7 @@ onMounted(async () => {
         <h2>Evenement</h2>
         <table class="pairs">
           <tbody>
-            <tr><th>Posten</th><td>{{ report.counts.posts }}</td><th>Medewerkers</th><td>{{ report.counts.staff }}</td><th>EHBO-eenheden</th><td>{{ report.counts.units }}</td></tr>
+            <tr><th>Locaties</th><td>{{ report.counts.posts }}</td><th>Medewerkers</th><td>{{ report.counts.staff }}</td><th>EHBO-eenheden</th><td>{{ report.counts.units }}</td></tr>
           </tbody>
         </table>
       </section>
@@ -78,7 +78,7 @@ onMounted(async () => {
             <tbody><tr v-for="[key, n] in outcomes" :key="key"><td>{{ OUTCOMES[key] }}</td><td class="num">{{ n }}</td></tr></tbody>
           </table>
           <table v-if="report.totals.byPost.length">
-            <thead><tr><th>Post</th><th class="num">Incidenten</th></tr></thead>
+            <thead><tr><th>Locatie</th><th class="num">Incidenten</th></tr></thead>
             <tbody><tr v-for="p in report.totals.byPost" :key="p.postName"><td>{{ p.postName }}</td><td class="num">{{ p.count }}</td></tr></tbody>
           </table>
           <table v-if="requests.length">
@@ -92,7 +92,7 @@ onMounted(async () => {
         <h2>Incidenten</h2>
         <table v-if="report.incidents.length" class="incidents">
           <thead>
-            <tr><th>Nr</th><th>Post</th><th>Melding</th><th>Gemeld</th><th>Geacc.</th><th>Ter pl.</th><th>Afgerond</th><th>Aanrijtijd</th><th>Eenheid</th><th>Afloop</th><th>Notitie</th></tr>
+            <tr><th>Nr</th><th>Locatie</th><th>Melding</th><th>Gemeld</th><th>Geacc.</th><th>Ter pl.</th><th>Afgerond</th><th>Aanrijtijd</th><th>Eenheid</th><th>Afloop</th><th>Notitie</th></tr>
           </thead>
           <tbody>
             <tr v-for="i in report.incidents" :key="i.number">
@@ -114,9 +114,9 @@ onMounted(async () => {
       </section>
 
       <section v-if="report.passages.length">
-        <h2>Km-punten per post</h2>
+        <h2>Km-punten per locatie</h2>
         <table class="incidents">
-          <thead><tr><th>Post</th><th>Loop</th><th>Km-punten</th></tr></thead>
+          <thead><tr><th>Locatie</th><th>Loop</th><th>Km-punten</th></tr></thead>
           <tbody>
             <template v-for="p in report.passages" :key="p.postName">
               <tr v-for="r in p.runs" :key="r.runName">

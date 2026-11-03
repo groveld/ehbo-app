@@ -466,12 +466,12 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     // From a post, or from where you are (#102): anyone on staff, with a GPS position. That place is kept for the report;
     // within the radius of a post it counts as that post.
     const position: [number, number] | null = body.lat != null && body.lng != null ? [body.lng, body.lat] : null;
-    if (body.postId === null && !position) throw httpError(400, 'Zonder post is je locatie nodig');
+    if (body.postId === null && !position) throw httpError(400, 'Zonder locatie is je positie nodig');
     const place = body.postId === null && position ? placeOf([...posts().values()], position, atPostM()) : null;
     const post = posts().get(body.postId ?? place?.postId ?? -1);
-    if (!post) throw body.postId === null ? httpError(409, 'Er zijn nog geen posten met een plek') : httpError(404, 'Post niet gevonden');
+    if (!post) throw body.postId === null ? httpError(409, 'Er zijn nog geen locaties met een positie') : httpError(404, 'Locatie niet gevonden');
     if (body.postId !== null) {
-      if (!atPost(me, post.id) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Je kunt alleen een verzoek doen vanaf je eigen post');
+      if (!atPost(me, post.id) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Je kunt alleen een verzoek doen vanaf je eigen locatie');
       if (!post.isOpen && !reopenAutoClosed(post.id)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
     }
     const offPost = place !== null && !place.atPost;
@@ -530,7 +530,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const position: [number, number] | null = body.lat !== null && body.lng !== null ? [body.lng, body.lat] : null;
     const place = position ? placeOf([...postMap.values()], position, atPostM()) : null;
     const post = postMap.get(place?.postId ?? body.postId);
-    if (!post) throw httpError(404, 'Post niet gevonden');
+    if (!post) throw httpError(404, 'Locatie niet gevonden');
     const offPost = place !== null && !place.atPost;
     const at = stamp();
     const aed = body.responsive === 'nee';
@@ -577,7 +577,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function update(me: Me, id: number, details: IncidentDetails) {
     const row = incidentRow(id);
-    if (!canFollow(me, row)) throw httpError(403, 'Alleen de post kan de melding aanvullen');
+    if (!canFollow(me, row)) throw httpError(403, 'Alleen de locatie of wie de melding deed, kan hem aanvullen');
     if (!['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string)) throw httpError(409, 'Deze melding is al afgesloten');
     const note = details.note?.trim() || null;
     const differences = changes(row, details, note);
@@ -613,7 +613,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function take(id: number, unit: Unit, by: Me, manual: boolean) {
     const row = incidentRow(id);
     const open = ['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string);
-    if (!open) throw httpError(409, row.status === 'ingetrokken' ? 'De post heeft de melding ingetrokken' : 'Deze melding is al afgerond');
+    if (!open) throw httpError(409, row.status === 'ingetrokken' ? 'De melding is ingetrokken' : 'Deze melding is al afgerond');
     const busy = busyUnits().get(unit.id);
     if (busy !== undefined && busy !== id) throw httpError(409, `${unit.name} is al bezig met een andere oproep`);
     const dispatches = dispatchesOf(id);
@@ -726,7 +726,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function withdraw(me: Me, id: number) {
     const row = incidentRow(id);
-    if (!canFollow(me, row)) throw httpError(403, 'Alleen de post kan de melding intrekken');
+    if (!canFollow(me, row)) throw httpError(403, 'Alleen de locatie of wie de melding deed, kan hem intrekken');
     if (!['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string)) return state();
     const post = posts().get(row.post_id as number)!;
     db.transaction(() => {
@@ -774,7 +774,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function setPostOpen(me: Me, postId: number, open: boolean) {
     const post = posts().get(postId);
-    if (!post) throw httpError(404, 'Post niet gevonden');
+    if (!post) throw httpError(404, 'Locatie niet gevonden');
     if (!post.manned) throw httpError(409, 'Op deze locatie staat niemand: hij gaat niet open of dicht');
     const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
     const ownEhboPost = post.isEhbo && units().some((u) => u.kind === 'vast' && u.postId === postId && memberOf(me, u.id));
@@ -880,10 +880,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       } else if (step === 'close') {
         run('UPDATE posts SET is_open = 0, keep_until = NULL, closes_at = NULL, auto_closed_at = ? WHERE id = ?', iso(), post.id);
         closed.push(post.name);
-        notify(postPhones(post.id), { title: `${post.name} is gesloten`, body: 'De geplande tijd is voorbij. Nog bezig? Je kunt de post altijd weer openen.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+        notify(postPhones(post.id), { title: `${post.name} is gesloten`, body: 'De geplande tijd is voorbij. Nog bezig? Je kunt de locatie altijd weer openen.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
       } else {
         run('UPDATE posts SET closes_at = ? WHERE id = ?', step.toISOString(), post.id);
-        notify(postPhones(post.id), { title: `${post.name} sluit om ${clockText(step.getTime())}`, body: 'Nog nodig? Tik om de post open te houden.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+        notify(postPhones(post.id), { title: `${post.name} sluit om ${clockText(step.getTime())}`, body: 'Nog nodig? Tik om de locatie open te houden.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
       }
     }
     const phone = coordinator();
@@ -893,7 +893,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function keepPost(me: Me, postId: number) {
     const post = posts().get(postId);
-    if (!post) throw httpError(404, 'Post niet gevonden');
+    if (!post) throw httpError(404, 'Locatie niet gevonden');
     const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
     if (!lead && !isLead(me)) throw httpError(403, 'Alleen de locatieverantwoordelijke of de coördinator kan de locatie open houden');
     const until = new Date(now().getTime() + KEEP_OPEN_MIN * 60_000).toISOString();
@@ -944,7 +944,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       for (const post of openPosts) setPost(post.id, true);
       for (const unit of onDuty) run("UPDATE ehbo_units SET availability = 'vrij', keep_until = ?, closes_at = NULL WHERE id = ?", keepAfterOpening(planOf(unit)), unit.id);
     });
-    for (const post of openPosts) notify(postPhones(post.id), { title: `${post.name} is geopend`, body: 'De coördinator heeft je post geopend.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+    for (const post of openPosts) notify(postPhones(post.id), { title: `${post.name} is geopend`, body: 'De coördinator heeft je locatie geopend.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
     offerOpenCalls(onDuty.map((u) => u.id));
     for (const unit of onDuty) notify(unit.members, { title: 'Je staat op Beschikbaar', body: 'De coördinator heeft je op Beschikbaar gezet.', tag: `dienst-${unit.id}`, url: '/ehbo' });
     changed();
@@ -982,7 +982,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     finishRequests();
     const everyone = new Set(all('SELECT phone FROM post_contacts UNION SELECT phone FROM ehbo_unit_members').map((r) => r.phone as string));
     const result = closeEverything();
-    notify(everyone, { title: 'Dag gesloten', body: 'Alle posten zijn dicht. Tot morgen.', tag: 'dag-gesloten', url: '/' });
+    notify(everyone, { title: 'Dag gesloten', body: 'Alle locaties zijn dicht. Tot morgen.', tag: 'dag-gesloten', url: '/' });
     changed();
     return result;
   }

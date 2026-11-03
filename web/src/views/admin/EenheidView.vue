@@ -105,7 +105,7 @@ async function remove() {
           <span v-else-if="form.kind === 'mobiel' && selectedPost" class="small">
             Staat als klein kruisje bij deze post op de kaart. Het team kan onderweg zijn; de post houdt een oogje in het zeil.
           </span>
-          <span v-else-if="form.kind === 'vast'" class="small">De eenheid zit op deze post; zo staat ze op de kaart.</span>
+          <span v-else-if="form.kind === 'vast'" class="small">De eenheid zit op deze locatie; zo staat ze op de kaart.</span>
         </div>
 
         <section class="stack gap-8">

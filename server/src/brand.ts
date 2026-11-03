@@ -76,7 +76,7 @@ export function buildManifest(db: EventDb) {
     id: '/',
     name,
     short_name: style.shortName || name.slice(0, SHORT_NAME_MAX),
-    description: `Posten, contacten en EHBO-oproepen tijdens ${name}.`,
+    description: `Locaties, contacten en EHBO-oproepen tijdens ${name}.`,
     lang: 'nl',
     start_url: '/?bron=app',
     scope: '/',

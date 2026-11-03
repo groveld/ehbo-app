@@ -27,7 +27,7 @@ const where = computed(() => {
   const { unit } = props;
   const home = postOf(unit.postId);
   const base = unit.kind === 'vast' ? postOf(state.value?.stayPostId ?? unit.postId)?.name : home?.name;
-  if (unit.kind === 'vast') return base ?? 'Geen post';
+  if (unit.kind === 'vast') return base ?? 'Geen locatie';
   const position = state.value?.position;
   const age = position ? live.serverNow - new Date(position.at).getTime() : Infinity;
   if (age > POSITION_MAX_AGE_MS) return base ? `${base} · geen recente positie` : 'Geen recente positie';

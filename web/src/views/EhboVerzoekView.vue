@@ -92,7 +92,7 @@ async function send() {
         <template v-else-if="gps.measuring.value"><strong>Locatie zoeken…</strong><span class="small">Even geduld, of bel 112 bij levensgevaar.</span></template>
         <template v-else>
           <strong>Geen locatie</strong>
-          <span class="small">{{ gps.error.value }} Vraag hulp vanaf je post, of bel de EHBO.</span>
+          <span class="small">{{ gps.error.value }} Vraag hulp vanaf je locatie, of bel de EHBO.</span>
           <button class="btn link" @click="gps.start()">Opnieuw zoeken</button>
         </template>
       </span>

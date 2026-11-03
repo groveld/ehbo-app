@@ -64,14 +64,14 @@ const location = computed(() => {
 });
 
 /** Welke EHBO-eenheid hier hoort: een vaste eenheid op haar eigen EHBO-post, of een mobiele eenheid met hier haar standplaats. */
-const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EHBO ${u.name} staat op deze post` : `Standplaats van EHBO ${u.name} (mobiel)`);
+const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EHBO ${u.name} staat op deze locatie` : `Standplaats van EHBO ${u.name} (mobiel)`);
 </script>
 
 <template>
   <main class="screen tight">
     <header class="top">
       <button class="icon-btn" aria-label="Terug" @click="back"><Icon name="back" /></button>
-      <span class="top-title">Post</span>
+      <span class="top-title">Locatie</span>
       <RouterLink v-if="session.me?.isAdmin && post" :to="{ name: 'beheer-post', params: { id: post.id } }" class="edit">Bewerken</RouterLink>
     </header>
 
@@ -98,11 +98,11 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <div class="card stack post-facts">
         <div v-if="location" class="fact location">
           <span class="stack">
-            <span class="label">Locatie</span>
+            <span class="label">Positie</span>
             <span :class="post.address ? 'address' : 'mono coords'">{{ location }}</span>
           </span>
         </div>
-        <div v-else class="fact"><span class="label">Locatie</span><span>Nog geen locatie vastgelegd</span></div>
+        <div v-else class="fact"><span class="label">Positie</span><span>Nog geen positie vastgelegd</span></div>
         <div v-if="post.passages.length" class="fact stack gap-6"><span class="label">Km-punten</span><KmPoints :passages="post.passages" :runs="store.pkg.runs" /></div>
         <div v-if="post.accessRoute" class="fact"><span class="label">Aanrijroute hulpverlening</span><span>{{ post.accessRoute }}</span></div>
       </div>
@@ -139,7 +139,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
 
       <div class="grow" />
       <div class="actions">
-        <a v-if="contact" :href="telHref(contact.phone)" class="btn big"><Icon name="phone" :size="20" />Bel post</a>
+        <a v-if="contact" :href="telHref(contact.phone)" class="btn big"><Icon name="phone" :size="20" />Bel locatie</a>
         <a
           v-if="post.lat !== null && post.lng !== null" :href="navigationUrl(post.lat, post.lng, post.name)"
           class="btn primary"

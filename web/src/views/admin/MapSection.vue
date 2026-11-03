@@ -55,7 +55,7 @@ const outside = computed(() => {
         <span><strong>Kaart van {{ built }}</strong></span>
         <span class="small">{{ current.tiles }} tegels · {{ (current.bytes / 1024 / 1024).toLocaleString('nl-NL', { maximumFractionDigits: 1 }) }} MB · opgehaald {{ new Date(current.preparedAt).toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' }) }}</span>
       </template>
-      <span v-else class="small">Nog geen kaart. De kaart beslaat het gebied rond alle lopen (GPX) en posten, met 2 km marge.</span>
+      <span v-else class="small">Nog geen kaart. De kaart beslaat het gebied rond alle lopen (GPX) en locaties, met 2 km marge.</span>
 
       <p v-if="outside.length" class="note warn">{{ outside.map((p) => p.name).join(', ') }} {{ outside.length === 1 ? 'ligt' : 'liggen' }} buiten de kaart. Haal de kaart opnieuw op.</p>
 

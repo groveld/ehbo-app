@@ -26,7 +26,7 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
         </RouterLink>
       </div>
       <p v-else class="note">Nog geen locaties. Voeg ze toe ter plaatse, dan legt de app meteen de GPS-positie vast.</p>
-      <RouterLink :to="{ name: 'beheer-post', params: { id: 'nieuw' } }" class="add-link">+ Post toevoegen</RouterLink>
+      <RouterLink :to="{ name: 'beheer-post', params: { id: 'nieuw' } }" class="add-link">+ Locatie toevoegen</RouterLink>
     </template>
   </AdminPage>
 </template>

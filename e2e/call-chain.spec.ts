@@ -147,7 +147,7 @@ test('aanvraag water: post vraagt aan, coördinator pakt op en handelt af', asyn
   await expect(coordinator.getByRole('heading', { name: 'Water: afgehandeld' })).toBeVisible();
   await expect(coordinator.getByText('Opgepakt door Cor Coördinator')).toBeVisible();
 
-  await post.getByRole('button', { name: 'Terug naar mijn post' }).click();
+  await post.getByRole('button', { name: 'Terug naar mijn locatie' }).click();
   await post.getByRole('link', { name: /Eerder vandaag/ }).click();
   await post.getByRole('link', { name: /Water.*afgehandeld/ }).first().click();
   await expect(post.getByRole('heading', { name: 'Water: afgehandeld' })).toBeVisible();
@@ -208,7 +208,7 @@ test('zonder bereik: de EHBO rondt af, de post vraagt water, en alles gaat later
   await card.getByRole('button', { name: 'Afgehandeld' }).click();
   await expect(coordinator.locator('.incident').filter({ hasText: 'afgerond' }).first()).toBeVisible();
 
-  await post.getByRole('button', { name: 'Terug naar mijn post' }).click();
+  await post.getByRole('button', { name: 'Terug naar mijn locatie' }).click();
   await post.getByRole('button', { name: 'Locatie sluiten' }).click();
   await post.getByRole('dialog').getByRole('button', { name: 'Locatie sluiten' }).click();
   await expect(post.getByText('LOCATIE IS DICHT')).toBeVisible();
@@ -241,7 +241,7 @@ test('closing: the warning on the post, keep open without signal, and everything
 
   const coordinator = await staffPhone(browser, PHONE.coordinator);
   await coordinator.getByRole('link', { name: 'Menu' }).click();
-  await coordinator.getByRole('link', { name: /Posten en EHBO openen/ }).click();
+  await coordinator.getByRole('link', { name: /Locaties en EHBO openen/ }).click();
   await coordinator.getByRole('button', { name: 'Alles openen' }).click();
   await coordinator.getByRole('dialog').getByRole('button', { name: 'Alles openen' }).click();
   // Nobody has logged in for Team 1, so it stays closed with its post, and says so.
@@ -371,7 +371,7 @@ test('participant: looking at a run keeps the favorites, and there can be severa
   await info.click();
   await expect(page.getByRole('link', { name: 'OpenStreetMap-bijdragers' })).toBeVisible();
   await page.getByRole('button', { name: 'Terug' }).click();
-  await expect(page.getByText('Soorten posten')).toBeVisible();
+  await expect(page.getByText('Legenda')).toBeVisible();
   await context.close();
 });
 
@@ -418,7 +418,7 @@ test('a new post in admin: open phones get it by themselves, and a call works be
 
   // With signal back, the rest of the post's data arrives too.
   await ehbo.unroute('**/api/package');
-  await expect(ehbo.getByRole('link', { name: 'Bel post' })).toBeVisible({ timeout: 15_000 });
+  await expect(ehbo.getByRole('link', { name: 'Bel locatie' })).toBeVisible({ timeout: 15_000 });
 
   expect((await post.request.post(`/api/incidents/${id}/withdraw`)).ok()).toBe(true);
 });
@@ -458,14 +458,14 @@ test('overview map: teams in the list for all staff, counters only for the coord
   await expect(coordinator.getByLabel(/^EHBO beschikbaar:/)).toBeVisible();
   await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
 
-  await coordinator.getByLabel('Soort post').selectOption('teams');
+  await coordinator.getByLabel('Functie').selectOption('teams');
   await expect(coordinator.locator('.post-row')).toHaveCount(0);
   await expect(coordinator.locator('.team-row')).toHaveCount(2);
   // Team 2 is on duty without a position, so it needs attention.
-  await coordinator.getByLabel('Soort post').selectOption({ label: 'Vraagt aandacht' });
+  await coordinator.getByLabel('Functie').selectOption({ label: 'Vraagt aandacht' });
   await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
   await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 1' })).toHaveCount(0);
-  await coordinator.getByLabel('Soort post').selectOption({ label: 'Alle' });
+  await coordinator.getByLabel('Functie').selectOption({ label: 'Alle' });
   // The ring shows open or closed in the list.
   await expect(coordinator.locator('.post-row').filter({ hasText: 'Kruising 4' }).locator('.status-ring')).toHaveCSS('outline-color', 'rgb(200, 38, 30)');
   await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' }).locator('.status-ring')).toHaveCSS('outline-color', 'rgb(10, 125, 79)');
@@ -473,7 +473,7 @@ test('overview map: teams in the list for all staff, counters only for the coord
   const post = await staffPhone(browser, PHONE.postLead);
   await post.getByRole('link', { name: 'Kaart' }).click();
   await expect(post.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
-  await expect(post.getByLabel('Soort post').getByRole('option', { name: 'Vraagt aandacht' })).toHaveCount(0);
+  await expect(post.getByLabel('Functie').getByRole('option', { name: 'Vraagt aandacht' })).toHaveCount(0);
   await expect(post.getByLabel(/^Locaties open:/)).toHaveCount(0);
 });
 

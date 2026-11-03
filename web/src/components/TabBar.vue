@@ -61,7 +61,7 @@ const tabs = computed<Tab[]>(() => {
     const postId = a.postId!;
     tabs.push({
       key: `post-${postId}`, to: { name: 'post-home', params: { id: postId } }, icon: 'pin',
-      label: posts.length > 1 ? (pkg.postById.get(postId)?.name.split(' · ')[0] ?? 'Post') : 'Mijn post',
+      label: pkg.postById.get(postId)?.name.split(' · ')[0] ?? 'Locatie',
       active: routePostId.value === postId,
       color: pkg.typeById.get(pkg.postById.get(postId)?.typeId ?? -1)?.color,
       count: live.openIncidents.filter((i) => i.postId === postId && !i.offPost).length,

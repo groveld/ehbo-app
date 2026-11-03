@@ -91,7 +91,7 @@ const legend = computed(() => {
       </section>
 
       <section v-if="legend.length" class="stack gap-8 section">
-        <span class="section-label">Soorten posten</span>
+        <span class="section-label">Legenda</span>
         <div class="list legend">
           <div v-for="type in legend" :key="type.id" class="list-row legend-item"><PostBadge :type="type" :size="32" /><span class="title-line">{{ type.name }}</span></div>
         </div>

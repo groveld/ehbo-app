@@ -69,7 +69,7 @@ async function finish(pause = false) {
         </button>
         <button class="card where" :aria-pressed="!stayHere" @click="stayHere = false">
           <span class="radio" />
-          <span class="stack"><strong>Terug naar {{ ownPost!.name }}</strong><span class="small">Weer beschikbaar vanaf je vaste post</span></span>
+          <span class="stack"><strong>Terug naar {{ ownPost!.name }}</strong><span class="small">Weer beschikbaar vanaf je eigen EHBO-post</span></span>
         </button>
       </div>
     </div>

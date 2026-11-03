@@ -11,9 +11,9 @@ const me = computed(() => session.me!);
 
 const preview = computed(() => {
   switch (me.value.home) {
-    case 'ehbo': return 'Oproepen voor jouw EHBO-eenheid, en het volledige overzicht: alle posten en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
-    case 'post': return 'De hulpknop voor jouw post, en het volledige overzicht: alle posten en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
-    default: return 'Het volledige overzicht: het kernteam, alle posten en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
+    case 'ehbo': return 'Oproepen voor jouw EHBO-eenheid, en het volledige overzicht: alle locaties en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
+    case 'post': return 'De hulpknop voor jouw locatie, en het volledige overzicht: alle locaties en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
+    default: return 'Het volledige overzicht: het kernteam, alle locaties en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
   }
 });
 

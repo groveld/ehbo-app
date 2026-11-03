@@ -39,7 +39,7 @@ async function logoutAll() {
   const others = (admin.state?.sessions ?? 1) - 1;
   if (!await confirmDialog({
     title: `${others} ${others === 1 ? 'toestel' : 'toestellen'} afmelden?`,
-    text: 'Iedereen behalve jij is afgemeld en krijgt geen meldingen meer. Posten en EHBO-eenheden waar dan niemand meer is aangemeld, gaan dicht.',
+    text: 'Iedereen behalve jij is afgemeld en krijgt geen meldingen meer. Locaties en EHBO-eenheden waar dan niemand meer is aangemeld, gaan dicht.',
     reassure: 'Wie weer aanmeldt en meldingen aanzet, doet gewoon weer mee.',
     confirm: 'Iedereen afmelden',
     tone: 'danger',

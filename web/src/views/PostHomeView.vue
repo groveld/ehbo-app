@@ -70,13 +70,13 @@ async function setOpen(value: boolean) {
 
 <template>
   <main class="screen tight">
-    <NotOnPhone v-if="!post || !store.pkg" class="top-gap">Deze post staat niet (meer) in de gegevens van het evenement.</NotOnPhone>
+    <NotOnPhone v-if="!post || !store.pkg" class="top-gap">Deze locatie staat niet (meer) in de gegevens van het evenement.</NotOnPhone>
     <template v-else>
       <header class="head">
         <div class="stack gap-4 grow">
           <span class="eyebrow">{{ eyebrow }}</span>
           <h1>{{ post.name }}</h1>
-          <span v-if="open" class="small">{{ kmLabel(post) }}<template v-if="post.km !== null"> · </template><strong class="open">post open</strong></span>
+          <span v-if="open" class="small">{{ kmLabel(post) }}<template v-if="post.km !== null"> · </template><strong class="open">locatie open</strong></span>
           <span v-else class="small">{{ planned }}</span>
         </div>
         <button v-if="open && canOpen" class="close-post" :disabled="busy" @click="setOpen(false)"><Icon name="close" :size="14" />Locatie sluiten</button>
@@ -156,7 +156,7 @@ async function setOpen(value: boolean) {
               <Icon name="forward" :size="16" />
             </RouterLink>
           </template>
-          <div v-else-if="!waiting.length && !openRequests.length" class="request"><span class="grow muted">Open verzoeken van deze post</span><strong>geen</strong></div>
+          <div v-else-if="!waiting.length && !openRequests.length" class="request"><span class="grow muted">Open verzoeken van deze locatie</span><strong>geen</strong></div>
         </div>
       </template>
 

@@ -75,8 +75,8 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     const existing = get('SELECT id FROM requests WHERE client_id = ?', body.clientId);
     if (existing) return list().find((r) => r.id === existing.id)!;
     const post = get('SELECT id, is_open FROM posts WHERE id = ?', body.postId);
-    if (!post) throw httpError(404, 'Post niet gevonden');
-    if (!atPost(me, body.postId) && !handles(me)) throw httpError(403, 'Je kunt alleen een aanvraag doen vanaf je eigen post');
+    if (!post) throw httpError(404, 'Locatie niet gevonden');
+    if (!atPost(me, body.postId) && !handles(me)) throw httpError(403, 'Je kunt alleen een aanvraag doen vanaf je eigen locatie');
     if (post.is_open !== 1 && !reopen(body.postId)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
     checkDetail(body.kind, body.detail);
     const id = Number(run(`INSERT INTO requests (client_id, post_id, kind, detail, status, reported_by, created_at, is_test)
@@ -91,7 +91,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
 
   function setDetail(me: Me, id: number, detail: string | null) {
     const r = row(id);
-    if (!atPost(me, r.post_id as number) && !handles(me)) throw httpError(403, 'Alleen de post kan de aanvraag aanpassen');
+    if (!atPost(me, r.post_id as number) && !handles(me)) throw httpError(403, 'Alleen de locatie kan de aanvraag aanpassen');
     if (r.status !== 'aangevraagd' && r.status !== 'opgepakt') throw httpError(409, 'Deze aanvraag is al afgehandeld');
     checkDetail(r.kind as RequestKind, detail);
     run('UPDATE requests SET detail = ? WHERE id = ?', detail, id);
@@ -121,7 +121,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
 
   function withdraw(me: Me, id: number) {
     const r = row(id);
-    if (!atPost(me, r.post_id as number) && !handles(me)) throw httpError(403, 'Alleen de post kan de aanvraag intrekken');
+    if (!atPost(me, r.post_id as number) && !handles(me)) throw httpError(403, 'Alleen de locatie kan de aanvraag intrekken');
     if (r.status !== 'aangevraagd' && r.status !== 'opgepakt') return list();
     run("UPDATE requests SET status = 'ingetrokken', done_at = ? WHERE id = ?", iso(), id);
     changed();

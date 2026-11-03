@@ -26,7 +26,7 @@ const session = useSessionStore();
     <div class="grow" />
     <div class="card outlined stack gap-6">
       <strong class="participant">Ben je deelnemer?</strong>
-      <span class="small">Dan heb je geen aanmelding nodig. Je ziet de route, de posten en de starttijden.</span>
+      <span class="small">Dan heb je geen aanmelding nodig. Je ziet de route, de locaties en de starttijden.</span>
       <RouterLink :to="{ name: 'deelnemer' }" class="participant-link">Naar route-informatie</RouterLink>
     </div>
   </main>

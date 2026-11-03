@@ -100,7 +100,7 @@ async function saveName() {
       </section>
 
       <a href="/api/admin/people.csv" class="btn" download>CSV-export</a>
-      <span class="small">Aanpassen doe je op de pagina van de post, eenheid of het kernteam. De naam geldt overal en kun je hier wijzigen.</span>
+      <span class="small">Aanpassen doe je op de pagina van de locatie, eenheid of het kernteam. De naam geldt overal en kun je hier wijzigen.</span>
     </template>
   </AdminPage>
 </template>

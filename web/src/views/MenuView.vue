@@ -32,8 +32,8 @@ async function logout() {
   const placed = me.value.assignments.some((a) => a.kind === 'post' || a.kind === 'ehbo');
   if (placed && !await confirmDialog({
     title: 'Afmelden?',
-    text: 'Ben jij de laatste van je post of EHBO-eenheid die nog is aangemeld, dan gaat die dicht. Je krijgt op dit toestel geen meldingen meer.',
-    reassure: 'Weer aanmelden kan altijd; zet je post daarna zelf weer open.',
+    text: 'Ben jij de laatste van je locatie of EHBO-eenheid die nog is aangemeld, dan gaat die dicht. Je krijgt op dit toestel geen meldingen meer.',
+    reassure: 'Weer aanmelden kan altijd; zet je locatie daarna zelf weer open.',
     confirm: 'Afmelden',
     tone: 'danger',
   })) return;
@@ -60,7 +60,7 @@ async function logout() {
     </div>
 
     <nav class="stack gap-10 menu">
-      <RouterLink v-if="me.isAdmin || isCoordinator" :to="{ name: 'sturing' }" class="btn item"><Icon name="list" :size="20" />Posten en EHBO openen of sluiten</RouterLink>
+      <RouterLink v-if="me.isAdmin || isCoordinator" :to="{ name: 'sturing' }" class="btn item"><Icon name="list" :size="20" />Locaties en EHBO openen of sluiten</RouterLink>
       <RouterLink v-if="me.isAdmin" :to="{ name: 'beheer' }" class="btn item"><Icon name="settings" :size="20" />Beheer</RouterLink>
       <RouterLink :to="{ name: 'info' }" class="btn item"><Icon name="info" :size="20" />Info &amp; voorwaarden</RouterLink>
       <RouterLink :to="{ name: 'controle' }" class="btn item"><Icon name="check" :size="20" />Pushmeldingen, locatie en controle</RouterLink>
@@ -76,7 +76,7 @@ async function logout() {
     <div class="card awake">
       <span class="stack grow">
         <strong>Scherm aan houden</strong>
-        <span v-if="wakeLockSupported" class="small">Het scherm gaat niet uit zolang de app open is, bijvoorbeeld in de auto of op de post. Kost meer batterij.</span>
+        <span v-if="wakeLockSupported" class="small">Het scherm gaat niet uit zolang de app open is, bijvoorbeeld in de auto of op de locatie. Kost meer batterij.</span>
         <span v-else class="small">Dit toestel kan het scherm niet aan houden. Zet de automatische vergrendeling langer: {{ isIOS ? 'Instellingen › Scherm en helderheid › Automatisch slot' : 'Instellingen › Scherm › Time-out scherm' }}.</span>
       </span>
       <button
