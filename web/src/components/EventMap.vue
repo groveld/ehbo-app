@@ -177,6 +177,38 @@ function postLayer(post: PackagePost, typeKey: string | null | undefined, onTop:
 /** The run in focus, if it has a route on the map. */
 const focusRun = () => props.pkg.runs.find((r) => r.id === props.highlightRunId && r.line) ?? null;
 
+/** From this zoom the other functions of a location stand around it as a flower (#83); further out a small count says how many. */
+const FLOWER_ZOOM = 15;
+/** More petals than this don't fit around a 28 px marker; the rest is "+n". */
+const MAX_PETALS = 6;
+
+/**
+ * The petals of a location: its other functions, and a team's standplaats, which isn't a function you tick but comes with the team.
+ * One cross for EHBO, grey when the mobile team is away.
+ */
+function petalsOf(post: PackagePost, away: boolean) {
+  const types = post.functionIds.filter((id) => id !== post.typeId).map((id) => props.pkg.postTypes.find((t) => t.id === id)).filter((t) => t !== undefined);
+  const main = props.pkg.postTypes.find((t) => t.id === post.typeId);
+  const standplaats = main?.key !== 'ehbo' && !types.some((t) => t.key === 'ehbo') && props.pkg.units.some((u) => u.postId === post.id);
+  const petals = types.map((t) => {
+    const icon = postTypeIcon(t.key);
+    const grey = t.key === 'ehbo' && away;
+    return { color: grey ? GREY : t.color, html: t.key === 'ehbo' ? CROSS : icon ? iconSvg(icon, 11, 2.6) : (t.letter ?? '').slice(0, 2), ehbo: t.key === 'ehbo' };
+  });
+  if (standplaats) petals.push({ color: away ? GREY : '#0A7D4F', html: CROSS, ehbo: true });
+  return petals;
+}
+
+function petalsHtml(petals: ReturnType<typeof petalsOf>) {
+  if (!petals.length) return '';
+  const shown = petals.length > MAX_PETALS ? petals.slice(0, MAX_PETALS - 1) : petals;
+  const rest = petals.length - shown.length;
+  const all = [...shown, ...(rest ? [{ color: '#3E434B', html: `+${rest}`, ehbo: false }] : [])];
+  // Evenly around the marker, the first at the top.
+  const placed = all.map((p, i) => `<span class="petal${p.ehbo ? ' ehbo' : ''}" style="background:${p.color};--angle:${Math.round((360 / all.length) * i - 90)}deg">${p.html}</span>`);
+  return `<span class="petals" aria-hidden="true">${placed.join('')}</span><span class="count" aria-hidden="true">+${petals.length}</span>`;
+}
+
 function markerElement(post: PackagePost) {
   const type = props.pkg.postTypes.find((t) => t.id === post.typeId);
   const el = document.createElement('button');
@@ -197,7 +229,8 @@ function markerElement(post: PackagePost) {
     el.classList.add(ehbo ? 'dimmed' : 'faded');
   }
   const icon = postTypeIcon(type?.key);
-  el.setAttribute('aria-label', away ? `${post.name}, EHBO onderweg` : post.name);
+  const names = post.functionIds.map((id) => props.pkg.postTypes.find((t) => t.id === id)?.name).filter(Boolean);
+  el.setAttribute('aria-label', [post.name, names.length > 1 ? names.join(', ') : null, away ? 'EHBO onderweg' : null].filter(Boolean).join(', '));
   if (type?.key === 'ehbo') el.innerHTML = CROSS;
   else {
     if (icon) el.innerHTML = iconSvg(icon, 16, 2.4);
@@ -205,9 +238,10 @@ function markerElement(post: PackagePost) {
       el.textContent = type?.letter ?? '';
       if ((type?.letter.length ?? 0) > 1) el.classList.add('small');
     }
-    // Een EHBO-eenheid heeft hier haar standplaats: klein groen kruisje op de rand, grijs als ze onderweg is.
-    if (props.pkg.units.some((u) => u.postId === post.id)) el.insertAdjacentHTML('beforeend', `<span class="ehbo-dot${away ? ' away' : ''}">${CROSS}</span>`);
   }
+  // The other functions and a standplaats, as petals; the selected location always has its flower open.
+  el.insertAdjacentHTML('beforeend', petalsHtml(petalsOf(post, away)));
+  if (focus) el.classList.add('open');
   el.addEventListener('click', (e) => {
     e.stopPropagation();
     emit('select', post.id);
@@ -361,6 +395,10 @@ function createMap() {
   });
   map.on('webglcontextlost', () => { contextLost = true; });
   map.on('zoom', drawAccuracy);
+  // Switching between count and flower is one class on the map, without drawing the markers again.
+  const flower = () => container.value?.classList.toggle('flowers', map!.getZoom() >= FLOWER_ZOOM);
+  map.on('zoom', flower);
+  map.on('load', flower);
   // Moving the map yourself stops following.
   map.on('dragstart', () => { if (locating.value === 'follow') locating.value = 'shown'; });
   map.on('webglcontextrestored', () => { contextLost = false; });
@@ -526,12 +564,21 @@ onBeforeUnmount(() => {
 /* !important: MapLibre sets opacity on every marker itself. */
 .event-map :deep(.post-marker.dimmed) { opacity: .4 !important; }
 .event-map :deep(.post-marker.faded) { opacity: .15 !important; pointer-events: none; }
-.event-map :deep(.ehbo-dot) {
-  position: absolute; right: -6px; bottom: -6px; width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid #FFFFFF;
-  background: #0A7D4F; display: flex; align-items: center; justify-content: center;
+/* A location with more functions: a small count further out, a flower of petals around it from FLOWER_ZOOM (#83). */
+.event-map :deep(.post-marker .count) {
+  position: absolute; right: -8px; bottom: -6px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; border: 1.5px solid #FFFFFF;
+  background: #3E434B; color: #FFFFFF; font: 700 9px var(--sans); display: flex; align-items: center; justify-content: center;
 }
-.event-map :deep(.ehbo-dot.away) { background: #9A9CA3; }
-.event-map :deep(.ehbo-dot svg) { width: 10px; height: 10px; }
+.event-map :deep(.post-marker .petals) { position: absolute; inset: 0; display: none; pointer-events: none; }
+.event-map :deep(.post-marker .petal) {
+  position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; border: 1.5px solid #FFFFFF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .3); color: #FFFFFF; font: 700 8px var(--sans); display: flex; align-items: center; justify-content: center;
+  transform: rotate(var(--angle)) translate(24px) rotate(calc(-1 * var(--angle)));
+}
+.event-map :deep(.post-marker .petal.ehbo) { border-radius: 5px; }
+.event-map :deep(.post-marker .petal svg) { width: 11px; height: 11px; }
+.event-map.flowers :deep(.post-marker .petals), .event-map :deep(.post-marker.open .petals) { display: block; }
+.event-map.flowers :deep(.post-marker .count), .event-map :deep(.post-marker.open .count) { display: none; }
 .event-map :deep(.unit-marker) {
   width: 28px; height: 28px; border-radius: 50%; background: #FFFFFF; border: 2px solid #0A7D4F; color: #0A7D4F;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
