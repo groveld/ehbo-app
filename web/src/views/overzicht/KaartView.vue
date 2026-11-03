@@ -8,7 +8,7 @@ import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
 import TeamRow from '../../components/TeamRow.vue';
 import { clock } from '../../incidents.ts';
-import { callLines, coordinatorOf, isOnRun, mobileUnits, type Ambulance } from '../../posts.ts';
+import { callLines, coordinatorOf, isOnRun, manned, mobileUnits, type Ambulance } from '../../posts.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 import { useSessionStore } from '../../stores/session.ts';
@@ -44,7 +44,9 @@ const alertIds = computed(() => [...new Set(live.openIncidents.filter((i) => !i.
 const taskIds = computed(() => [...new Set(live.requests.filter((r) => r.status === 'aangevraagd' || r.status === 'opgepakt').map((r) => r.postId))]);
 /** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
 const mobile = computed(() => mobileUnits(store.pkg, live.units, live.serverNow));
-const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id) ?? []);
+/** Only locations with people can be open or closed (#69). */
+const mannedPosts = computed(() => store.pkg?.posts.filter((p) => manned(store.pkg, p)) ?? []);
+const closedIds = computed(() => mannedPosts.value.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id));
 const matches = (p: PackagePost) => {
   const q = query.value.trim().toLowerCase().replace(',', '.');
   const km = q.replace(/^km\s*/, '');
@@ -109,7 +111,7 @@ const counters = computed(() => {
     return state?.availability === 'vrij' && state.incidentId === null;
   });
   return [
-    { label: 'Locaties', value: `${pkg.posts.length - closedIds.value.length}/${pkg.posts.length}`, full: 'Locaties open' },
+    { label: 'Locaties', value: `${mannedPosts.value.length - closedIds.value.length}/${mannedPosts.value.length}`, full: 'Locaties open' },
     { label: 'EHBO', value: `${free.length}/${pkg.units.length}`, full: 'EHBO beschikbaar' },
     { label: 'Oproepen', value: String(live.openIncidents.length), full: 'Open oproepen' },
     { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'aangevraagd').length), full: 'Aanvragen nog niet opgepakt' },

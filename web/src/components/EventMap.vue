@@ -239,6 +239,9 @@ function markerElement(post: PackagePost) {
       if ((type?.letter.length ?? 0) > 1) el.classList.add('small');
     }
   }
+  // A turnaround says which run, when there's more than one (#69).
+  const ownRun = post.runId !== null && props.pkg.runs.length > 1 ? props.pkg.runs.find((r) => r.id === post.runId) : undefined;
+  if (ownRun) el.insertAdjacentHTML('beforeend', `<span class="run-label">${ownRun.name.replace(/[<>&"']/g, '')}</span>`);
   // The other functions and a standplaats, as petals; the selected location always has its flower open.
   el.insertAdjacentHTML('beforeend', petalsHtml(petalsOf(post, away)));
   if (focus) el.classList.add('open');
@@ -577,6 +580,10 @@ onBeforeUnmount(() => {
 }
 .event-map :deep(.post-marker .petal.ehbo) { border-radius: 5px; }
 .event-map :deep(.post-marker .petal svg) { width: 11px; height: 11px; }
+.event-map :deep(.post-marker .run-label) {
+  position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); padding: 1px 5px; border-radius: 6px;
+  background: rgba(255, 255, 255, .92); color: var(--ink); font: 700 10px var(--sans); white-space: nowrap; pointer-events: none;
+}
 .event-map.flowers :deep(.post-marker .petals), .event-map :deep(.post-marker.open .petals) { display: block; }
 .event-map.flowers :deep(.post-marker .count), .event-map :deep(.post-marker.open .count) { display: none; }
 .event-map :deep(.unit-marker) {

@@ -10,7 +10,7 @@ import PostBadge from '../components/PostBadge.vue';
 import { navigationUrl } from '../navigate.ts';
 import { confirmClosePost } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
-import { kmLabel, mobileUnits, nearestUnit, primaryContact, unitsAt } from '../posts.ts';
+import { kmLabel, manned, mobileUnits, nearestUnit, primaryContact, unitsAt } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -31,6 +31,9 @@ async function setOpen(open: boolean) {
 const post = computed(() => store.postById.get(Number(props.id)) ?? null);
 const type = computed(() => (post.value ? store.typeById.get(post.value.typeId) : undefined));
 /** Every function of this location, the main one first (#83). */
+const hasPeople = computed(() => (post.value ? manned(store.pkg, post.value) : true));
+/** A turnaround's run, by name. */
+const runName = computed(() => (post.value?.runId != null ? store.pkg?.runs.find((r) => r.id === post.value!.runId)?.name ?? null : null));
 const functionNames = computed(() => post.value?.functionIds.map((id) => store.typeById.get(id)?.name).filter(Boolean).join(' · ') ?? '');
 const contact = computed(() => (post.value ? primaryContact(post.value) : null));
 const here = computed(() => (store.pkg && post.value ? unitsAt(store.pkg, post.value.id) : []));
@@ -77,7 +80,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <div class="title">
         <PostBadge :type="type" :size="56" />
         <div class="stack">
-          <span class="type" :style="{ color: type?.color }">{{ functionNames }}</span>
+          <span class="type" :style="{ color: type?.color }">{{ functionNames }}<template v-if="runName"> · {{ runName }}</template></span>
           <h1>{{ post.name }}</h1>
           <span v-if="subtitle" class="small">{{ subtitle }}</span>
         </div>
@@ -104,8 +107,8 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
         <div v-if="post.accessRoute" class="fact"><span class="label">Aanrijroute hulpverlening</span><span>{{ post.accessRoute }}</span></div>
       </div>
 
-      <!-- Open of dicht, live. Een beheerder kan elke post open en dicht zetten, voor wie minder technisch is. -->
-      <div class="card open-row">
+      <!-- Open of dicht, live. Een beheerder kan elke post open en dicht zetten, voor wie minder technisch is. Not where nobody is (#69). -->
+      <div v-if="hasPeople" class="card open-row">
         <span class="dot" :class="{ on: isOpen }" />
         <span class="grow"><strong>{{ isOpen ? 'Locatie is open' : 'Locatie is dicht' }}</strong></span>
         <button

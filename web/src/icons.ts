@@ -33,6 +33,10 @@ export const PATHS = {
   flag: '<path d="M4 22V4"/><path d="M4 15s1.5-1.5 4.5-1.5 4.5 2 7.5 2 4-1.5 4-1.5V4s-1 1.5-4 1.5-4.5-2-7.5-2S4 4 4 4"/>',
   stamp: '<path d="M5 21h14"/><path d="M19.3 13.7a2.5 2.5 0 0 0-1.8-.7h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.7-.3-1.3-.7-1.8z"/><path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13"/>',
   more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+  /** A heart with a bolt, as on AED signs. */
+  aed: '<path d="M12 20.5 4.6 13.2A4.8 4.8 0 0 1 12 6.5a4.8 4.8 0 0 1 7.4 6.7z"/><path d="m12.8 9-2.3 3.6h3l-2.3 3.6"/>',
+  toilet: '<circle cx="7" cy="4.5" r="1.8"/><path d="M5 21v-6H3.5L5.5 8h3l2 7H9v6"/><circle cx="17" cy="4.5" r="1.8"/><path d="M15 21V8h4v13"/>',
+  uturn: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
 } as const;
 
 export type IconName = keyof typeof PATHS;
@@ -42,5 +46,5 @@ export const iconSvg = (name: IconName, size: number, strokeWidth = 2) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[name]}</svg>`;
 
 /** Icoon per standaardsoort post; een eigen soort zonder vast icoon houdt zijn letter. EHBO is het gevulde kruis. */
-const TYPE_ICON: Record<string, IconName> = { start_finish: 'flag', water: 'drop', stempel: 'stamp', verkeer: 'cone', anders: 'more' };
+const TYPE_ICON: Record<string, IconName> = { start_finish: 'flag', water: 'drop', stempel: 'stamp', verkeer: 'cone', anders: 'more', aed: 'aed', toilet: 'toilet', keerpunt: 'uturn' };
 export const postTypeIcon = (key: string | null | undefined): IconName | null => (key ? TYPE_ICON[key] ?? null : null);

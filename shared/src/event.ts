@@ -15,7 +15,7 @@ export const POST_CONTACT_ROLE_LABEL: Record<PostContactRole, string> = {
  * Which function of a location matters most, lowest first: it goes on top on the map (#72), and it's the main function of a
  * location with several (#83), which gives its marker the icon and colour. A custom type counts as "anders".
  */
-export const MARKER_ORDER = ['anders', 'verkeer', 'water', 'stempel', 'ehbo', 'start_finish'];
+export const MARKER_ORDER = ['anders', 'keerpunt', 'toilet', 'verkeer', 'water', 'stempel', 'aed', 'ehbo', 'start_finish'];
 export const markerRank = (key: string | null | undefined) => Math.max(MARKER_ORDER.indexOf(key ?? ''), 0);
 
 /** The main function of a location: the highest in MARKER_ORDER; between equals the first chosen. */
@@ -24,15 +24,27 @@ export function mainFunction(functionIds: number[], types: { id: number; key: st
   return functionIds.reduce((best, id) => (rank(id) > rank(best) ? id : best), functionIds[0]!);
 }
 
-/** Standaardsoorten posten bij een nieuw evenement; de beheerder kan ze aanpassen en aanvullen. */
+/**
+ * Standaardsoorten posten bij een nieuw evenement; de beheerder kan ze aanpassen en aanvullen.
+ * Unmanned (#69): a fixed AED, toilets and a turnaround have nobody, so no contacts, open or closed, requests or tab.
+ * A checkpoint is the stamp post: the app doesn't time runners, so the two are the same.
+ */
 export const DEFAULT_POST_TYPES = [
-  { key: 'start_finish', name: 'Start/finish', letter: 'S/F', color: '#16181D' },
-  { key: 'water', name: 'Waterpost', letter: 'W', color: '#1F6FB2' },
-  { key: 'stempel', name: 'Stempelpost', letter: 'St', color: '#7A4BB7' },
-  { key: 'verkeer', name: 'Verkeer', letter: 'V', color: '#D9781C', personLabel: 'Verkeersregelaar' },
-  { key: 'ehbo', name: 'EHBO-post', letter: '+', color: '#0A7D4F' },
-  { key: 'anders', name: 'Anders', letter: 'A', color: '#6B7079' },
+  { key: 'start_finish', name: 'Start/finish', letter: 'S/F', color: '#16181D', manned: true },
+  { key: 'water', name: 'Waterpost', letter: 'W', color: '#1F6FB2', manned: true },
+  { key: 'stempel', name: 'Stempel-/controlepost', letter: 'St', color: '#7A4BB7', manned: true },
+  { key: 'verkeer', name: 'Verkeer', letter: 'V', color: '#D9781C', personLabel: 'Verkeersregelaar', manned: true },
+  { key: 'ehbo', name: 'EHBO-post', letter: '+', color: '#0A7D4F', manned: true },
+  // Magenta: clear of the red for urgent and the green for EHBO.
+  { key: 'aed', name: 'AED', letter: 'AED', color: '#B5179E', manned: false },
+  { key: 'toilet', name: 'Toiletten', letter: 'WC', color: '#5B6B7A', manned: false },
+  { key: 'keerpunt', name: 'Keerpunt', letter: 'K', color: '#6D4C41', manned: false },
+  { key: 'anders', name: 'Anders', letter: 'A', color: '#6B7079', manned: true },
 ] as const;
+
+/** A location has people when one of its functions has (#69). */
+export const isManned = (post: { functionIds: number[] }, types: { id: number; manned: boolean }[]) =>
+  post.functionIds.some((id) => types.find((t) => t.id === id)?.manned ?? true);
 
 /** Voorstel voor het kernteam bij een nieuw evenement (functies zonder naam en nummer). */
 export const DEFAULT_CORE_TEAM = [

@@ -391,7 +391,7 @@ test('a new post in admin: open phones get it by themselves, and a call works be
   const { postTypes } = await (await admin.request.get('/api/package')).json() as { postTypes: { id: number; key: string }[] };
   const created = await admin.request.post('/api/admin/posts', {
     data: {
-      functionIds: [postTypes.find((t) => t.key === 'water')!.id], name: NEW_POST, lat: 53.16, lng: 5.84, accuracyM: null, address: null, accessRoute: null,
+      functionIds: [postTypes.find((t) => t.key === 'water')!.id], runId: null, name: NEW_POST, lat: 53.16, lng: 5.84, accuracyM: null, address: null, accessRoute: null,
       timeFrom: null, timeTo: null, contacts: [{ name: 'Nieuwe Leider', phone: '0600000011', role: 'verantwoordelijke', timeFrom: null, timeTo: null }],
     },
   });
@@ -666,4 +666,30 @@ test('Beheer › Mensen: everyone with where they are, and what is still missing
   if (process.env.SHOTS) await admin.screenshot({ path: `${process.env.SHOTS}/mensen.png`, fullPage: true });
   await wim.getByRole('link', { name: 'Waterpost 3 · brug · locatieverantwoordelijke' }).click();
   await expect(admin).toHaveURL(/\/beheer\/posten\/\d+/);
+});
+
+test('an AED on the map: for participants in the legend, and no open or closed', async ({ browser }) => {
+  const admin = await staffPhone(browser, PHONE.admin);
+  const { postTypes } = await (await admin.request.get('/api/admin')).json() as { postTypes: { id: number; key: string }[] };
+  const state = await (await admin.request.post('/api/admin/posts', {
+    data: {
+      functionIds: [postTypes.find((t) => t.key === 'aed')!.id], runId: null, name: 'AED dorpshuis', lat: 53.1430, lng: 5.8150, accuracyM: null,
+      address: 'Aan de gevel', accessRoute: null, timeFrom: null, timeTo: null, contacts: [],
+    },
+  })).json() as { posts: { id: number; name: string }[] };
+  const aed = state.posts.find((p) => p.name === 'AED dorpshuis')!;
+
+  await admin.goto(`/post/${aed.id}`);
+  await expect(admin.getByRole('heading', { name: 'AED dorpshuis' })).toBeVisible();
+  await expect(admin.getByText(/Locatie is (open|dicht)/)).toHaveCount(0);
+  if (process.env.SHOTS) await admin.screenshot({ path: `${process.env.SHOTS}/aed-post.png` });
+
+  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
+  const participant = await context.newPage();
+  await participant.goto('/?browser=1');
+  await expect(participant.locator('.legend-item').filter({ hasText: 'AED' })).toBeVisible();
+  if (process.env.SHOTS) await participant.screenshot({ path: `${process.env.SHOTS}/aed-legend.png`, fullPage: true });
+  await context.close();
+
+  expect((await admin.request.delete(`/api/admin/posts/${aed.id}`)).ok()).toBe(true);
 });

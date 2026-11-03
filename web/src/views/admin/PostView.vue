@@ -2,7 +2,7 @@
 // 1.3 · Post invoeren: soort, naam, GPS-positie (de km-punten volgen uit de GPX), aanrijroute, tijden en contactpersonen.
 import { computed, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import { formatPhone, type ContactData, type PostContactRole, type PostData } from '@ehbo/shared';
+import { formatPhone, isManned, type ContactData, type PostContactRole, type PostData } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import EventMap from '../../components/EventMap.vue';
 import Icon from '../../components/Icon.vue';
@@ -32,7 +32,7 @@ const ROLES: { value: PostContactRole; label: string }[] = [
 ];
 
 const form = reactive<PostData>({
-  functionIds: [], name: '', lat: null, lng: null, accuracyM: null, address: null, accessRoute: null, timeFrom: null, timeTo: null, contacts: [],
+  functionIds: [], runId: null, name: '', lat: null, lng: null, accuracyM: null, address: null, accessRoute: null, timeFrom: null, timeTo: null, contacts: [],
 });
 const coordsText = ref('');
 const showCoords = ref(false);
@@ -60,6 +60,10 @@ function toggleFunction(id: number) {
   if (!form.functionIds.includes(id)) form.functionIds = [...form.functionIds, id];
   else if (form.functionIds.length > 1) form.functionIds = form.functionIds.filter((f) => f !== id);
 }
+/** Nobody at an AED, toilets or a turnaround (#69): no people or times to fill in. */
+const hasPeople = computed(() => isManned(form, admin.state?.postTypes ?? []));
+const turnaround = computed(() => form.functionIds.some((id) => admin.postTypeById.get(id)?.key === 'keerpunt'));
+
 /** One lead per location (#83): once someone is, the others can't be chosen as lead. */
 const leadTaken = (i: number) => form.contacts.some((c, j) => j !== i && c.role === 'verantwoordelijke');
 
@@ -162,7 +166,16 @@ async function remove() {
           <span v-else class="small">Geen km: geen GPX, geen positie, of de route komt hier niet langs. De km-punten volgen uit de GPX van de lopen.</span>
         </div>
 
-        <div class="row-2">
+        <!-- A turnaround belongs to one run (#69). -->
+        <div v-if="turnaround" class="form-field">
+          <label for="loop">Keerpunt van</label>
+          <select id="loop" v-model="form.runId" class="input">
+            <option :value="null">Kies een loop</option>
+            <option v-for="r in state.runs" :key="r.id" :value="r.id">{{ r.name }}</option>
+          </select>
+        </div>
+
+        <div v-if="hasPeople" class="row-2">
           <div class="form-field">
             <label for="van">Bemand vanaf</label>
             <input id="van" v-model="form.timeFrom" class="input" type="time">
@@ -178,7 +191,8 @@ async function remove() {
           <textarea id="route" v-model="form.accessRoute" class="input" rows="2" placeholder="Via [weg], hek bij boerderij staat open." />
         </div>
 
-        <section class="stack gap-8">
+        <p v-if="!hasPeople" class="small">Hier staat niemand: geen contactpersonen, geen tijden en geen open of dicht.</p>
+        <section v-else class="stack gap-8">
           <span class="section-label">Contactpersonen</span>
           <div v-for="(c, i) in form.contacts" :key="i" class="card stack gap-8">
             <div class="row-2">
@@ -193,7 +207,7 @@ async function remove() {
             </div>
           </div>
           <button class="add-link" @click="form.contacts.push(emptyContact())">+ Nog een contact</button>
-          <span class="small">Wie hier staat, kan met dit nummer inloggen. De verantwoordelijke zet de post open en dicht.</span>
+          <span class="small">Wie hier staat, kan met dit nummer inloggen. De verantwoordelijke zet de locatie open en dicht.</span>
         </section>
       </template>
     </template>

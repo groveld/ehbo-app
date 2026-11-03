@@ -83,6 +83,8 @@ interface Post {
   isEhbo: boolean;
   /** EHBO is all that's there: the location and its fixed team open and close together. */
   onlyEhbo: boolean;
+  /** People are there (#69); an AED, toilets or a turnaround never open. */
+  manned: boolean;
   timeTo: string | null;
   keepUntil: string | null;
   closesAt: string | null;
@@ -144,7 +146,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     // An EHBO post is a location with an EHBO function, also when that isn't its main function (#83).
     return new Map(all(`SELECT p.id, p.type_id, p.name, p.km, p.lat, p.lng, p.is_open, p.time_to, p.keep_until, p.closes_at, p.auto_closed_at,
                                EXISTS (SELECT 1 FROM post_functions f JOIN post_types t ON t.id = f.type_id WHERE f.post_id = p.id AND t.key = 'ehbo') AS ehbo,
-                               (SELECT COUNT(*) FROM post_functions f WHERE f.post_id = p.id) AS functions
+                               (SELECT COUNT(*) FROM post_functions f WHERE f.post_id = p.id) AS functions,
+                               EXISTS (SELECT 1 FROM post_functions f JOIN post_types t ON t.id = f.type_id WHERE f.post_id = p.id AND t.manned = 1) AS manned
                         FROM posts p`).map((p) => [p.id as number, {
       id: p.id as number,
       typeId: p.type_id as number,
@@ -155,6 +158,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       isOpen: p.is_open === 1,
       isEhbo: p.ehbo === 1,
       onlyEhbo: p.ehbo === 1 && p.functions === 1,
+      manned: p.manned === 1,
       timeTo: p.time_to as string | null,
       keepUntil: p.keep_until as string | null,
       closesAt: p.closes_at as string | null,
@@ -771,6 +775,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   function setPostOpen(me: Me, postId: number, open: boolean) {
     const post = posts().get(postId);
     if (!post) throw httpError(404, 'Post niet gevonden');
+    if (!post.manned) throw httpError(409, 'Op deze locatie staat niemand: hij gaat niet open of dicht');
     const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'verantwoordelijke');
     const ownEhboPost = post.isEhbo && units().some((u) => u.kind === 'vast' && u.postId === postId && memberOf(me, u.id));
     if (!lead && !ownEhboPost && !me.isAdmin) throw httpError(403, 'Alleen de locatieverantwoordelijke kan de locatie open of dicht zetten');
@@ -930,7 +935,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const present = db.loggedIn();
     const allUnits = units();
     const here = (people: string[]) => people.some((p) => present.has(p));
-    const closedPosts = [...posts().values()].filter((p) => !p.isOpen);
+    const closedPosts = [...posts().values()].filter((p) => !p.isOpen && p.manned);
     const off = allUnits.filter((u) => u.availability === 'uit_dienst');
     const openPosts = closedPosts.filter((p) => here(postPeople(p.id, allUnits)));
     const onDuty = off.filter((u) => here(u.members));
