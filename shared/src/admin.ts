@@ -140,6 +140,32 @@ export interface AdminState {
   info: InfoSettings;
 }
 
+/** Beheer › Mensen (#70): where someone is listed, linking to that page. */
+export interface PersonLink {
+  kind: 'post' | 'unit' | 'core' | 'admin';
+  /** Post or team; null for the core team and the admin list, which are one page each. */
+  id: number | null;
+  label: string;
+}
+
+export interface PersonOverview {
+  phone: string;
+  name: string;
+  links: PersonLink[];
+  /** A device is logged in with this number now. */
+  loggedIn: boolean;
+  /** A device gets pushes for this number. */
+  push: boolean;
+  /** What to look at: no name, listed nowhere, overlapping times. */
+  problems: string[];
+}
+
+export interface PeopleOverview {
+  people: PersonOverview[];
+  /** Still to fill in: a post without a lead, a team without members, a core team function without a number. */
+  gaps: PersonLink[];
+}
+
 /** Info & voorwaarden (2.6). In de teksten vult de app {evenement}, {beleid} en {contact} in. */
 export interface InfoSettings {
   /** null = de standaardtekst. */

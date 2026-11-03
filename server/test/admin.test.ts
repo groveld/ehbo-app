@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { DEFAULT_STYLE, type AdminState, type PostData, type UnitData } from '@ehbo/shared';
+import { DEFAULT_STYLE, type AdminState, type PeopleOverview, type PostData, type UnitData } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
 import { openEventDb, type EventDb } from '../src/event-db.ts';
@@ -300,4 +300,32 @@ test('GPX for download: every post on the route as a waypoint, before the track,
   assert.match(body, /<name>Kruising 4<\/name><desc>Verkeer · km [\d,]+ en [\d,]+<\/desc>/, 'passed twice');
   assert.match(body, /<sym>First Aid<\/sym>/);
   assert.doesNotMatch(body, /fietspad|\+316|Wim|Vera/);
+});
+
+test('Beheer › Mensen: everyone with where they are, what is missing, and the name to change', async () => {
+  const res = await call('GET', '/api/admin/people');
+  assert.equal(res.statusCode, 200);
+  const overview = res.json() as PeopleOverview;
+  const wim = overview.people.find((p) => p.phone === DEMO.postLead)!;
+  assert.deepEqual(wim.links.map((l) => l.label), ['Waterpost 3 · brug · postverantwoordelijke', 'Kruising 4 · posthouder']);
+  assert.ok(overview.people.find((p) => p.phone === DEMO.admin)!.links.some((l) => l.kind === 'admin'));
+  assert.ok(overview.gaps.some((g) => g.label === 'Kruising 4: nog geen postverantwoordelijke'));
+  assert.ok(!overview.gaps.some((g) => g.label.startsWith('EHBO-post 1')), 'run by its fixed team');
+  const names = overview.people.map((p) => p.name).filter(Boolean);
+  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'nl')), 'by name');
+
+  // Two places at the same time.
+  db.raw.prepare("UPDATE post_contacts SET time_from = '11:00', time_to = '12:00' WHERE phone = ?").run(DEMO.postLead);
+  const twice = (await call('GET', '/api/admin/people')).json() as PeopleOverview;
+  assert.match(twice.people.find((p) => p.phone === DEMO.postLead)!.problems.join(), /Overlappende tijden: Waterpost 3 · brug en Kruising 4/);
+  db.raw.prepare('UPDATE post_contacts SET time_from = NULL, time_to = NULL WHERE phone = ?').run(DEMO.postLead);
+
+  const renamed = (await call('PUT', `/api/admin/people/${encodeURIComponent(DEMO.postLead)}`, { name: 'Wim Waterman' })).json() as PeopleOverview;
+  assert.equal(renamed.people.find((p) => p.phone === DEMO.postLead)!.name, 'Wim Waterman');
+  assert.equal((await call('PUT', '/api/admin/people/0699999998', { name: 'X' })).statusCode, 404);
+  await call('PUT', `/api/admin/people/${encodeURIComponent(DEMO.postLead)}`, { name: 'Wim Water' });
+
+  const csv = await call('GET', '/api/admin/people.csv');
+  assert.match(csv.headers['content-type'] as string, /text\/csv/);
+  assert.match(csv.body, /Wim Water;\+31 6/);
 });
