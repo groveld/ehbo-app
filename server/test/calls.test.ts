@@ -251,7 +251,7 @@ test('aanvullen met "niet aanspreekbaar" roept alsnog de AED-eenheid op', async 
 test('ter plaatse en afronden; een vaste eenheid die blijft, telt vanaf die post', async () => {
   await onDuty();
   // Team 2 ver weg: dan is Team 1 het dichtstbij.
-  assert.equal((await call(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/position`, { lat: 52.0, lng: 4.0 })).statusCode, 204);
+  assert.equal((await call(DEMO.mobileEhbo, 'PUT', '/api/position', { lat: 52.0, lng: 4.0 })).statusCode, 204);
   const inc = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   assert.equal(inc.dispatches[0]?.unitId, TEAM1(), 'recente GPS-positie telt boven de standplaats');
 
@@ -384,9 +384,9 @@ test('deelnemers zien welke standplaats leeg is, zonder posities of namen', asyn
   assert.deepEqual(await status(), [], 'zonder GPS-positie telt de standplaats');
 
   // 20 m van Kruising 4 (53.1488, 5.8279) is thuis; 1 km verderop is onderweg.
-  await call(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/position`, { lat: 53.14898, lng: 5.8279 });
+  await call(DEMO.mobileEhbo, 'PUT', '/api/position', { lat: 53.14898, lng: 5.8279 });
   assert.deepEqual(await status(), []);
-  await call(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/position`, { lat: 53.1578, lng: 5.8279 });
+  await call(DEMO.mobileEhbo, 'PUT', '/api/position', { lat: 53.1578, lng: 5.8279 });
   assert.deepEqual(await status(), [KRUISING()]);
 
   // Een positie ouder dan 3 minuten telt niet meer.
@@ -426,4 +426,39 @@ test('a call and a request say which post they are about, for a phone without th
 
   const water = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/requests', { postId: WATER(), kind: 'water', detail: null, clientId: 'test-sync-abcdef' });
   assert.equal(water.postName, 'Waterpost 3 · brug');
+});
+
+test('a position is shared by a person, and only on a mobile team on duty', async () => {
+  assert.equal((await call(DEMO.postLead, 'PUT', '/api/position', { lat: 53.15, lng: 5.83 })).statusCode, 409, 'a post is never tracked');
+  assert.equal((await call(DEMO.mobileEhbo, 'PUT', '/api/position', { lat: 53.15, lng: 5.83 })).statusCode, 409, 'off duty');
+  await onDuty();
+  assert.equal((await call(DEMO.mobileEhbo, 'PUT', '/api/position', { lat: 53.15, lng: 5.83 })).statusCode, 204);
+  const team = async () => (await ok(DEMO.coordinator, 'GET', '/api/live/state')).units.find((u) => u.id === TEAM2())!;
+  assert.equal((await team()).position?.lat, 53.15);
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'uit_dienst' });
+  assert.equal((await team()).position, null, 'off duty: the position is gone');
+});
+
+test('help from where you are: the nearest team from that position, the place kept, and the reporter follows it', async () => {
+  await onDuty();
+  assert.equal((await call(DEMO.postMember, 'POST', '/api/incidents', request({ postId: null }))).statusCode, 400, 'a position is needed');
+
+  // About 400 m north of the start, far from Kruising 4: Team 1 at the EHBO post by the start is nearest.
+  const [lat, lng] = [53.1445, 5.8111];
+  const inc = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request({ postId: null, lat, lng, accuracyM: 12 }));
+  assert.equal(inc.offPost, true);
+  assert.equal(inc.accuracyM, 12);
+  assert.match(inc.post.name, /^\d+ m van /);
+  assert.deepEqual([inc.post.lat, inc.post.lng], [lat, lng]);
+  assert.equal(inc.dispatches[0]?.unitId, TEAM1());
+  assert.match(pushesTo(DEMO.ehbo)[0]!.payload.title, / m van /);
+  assert.match(inc.events[0]!.text, /^Gemeld door Vera Verkeer · \d+ m van /);
+
+  await ok(DEMO.ehbo, 'POST', `/api/incidents/${inc.id}/accept`, { unitId: TEAM1() });
+  assert.ok(pushesTo(DEMO.postMember).some((p) => p.payload.title === 'Hulp is onderweg'), 'the reporter hears it');
+  await ok(DEMO.postMember, 'POST', `/api/incidents/${inc.id}/withdraw`);
+
+  // Within 50 m of a post it counts as that post, which needn't be open.
+  const atPost = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request({ postId: null, lat: 53.1512, lng: 5.8345, accuracyM: 30 }));
+  assert.deepEqual([atPost.offPost, atPost.postId, atPost.post.name], [false, WATER(), 'Waterpost 3 · brug']);
 });

@@ -37,8 +37,9 @@ export interface UnitDistance {
  * EHBO-eenheden op afstand, hemelsbreed: een vaste eenheid op haar EHBO-post, een mobiele op haar standplaats.
  * Werkt zonder bereik, uit het evenementpakket. Eenheden zonder plek tellen niet mee; wie uit dienst is (als dat bekend is) ook niet.
  */
-export function unitsByDistance(pkg: EventPackage, post: PackagePost, offDuty: (unitId: number) => boolean = () => false): UnitDistance[] {
-  const from = lngLat(post);
+/** Teams by distance from a post, or from where someone asks for help. */
+export function unitsByDistance(pkg: EventPackage, post: { lat: number | null; lng: number | null }, offDuty: (unitId: number) => boolean = () => false): UnitDistance[] {
+  const from = post.lat != null && post.lng != null ? [post.lng, post.lat] as LngLat : null;
   if (!from) return [];
   return pkg.units.flatMap((unit) => {
     const at = unit.postId !== null ? pkg.posts.find((p) => p.id === unit.postId) : undefined;

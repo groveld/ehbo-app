@@ -54,6 +54,7 @@ export const router = createRouter({
     { path: '/post/:id/eerder', name: 'post-eerder', component: () => import('./views/PostEerderView.vue'), props: true, meta: { staff: true } },
     { path: '/post/:postId/eerder/melding/:id', name: 'post-melding', component: () => import('./views/MeldingView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
     { path: '/post/:postId/eerder/aanvraag/:id', name: 'post-aanvraag', component: () => import('./views/AanvraagView.vue'), props: (r) => ({ id: r.params.id }), meta: { staff: true } },
+    { path: '/hulp', name: 'hulp', component: () => import('./views/EhboVerzoekView.vue'), meta: { staff: true } },
     { path: '/post/:id/ehbo', name: 'ehbo-verzoek', component: () => import('./views/EhboVerzoekView.vue'), props: true, meta: { staff: true } },
     { path: '/melding/:id', name: 'melding', component: () => import('./views/MeldingView.vue'), props: true, meta: { staff: true } },
     { path: '/aanvraag/:id', name: 'aanvraag', component: () => import('./views/AanvraagView.vue'), props: true, meta: { staff: true } },

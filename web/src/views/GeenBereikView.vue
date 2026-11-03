@@ -17,10 +17,12 @@ const router = useRouter();
 const item = computed(() => live.outbox.find((i) => i.clientId === props.clientId));
 const refused = computed(() => live.refused[props.clientId]);
 const post = computed(() => store.postById.get(item.value?.postId ?? -1));
+/** From a post, or from where you asked for help. */
+const from = computed(() => post.value ?? (item.value?.lat != null ? { lat: item.value.lat, lng: item.value.lng ?? null } : undefined));
 const coordinator = computed(() => coordinatorOf(store.pkg));
 /** Op afstand; wie volgens de laatst bekende stand uit dienst is, laten we weg. */
-const units = computed(() => (store.pkg && post.value
-  ? unitsByDistance(store.pkg, post.value, (id) => live.unitState(id)?.availability === 'uit_dienst').filter((u) => u.unit.members.length)
+const units = computed(() => (store.pkg && from.value
+  ? unitsByDistance(store.pkg, from.value, (id) => live.unitState(id)?.availability === 'uit_dienst').filter((u) => u.unit.members.length)
   : []));
 const first = computed(() => units.value[0]);
 const rest = computed(() => units.value.slice(1, 3));

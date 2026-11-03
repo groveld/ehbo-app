@@ -27,7 +27,8 @@ const post = computed(() => (incident.value ? postOf(store.postById, incident.va
 const coordinator = computed(() => coordinatorOf(store.pkg));
 const isCoordinator = computed(() => coordinator.value?.phone === session.me?.phone || session.me?.isAdmin);
 const atPost = computed(() => live.myPostIds.includes(incident.value?.postId ?? -1));
-const canChange = computed(() => atPost.value || isCoordinator.value);
+/** The post, or who asked for help from where they were. */
+const canChange = computed(() => atPost.value || isCoordinator.value || incident.value?.reportedBy === session.me?.phone);
 
 const pending = computed(() => incident.value?.dispatches.filter((d) => !d.declinedAt && !d.acceptedAt) ?? []);
 const accepted = computed(() => incident.value?.dispatches.filter((d) => d.acceptedAt) ?? []);

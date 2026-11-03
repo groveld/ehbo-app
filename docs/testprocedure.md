@@ -129,6 +129,16 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 7.4 | B | Nieuw EHBO-verzoek | Gaat **niet** naar E (pauze), wel naar D | |
 | 7.5 | D, E | D handelt af; E zet zichzelf weer op **Beschikbaar** | — | |
 
+## Blok 7b · Locatie en hulp vanaf je plek (C, E, F)
+
+| # | Toestel | Stap | Verwacht | ✓ |
+| --- | --- | --- | --- | --- |
+| 7b.1 | F | Kaart › **Mijn locatie** | Asks for permission once, then centres on you with a blue dot and a light circle. A second tap follows you; moving the map stops it | |
+| 7b.2 | C | Menu › Pushmeldingen, locatie en controle | **Positie delen: uit** | |
+| 7b.3 | E | Beschikbaar, then the same screen | **Positie delen: aan**; A sees the ambulance on the map when E walks away | |
+| 7b.4 | C | Walk ± 200 m from any post › Kaart › **EHBO hierheen** › versturen | The place reads "… m van <post>" with the accuracy; the nearest team gets the call with that place, and navigation goes to C's position. C sees "Hulp is onderweg" | |
+| 7b.5 | C | Airplane mode on, do 7b.4 again | Straight to calling, with the teams by distance from C; it's sent once there's signal | |
+
 ## Blok 8 · Post open en dicht (B, C, A)
 
 | # | Toestel | Stap | Verwacht | ✓ |
