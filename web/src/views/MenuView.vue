@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatPhone } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
+import LocationBadge from '../components/LocationBadge.vue';
 import { confirmDialog } from '../composables/useDialog.ts';
 import { getNavApp, NAV_APPS, setNavApp, type NavApp } from '../navigate.ts';
 import { isIOS } from '../platform.ts';
@@ -51,7 +52,7 @@ async function logout() {
     </div>
 
     <div v-for="a in session.functions" :key="`${a.kind}-${a.locationId ?? a.teamId ?? a.title}`" class="card place">
-      <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
+      <LocationBadge :type="{ key: a.functionKey ?? null, letter: a.letter, color: a.color }" :size="48" />
       <span class="stack text">
         <span class="name">{{ a.title }}</span>
         <span v-if="a.detail" class="detail">{{ a.detail }}</span>
@@ -97,7 +98,6 @@ async function logout() {
 /* Icoon links, tekst ernaast, alles links uitgelijnd. */
 .item { justify-content: flex-start; gap: 12px; padding: 0 16px; text-align: left; }
 .logout { color: var(--danger); font-weight: 700; }
-.letter { width: 48px; height: 48px; color: #FFFFFF; font-size: 17px; }
 .text { gap: 2px; flex-grow: 1; }
 .name { font-size: 16px; font-weight: 700; }
 .detail { font-size: 14px; color: var(--ink-2); }

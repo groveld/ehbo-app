@@ -28,7 +28,7 @@ const incident = (changes: Partial<LiveIncident> = {}): LiveIncident => ({
 
 const state = (changes: Partial<LiveState> = {}): LiveState => ({
   version: 1, dataVersion: '1.1', serverTime: AT, helpRequests: [incident()], testMode: false, locations: [{ id: 10, isOpen: false, closesAt: null, autoClosedAt: null }],
-  teams: [{ id: 1, availability: 'off_duty', incidentId: null, stayLocationId: null, position: null, closesAt: null }, { id: 2, availability: 'available', incidentId: null, stayLocationId: null, position: null, closesAt: null }],
+  teams: [{ id: 1, availability: 'off_duty', incidentId: null, stayLocationId: null, position: null, closesAt: null, nextAvailability: null }, { id: 2, availability: 'available', incidentId: null, stayLocationId: null, position: null, closesAt: null, nextAvailability: null }],
   ...changes,
 });
 
@@ -54,13 +54,24 @@ test('applying is pure, and an action already in the state adds no second log li
 
 test('closing and taking a break; a fixed team can stay where it was', () => {
   const fixed = state({ helpRequests: [incident({ status: 'on_site', dispatches: [{ teamId: 1, at: AT, reason: 'all', distanceKm: 1, declinedAt: null, acceptedAt: AT }] })] });
-  const after = applyAction(fixed, { id: 'x', at: AT, action: { type: 'close', incidentId: 7, body: { outcome: 'false_alarm', persons: null, note: null, stayHere: true, pause: true } } }, { ...context, me: { name: 'Eva', phone: '0600000005' } });
+  const after = applyAction(fixed, { id: 'x', at: AT, action: { type: 'close', incidentId: 7, body: { outcome: 'false_alarm', persons: null, note: null, stayHere: true, then: 'unavailable' } } }, { ...context, me: { name: 'Eva', phone: '0600000005' } });
   assert.deepEqual([after.teams[0]?.availability, after.teams[0]?.stayLocationId], ['unavailable', 20]);
+});
+
+test('a status picked during a call waits until it is over, as on the server', () => {
+  const busy = state({
+    teams: [{ id: 1, availability: 'available', incidentId: 7, stayLocationId: null, position: null, closesAt: null, nextAvailability: null }],
+    helpRequests: [incident({ status: 'on_site', dispatches: [{ teamId: 1, at: AT, reason: 'all', distanceKm: 1, declinedAt: null, acceptedAt: AT }] })],
+  });
+  const planned = apply(busy, { type: 'availability', teamId: 1, availability: 'off_duty' });
+  assert.deepEqual([planned.teams[0]?.availability, planned.teams[0]?.nextAvailability], ['available', 'off_duty']);
+  const after = applyAction(planned, { id: 'x', at: AT, action: { type: 'close', incidentId: 7, body: { outcome: 'treated', persons: null, note: null, stayHere: false } } }, { ...context, me: { name: 'Eva', phone: '0600000005' } });
+  assert.deepEqual([after.teams[0]?.availability, after.teams[0]?.nextAvailability, after.teams[0]?.incidentId], ['off_duty', null, null]);
 });
 
 test('a fixed team and its post go together; a phone with no state yet still shows its own change', () => {
   assert.equal(apply(state(), { type: 'availability', teamId: 1, availability: 'available' }).locations[0]?.isOpen, true);
-  const closedLocation = apply(state({ teams: [{ id: 1, availability: 'available', incidentId: null, stayLocationId: null, position: null, closesAt: null }] }), { type: 'locationOpen', locationId: 10, open: false });
+  const closedLocation = apply(state({ teams: [{ id: 1, availability: 'available', incidentId: null, stayLocationId: null, position: null, closesAt: null, nextAvailability: null }] }), { type: 'locationOpen', locationId: 10, open: false });
   assert.equal(closedLocation.teams[0]?.availability, 'off_duty');
   assert.equal(apply(state({ teams: [] }), { type: 'availability', teamId: 2, availability: 'unavailable' }).teams[0]?.availability, 'unavailable');
 });

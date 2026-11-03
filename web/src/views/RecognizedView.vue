@@ -3,6 +3,7 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatPhone } from '@ehbo/shared';
+import LocationBadge from '../components/LocationBadge.vue';
 import { useSessionStore } from '../stores/session.ts';
 
 const session = useSessionStore();
@@ -37,7 +38,7 @@ async function notMe() {
     <div class="stack gap-10 places">
       <span class="label">Jij staat ingepland als</span>
       <div v-for="a in session.functions" :key="`${a.kind}-${a.locationId ?? a.teamId ?? a.title}`" class="card place outlined">
-        <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
+        <LocationBadge :type="{ key: a.functionKey ?? null, letter: a.letter, color: a.color }" :size="48" />
         <span class="stack text">
           <span class="name">{{ a.title }}</span>
           <span v-if="a.detail" class="detail">{{ a.detail }}</span>
@@ -64,7 +65,6 @@ async function notMe() {
 .places { margin-top: 28px; }
 .label { font-size: 14px; font-weight: 600; }
 .place { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; font: inherit; color: inherit; cursor: default; }
-.letter { width: 48px; height: 48px; color: #FFFFFF; font-size: 17px; }
 .text { gap: 2px; flex-grow: 1; }
 .name { font-size: 16px; font-weight: 700; }
 .detail { font-size: 14px; color: var(--ink-2); }

@@ -34,6 +34,9 @@ export type Outcome = keyof typeof OUTCOMES;
 
 /** Wat de eenheid zelf instelt. "Bezet" volgt uit een lopende oproep. */
 export type TeamAvailability = 'available' | 'unavailable' | 'off_duty';
+
+/** What the log adds when a team closes a call: what it does next. */
+export const AFTER_CALL: Record<TeamAvailability, string> = { available: '', unavailable: ', daarna pauze', off_duty: ', daarna uit dienst' };
 export const TEAM_AVAILABILITY = { available: 'Beschikbaar', unavailable: 'Niet beschikbaar', off_duty: 'Uit dienst' } as const;
 
 export const NOTE_MAX = 500;
@@ -80,8 +83,8 @@ export interface CloseIncident {
   note: string | null;
   /** Vaste eenheid: "ik blijf hier even", dan telt deze post als haar plek tot ze terug is. */
   stayHere: boolean;
-  /** Daarna pauze (lunch, wc) in plaats van weer beschikbaar. */
-  pause?: boolean;
+  /** The status afterwards: back to available, a break (lunch, toilet) or off duty. Without it, the status picked during the call, else available. */
+  then?: TeamAvailability;
 }
 
 export type DispatchReason = 'nearest' | 'aed' | 'all' | 'manual';
@@ -164,6 +167,8 @@ export interface LiveTeam {
   position: { lat: number; lng: number; at: string } | null;
   /** The team has been warned: it goes off duty at this time, unless it stays on. */
   closesAt: string | null;
+  /** The status picked during a call, carried out once the call is over. Null: available again. */
+  nextAvailability: Exclude<TeamAvailability, 'available'> | null;
 }
 
 export interface LiveLocation {

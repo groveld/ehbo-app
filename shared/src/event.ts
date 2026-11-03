@@ -170,6 +170,8 @@ export interface Assignment {
   times?: string;
   letter: string;
   color: string;
+  /** The function's key, for its icon: `first_aid` for an EHBO team, none for the core team or admin. */
+  functionKey?: string | null;
   locationId?: number;
   teamId?: number;
   /** Alleen bij posten: de locatieverantwoordelijke zet de post open en dicht. */

@@ -548,6 +548,8 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
     `);
     recomputePassages(db);
   },
+  // 26: the status a team picked during a call, carried out once the call is over.
+  `ALTER TABLE teams ADD COLUMN next_availability TEXT CHECK (next_availability IN ('unavailable', 'off_duty'));`,
 ];
 
 export interface EventRow {
@@ -572,6 +574,7 @@ export interface LocationAssignmentRow {
   role: LocationContactRole;
   time_from: string | null;
   time_to: string | null;
+  type_key: string | null;
   type_letter: string;
   type_color: string;
   person_label: string | null;
@@ -669,7 +672,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     locationAssignments: db.prepare(`
       SELECT p.id AS location_id, p.name AS location_name, p.km, c.role,
              COALESCE(c.time_from, p.time_from) AS time_from, COALESCE(c.time_to, p.time_to) AS time_to,
-             t.letter AS type_letter, t.color AS type_color, t.person_label
+             t.key AS type_key, t.letter AS type_letter, t.color AS type_color, t.person_label
       FROM location_contacts c JOIN locations p ON p.id = c.location_id JOIN function_types t ON t.id = p.type_id
       WHERE c.phone = ? ORDER BY COALESCE(c.time_from, p.time_from), p.sort, p.id`),
     teamAssignments: db.prepare(`

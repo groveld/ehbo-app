@@ -139,7 +139,7 @@ export async function helpRequestRoutes(app: FastifyInstance, { db, calls, reque
       body: {
         type: 'object',
         required: ['outcome', 'persons', 'note', 'stayHere'],
-        properties: { outcome: { enum: Object.keys(OUTCOMES) }, persons: details.persons, note, stayHere: { type: 'boolean' }, pause: { type: 'boolean' } },
+        properties: { outcome: { enum: Object.keys(OUTCOMES) }, persons: details.persons, note, stayHere: { type: 'boolean' }, then: { enum: ['available', 'unavailable', 'off_duty'] } },
       },
     },
   }, async (request) => calls.once(...actionHeaders(request), () => {

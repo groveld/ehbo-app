@@ -111,6 +111,35 @@ test('a team that finishes a call gets the one that was waiting, and a team that
   assert.equal((await incident(second.id)).dispatches.find((d) => d.teamId === TEAM2())?.declinedAt, null);
 });
 
+test('a status picked during a call waits until the call is over, unless closing says otherwise', async () => {
+  await onDuty();
+  await ok(DEMO.ehbo, 'PUT', `/api/teams/${TEAM1()}/availability`, { availability: 'unavailable' });
+  const team2 = (state: LiveState) => state.teams.find((u) => u.id === TEAM2())!;
+  const take = async () => {
+    const inc = await ok<LiveIncident>(DEMO.locationLead, 'POST', '/api/help-requests', request());
+    await ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${inc.id}/accept`, { teamId: TEAM2() });
+    return inc.id;
+  };
+  const close = (id: number, then?: string) => ok(DEMO.mobileEhbo, 'POST', `/api/help-requests/${id}/close`, { outcome: 'treated', persons: '1', note: null, stayHere: false, then });
+
+  let id = await take();
+  let state = await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${TEAM2()}/availability`, { availability: 'unavailable' });
+  assert.deepEqual([team2(state).availability, team2(state).nextAvailability, team2(state).incidentId], ['available', 'unavailable', id], 'still on the call');
+  state = await close(id);
+  assert.deepEqual([team2(state).availability, team2(state).nextAvailability], ['unavailable', null], 'a break after the call');
+  assert.equal(incidentsOf(state).find((i) => i.id === id)?.events.at(-1)?.text, 'Afgerond door Team 2, daarna pauze');
+
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${TEAM2()}/availability`, { availability: 'available' });
+  id = await take();
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${TEAM2()}/availability`, { availability: 'unavailable' });
+  assert.equal(team2(await close(id, 'available')).availability, 'available', 'closing says otherwise');
+
+  id = await take();
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${TEAM2()}/availability`, { availability: 'off_duty' });
+  state = await ok(DEMO.locationLead, 'POST', `/api/help-requests/${id}/withdraw`);
+  assert.deepEqual([team2(state).availability, team2(state).nextAvailability], ['off_duty', null], 'withdrawn ends the call too');
+});
+
 /** Waterpost open, beide eenheden in dienst. */
 async function onDuty() {
   await ok(DEMO.locationLead, 'PUT', `/api/locations/${WATER()}/open`, { open: true });
