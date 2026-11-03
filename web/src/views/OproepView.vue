@@ -177,9 +177,10 @@ async function onSite() {
         <span class="small">Aanrijroute</span>
         <span>{{ post.accessRoute }}</span>
       </div>
-      <div class="btn-pair gap-top">
-        <a v-if="navUrl" :href="navUrl" class="btn">Navigatie openen</a>
-        <a v-if="contact" :href="telHref(contact.phone)" class="btn">Bel de post</a>
+      <!-- The same pair as on the post details: call on the left, navigate on the right. -->
+      <div class="actions gap-top">
+        <a v-if="contact" :href="telHref(contact.phone)" class="btn big"><Icon name="phone" :size="20" />Bel post</a>
+        <a v-if="navUrl" :href="navUrl" class="btn primary"><Icon name="navigate" :size="20" />Navigeer</a>
       </div>
       <!-- Everything the post entered, also on site. -->
       <div class="card details gap-top" :class="{ fresh }">
@@ -258,6 +259,9 @@ async function onSite() {
 .seen { min-height: 44px; padding: 0 8px; }
 .map { margin-top: 14px; height: 190px; border-radius: 16px; overflow: hidden; }
 .small-map { height: clamp(150px, 22dvh, 260px); }
+.actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 10px; }
+/* Twee knoppen naast elkaar zijn altijd even hoog. */
+.btn.big { height: 56px; font-size: 16px; }
 .route { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 14px; line-height: 1.45; }
 .others { padding: 0 14px; }
 .others-label { display: block; padding-top: 10px; }
