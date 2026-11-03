@@ -95,6 +95,9 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 4.6 | A | — | Pushmelding met een kopie van de oproep; tik erop: die melding opent. Op **Meldingen** een kaart met label **EHBO** | |
 | 4.7 | E | **Accepteren & navigeren** | Navigatie-app opent naar Post 1 | |
 | 4.8 | B | — | "Hulp is onderweg" met naam en belknop van E | |
+| 4.8b | B | **Melding aanvullen** › Aanspreekbaar **Nee** + a note › versturen | E, back in the app from navigation: a short rising sound and vibration once (not the siren), the details block says **Nieuw · aangevuld**. With E's app in the background: a push "Niet aanspreekbaar · Notitie toegevoegd", without the note text | |
+| 4.8c | B | Send the same addition again without changing anything | E gets nothing | |
+| 4.8d | E | Leave the phone on the en route screen for 5 minutes (in the car holder) | The screen stays on. Menu › **Scherm aan houden** off: it goes off as usual | |
 | 4.9 | E | Terug naar de app › **Ik ben ter plaatse** | B ziet dat de EHBO er is | |
 | 4.10 | E | **Incident afronden** › afloop kiezen › **Afronden & weer beschikbaar** | E staat op Beschikbaar; de oproep staat onder *Vandaag* | |
 | 4.11 | A | Meldingen | De oproep staat onder *Afgerond* | |

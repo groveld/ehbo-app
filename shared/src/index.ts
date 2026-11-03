@@ -59,6 +59,8 @@ export interface PushPayload {
   tag?: string;
   url?: string;
   urgent?: boolean;
+  /** The app alerts by itself when it's in view, so the notification is silent then: never two alerts at once. */
+  quietInApp?: boolean;
 }
 
 /** Maximale vertraging voor een testmelding, in seconden. */
