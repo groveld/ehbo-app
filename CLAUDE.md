@@ -18,6 +18,7 @@ Everything users see is **Dutch**. Everything in the source is **English**: code
 
 | Path | What |
 | --- | --- |
+| `docs/begrippen.md` | Glossary: one word per concept in the app and one in the code (#84). A proposal until the owner approves it; renaming follows it. |
 | `docs/functioneel-ontwerp.md` | Full functional design and **all decisions**. The source of truth; update it when a decision changes. |
 | `docs/design/index.html` | Gallery of all 31 screens in process order. `docs/design/screens/*.html` are the per-screen references to build from. |
 | `docs/design/source/` | Original design canvas, for re-import into Claude. Don't edit by hand. |
