@@ -95,6 +95,9 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 4.6 | A | — | Pushmelding met een kopie van de oproep; tik erop: die melding opent. Op **Meldingen** een kaart met label **EHBO** | |
 | 4.7 | E | **Accepteren & navigeren** | Navigatie-app opent naar Post 1 | |
 | 4.8 | B | — | "Hulp is onderweg" met naam en belknop van E | |
+| 4.8b | B | **Melding aanvullen** › Aanspreekbaar **Nee** + a note › versturen | E, back in the app from navigation: a short rising sound and vibration once (not the siren), the details block says **Nieuw · aangevuld**. With E's app in the background: a push "Niet aanspreekbaar · Notitie toegevoegd", without the note text | |
+| 4.8c | B | Send the same addition again without changing anything | E gets nothing | |
+| 4.8d | E | Leave the phone on the en route screen for 5 minutes (in the car holder) | The screen stays on. Menu › **Scherm aan houden** off: it goes off as usual | |
 | 4.9 | E | Terug naar de app › **Ik ben ter plaatse** | B ziet dat de EHBO er is | |
 | 4.10 | E | **Incident afronden** › afloop kiezen › **Afronden & weer beschikbaar** | E staat op Beschikbaar; de oproep staat onder *Vandaag* | |
 | 4.11 | A | Meldingen | De oproep staat onder *Afgerond* | |
@@ -147,7 +150,10 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 8.2 | B | Rechtsboven **Post sluiten** › bevestigen | Post is dicht; op de kaart grijs; de verzoektegels werken niet meer | |
 | 8.3 | A | Kaart › Post 1 › schakelaar **Post open** | De post gaat open; B ziet het direct | |
 | 8.x | B | Only with the event date set to today: give the post an end time 25 minutes ago | Within a few minutes a push; the post shows when it closes and **Open houden**; without a tap it closes after 10 minutes and says so | |
-| 8.y | A | Menu › **Posten en EHBO openen of sluiten**: **Alles openen**, then **Dag sluiten** | Counts are right, everyone gets a push, and all posts are closed | |
+| 8.y | A | Menu › **Posten en EHBO openen of sluiten**: **Alles openen**, then **Dag sluiten** | Counts are right, everyone gets a push, and all posts are closed. What nobody is logged in for is named and stays closed | |
+| 8.z | B, C | Post 1 open. C: Menu › **Afmelden**. Then B: Menu › **Afmelden** | A question first. After C the post stays open; after B it closes and A gets "Gesloten: niemand meer aangemeld". B and C get no pushes any more | |
+| 8.z2 | B | Log in again | Post 1 is closed: open it yourself | |
+| 8.z3 | C | Airplane mode on, **Afmelden**, airplane mode off | The logout still reaches the server: A's overview shows nobody logged in for C | |
 
 ## Blok 9 · Aanvragen (B, A)
 
@@ -164,6 +170,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | # | Toestel | Stap | Verwacht | ✓ |
 | --- | --- | --- | --- | --- |
 | 10.1 | F | Adres openen › **Deelnemer** (niet installeren) | De naam van het evenement als titel, kaart met parcours, starttijden, posten langs de route | |
+| 10.1b | F | Route page › download the GPX, open it on a Garmin (or Strava/Komoot) | The posts on the route show as points with their name and km; water and EHBO with their own symbol where the device knows it | |
 | 10.2 | F | Geen namen of telefoonnummers te zien | — | |
 | 10.3 | F | **Bel EHBO** | Belt D (de EHBO-coördinator) | |
 | 10.3b | F | Tik op een loop, dan **Alles over …** | Routepagina met kaart, posten op volgorde en GPX downloaden; de download werkt ook in vliegtuigmodus | |
@@ -180,6 +187,7 @@ Lukt 1.5 niet op een iPhone: controleer iOS 16.4 of nieuwer en dat de app vanaf 
 | 11.4 | A | Beheer › **Info & voorwaarden** aanpassen; op een telefoon Menu › Info | De nieuwe tekst | |
 | 11.5 | A | Beheer › Rapport | Geen proefoproepen in de cijfers (testmodus) | |
 | 11.6 | A | Testmodus uit; één echte oproep (blok 4, kort) | Die oproep staat wél in het rapport | |
+| 11.7 | A | Rapport en testmodus › **Iedereen afmelden** › bevestigen | All other phones show the participant page at their next tap, get no pushes, and their posts and teams are closed. A stays logged in | |
 | 11.7 | A | **PDF-export** › Opslaan als PDF; **CSV-export** openen in Excel | PDF met logo, totalen en het incident; CSV opent met kolommen en goede tekens (ë, ö) | |
 
 ## Na afloop

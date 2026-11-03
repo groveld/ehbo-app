@@ -28,7 +28,7 @@ import {
 import { adminDb } from '../admin-db.ts';
 import { BRAND_IMAGES, ICON_IMAGES, LOGO_MAX_SIDE, pngSize, setBrandImages } from '../brand.ts';
 import type { Calls } from '../calls.ts';
-import { requireAdmin } from '../auth.ts';
+import { nextMidnight, requireAdmin, sessionsEnded, sqliteTime } from '../auth.ts';
 import type { EventDb } from '../event-db.ts';
 import { parseGpx } from '../gpx.ts';
 import { buildReport, reportCsv } from '../report.ts';
@@ -178,6 +178,13 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
     schema: { body: { type: 'object', required: ['on'], properties: { on: { type: 'boolean' } } } },
   }, async (request) => {
     db.raw.prepare('UPDATE event SET test_mode = ? WHERE id = 1').run(request.body.on ? 1 : 0);
+    // Testers are logged out after the test day: sessions that are already there end at midnight too.
+    if (request.body.on) db.shortenSessions(sqliteTime(nextMidnight()));
+    return admin.getState();
+  });
+  // Everyone except the admin who presses it. Their phones get no pushes any more, and what nobody is logged in for closes.
+  app.post<{ Reply: AdminState }>('/api/admin/logout-all', async (request) => {
+    sessionsEnded(db, calls, db.deleteOtherSessions(request.sessionHash));
     return admin.getState();
   });
   app.delete<{ Reply: AdminState }>('/api/admin/test-data', async () => {

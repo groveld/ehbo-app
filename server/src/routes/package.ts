@@ -4,7 +4,7 @@ import { sameFunction, type EhboStatus, type EventPackage, type LngLat, type Pac
 import { adminDb } from '../admin-db.ts';
 import type { Calls } from '../calls.ts';
 import type { EventDb } from '../event-db.ts';
-import { cleanGpx } from '../gpx.ts';
+import { cleanGpx, type GpxWaypoint } from '../gpx.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
@@ -59,12 +59,19 @@ export async function packageRoutes(app: FastifyInstance, { db, calls }: { db: E
     const id = /^(\d+)\.gpx$/.exec(request.params.file)?.[1];
     const run = id ? db.raw.prepare('SELECT name, gpx, track_json FROM runs WHERE id = ? AND track_json IS NOT NULL').get(Number(id)) as { name: string; gpx: string | null; track_json: string } | undefined : undefined;
     if (!run) return reply.code(404).send({ error: 'Geen route gevonden' });
+    // Every post this run passes, in the order you meet them.
+    const waypoints = (db.raw.prepare(`
+      SELECT p.name, p.lat, p.lng, t.key, t.name AS type_name, json_group_array(pp.km) AS km
+      FROM post_passages pp JOIN posts p ON p.id = pp.post_id JOIN post_types t ON t.id = p.type_id
+      WHERE pp.run_id = ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL
+      GROUP BY p.id ORDER BY MIN(pp.km)`).all(Number(id)) as { name: string; lat: number; lng: number; key: string | null; type_name: string; km: string }[])
+      .map((r): GpxWaypoint => ({ name: r.name, lat: r.lat, lng: r.lng, typeKey: r.key, typeName: r.type_name, km: (JSON.parse(r.km) as number[]).sort((a, b) => a - b) }));
     const filename = run.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'route';
     return reply
       .header('Cache-Control', 'no-cache')
       .header('Content-Disposition', `attachment; filename="${filename}.gpx"`)
       .type('application/gpx+xml')
-      .send(cleanGpx(run.name, run.gpx, JSON.parse(run.track_json) as LngLat[]));
+      .send(cleanGpx(run.name, run.gpx, JSON.parse(run.track_json) as LngLat[], waypoints));
   });
 
   // Voor iedereen, ook zonder aanmelding: welke standplaatsen nu zonder EHBO zijn (grijs kruisje). Geen posities of namen.

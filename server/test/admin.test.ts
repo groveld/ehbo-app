@@ -288,3 +288,16 @@ test('GPX for download: public, and only the route', async () => {
   assert.doesNotMatch(res.body, /Geheime Naam|<time>/);
   assert.equal((await app.inject({ url: '/gpx/abc.gpx' })).statusCode, 404);
 });
+
+test('GPX for download: every post on the route as a waypoint, before the track, and nothing for staff only', async () => {
+  const run = db.raw.prepare("SELECT id FROM runs WHERE name = '10 km'").get() as { id: number };
+  db.raw.prepare("UPDATE posts SET access_route = 'Via het fietspad achter de boerderij' WHERE name = 'Kruising 4'").run();
+  const body = (await app.inject({ url: `/gpx/${run.id}.gpx` })).body;
+  const names = [...body.matchAll(/<wpt [^>]*><name>([^<]*)<\/name>/g)].map((m) => m[1]);
+  assert.deepEqual(names, ['Start/finish De Trilker', 'EHBO-post 1 · start', 'Kruising 4', 'Waterpost 3 · brug'], 'in the order you meet them');
+  assert.ok(body.indexOf('<wpt') < body.indexOf('<trk>'), 'waypoints first');
+  assert.match(body, /<name>Waterpost 3 · brug<\/name><desc>Waterpost · km [\d,]+<\/desc><sym>Drinking Water<\/sym>/);
+  assert.match(body, /<name>Kruising 4<\/name><desc>Verkeer · km [\d,]+ en [\d,]+<\/desc>/, 'passed twice');
+  assert.match(body, /<sym>First Aid<\/sym>/);
+  assert.doesNotMatch(body, /fietspad|\+316|Wim|Vera/);
+});

@@ -5,7 +5,7 @@ import Fastify, { LogController, type FastifyError, type FastifyServerOptions } 
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import type { ApiError, AppInfo } from '@ehbo/shared';
-import { registerSessions } from './auth.ts';
+import { registerSessions, sessionsEnded } from './auth.ts';
 import { createCalls, type CallsOptions } from './calls.ts';
 import type { EventDb } from './event-db.ts';
 import { protomapsSource, type MapSource } from './map.ts';
@@ -81,12 +81,17 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   // Lopende oproepen gaan na een herstart verder waar ze waren.
   app.addHook('onReady', async () => calls.resume());
   app.addHook('onClose', async () => calls.stop());
-  // Sluiten op tijd: posten en eenheden voorbij hun geplande eindtijd.
-  const sweeper = setInterval(() => calls.sweep(), SWEEP_MS);
+  // Sluiten op tijd: posten en eenheden voorbij hun geplande eindtijd. And sessions that ran out (test mode: at midnight) count as logging out.
+  const sweep = () => {
+    sessionsEnded(db, calls, db.deleteExpiredSessions());
+    calls.sweep();
+  };
+  app.addHook('onReady', async () => sweep());
+  const sweeper = setInterval(sweep, SWEEP_MS);
   sweeper.unref();
   app.addHook('onClose', async () => clearInterval(sweeper));
 
-  app.register(sessionRoutes, { db });
+  app.register(sessionRoutes, { db, calls });
   app.register(pushRoutes, { db, notifier, allowInsecureEndpoints });
   app.register(callRoutes, { calls, requests });
   app.register(requestRoutes, { calls, requests });

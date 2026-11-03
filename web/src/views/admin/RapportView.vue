@@ -35,6 +35,17 @@ async function toggleTestMode(on: boolean) {
   if (on && !await confirmDialog({ title: 'Testmodus aanzetten?', text: 'Alle oproepen en aanvragen tellen dan als proef en komen niet in het rapport. Zet hem uit voordat het evenement begint.', confirm: 'Testmodus aanzetten' })) return;
   await testing.run(() => admin.setTestMode(on));
 }
+async function logoutAll() {
+  const others = (admin.state?.sessions ?? 1) - 1;
+  if (!await confirmDialog({
+    title: `${others} ${others === 1 ? 'toestel' : 'toestellen'} afmelden?`,
+    text: 'Iedereen behalve jij is afgemeld en krijgt geen meldingen meer. Posten en EHBO-eenheden waar dan niemand meer is aangemeld, gaan dicht.',
+    reassure: 'Wie weer aanmeldt en meldingen aanzet, doet gewoon weer mee.',
+    confirm: 'Iedereen afmelden',
+    tone: 'danger',
+  })) return;
+  await testing.run(() => admin.logoutAll());
+}
 async function deleteTestData() {
   if (!report.value || !await confirmDialog({ title: `${report.value.testItems} proefoproepen en -aanvragen wissen?`, text: 'Dit kan niet ongedaan worden.', confirm: 'Wissen', tone: 'danger' })) return;
   if (await testing.run(() => admin.deleteTestData())) await load();
@@ -90,7 +101,7 @@ async function deleteTestData() {
         <div class="card test-row">
           <span class="stack grow">
             <strong>{{ state.testMode ? 'Testmodus staat aan' : 'Testmodus' }}</strong>
-            <span class="small">Oproepen en aanvragen zijn proef: meldingen beginnen met "Test" en ze komen niet in het rapport.</span>
+            <span class="small">Oproepen en aanvragen zijn proef: meldingen beginnen met "Test" en ze komen niet in het rapport. Testers zijn om middernacht vanzelf afgemeld.</span>
           </span>
           <button
             class="switch" role="switch" :aria-checked="state.testMode" aria-label="Testmodus" :disabled="testing.busy.value"
@@ -99,6 +110,7 @@ async function deleteTestData() {
         </div>
         <p v-if="state.testMode" class="note warn">Zet de testmodus uit voordat het evenement begint.</p>
         <button v-if="report?.testItems" class="btn" :disabled="testing.busy.value" @click="deleteTestData">Proefgegevens wissen ({{ report.testItems }})</button>
+        <button class="btn" :disabled="testing.busy.value || state.sessions <= 1" @click="logoutAll">Iedereen afmelden ({{ state.sessions - 1 }})</button>
         <p v-if="testing.error.value" class="error-text" role="alert">{{ testing.error.value }}</p>
       </section>
     </template>

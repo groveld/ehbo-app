@@ -140,8 +140,13 @@ test('opening again after the end time stays open for a while', () => {
   assert.ok(post().closesAt);
 });
 
+const logIn = (...phones: string[]) => {
+  for (const phone of phones) set("INSERT INTO sessions (token_hash, phone, expires_at) VALUES (?, ?, '2099-01-01 00:00:00')", `hash-${phone}`, phone);
+};
+
 test('coordinator: everything at once, and not while a call is open', () => {
   assert.throws(() => calls.openAll(lead()), /coördinator/);
+  logIn(DEMO.coordinator, DEMO.ehbo, DEMO.postLead, DEMO.mobileEhbo);
   calls.openAll(coordinator());
   assert.ok(calls.state().posts.every((p) => p.isOpen));
   assert.ok(calls.state().units.every((u) => u.availability === 'vrij'));
@@ -157,6 +162,30 @@ test('coordinator: everything at once, and not while a call is open', () => {
   calls.closeDay(coordinator(), () => { finished = true; });
   assert.ok(finished);
   assert.ok(calls.state().posts.every((p) => !p.isOpen));
+});
+
+test('open all skips what nobody is logged in for, and names it', () => {
+  set('UPDATE posts SET is_open = 0');
+  logIn(DEMO.postLead, DEMO.ehbo);
+  const { skipped } = calls.openAll(coordinator());
+  assert.deepEqual(skipped, ['Start/finish De Trilker', 'Team 2']);
+  assert.equal(calls.state().posts.filter((p) => p.isOpen).length, 3, 'the EHBO post, the water post and Kruising 4, where Wim is a member');
+});
+
+test('the last member logging out during a call: the team goes off duty once the call is over', () => {
+  logIn(DEMO.mobileEhbo);
+  set("UPDATE ehbo_units SET availability = 'vrij' WHERE id = ?", TEAM2());
+  set(`INSERT INTO incidents (client_id, post_id, reported_by, status, stage, reported_at, sent_at, is_test, unit_id) VALUES ('left-1', ?, ?, 'geaccepteerd', 'alle', ?, ?, 0, ?)`, WATER(), DEMO.postLead, clock.toISOString(), clock.toISOString(), TEAM2());
+  const incident = (db.raw.prepare("SELECT id FROM incidents WHERE client_id = 'left-1'").get() as { id: number }).id;
+  set(`INSERT INTO incident_dispatches (incident_id, unit_id, at, reason, accepted_at) VALUES (?, ?, ?, 'alle', ?)`, incident, TEAM2(), clock.toISOString(), clock.toISOString());
+  set('DELETE FROM sessions');
+  calls.leave([DEMO.mobileEhbo]);
+  assert.equal(team().availability, 'vrij');
+  sweepAt('12:01');
+  assert.equal(team().availability, 'vrij');
+  set("UPDATE incidents SET status = 'afgerond'");
+  sweepAt('12:02');
+  assert.equal(team().availability, 'uit_dienst');
 });
 
 test('a team starts an incident itself: on site at once, the place by GPS, and no call to anyone else', () => {

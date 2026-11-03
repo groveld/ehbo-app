@@ -27,14 +27,17 @@ const counts = computed(() => {
 async function act(action: 'open-all' | 'close-all' | 'close-day') {
   let skipped: string[] = [];
   const ok = await run(async () => { skipped = await live.control(action); });
-  if (ok && skipped.length) void messageDialog({ title: 'Niet alles is gesloten', text: `Nog bezig met een oproep: ${skipped.join(', ')}.`, confirm: 'Begrepen' });
+  if (!ok || !skipped.length) return;
+  void messageDialog(action === 'open-all'
+    ? { title: 'Niet alles is geopend', text: `Niemand aangemeld: ${skipped.join(', ')}.`, confirm: 'Begrepen' }
+    : { title: 'Niet alles is gesloten', text: `Nog bezig met een oproep: ${skipped.join(', ')}.`, confirm: 'Begrepen' });
 }
 
 async function openAll() {
   const { posts, openPosts, units, onDuty } = counts.value;
   if (await confirmDialog({
     title: `${posts - openPosts} posten en ${units - onDuty} EHBO-eenheden openen?`,
-    text: 'Eenheden gaan op Beschikbaar, ook als de EHBO\'er er misschien nog niet is. Wie Niet beschikbaar staat, blijft zo staan. Iedereen krijgt een melding.',
+    text: 'Alleen waar iemand is aangemeld. Eenheden gaan op Beschikbaar, ook als de EHBO\'er er misschien nog niet is. Wie Niet beschikbaar staat, blijft zo staan. Iedereen krijgt een melding.',
     confirm: 'Alles openen',
   })) await act('open-all');
 }
@@ -73,7 +76,7 @@ async function closeDay() {
       <div class="fact"><span class="value mono">{{ counts.onDuty }}/{{ counts.units }}</span><span class="label">EHBO in dienst</span></div>
     </div>
 
-    <p class="note top">Na de geplande eindtijd sluiten posten en eenheden vanzelf, 10 minuten na een waarschuwing. Nooit tijdens een open melding.</p>
+    <p class="note top">Na de geplande eindtijd sluiten posten en eenheden vanzelf, 10 minuten na een waarschuwing. Nooit tijdens een open melding. Meldt de laatste van een post of eenheid zich af, dan gaat die ook dicht.</p>
     <p v-if="live.offline" class="note warn top">Dit kan alleen met verbinding.</p>
     <p v-if="error" class="error-text top" role="alert">{{ error }}</p>
 

@@ -41,6 +41,26 @@ function ring() {
   navigator.vibrate?.(VIBRATE);
 }
 
+/** Once, for news on my active call: three soft rising tones, nothing like the siren. */
+export function chime() {
+  navigator.vibrate?.([120, 80, 120]);
+  if (!ctx || ctx.state !== 'running') return;
+  const start = ctx.currentTime;
+  for (const [i, freq] of [660, 880, 1100].entries()) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const t = start + i * 0.14;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.32);
+  }
+}
+
 export function startAlarm() {
   if (timer) return;
   ring();
