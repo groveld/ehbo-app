@@ -19,6 +19,7 @@ import type {
 import { ACTION_AT_HEADER, ACTION_ID_HEADER, LIVE_HEARTBEAT_MS, POSITION_SHARE_MS, actionRequest, applyAction, placeOf } from '@ehbo/shared';
 import { api, ApiRequestError, noAnswer } from '../api.ts';
 import { messageDialog } from '../composables/useDialog.ts';
+import { atPostM } from '../posts.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
 import { useSessionStore } from './session.ts';
@@ -477,7 +478,7 @@ export const useLiveStore = defineStore('live', () => {
     async selfStart({ unitId, postId, position, ...details }: IncidentDetails & { unitId: number; postId: number; position: LngLat | null }) {
       const tempId = -Date.now();
       const known = pkg.postById.get(postId);
-      const place = position ? placeOf(pkg.pkg?.posts ?? [], position) : null;
+      const place = position ? placeOf(pkg.pkg?.posts ?? [], position, atPostM(pkg.pkg)) : null;
       const shown = place ? pkg.postById.get(place.postId) ?? known : known;
       await act({
         type: 'selfStart', tempId, postId: shown?.id ?? postId, offPost: place !== null && !place.atPost,

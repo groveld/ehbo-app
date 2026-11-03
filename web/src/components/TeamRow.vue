@@ -2,7 +2,7 @@
 // One EHBO team in a list: its status, where it is, AED, and a call button.
 import { computed } from 'vue';
 import { POSITION_MAX_AGE_MS, UNIT_AVAILABILITY, isAway, telHref, type EventPackage, type PackageUnit } from '@ehbo/shared';
-import { shiftText } from '../posts.ts';
+import { atPostM, shiftText } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import Icon from './Icon.vue';
 import PostBadge from './PostBadge.vue';
@@ -31,7 +31,7 @@ const where = computed(() => {
   const position = state.value?.position;
   const age = position ? live.serverNow - new Date(position.at).getTime() : Infinity;
   if (age > POSITION_MAX_AGE_MS) return base ? `${base} · geen recente positie` : 'Geen recente positie';
-  const away = isAway(unit, state.value ?? undefined, home, live.serverNow);
+  const away = isAway(unit, state.value ?? undefined, home, live.serverNow, atPostM(props.pkg));
   const minutes = Math.floor(age / 60_000);
   return `${away ? 'Onderweg' : `Thuis${base ? ` · ${base}` : ''}`} · positie ${minutes ? `${minutes} min oud` : 'net bijgewerkt'}`;
 });
