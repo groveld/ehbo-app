@@ -43,7 +43,7 @@ const alertIds = computed(() => [...new Set(live.openIncidents.filter((i) => !i.
 /** Posts with a request that's still open. */
 const taskIds = computed(() => [...new Set(live.requests.filter((r) => r.status === 'aangevraagd' || r.status === 'opgepakt').map((r) => r.postId))]);
 /** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
-const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], live.serverNow));
+const mobile = computed(() => mobileUnits(store.pkg, live.units, live.serverNow));
 const closedIds = computed(() => store.pkg?.posts.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id) ?? []);
 const matches = (p: PackagePost) => {
   const q = query.value.trim().toLowerCase().replace(',', '.');
@@ -120,7 +120,7 @@ const mapView = shallowRef<{ pkg: EventPackage; posts: PackagePost[]; highlightR
 watchEffect(() => {
   if ((!props.active && mapView.value) || !store.pkg) return;
   mapView.value = {
-    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, taskPostIds: taskIds.value, lines: callLines(store.pkg, live.state?.units ?? [], live.incidents, live.serverNow), ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
+    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, taskPostIds: taskIds.value, lines: callLines(store.pkg, live.units, live.incidents, live.serverNow), ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
   };
 });
 const banner = computed(() => {
