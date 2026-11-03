@@ -2,8 +2,9 @@
 // 3.1 · Locatie openen en 3.2 · Post open: wat heb je nodig? Het startscherm van een post.
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { POST_CONTACT_ROLE_LABEL, REQUEST_KINDS, formatKm, formatPhone, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
-import Icon, { type IconName } from '../components/Icon.vue';
+import { POST_CONTACT_ROLE_LABEL, formatKm, formatPhone, helpRequestType, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
+import Icon from '../components/Icon.vue';
+import { iconOf } from '../icons.ts';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import { confirmClosePost } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
@@ -44,12 +45,8 @@ const planned = computed(() => {
   return [kmLabel(p), times].filter(Boolean).join(' · ');
 });
 
-// Water, verkeer en vrijwilliger: een aanvraag in de wachtrij van de coördinator (5.1). Kleuren uit het schermontwerp.
-const TILES = [
-  { key: 'water', bg: '#E4EEF7', line: '#B8D0E6', icon: '#1F6FB2', iconText: '#FFFFFF', iconName: 'drop' },
-  { key: 'traffic', bg: '#FBE6D2', line: '#EDC7A2', icon: '#D9781C', iconText: '#16181D', iconName: 'cone' },
-  { key: 'volunteer', bg: '#EDE4F7', line: '#D2C1EA', icon: '#7A4BB7', iconText: '#FFFFFF', iconName: 'personAdd' },
-] as const satisfies readonly { key: RequestKind; bg: string; line: string; icon: string; iconText: string; iconName: IconName }[];
+// A request in the coordinator's queue (5.1): one tile per queue type of the event (#86), in its own colours.
+const tiles = computed(() => (store.pkg?.helpRequestTypes ?? []).filter((t) => t.handling === 'queue'));
 /** Open aanvragen van deze post, onder de tegels. */
 const openRequests = computed(() => live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'sent' || r.status === 'accepted')));
 
@@ -123,11 +120,11 @@ async function setOpen(value: boolean) {
             <span class="tile-text"><span class="tile-label">EHBO</span><span class="tile-sub">Eerste hulp nodig</span></span>
           </RouterLink>
           <button
-            v-for="t in TILES" :key="t.key" class="tile" :disabled="busy"
-            :style="{ background: t.bg, borderColor: t.line }" @click="ask(t.key)"
+            v-for="t in tiles" :key="t.key" class="tile" :disabled="busy"
+            :style="{ background: t.colors.bg, borderColor: t.colors.line }" @click="ask(t.key)"
           >
-            <span class="tile-icon" :style="{ background: t.icon, color: t.iconText }"><Icon :name="t.iconName" :size="22" /></span>
-            <span class="tile-text"><span class="tile-label">{{ REQUEST_KINDS[t.key].label }}</span><span class="tile-sub">{{ REQUEST_KINDS[t.key].sub }}</span></span>
+            <span class="tile-icon" :style="{ background: t.colors.icon, color: t.colors.iconText }"><Icon :name="iconOf(t.icon)" :size="22" /></span>
+            <span class="tile-text"><span class="tile-label">{{ t.name }}</span><span v-if="t.sub" class="tile-sub">{{ t.sub }}</span></span>
           </button>
           <a :href="coordinator ? telHref(coordinator.phone) : undefined" class="tile other">
             <span class="tile-icon" style="background: var(--primary)"><Icon name="phone" :size="20" /></span>
@@ -138,7 +135,7 @@ async function setOpen(value: boolean) {
         <div class="card requests">
           <RouterLink v-for="r in openRequests" :key="`r${r.id}`" :to="{ name: 'aanvraag', params: { id: r.id } }" class="request">
             <span class="mono at">{{ clock(r.reportedAt) }}</span>
-            <span class="grow">{{ [REQUEST_KINDS[r.type].label, requestDetailLabel(r.type, r.detail)].filter(Boolean).join(' · ') }}</span>
+            <span class="grow">{{ [helpRequestType(store.pkg?.helpRequestTypes, r.type).name, requestDetailLabel(store.pkg?.helpRequestTypes, r.type, r.detail)].filter(Boolean).join(' · ') }}</span>
             <span class="state blue">{{ r.status === 'accepted' ? 'wordt geregeld' : `plek ${r.position}` }}</span>
             <Icon name="forward" :size="16" />
           </RouterLink>

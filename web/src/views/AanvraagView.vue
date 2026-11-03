@@ -2,7 +2,7 @@
 // 5.1 · Post: aanvraag verstuurd (water, verkeer, vrijwilliger). Geen spoed: de coördinator pakt hem op uit de wachtrij.
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { REQUEST_KINDS, telHref } from '@ehbo/shared';
+import { helpRequestType, telHref } from '@ehbo/shared';
 import ActivityLog from '../components/ActivityLog.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
@@ -21,16 +21,16 @@ const route = useRoute();
 const { busy, error, run } = useSave();
 
 const request = computed(() => live.requestById(Number(props.id)));
-const kind = computed(() => (request.value ? REQUEST_KINDS[request.value.type] : null));
+const kind = computed(() => (request.value ? helpRequestType(store.pkg?.helpRequestTypes, request.value.type) : null));
 const open = computed(() => request.value?.status === 'sent' || request.value?.status === 'accepted');
 const coordinator = computed(() => coordinatorOf(store.pkg));
 
 const title = computed(() => {
   const r = request.value;
   if (!r || !kind.value) return '';
-  if (r.status === 'closed') return `${kind.value.label}: afgehandeld`;
+  if (r.status === 'closed') return `${kind.value.name}: afgehandeld`;
   if (r.status === 'withdrawn') return 'Aanvraag ingetrokken';
-  return `${kind.value.label} aangevraagd`;
+  return `${kind.value.name} aangevraagd`;
 });
 
 const setDetail = (detail: string) => request.value && run(() => live.setRequestDetail(request.value!.id, request.value!.detail === detail ? null : detail));
@@ -50,13 +50,13 @@ const atPost = computed(() => live.myPostIds.includes(request.value?.postId ?? -
       <div v-if="open" class="stack gap-8 gap-top">
         <span class="section-title">{{ kind.ask }} (optioneel)</span>
         <div class="choice-grid">
-          <button v-for="(label, key) in kind.details" :key="key" class="option" :aria-pressed="request.detail === key" :disabled="busy" @click="setDetail(key)">{{ label }}</button>
+          <button v-for="c in kind.choices" :key="c.key" class="option" :aria-pressed="request.detail === c.key" :disabled="busy" @click="setDetail(c.key)">{{ c.label }}</button>
         </div>
       </div>
 
       <p v-if="request.status === 'accepted'" class="note info gap-top">{{ request.acceptedBy?.name ?? 'De coördinator' }} regelt het.</p>
       <p v-else-if="request.position" class="note info gap-top">Plek {{ request.position }} in de wachtrij van de coördinator.</p>
-      <ActivityLog :entries="requestLog(request)" />
+      <ActivityLog :entries="requestLog(request, store.pkg?.helpRequestTypes)" />
 
       <p v-if="open" class="note gap-top">Geen spoed: je krijgt een melding als de coördinator het oppakt. Bij spoed: bel de coördinator.</p>
 

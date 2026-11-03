@@ -1,4 +1,5 @@
 // Evenementpakket: alles wat een telefoon nodig heeft om zonder bereik te werken, met één versienummer.
+import type { HelpRequestType } from './request.ts';
 import type { PostPassages, PostTypeInfo } from './admin.ts';
 import type { PostContactRole, TeamKind, TeamMobility } from './event.ts';
 
@@ -82,6 +83,8 @@ export interface EventPackage {
   teams: PackageTeam[];
   coreTeam: { function: string; name: string; phone: string; isCoordinator: boolean }[];
   emergencyNumbers: { label: string; number: string }[];
+  /** What a location can ask for (#86), staff only: tiles, labels and colours come from here. */
+  helpRequestTypes: HelpRequestType[];
   /** Voor iedereen, ook deelnemers: "Bel EHBO" belt de EHBO-coördinator, anders de evenementcoördinator. Alleen het nummer. */
   ehboPhone: string | null;
   map: PackageMap | null;

@@ -49,7 +49,8 @@ export interface IncidentDetails {
 /** POST /api/incidents */
 /** A help request of the first-aid type (#86): POST /api/help-requests. */
 export interface NewIncident extends IncidentDetails {
-  type: 'first_aid';
+  /** A help request type that's handled by dispatch, such as first_aid. */
+  type: string;
   /** The post asking for help; null for a request from where you are, with a GPS position. */
   postId: number | null;
   /** From where you are (#102): the position, sent once with the request and kept as the place of the incident. */
@@ -120,7 +121,7 @@ export interface IncidentPost {
 
 export interface LiveIncident extends IncidentDetails {
   id: number;
-  type: 'first_aid';
+  type: string;
   handling: 'dispatch';
   /** Gedaan in de testmodus: telt niet mee in het rapport. */
   isTest: boolean;

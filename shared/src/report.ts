@@ -1,6 +1,6 @@
 // Rapport na afloop (6.1): per incident de tijden en afloop, plus totalen. Proefoproepen uit de testmodus tellen niet mee.
 import type { IncidentPersons, IncidentStatus, IncidentWhat, Outcome } from './incident.ts';
-import type { RequestKind } from './request.ts';
+import type { HelpRequestType, RequestKind } from './request.ts';
 
 export interface ReportIncident {
   /** Volgnummer in het rapport (1 = eerste melding). */
@@ -40,6 +40,8 @@ export interface Report {
   counts: { posts: number; staff: number; teams: number };
   incidents: ReportIncident[];
   passages: ReportPostPassages[];
+  /** To name the requests by their type (#86). */
+  helpRequestTypes: HelpRequestType[];
   totals: {
     incidents: number;
     withdrawn: number;

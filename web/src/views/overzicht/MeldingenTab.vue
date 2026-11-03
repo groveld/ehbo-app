@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Meldingen: alles wat open is (EHBO-oproepen rood bovenaan, dan de wachtrij 5.2: water, verkeer, vrijwilliger), daarna wat is afgerond.
 import { computed } from 'vue';
-import { REQUEST_KINDS, requestDetailLabel, telHref, type LiveRequest } from '@ehbo/shared';
+import { helpRequestType, requestDetailLabel, telHref, type LiveRequest } from '@ehbo/shared';
 import Icon from '../../components/Icon.vue';
 import { clock, incidentSummary, teamOf } from '../../incidents.ts';
 import { useSave } from '../../composables/useSave.ts';
@@ -23,10 +23,11 @@ const handles = computed(() => {
 });
 const openRequests = computed(() => live.requests.filter((r) => r.status === 'sent' || r.status === 'accepted').slice().reverse());
 const doneRequests = computed(() => live.requests.filter((r) => r.status === 'closed' || r.status === 'withdrawn'));
-const KIND_STYLE = { water: ['#E4EEF7', '#124A78'], traffic: ['#FBE6D2', '#7A3F06'], volunteer: ['#EDE4F7', '#4E2A82'] } as const;
+/** A request's type, with its name and the colours of its chip (#86). */
+const typeOf = (r: LiveRequest) => helpRequestType(store.pkg?.helpRequestTypes, r.type);
 const line = (r: LiveRequest) => {
   const post = store.postById.get(r.postId);
-  return [r.postName, post ? kmLabel(post) : null, requestDetailLabel(r.type, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
+  return [r.postName, post ? kmLabel(post) : null, requestDetailLabel(store.pkg?.helpRequestTypes, r.type, r.detail)?.toLowerCase()].filter(Boolean).join(' · ');
 };
 const postPhone = (r: LiveRequest) => {
   const post = store.postById.get(r.postId);
@@ -57,7 +58,7 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div v-for="r in openRequests" :key="r.id" class="card request" :class="{ mine: r.status === 'accepted' && r.acceptedBy?.phone === session.me?.phone }">
         <div class="request-top">
-          <span class="kind" :style="{ background: KIND_STYLE[r.type][0], color: KIND_STYLE[r.type][1] }">{{ REQUEST_KINDS[r.type].label }}</span>
+          <span class="kind" :style="{ background: typeOf(r).colors.chip, color: typeOf(r).colors.chipText }">{{ typeOf(r).name }}</span>
           <span class="picked grow">{{ pickedText(r) }}</span>
           <span class="mono at">{{ clock(r.reportedAt) }}</span>
         </div>
@@ -82,7 +83,7 @@ const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
         </RouterLink>
         <div v-for="r in doneRequests" :key="r.id" class="card request">
           <div class="request-top">
-            <span class="kind" :style="{ background: KIND_STYLE[r.type][0], color: KIND_STYLE[r.type][1] }">{{ REQUEST_KINDS[r.type].label }}</span>
+            <span class="kind" :style="{ background: typeOf(r).colors.chip, color: typeOf(r).colors.chipText }">{{ typeOf(r).name }}</span>
             <span class="picked grow">{{ pickedText(r) }}</span>
             <span class="mono at">{{ clock(r.reportedAt) }}</span>
           </div>

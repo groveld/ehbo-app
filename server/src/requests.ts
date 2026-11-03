@@ -1,6 +1,6 @@
 // Eenvoudige aanvragen van posten: water, verkeer, vrijwilliger. Gaan naar de wachtrij van de evenementcoördinator, zonder alarm.
 // Aangevraagd → opgepakt → afgehandeld, of ingetrokken door de post.
-import { REQUEST_KINDS, requestDetailLabel, type LiveRequest, type Me, type NewRequest, type PushPayload, type RequestKind, type RequestStatus } from '@ehbo/shared';
+import { helpRequestType, requestDetailLabel, type LiveRequest, type Me, type NewRequest, type PushPayload, type RequestKind, type RequestStatus } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
 
 const httpError = (statusCode: number, message: string) => Object.assign(new Error(message), { statusCode });
@@ -65,11 +65,13 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     return r;
   }
 
+  /** A kind of help request by its key, from the table: a new kind is a row (#86). */
+  const typeOf = (kind: RequestKind) => helpRequestType(db.helpRequestTypes(), kind);
   const checkDetail = (kind: RequestKind, detail: string | null) => {
-    if (detail !== null && !(detail in REQUEST_KINDS[kind].details)) throw httpError(400, 'Onbekende keuze bij deze aanvraag');
+    if (detail !== null && !typeOf(kind).choices.some((c) => c.key === detail)) throw httpError(400, 'Onbekende keuze bij deze aanvraag');
   };
 
-  const describe = (r: Row) => [REQUEST_KINDS[r.kind as RequestKind].label, requestDetailLabel(r.kind as RequestKind, r.detail as string | null)]
+  const describe = (r: Row) => [typeOf(r.kind as RequestKind).name, requestDetailLabel(db.helpRequestTypes(), r.kind as RequestKind, r.detail as string | null)]
     .filter(Boolean).join(' · ');
 
   function create(me: Me, body: NewRequest) {
@@ -86,7 +88,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
       body.clientId, body.type, body.postId, body.detail, me.phone, iso(), db.testMode() ? 1 : 0).lastInsertRowid);
     const coordinator = db.coordinatorPhone();
     if (coordinator) {
-      notify([coordinator], { title: `${REQUEST_KINDS[body.type].label} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/overzicht/meldingen' });
+      notify([coordinator], { title: `${typeOf(body.type).name} · ${postName(body.postId)}`, body: `${describe(row(id))}. Staat in de wachtrij.`, tag: `aanvraag-${id}`, url: '/overzicht/meldingen' });
     }
     changed();
     return list().find((r) => r.id === id)!;
@@ -107,7 +109,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     const r = row(id);
     if (r.status !== 'sent') throw httpError(409, r.status === 'accepted' ? `Al opgepakt door ${personName(r.picked_by as string)}` : 'Deze aanvraag is niet meer open');
     run("UPDATE help_requests SET status = 'accepted', accepted_at = ?, accepted_by = ? WHERE id = ?", iso(), me.phone, id);
-    notify(postPhones(r.post_id as number), { title: `${REQUEST_KINDS[r.kind as RequestKind].label} wordt geregeld`, body: `${personName(me.phone)} heeft je aanvraag opgepakt.`, tag: `aanvraag-${id}`, url: `/aanvraag/${id}` });
+    notify(postPhones(r.post_id as number), { title: `${typeOf(r.kind as RequestKind).name} wordt geregeld`, body: `${personName(me.phone)} heeft je aanvraag opgepakt.`, tag: `aanvraag-${id}`, url: `/aanvraag/${id}` });
     changed();
     return list();
   }
@@ -117,7 +119,7 @@ export function createRequests(db: EventDb, { notify: send, changed, reopen, now
     const r = row(id);
     if (r.status !== 'sent' && r.status !== 'accepted') return list();
     run("UPDATE help_requests SET status = 'closed', closed_at = ?, accepted_at = COALESCE(accepted_at, ?), accepted_by = COALESCE(accepted_by, ?) WHERE id = ?", iso(), iso(), me.phone, id);
-    notify(postPhones(r.post_id as number), { title: `${REQUEST_KINDS[r.kind as RequestKind].label}: afgehandeld`, body: `${personName(me.phone)} heeft je aanvraag afgehandeld.`, tag: `aanvraag-${id}`, url: `/aanvraag/${id}` });
+    notify(postPhones(r.post_id as number), { title: `${typeOf(r.kind as RequestKind).name}: afgehandeld`, body: `${personName(me.phone)} heeft je aanvraag afgehandeld.`, tag: `aanvraag-${id}`, url: `/aanvraag/${id}` });
     changed();
     return list();
   }

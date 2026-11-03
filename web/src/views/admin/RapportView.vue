@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 6.1 · Beheerder: rapport & export. Kerncijfers, de incidenten, en export als PDF (afdrukpagina) en CSV. Plus de testmodus.
 import { computed, onMounted, ref } from 'vue';
-import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, formatDuration, type Report, type RequestKind } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, formatDuration, helpRequestType, type Report, type RequestKind } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import { confirmDialog } from '../../composables/useDialog.ts';
 import { useSave } from '../../composables/useSave.ts';
@@ -84,7 +84,7 @@ async function deleteTestData() {
             <div v-for="[key, count] in outcomes" :key="key" class="list-row row"><span class="grow">{{ OUTCOMES[key] }}</span><strong>{{ count }}</strong></div>
             <div v-if="report.totals.maxResponseSeconds !== null" class="list-row row"><span class="grow">Langste tijd tot acceptatie</span><strong class="mono">{{ formatDuration(report.totals.maxResponseSeconds) }}</strong></div>
             <div v-if="report.totals.withdrawn" class="list-row row"><span class="grow">Ingetrokken meldingen</span><strong>{{ report.totals.withdrawn }}</strong></div>
-            <div v-for="[kind, count] in requests" :key="kind" class="list-row row"><span class="grow">Aanvragen {{ REQUEST_KINDS[kind].label.toLowerCase() }}</span><strong>{{ count }}</strong></div>
+            <div v-for="[kind, count] in requests" :key="kind" class="list-row row"><span class="grow">Aanvragen {{ helpRequestType(report?.helpRequestTypes, kind).name.toLowerCase() }}</span><strong>{{ count }}</strong></div>
           </div>
         </section>
 

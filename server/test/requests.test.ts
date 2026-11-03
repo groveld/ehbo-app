@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { requestsOf, type LiveRequest, type LiveState, type PushPayload } from '@ehbo/shared';
+import { requestsOf, type HelpRequestType, type LiveRequest, type LiveState, type PushPayload } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
 import { openEventDb, type EventDb } from '../src/event-db.ts';
@@ -102,4 +102,28 @@ test('de post vult aan of trekt in; een dichte post kan niets aanvragen; dubbel 
   await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: false });
   assert.equal((await call(DEMO.postLead, 'POST', '/api/help-requests', water())).statusCode, 409);
   assert.equal((await call(DEMO.postMember, 'POST', '/api/help-requests', water())).statusCode, 403, 'niet je eigen post');
+});
+
+test('a new kind of help request is a row, not code: its name, choices and handling come from the table', async () => {
+  const add = db.raw.prepare('INSERT INTO help_request_types (key, name, handling, sort, sub, ask, choices_json, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  add.run('parking', 'Parkeren', 'queue', 4, 'Hulp bij parkeren', 'Wat is er?', JSON.stringify([{ key: 'full', label: 'Vol' }]), 'more');
+  add.run('lost_child', 'Kind kwijt', 'dispatch', 5, null, null, '[]', 'more');
+
+  const pkg = await ok<{ helpRequestTypes: HelpRequestType[] }>(DEMO.postLead, 'GET', '/api/package');
+  assert.deepEqual(pkg.helpRequestTypes.map((t) => t.key), ['first_aid', 'water', 'traffic', 'volunteer', 'parking', 'lost_child']);
+  assert.equal(pkg.helpRequestTypes.find((t) => t.key === 'parking')!.colors.bg, '#F0EFEA', 'no colours of its own: the plain ones');
+
+  const req = await ok<LiveRequest>(DEMO.postLead, 'POST', '/api/help-requests', { ...water('full'), type: 'parking' });
+  assert.deepEqual([req.type, req.handling, req.detail], ['parking', 'queue', 'full']);
+  const push = pushes.find((p) => p.phones.includes(DEMO.coordinator))!.payload;
+  assert.match(push.title, /Parkeren · Waterpost 3/);
+  assert.match(push.body, /Vol/);
+  assert.equal((await call(DEMO.postLead, 'PUT', `/api/help-requests/${req.id}`, { detail: 'lots' })).statusCode, 400, 'a choice of water');
+
+  const incident = await call(DEMO.postLead, 'POST', '/api/help-requests', {
+    type: 'lost_child', postId: WATER(), clientId: `kind-${++n}-abcdef`, what: 'unknown', persons: '1', responsive: null, note: null,
+  });
+  assert.equal(incident.statusCode, 201, incident.body);
+  assert.deepEqual([incident.json().type, incident.json().handling, incident.json().status], ['lost_child', 'dispatch', 'sent']);
+  assert.equal((await call(DEMO.postLead, 'POST', '/api/help-requests', { ...water(), type: 'pizza' })).statusCode, 400, 'unknown kind');
 });
