@@ -30,7 +30,7 @@ const STORAGE_STEPS: ((read: <T>(key: string) => T | null, write: (key: string, 
       write('ehbo.package', {
         ...pkg,
         units: pkg.units.map((u: Any) => ({ ...u, kind: KIND[u.kind] ?? u.kind, mobility: MOBILITY[u.mobility] ?? u.mobility })),
-        posts: (pkg.posts ?? []).map((p: Any) => ({ ...p, contacts: p.contacts?.map((c: Any) => ({ ...c, role: ROLE[c.role] ?? c.role })) })),
+        locations: (pkg.locations ?? []).map((p: Any) => ({ ...p, contacts: p.contacts?.map((c: Any) => ({ ...c, role: ROLE[c.role] ?? c.role })) })),
       });
     }
     const me = read<Any>('ehbo.me');
@@ -153,6 +153,29 @@ const STORAGE_STEPS: ((read: <T>(key: string) => T | null, write: (key: string, 
       });
     }
     if (read<string>('app.nav') === 'telefoon') write('app.nav', 'phone');
+  },
+  // 8: a post is a location (#84): every name with post in it (postId, posts, stayPostId, …), a post type is a function type and
+  // manned is staffed; the actions postOpen and keepPost, a function or home screen post, and the keys of the functions.
+  (read, write) => {
+    type Any = Record<string, any>;
+    const NAMES: [string, string][] = [['PostType', 'FunctionType'], ['postType', 'functionType'], ['Posts', 'Locations'], ['posts', 'locations'], ['Post', 'Location'], ['post', 'location'], ['manned', 'staffed']];
+    const FUNCTION_KEYS: Record<string, string> = { stempel: 'stamp', verkeer: 'traffic', keerpunt: 'turnaround', anders: 'other', ehbo: 'first_aid' };
+    const name = (k: string) => NAMES.reduce((s, [a, b]) => s.replace(a, b), k);
+    const convert = (value: unknown, key = ''): unknown => {
+      if (Array.isArray(value)) return value.map((v) => convert(v, key));
+      if (typeof value === 'string') {
+        if ((key === 'kind' || key === 'home') && value === 'post') return 'location';
+        return key === 'type' && (value === 'postOpen' || value === 'keepPost') ? name(value) : value;
+      }
+      if (!value || typeof value !== 'object') return value;
+      return Object.fromEntries(Object.entries(value).map(([k, v]) => [name(k), convert(v, k)]));
+    };
+    for (const key of ['app.queue', 'app.live', 'app.package', 'app.me']) {
+      const value = read<unknown>(key);
+      if (value !== null) write(key, convert(value));
+    }
+    const pkg = read<Any>('app.package');
+    if (pkg?.functionTypes) write('app.package', { ...pkg, functionTypes: pkg.functionTypes.map((t: Any) => ({ ...t, key: FUNCTION_KEYS[t.key] ?? t.key })) });
   },
 ];
 

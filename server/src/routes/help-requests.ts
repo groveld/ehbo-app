@@ -57,11 +57,11 @@ export async function helpRequestRoutes(app: FastifyInstance, { db, calls, reque
     schema: {
       body: {
         type: 'object',
-        required: ['type', 'postId', 'clientId'],
+        required: ['type', 'locationId', 'clientId'],
         properties: {
           type: { type: 'string', maxLength: 40 },
           clientId,
-          postId: { type: ['integer', 'null'], minimum: 1 },
+          locationId: { type: ['integer', 'null'], minimum: 1 },
           reportedAt: { type: 'string', format: 'date-time' },
           lat: coordinate(90),
           lng: coordinate(180),
@@ -79,7 +79,7 @@ export async function helpRequestRoutes(app: FastifyInstance, { db, calls, reque
       if (!detailsRequired.every((k) => k in body)) throw httpError(400, 'Ongeldig verzoek');
       return reply.code(201).send(calls.report(request.me!, body as NewIncident));
     }
-    if (typeof body.postId !== 'number' || !('detail' in body)) throw httpError(400, 'Ongeldig verzoek');
+    if (typeof body.locationId !== 'number' || !('detail' in body)) throw httpError(400, 'Ongeldig verzoek');
     return reply.code(201).send(calls.at(actionHeaders(request)[1], () => requests.create(request.me!, body as NewRequest)));
   });
 
@@ -87,8 +87,8 @@ export async function helpRequestRoutes(app: FastifyInstance, { db, calls, reque
     schema: {
       body: {
         type: 'object',
-        required: ['clientId', 'teamId', 'postId', 'lat', 'lng', ...detailsRequired],
-        properties: { clientId, teamId: { type: 'integer', minimum: 1 }, postId: { type: 'integer', minimum: 1 }, lat: coordinate(90), lng: coordinate(180), ...details },
+        required: ['clientId', 'teamId', 'locationId', 'lat', 'lng', ...detailsRequired],
+        properties: { clientId, teamId: { type: 'integer', minimum: 1 }, locationId: { type: 'integer', minimum: 1 }, lat: coordinate(90), lng: coordinate(180), ...details },
       },
     },
   }, async (request, reply) => reply.code(201).send(calls.at(actionHeaders(request)[1], () => calls.selfStart(request.me!, request.body))));

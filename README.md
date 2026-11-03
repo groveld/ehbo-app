@@ -174,7 +174,7 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | POST | `/api/help-requests/:id/pick`, `/done` | coördinator | Alleen een aanvraag: oppakken, afhandelen |
 | PUT | `/api/teams/:id/availability` | EHBO-eenheid | Beschikbaar, pauze of uit dienst |
 | PUT | `/api/position` | mobiele EHBO in dienst | Eigen positie `{ lat, lng }` (alleen in het geheugen van de server); van anderen geweigerd |
-| PUT | `/api/posts/:id/open` | postverantwoordelijke | Post open of dicht `{ open }` |
+| PUT | `/api/locations/:id/open` | locatieverantwoordelijke | Locatie open of dicht `{ open }` |
 | GET | `/api/admin/export.xlsx`, `/api/admin/export/<tabblad>.csv` | beheerder | Export en sjabloon: locaties, contactpersonen, EHBO-eenheden en -leden, kernteam, noodnummers |
 | POST | `/api/admin/import/check`, `/api/admin/import` | beheerder | Controleren (verandert niets) en importeren `{ files: [{ name, data (base64) }], removeMissing }`; alles of niets |
 | GET | `/api/admin/people`, `/api/admin/people.csv` | beheerder | Iedereen met nummer, naam, waar die staat, aangemeld en meldingen; en wat nog ontbreekt |

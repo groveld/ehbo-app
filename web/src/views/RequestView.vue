@@ -9,7 +9,7 @@ import StatusBlock from '../components/StatusBlock.vue';
 import { confirmDialog } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { clock, requestLog } from '../incidents.ts';
-import { coordinatorOf } from '../posts.ts';
+import { coordinatorOf } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -38,7 +38,7 @@ async function withdraw() {
   if (!request.value || !await confirmDialog({ title: 'Aanvraag intrekken?', text: 'De coördinator hoeft er dan niets meer mee te doen.', confirm: 'Aanvraag intrekken', cancel: 'Niet intrekken', tone: 'danger' })) return;
   await run(() => live.withdrawRequest(request.value!.id));
 }
-const atPost = computed(() => live.myPostIds.includes(request.value?.postId ?? -1));
+const atLocation = computed(() => live.myLocationIds.includes(request.value?.locationId ?? -1));
 </script>
 
 <template>
@@ -64,7 +64,7 @@ const atPost = computed(() => live.myPostIds.includes(request.value?.postId ?? -
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <div class="stack gap-8 bottom">
         <a v-if="open && coordinator" :href="telHref(coordinator.phone)" class="btn">Bel evenementcoördinator</a>
-        <button class="btn primary" @click="router.back()">{{ atPost && route.name === 'request' ? 'Terug naar mijn locatie' : 'Terug' }}</button>
+        <button class="btn primary" @click="router.back()">{{ atLocation && route.name === 'request' ? 'Terug naar mijn locatie' : 'Terug' }}</button>
         <button v-if="open" class="btn link muted" :disabled="busy" @click="withdraw">Aanvraag intrekken</button>
       </div>
     </template>

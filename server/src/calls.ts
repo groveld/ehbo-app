@@ -6,7 +6,7 @@ import {
   INCIDENT_WHAT,
   KEEP_OPEN_MIN,
   POSITION_MAX_AGE_MS,
-  awayPostIds,
+  awayLocationIds,
   incidentsOf,
   distanceKm,
   formatKm,
@@ -63,17 +63,17 @@ interface Team {
   id: number;
   name: string;
   kind: 'fixed' | 'mobile';
-  postId: number | null;
+  locationId: number | null;
   hasAed: boolean;
   availability: TeamAvailability;
-  stayPostId: number | null;
+  stayLocationId: number | null;
   timeTo: string | null;
   keepUntil: string | null;
   closesAt: string | null;
   members: string[];
 }
 
-interface Post {
+interface Location {
   id: number;
   typeId: number;
   name: string;
@@ -85,7 +85,7 @@ interface Post {
   /** EHBO is all that's there: the location and its fixed team open and close together. */
   onlyEhbo: boolean;
   /** People are there (#69); an AED, toilets or a turnaround never open. */
-  manned: boolean;
+  staffed: boolean;
   timeTo: string | null;
   keepUntil: string | null;
   closesAt: string | null;
@@ -120,7 +120,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   const escalationMs = () => (get('SELECT escalation_seconds FROM event WHERE id = 1')!.escalation_seconds as number) * 1000;
   /** Within this many metres of a post a position counts as that post (#63). */
-  const atPostM = () => get('SELECT at_post_m FROM event WHERE id = 1')!.at_post_m as number;
+  const atLocationM = () => get('SELECT at_location_m FROM event WHERE id = 1')!.at_location_m as number;
   const coordinator = () => db.coordinatorPhone();
 
   function teams(): Team[] {
@@ -128,14 +128,14 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     for (const m of all('SELECT team_id, phone FROM team_members ORDER BY rowid')) {
       members.set(m.team_id as number, [...(members.get(m.team_id as number) ?? []), m.phone as string]);
     }
-    return all('SELECT id, name, kind, post_id, has_aed, availability, stay_post_id, time_to, keep_until, closes_at FROM teams ORDER BY sort, id').map((u) => ({
+    return all('SELECT id, name, kind, location_id, has_aed, availability, stay_location_id, time_to, keep_until, closes_at FROM teams ORDER BY sort, id').map((u) => ({
       id: u.id as number,
       name: u.name as string,
       kind: u.kind as Team['kind'],
-      postId: u.post_id as number | null,
+      locationId: u.location_id as number | null,
       hasAed: u.has_aed === 1,
       availability: u.availability as TeamAvailability,
-      stayPostId: u.stay_post_id as number | null,
+      stayLocationId: u.stay_location_id as number | null,
       timeTo: u.time_to as string | null,
       keepUntil: u.keep_until as string | null,
       closesAt: u.closes_at as string | null,
@@ -143,13 +143,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     }));
   }
 
-  function posts(): Map<number, Post> {
+  function locations(): Map<number, Location> {
     // An EHBO post is a location with an EHBO function, also when that isn't its main function (#83).
     return new Map(all(`SELECT p.id, p.type_id, p.name, p.km, p.lat, p.lng, p.is_open, p.time_to, p.keep_until, p.closes_at, p.auto_closed_at,
-                               EXISTS (SELECT 1 FROM post_functions f JOIN post_types t ON t.id = f.type_id WHERE f.post_id = p.id AND t.key = 'ehbo') AS ehbo,
-                               (SELECT COUNT(*) FROM post_functions f WHERE f.post_id = p.id) AS functions,
-                               EXISTS (SELECT 1 FROM post_functions f JOIN post_types t ON t.id = f.type_id WHERE f.post_id = p.id AND t.manned = 1) AS manned
-                        FROM posts p`).map((p) => [p.id as number, {
+                               EXISTS (SELECT 1 FROM location_functions f JOIN function_types t ON t.id = f.type_id WHERE f.location_id = p.id AND t.key = 'first_aid') AS ehbo,
+                               (SELECT COUNT(*) FROM location_functions f WHERE f.location_id = p.id) AS functions,
+                               EXISTS (SELECT 1 FROM location_functions f JOIN function_types t ON t.id = f.type_id WHERE f.location_id = p.id AND t.staffed = 1) AS staffed
+                        FROM locations p`).map((p) => [p.id as number, {
       id: p.id as number,
       typeId: p.type_id as number,
       name: p.name as string,
@@ -159,7 +159,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       isOpen: p.is_open === 1,
       isEhbo: p.ehbo === 1,
       onlyEhbo: p.ehbo === 1 && p.functions === 1,
-      manned: p.manned === 1,
+      staffed: p.staffed === 1,
       timeTo: p.time_to as string | null,
       keepUntil: p.keep_until as string | null,
       closesAt: p.closes_at as string | null,
@@ -168,7 +168,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   }
 
   const teamById = (id: number) => teams().find((u) => u.id === id);
-  const postPhones = (postId: number) => all('SELECT phone FROM post_contacts WHERE post_id = ?', postId).map((r) => r.phone as string);
+  const locationPhones = (locationId: number) => all('SELECT phone FROM location_contacts WHERE location_id = ?', locationId).map((r) => r.phone as string);
   const personName = (phone: string) => (get('SELECT name FROM people WHERE phone = ?', phone)?.name as string | undefined) || phone;
 
   /** Eenheden die nu met een oproep bezig zijn: team id → incident id. */
@@ -191,24 +191,24 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   }
 
   /** Waar een eenheid nu is: vast = eigen post (of waar ze bleef), mobiel = recente GPS, anders de standplaats. */
-  function teamPosition(team: Team, postMap: Map<number, Post>): [number, number] | null {
+  function teamPosition(team: Team, locationMap: Map<number, Location>): [number, number] | null {
     if (team.kind === 'mobile') {
       const fix = teamFix(team);
       if (fix && now().getTime() - fix.at <= POSITION_MAX_AGE_MS) return [fix.lng, fix.lat];
     }
-    const post = postMap.get((team.kind === 'fixed' ? team.stayPostId : null) ?? team.postId ?? -1);
-    return post?.lat != null && post.lng != null ? [post.lng, post.lat] : null;
+    const location = locationMap.get((team.kind === 'fixed' ? team.stayLocationId : null) ?? team.locationId ?? -1);
+    return location?.lat != null && location.lng != null ? [location.lng, location.lat] : null;
   }
 
   /** Beschikbare eenheden met hun afstand tot de plek van de hulpvraag (null als die onbekend is). */
-  function freeTeams(post: { lat: number | null; lng: number | null }) {
+  function freeTeams(location: { lat: number | null; lng: number | null }) {
     const busy = busyTeams();
-    const postMap = posts();
+    const locationMap = locations();
     return teams()
       .filter((u) => u.availability === 'available' && !busy.has(u.id))
       .map((team) => {
-        const position = teamPosition(team, postMap);
-        const km = position && post.lat != null && post.lng != null ? Math.round(distanceKm(position, [post.lng, post.lat]) * 10) / 10 : null;
+        const position = teamPosition(team, locationMap);
+        const km = position && location.lat != null && location.lng != null ? Math.round(distanceKm(position, [location.lng, location.lat]) * 10) / 10 : null;
         return { team, km };
       });
   }
@@ -224,11 +224,11 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** Where help is needed: the place of the incident when that's away from its post, otherwise the post. */
   function targetOf(row: Row) {
-    return row.place_lat != null && row.place_lng != null ? { lat: row.place_lat as number, lng: row.place_lng as number } : posts().get(row.post_id as number)!;
+    return row.place_lat != null && row.place_lng != null ? { lat: row.place_lat as number, lng: row.place_lng as number } : locations().get(row.location_id as number)!;
   }
-  const placeName = (row: Row) => (row.place_name as string | null) ?? posts().get(row.post_id as number)!.name;
+  const placeName = (row: Row) => (row.place_name as string | null) ?? locations().get(row.location_id as number)!.name;
   /** Who follows the call: the post, and who asked for help, also from away from a post. */
-  const followers = (row: Row) => new Set([...postPhones(row.post_id as number), row.reported_by as string]);
+  const followers = (row: Row) => new Set([...locationPhones(row.location_id as number), row.reported_by as string]);
 
   function dispatchesOf(id: number): Dispatch[] {
     return all('SELECT * FROM dispatches WHERE help_request_id = ? ORDER BY at, rowid', id).map((d) => ({
@@ -243,20 +243,20 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   // ---- Live stand ----
 
-  function toLive(row: Row, eventsById: Map<number, IncidentEvent[]>, postMap: Map<number, Post>): LiveIncident {
+  function toLive(row: Row, eventsById: Map<number, IncidentEvent[]>, locationMap: Map<number, Location>): LiveIncident {
     const acceptedBy = row.accepted_by as string | null;
     // An incident keeps its post: the database refuses to delete a post that has incidents.
-    const { typeId, name, km, lat, lng } = postMap.get(row.post_id as number)!;
+    const { typeId, name, km, lat, lng } = locationMap.get(row.location_id as number)!;
     const place = row.place_name as string | null;
     return {
       id: row.id as number,
       type: row.type as string,
       handling: 'dispatch',
-      postId: row.post_id as number,
-      post: { typeId, name: place ?? name, km, lat: (row.place_lat as number | null) ?? lat, lng: (row.place_lng as number | null) ?? lng },
+      locationId: row.location_id as number,
+      location: { typeId, name: place ?? name, km, lat: (row.place_lat as number | null) ?? lat, lng: (row.place_lng as number | null) ?? lng },
       reportedBy: row.reported_by as string,
       selfStarted: row.self_started === 1,
-      offPost: place !== null,
+      offLocation: place !== null,
       accuracyM: row.place_accuracy_m as number | null,
       status: row.status as LiveIncident['status'],
       stage: row.stage as LiveIncident['stage'],
@@ -284,13 +284,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const busy = busyTeams();
     return teams().map((u) => {
       const fix = teamFix(u);
-      return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayPostId: u.stayPostId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null, closesAt: u.closesAt };
+      return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayLocationId: u.stayLocationId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null, closesAt: u.closesAt };
     });
   }
 
   /** Voor deelnemers: welke standplaatsen nu leeg zijn. Zonder de oproepen, dus licht genoeg om vaak op te vragen. */
   function ehboStatus(): FirstAidStatus {
-    return { awayPostIds: awayPostIds(teams(), liveTeams(), [...posts().values()], now().getTime(), atPostM()), dataVersion: db.dataVersion() };
+    return { awayLocationIds: awayLocationIds(teams(), liveTeams(), [...locations().values()], now().getTime(), atLocationM()), dataVersion: db.dataVersion() };
   }
 
   function state(): LiveState {
@@ -300,14 +300,14 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       list.push({ at: e.at as string, type: e.type as IncidentEventType, teamId: e.team_id as number | null, text: e.text as string });
       eventsById.set(e.incident_id as number, list);
     }
-    const postMap = posts();
+    const locationMap = locations();
     return {
       version,
       dataVersion: db.dataVersion(),
       serverTime: iso(),
-      helpRequests: [...all('SELECT * FROM incidents').map((row) => toLive(row, eventsById, postMap)), ...requests()].sort((a, b) => b.id - a.id),
+      helpRequests: [...all('SELECT * FROM incidents').map((row) => toLive(row, eventsById, locationMap)), ...requests()].sort((a, b) => b.id - a.id),
       teams: liveTeams(),
-      posts: [...postMap.values()].map((p) => ({ id: p.id, isOpen: p.isOpen, closesAt: p.closesAt, autoClosedAt: p.autoClosedAt })),
+      locations: [...locationMap.values()].map((p) => ({ id: p.id, isOpen: p.isOpen, closesAt: p.closesAt, autoClosedAt: p.autoClosedAt })),
       testMode: db.testMode(),
     };
   }
@@ -322,7 +322,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   // ---- Bouwstenen ----
 
   /** An incident is a help request of the first-aid type (#86); what only incidents have is in dispatch_details. */
-  const SHARED = new Set(['client_id', 'post_id', 'reported_by', 'status', 'is_test', 'reported_at', 'accepted_by', 'accepted_at', 'closed_at',
+  const SHARED = new Set(['client_id', 'location_id', 'reported_by', 'status', 'is_test', 'reported_at', 'accepted_by', 'accepted_at', 'closed_at',
     'place_name', 'place_lat', 'place_lng', 'place_accuracy_m']);
   const split = (values: Row): [string[], string[]] => {
     const keys = Object.keys(values);
@@ -459,10 +459,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   const isCoordinator = (me: Me) => coordinator() === me.phone;
   const memberOf = (me: Me, teamId: number) => me.assignments.some((a) => a.kind === 'team' && a.teamId === teamId);
-  const atPost = (me: Me, postId: number) => me.assignments.some((a) => a.kind === 'post' && a.postId === postId);
+  const atLocation = (me: Me, locationId: number) => me.assignments.some((a) => a.kind === 'location' && a.locationId === locationId);
 
   /** The post, who asked for help, the coordinator or an admin. */
-  const canFollow = (me: Me, row: Row) => atPost(me, row.post_id as number) || row.reported_by === me.phone || me.isAdmin || isCoordinator(me);
+  const canFollow = (me: Me, row: Row) => atLocation(me, row.location_id as number) || row.reported_by === me.phone || me.isAdmin || isCoordinator(me);
 
   function requireTeamMember(me: Me, teamId: number) {
     if (!memberOf(me, teamId) && !me.isAdmin) throw httpError(403, 'Je hoort niet bij deze EHBO-eenheid');
@@ -488,15 +488,15 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     // From a post, or from where you are (#102): anyone on staff, with a GPS position. That place is kept for the report;
     // within the radius of a post it counts as that post.
     const position: [number, number] | null = body.lat != null && body.lng != null ? [body.lng, body.lat] : null;
-    if (body.postId === null && !position) throw httpError(400, 'Zonder locatie is je positie nodig');
-    const place = body.postId === null && position ? placeOf([...posts().values()], position, atPostM()) : null;
-    const post = posts().get(body.postId ?? place?.postId ?? -1);
-    if (!post) throw body.postId === null ? httpError(409, 'Er zijn nog geen locaties met een positie') : httpError(404, 'Locatie niet gevonden');
-    if (body.postId !== null) {
-      if (!atPost(me, post.id) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Je kunt alleen een verzoek doen vanaf je eigen locatie');
-      if (!post.isOpen && !reopenAutoClosed(post.id)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
+    if (body.locationId === null && !position) throw httpError(400, 'Zonder locatie is je positie nodig');
+    const place = body.locationId === null && position ? placeOf([...locations().values()], position, atLocationM()) : null;
+    const location = locations().get(body.locationId ?? place?.locationId ?? -1);
+    if (!location) throw body.locationId === null ? httpError(409, 'Er zijn nog geen locaties met een positie') : httpError(404, 'Locatie niet gevonden');
+    if (body.locationId !== null) {
+      if (!atLocation(me, location.id) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Je kunt alleen een verzoek doen vanaf je eigen locatie');
+      if (!location.isOpen && !reopenAutoClosed(location.id)) throw httpError(409, 'Deze locatie is dicht. Zet de locatie eerst open.');
     }
-    const offPost = place !== null && !place.atPost;
+    const offLocation = place !== null && !place.atLocation;
 
     const sentAt = iso();
     // Een melding die zonder bereik is bewaard, houdt het moment van versturen; nooit in de toekomst of meer dan een uur terug.
@@ -504,19 +504,19 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const reportedAt = reported && reported <= now() && now().getTime() - reported.getTime() < 3600_000 ? reported.toISOString() : sentAt;
     const aed = body.responsive === 'no';
 
-    const candidates = freeTeams(offPost ? { lat: position![1], lng: position![0] } : post);
+    const candidates = freeTeams(offLocation ? { lat: position![1], lng: position![0] } : location);
     const first = nearest(candidates);
     const aedTeam = aed ? nearest(candidates.filter((c) => c.team.hasAed)) : undefined;
     const escalatesAt = first ? new Date(now().getTime() + escalationMs()).toISOString() : null;
 
     const id = db.transaction(() => {
       const incidentId = insertIncident(body.type, {
-        client_id: body.clientId, post_id: post.id, reported_by: me.phone, what: body.what, persons: body.persons, responsive: body.responsive,
+        client_id: body.clientId, location_id: location.id, reported_by: me.phone, what: body.what, persons: body.persons, responsive: body.responsive,
         note: body.note?.trim() || null, aed: aed ? 1 : 0, status: 'sent', stage: 'nearest', reported_at: reportedAt, sent_at: sentAt, escalates_at: escalatesAt,
-        is_test: db.testMode() ? 1 : 0, place_name: offPost ? place.name : null, place_lat: offPost ? position![1] : null, place_lng: offPost ? position![0] : null,
+        is_test: db.testMode() ? 1 : 0, place_name: offLocation ? place.name : null, place_lat: offLocation ? position![1] : null, place_lng: offLocation ? position![0] : null,
         place_accuracy_m: place ? body.accuracyM ?? null : null,
       });
-      log(incidentId, 'reported', body.postId === null ? `Gemeld door ${personName(me.phone)} · ${offPost ? place.name : post.name}` : `Gemeld door ${post.name}`);
+      log(incidentId, 'reported', body.locationId === null ? `Gemeld door ${personName(me.phone)} · ${offLocation ? place.name : location.name}` : `Gemeld door ${location.name}`);
       if (first) {
         addDispatch(incidentId, first.team.id, 'nearest', first.km);
         if (aedTeam && aedTeam.team.id !== first.team.id) addDispatch(incidentId, aedTeam.team.id, 'aed', aedTeam.km);
@@ -547,26 +547,26 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const team = requireTeamMember(me, body.teamId);
     if (busyTeams().has(team.id)) throw httpError(409, `${team.name} is al bezig met een andere oproep`);
 
-    const postMap = posts();
+    const locationMap = locations();
     const position: [number, number] | null = body.lat !== null && body.lng !== null ? [body.lng, body.lat] : null;
-    const place = position ? placeOf([...postMap.values()], position, atPostM()) : null;
-    const post = postMap.get(place?.postId ?? body.postId);
-    if (!post) throw httpError(404, 'Locatie niet gevonden');
-    const offPost = place !== null && !place.atPost;
+    const place = position ? placeOf([...locationMap.values()], position, atLocationM()) : null;
+    const location = locationMap.get(place?.locationId ?? body.locationId);
+    if (!location) throw httpError(404, 'Locatie niet gevonden');
+    const offLocation = place !== null && !place.atLocation;
     const at = stamp();
     const aed = body.responsive === 'no';
 
     const id = db.transaction(() => {
       const incidentId = insertIncident('first_aid', {
-        client_id: body.clientId, post_id: post.id, reported_by: me.phone, what: body.what, persons: body.persons, responsive: body.responsive,
+        client_id: body.clientId, location_id: location.id, reported_by: me.phone, what: body.what, persons: body.persons, responsive: body.responsive,
         note: body.note?.trim() || null, aed: aed ? 1 : 0, status: 'on_site', stage: 'nearest', reported_at: at, sent_at: at,
         team_id: team.id, accepted_by: me.phone, accepted_at: at, on_site_at: at, is_test: db.testMode() ? 1 : 0, self_started: 1,
-        place_name: offPost ? place.name : null, place_lat: offPost ? position![1] : null, place_lng: offPost ? position![0] : null,
+        place_name: offLocation ? place.name : null, place_lat: offLocation ? position![1] : null, place_lng: offLocation ? position![0] : null,
       });
       addDispatch(incidentId, team.id, 'manual', 0);
       run('UPDATE dispatches SET accepted_at = ? WHERE help_request_id = ? AND team_id = ?', at, incidentId, team.id);
-      run("UPDATE teams SET availability = 'available', stay_post_id = NULL WHERE id = ?", team.id);
-      log(incidentId, 'reported', `Zelf gestart door ${team.name} · ${offPost ? place.name : post.name}`, team.id);
+      run("UPDATE teams SET availability = 'available', stay_location_id = NULL WHERE id = ?", team.id);
+      log(incidentId, 'reported', `Zelf gestart door ${team.name} · ${offLocation ? place.name : location.name}`, team.id);
       return incidentId;
     });
 
@@ -579,7 +579,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
         alarmTeams(row, [aedTeam.team.id], 'EHBO-oproep · AED nodig');
       }
     }
-    copyToCoordinator(row, `${team.name} is zelf een incident gestart: ${summary(row)}${offPost ? `, ${place.name}` : ''}.`);
+    copyToCoordinator(row, `${team.name} is zelf een incident gestart: ${summary(row)}${offLocation ? `, ${place.name}` : ''}.`);
     changed();
     return incidentsOf(state()).find((i) => i.id === id)!;
   }
@@ -647,13 +647,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     }
 
     const at = stamp();
-    const post = posts().get(row.post_id as number)!;
+    const location = locations().get(row.location_id as number)!;
     db.transaction(() => {
       const km = freeTeams(targetOf(row)).find((c) => c.team.id === team.id)?.km ?? null;
       addDispatch(id, team.id, manual ? 'manual' : 'all', km);
       run('UPDATE dispatches SET accepted_at = ?, declined_at = NULL WHERE help_request_id = ? AND team_id = ?', at, id, team.id);
       // Wie aanneemt, is in dienst; een vaste eenheid gaat na afloop terug naar haar eigen post.
-      run("UPDATE teams SET availability = 'available', stay_post_id = NULL WHERE id = ?", team.id);
+      run("UPDATE teams SET availability = 'available', stay_location_id = NULL WHERE id = ?", team.id);
       if (row.status === 'sent') {
         setIncident(id, { status: 'accepted', team_id: team.id, accepted_by: manual ? null : by.phone, accepted_at: at, escalates_at: null });
       }
@@ -730,8 +730,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     db.transaction(() => {
       setIncident(id, { status: 'closed', closed_at: stamp(), outcome: body.outcome, outcome_persons: body.persons, outcome_note: body.note?.trim() || null, on_site_at: row.on_site_at ?? stamp() });
       // Alleen een vaste eenheid "blijft hier"; een mobiele eenheid geeft haar positie zelf door.
-      const stay = body.stayHere && team.kind === 'fixed' && row.post_id !== team.postId ? (row.post_id as number) : null;
-      run('UPDATE teams SET stay_post_id = ? WHERE id = ?', stay, teamId);
+      const stay = body.stayHere && team.kind === 'fixed' && row.location_id !== team.locationId ? (row.location_id as number) : null;
+      run('UPDATE teams SET stay_location_id = ? WHERE id = ?', stay, teamId);
       // In dezelfde stap op pauze, zodat er tussendoor geen oproep binnenkomt.
       if (body.pause) run("UPDATE teams SET availability = 'unavailable' WHERE id = ?", teamId);
       log(id, 'closed', `Afgerond door ${team.name}${body.pause ? ', daarna pauze' : ''}`, teamId);
@@ -746,7 +746,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const row = incidentRow(id);
     if (!canFollow(me, row)) throw httpError(403, 'Alleen de locatie of wie de melding deed, kan hem intrekken');
     if (!['sent', 'accepted', 'on_site'].includes(row.status as string)) return state();
-    const post = posts().get(row.post_id as number)!;
+    const location = locations().get(row.location_id as number)!;
     db.transaction(() => {
       setIncident(id, { status: 'withdrawn', closed_at: stamp(), escalates_at: null });
       log(id, 'withdrawn', `Ingetrokken door ${personName(me.phone)}`);
@@ -756,7 +756,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     for (const team of teams().filter((u) => reached.includes(u.id))) {
       notify(team.members, { title: 'Melding ingetrokken', body: `${placeName(row)}: geen hulp meer nodig.`, tag: tag(id), url: teamUrl(id) });
     }
-    copyToCoordinator(row, `Ingetrokken door ${row.place_name ? personName(me.phone) : post.name}.`);
+    copyToCoordinator(row, `Ingetrokken door ${row.place_name ? personName(me.phone) : location.name}.`);
     changed();
     return state();
   }
@@ -766,10 +766,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     db.transaction(() => {
       run('UPDATE teams SET availability = ? WHERE id = ?', availability, team.id);
       // Vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde (functioneel ontwerp, "Post open of dicht"), zolang er geen andere dienst staat.
-      if (team.kind === 'fixed' && team.postId !== null && availability === 'available') setPost(team.postId, true);
-      if (team.kind === 'fixed' && team.postId !== null && availability === 'off_duty' && !otherShiftOnDuty(team)) setPost(team.postId, false);
+      if (team.kind === 'fixed' && team.locationId !== null && availability === 'available') setLocation(team.locationId, true);
+      if (team.kind === 'fixed' && team.locationId !== null && availability === 'off_duty' && !otherShiftOnDuty(team)) setLocation(team.locationId, false);
       if (availability === 'off_duty') {
-        run('UPDATE teams SET stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?', team.id);
+        run('UPDATE teams SET stay_location_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?', team.id);
         forgetPositions(team);
       } else if (team.availability === 'off_duty') {
         run('UPDATE teams SET keep_until = ?, closes_at = NULL WHERE id = ?', keepAfterOpening(planOf(team)), team.id);
@@ -790,20 +790,20 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     changed();
   }
 
-  function setPostOpen(me: Me, postId: number, open: boolean) {
-    const post = posts().get(postId);
-    if (!post) throw httpError(404, 'Locatie niet gevonden');
-    if (!post.manned) throw httpError(409, 'Op deze locatie staat niemand: hij gaat niet open of dicht');
-    const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'lead');
-    const ownEhboPost = post.isEhbo && teams().some((u) => u.kind === 'fixed' && u.postId === postId && memberOf(me, u.id));
-    if (!lead && !ownEhboPost && !me.isAdmin) throw httpError(403, 'Alleen de locatieverantwoordelijke kan de locatie open of dicht zetten');
-    const fixed = teams().filter((u) => u.kind === 'fixed' && u.postId === postId);
+  function setLocationOpen(me: Me, locationId: number, open: boolean) {
+    const location = locations().get(locationId);
+    if (!location) throw httpError(404, 'Locatie niet gevonden');
+    if (!location.staffed) throw httpError(409, 'Op deze locatie staat niemand: hij gaat niet open of dicht');
+    const lead = me.assignments.some((a) => a.kind === 'location' && a.locationId === locationId && a.role === 'lead');
+    const ownEhboLocation = location.isEhbo && teams().some((u) => u.kind === 'fixed' && u.locationId === locationId && memberOf(me, u.id));
+    if (!lead && !ownEhboLocation && !me.isAdmin) throw httpError(403, 'Alleen de locatieverantwoordelijke kan de locatie open of dicht zetten');
+    const fixed = teams().filter((u) => u.kind === 'fixed' && u.locationId === locationId);
     // Openen: je eigen eenheid, als je daarbij hoort; een andere dienst op dezelfde post blijft zoals hij is.
     // On a location with more than EHBO (#83), someone else opening or closing it doesn't make the team available or take it off duty.
     const mine = fixed.filter((u) => memberOf(me, u.id));
-    const affected = mine.length ? (open ? mine : fixed) : post.onlyEhbo ? fixed : [];
+    const affected = mine.length ? (open ? mine : fixed) : location.onlyEhbo ? fixed : [];
     db.transaction(() => {
-      setPost(postId, open);
+      setLocation(locationId, open);
       // Een vaste eenheid op deze EHBO-post gaat mee in dienst of uit dienst.
       for (const team of affected) {
         if (team.availability !== 'unavailable') run('UPDATE teams SET availability = ? WHERE id = ?', open ? 'available' : 'off_duty', team.id);
@@ -823,9 +823,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     return { startDate: row.start_date as string | null, endDate: row.end_date as string | null };
   };
   const clockText = (at: number) => new Date(at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
-  const postPlan = (postId: number | null) => (postId === null ? null : posts().get(postId)?.timeTo ?? null);
+  const locationPlan = (locationId: number | null) => (locationId === null ? null : locations().get(locationId)?.timeTo ?? null);
   /** A fixed team without its own end time follows its post. */
-  const planOf = (team: Team) => team.timeTo ?? (team.kind === 'fixed' ? postPlan(team.postId) : null);
+  const planOf = (team: Team) => team.timeTo ?? (team.kind === 'fixed' ? locationPlan(team.locationId) : null);
 
   /** Opened again around or after the planned end: don't close it straight away. */
   function keepAfterOpening(timeTo: string | null) {
@@ -834,23 +834,23 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     return late ? new Date(now().getTime() + KEEP_OPEN_MIN * 60_000).toISOString() : null;
   }
 
-  function setPost(postId: number, open: boolean) {
-    run('UPDATE posts SET is_open = ?, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', open ? 1 : 0, open ? keepAfterOpening(postPlan(postId)) : null, postId);
+  function setLocation(locationId: number, open: boolean) {
+    run('UPDATE locations SET is_open = ?, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', open ? 1 : 0, open ? keepAfterOpening(locationPlan(locationId)) : null, locationId);
   }
 
-  const otherShiftOnDuty = (team: Team) => teams().some((u) => u.id !== team.id && u.kind === 'fixed' && u.postId === team.postId && u.availability !== 'off_duty');
+  const otherShiftOnDuty = (team: Team) => teams().some((u) => u.id !== team.id && u.kind === 'fixed' && u.locationId === team.locationId && u.availability !== 'off_duty');
 
   /** A phone without signal didn't see its post close by time: what it asks for still counts, and the post is open again. */
-  function reopenAutoClosed(postId: number) {
-    if (!posts().get(postId)?.autoClosedAt) return false;
-    setPost(postId, true);
+  function reopenAutoClosed(locationId: number) {
+    if (!locations().get(locationId)?.autoClosedAt) return false;
+    setLocation(locationId, true);
     return true;
   }
 
   function closeTeamAuto(team: Team) {
     takeOffDuty(team);
-    if (team.kind === 'fixed' && team.postId !== null && !otherShiftOnDuty(team)) {
-      run('UPDATE posts SET is_open = 0, keep_until = NULL, closes_at = NULL, auto_closed_at = ? WHERE id = ?', iso(), team.postId);
+    if (team.kind === 'fixed' && team.locationId !== null && !otherShiftOnDuty(team)) {
+      run('UPDATE locations SET is_open = 0, keep_until = NULL, closes_at = NULL, auto_closed_at = ? WHERE id = ?', iso(), team.locationId);
     }
   }
 
@@ -865,12 +865,12 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   /** Every minute. */
   function sweep() {
     const at = now().getTime();
-    const postMap = posts();
+    const locationMap = locations();
     const allTeams = teams();
     const busy = busyTeams();
-    const fixedPosts = new Set(allTeams.filter((u) => u.kind === 'fixed').map((u) => u.postId));
-    const inUsePosts = new Set(all(`SELECT post_id FROM incidents WHERE status IN ('sent', 'accepted', 'on_site')
-                                    UNION SELECT post_id FROM queue_requests WHERE status IN ('sent', 'accepted')`).map((r) => r.post_id as number));
+    const fixedLocations = new Set(allTeams.filter((u) => u.kind === 'fixed').map((u) => u.locationId));
+    const inUseLocations = new Set(all(`SELECT location_id FROM incidents WHERE status IN ('sent', 'accepted', 'on_site')
+                                    UNION SELECT location_id FROM queue_requests WHERE status IN ('sent', 'accepted')`).map((r) => r.location_id as number));
     const closed: string[] = [];
     let touched = sweepLeft();
 
@@ -889,19 +889,19 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
         notify(team.members, { title: `Je dienst stopt om ${clockText(step.getTime())}`, body: 'Nog nodig? Tik om in dienst te blijven.', tag: `dienst-${team.id}`, url: '/first-aid' });
       }
     }
-    for (const post of [...postMap.values()].filter((p) => p.isOpen && !fixedPosts.has(p.id))) {
-      const step = nextStep(post, post.timeTo, inUsePosts.has(post.id), at);
+    for (const location of [...locationMap.values()].filter((p) => p.isOpen && !fixedLocations.has(p.id))) {
+      const step = nextStep(location, location.timeTo, inUseLocations.has(location.id), at);
       if (!step) continue;
       touched = true;
       if (step === 'clear') {
-        run('UPDATE posts SET closes_at = NULL WHERE id = ?', post.id);
+        run('UPDATE locations SET closes_at = NULL WHERE id = ?', location.id);
       } else if (step === 'close') {
-        run('UPDATE posts SET is_open = 0, keep_until = NULL, closes_at = NULL, auto_closed_at = ? WHERE id = ?', iso(), post.id);
-        closed.push(post.name);
-        notify(postPhones(post.id), { title: `${post.name} is gesloten`, body: 'De geplande tijd is voorbij. Nog bezig? Je kunt de locatie altijd weer openen.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+        run('UPDATE locations SET is_open = 0, keep_until = NULL, closes_at = NULL, auto_closed_at = ? WHERE id = ?', iso(), location.id);
+        closed.push(location.name);
+        notify(locationPhones(location.id), { title: `${location.name} is gesloten`, body: 'De geplande tijd is voorbij. Nog bezig? Je kunt de locatie altijd weer openen.', tag: `post-${location.id}`, url: `/location/${location.id}/start` });
       } else {
-        run('UPDATE posts SET closes_at = ? WHERE id = ?', step.toISOString(), post.id);
-        notify(postPhones(post.id), { title: `${post.name} sluit om ${clockText(step.getTime())}`, body: 'Nog nodig? Tik om de locatie open te houden.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+        run('UPDATE locations SET closes_at = ? WHERE id = ?', step.toISOString(), location.id);
+        notify(locationPhones(location.id), { title: `${location.name} sluit om ${clockText(step.getTime())}`, body: 'Nog nodig? Tik om de locatie open te houden.', tag: `post-${location.id}`, url: `/location/${location.id}/start` });
       }
     }
     const phone = coordinator();
@@ -909,13 +909,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (touched) changed();
   }
 
-  function keepPost(me: Me, postId: number) {
-    const post = posts().get(postId);
-    if (!post) throw httpError(404, 'Locatie niet gevonden');
-    const lead = me.assignments.some((a) => a.kind === 'post' && a.postId === postId && a.role === 'lead');
+  function keepLocation(me: Me, locationId: number) {
+    const location = locations().get(locationId);
+    if (!location) throw httpError(404, 'Locatie niet gevonden');
+    const lead = me.assignments.some((a) => a.kind === 'location' && a.locationId === locationId && a.role === 'lead');
     if (!lead && !isLead(me)) throw httpError(403, 'Alleen de locatieverantwoordelijke of de coördinator kan de locatie open houden');
     const until = new Date(now().getTime() + KEEP_OPEN_MIN * 60_000).toISOString();
-    run('UPDATE posts SET is_open = 1, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', until, postId);
+    run('UPDATE locations SET is_open = 1, keep_until = ?, closes_at = NULL, auto_closed_at = NULL WHERE id = ?', until, locationId);
     changed();
     return state();
   }
@@ -941,8 +941,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     requireLead(me);
     const seen = new Map(all('SELECT phone, MAX(last_seen_at) AS at FROM sessions GROUP BY phone').map((r) => [r.phone as string, `${(r.at as string).replace(' ', 'T')}Z`]));
     const latest = (phones: string[]) => phones.map((p) => seen.get(p)).filter((t) => t !== undefined).sort().at(-1) ?? null;
-    const result: LastSeen = { posts: {}, teams: {} };
-    for (const post of posts().values()) if (post.isOpen) result.posts[post.id] = latest(postPhones(post.id));
+    const result: LastSeen = { locations: {}, teams: {} };
+    for (const location of locations().values()) if (location.isOpen) result.locations[location.id] = latest(locationPhones(location.id));
     for (const team of teams()) if (team.availability !== 'off_duty') result.teams[team.id] = latest(team.members);
     return result;
   }
@@ -953,16 +953,16 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const present = db.loggedIn();
     const allTeams = teams();
     const here = (people: string[]) => people.some((p) => present.has(p));
-    const closedPosts = [...posts().values()].filter((p) => !p.isOpen && p.manned);
+    const closedLocations = [...locations().values()].filter((p) => !p.isOpen && p.staffed);
     const off = allTeams.filter((u) => u.availability === 'off_duty');
-    const openPosts = closedPosts.filter((p) => here(postPeople(p.id, allTeams)));
+    const openLocations = closedLocations.filter((p) => here(locationPeople(p.id, allTeams)));
     const onDuty = off.filter((u) => here(u.members));
-    const skipped = [...closedPosts.filter((p) => !openPosts.includes(p)).map((p) => p.name), ...off.filter((u) => !onDuty.includes(u)).map((u) => u.name)];
+    const skipped = [...closedLocations.filter((p) => !openLocations.includes(p)).map((p) => p.name), ...off.filter((u) => !onDuty.includes(u)).map((u) => u.name)];
     db.transaction(() => {
-      for (const post of openPosts) setPost(post.id, true);
+      for (const location of openLocations) setLocation(location.id, true);
       for (const team of onDuty) run("UPDATE teams SET availability = 'available', keep_until = ?, closes_at = NULL WHERE id = ?", keepAfterOpening(planOf(team)), team.id);
     });
-    for (const post of openPosts) notify(postPhones(post.id), { title: `${post.name} is geopend`, body: 'De coördinator heeft je locatie geopend.', tag: `post-${post.id}`, url: `/post/${post.id}/start` });
+    for (const location of openLocations) notify(locationPhones(location.id), { title: `${location.name} is geopend`, body: 'De coördinator heeft je locatie geopend.', tag: `post-${location.id}`, url: `/location/${location.id}/start` });
     offerOpenCalls(onDuty.map((u) => u.id));
     for (const team of onDuty) notify(team.members, { title: 'Je staat op Beschikbaar', body: 'De coördinator heeft je op Beschikbaar gezet.', tag: `dienst-${team.id}`, url: '/first-aid' });
     changed();
@@ -972,10 +972,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   /** Everything except what's in the middle of a call: that says so instead. */
   function closeEverything(): ControlResult {
     const busy = busyTeams();
-    const openPosts = new Set(all("SELECT post_id FROM incidents WHERE status IN ('sent', 'accepted', 'on_site')").map((r) => r.post_id as number));
-    const skipped = [...teams().filter((u) => busy.has(u.id)).map((u) => u.name), ...[...posts().values()].filter((p) => openPosts.has(p.id)).map((p) => p.name)];
+    const openLocations = new Set(all("SELECT location_id FROM incidents WHERE status IN ('sent', 'accepted', 'on_site')").map((r) => r.location_id as number));
+    const skipped = [...teams().filter((u) => busy.has(u.id)).map((u) => u.name), ...[...locations().values()].filter((p) => openLocations.has(p.id)).map((p) => p.name)];
     db.transaction(() => {
-      for (const post of posts().values()) if (!openPosts.has(post.id)) setPost(post.id, false);
+      for (const location of locations().values()) if (!openLocations.has(location.id)) setLocation(location.id, false);
       for (const team of teams()) {
         if (!busy.has(team.id)) takeOffDuty(team);
       }
@@ -992,13 +992,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   function closeDay(me: Me, finishRequests: () => void) {
     requireLead(me);
-    const open = all("SELECT post_id, reported_at FROM incidents WHERE status IN ('sent', 'accepted', 'on_site') ORDER BY id");
-    const postMap = posts();
+    const open = all("SELECT location_id, reported_at FROM incidents WHERE status IN ('sent', 'accepted', 'on_site') ORDER BY id");
+    const locationMap = locations();
     if (open.length) {
-      throw httpError(409, `Eerst afronden: ${open.map((i) => `${postMap.get(i.post_id as number)?.name}, ${clockText(new Date(i.reported_at as string).getTime())}`).join('; ')}`);
+      throw httpError(409, `Eerst afronden: ${open.map((i) => `${locationMap.get(i.location_id as number)?.name}, ${clockText(new Date(i.reported_at as string).getTime())}`).join('; ')}`);
     }
     finishRequests();
-    const everyone = new Set(all('SELECT phone FROM post_contacts UNION SELECT phone FROM team_members').map((r) => r.phone as string));
+    const everyone = new Set(all('SELECT phone FROM location_contacts UNION SELECT phone FROM team_members').map((r) => r.phone as string));
     const result = closeEverything();
     notify(everyone, { title: 'Dag gesloten', body: 'Alle locaties zijn dicht. Tot morgen.', tag: 'dag-gesloten', url: '/' });
     changed();
@@ -1010,33 +1010,33 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   // Logging out is something a person does, so this is no "closing on lost connection".
 
   /** Everyone who counts as being at a post: its contacts, and at an EHBO post the members of its fixed teams. */
-  function postPeople(postId: number, allTeams = teams()) {
-    return [...postPhones(postId), ...allTeams.filter((u) => u.kind === 'fixed' && u.postId === postId).flatMap((u) => u.members)];
+  function locationPeople(locationId: number, allTeams = teams()) {
+    return [...locationPhones(locationId), ...allTeams.filter((u) => u.kind === 'fixed' && u.locationId === locationId).flatMap((u) => u.members)];
   }
 
-  /** Posts and teams of these people that nobody is logged in for. */
+  /** Locations and teams of these people that nobody is logged in for. */
   function unattended(phones: Iterable<string>) {
     const present = db.loggedIn();
     const concerned = new Set(phones);
     const allTeams = teams();
     const nobody = (people: string[]) => people.some((p) => concerned.has(p)) && !people.some((p) => present.has(p));
-    return { posts: [...posts().values()].filter((p) => nobody(postPeople(p.id, allTeams))), teams: allTeams.filter((u) => nobody(u.members)) };
+    return { locations: [...locations().values()].filter((p) => nobody(locationPeople(p.id, allTeams))), teams: allTeams.filter((u) => nobody(u.members)) };
   }
 
   function takeOffDuty(team: Team) {
-    run("UPDATE teams SET availability = 'off_duty', stay_post_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", team.id);
+    run("UPDATE teams SET availability = 'off_duty', stay_location_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?", team.id);
     forgetPositions(team);
   }
 
   /** Closes what nobody is logged in for; a team in the middle of a call waits until it's over. Gives the names of what closed. */
   function closeUnattended(phones: Iterable<string>) {
-    const { posts: empty, teams: idle } = unattended(phones);
+    const { locations: empty, teams: idle } = unattended(phones);
     const busy = busyTeams();
     const closed: string[] = [];
     db.transaction(() => {
-      for (const post of empty.filter((p) => p.isOpen)) {
-        setPost(post.id, false);
-        closed.push(post.name);
+      for (const location of empty.filter((p) => p.isOpen)) {
+        setLocation(location.id, false);
+        closed.push(location.name);
       }
       for (const team of idle.filter((u) => u.availability !== 'off_duty')) {
         if (busy.has(team.id)) {
@@ -1130,8 +1130,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       listeners.add(listener);
       return () => { listeners.delete(listener); };
     },
-    report, selfStart, update, accept, assign, decline, onSite, close, withdraw, setAvailability, setPosition, setPostOpen, resume, stop, at, once, moment,
-    sweep, keepPost, keepTeam, reopenAutoClosed, lastSeen, openAll, closeAll, closeDay, leave, arrive,
+    report, selfStart, update, accept, assign, decline, onSite, close, withdraw, setAvailability, setPosition, setLocationOpen, resume, stop, at, once, moment,
+    sweep, keepLocation, keepTeam, reopenAutoClosed, lastSeen, openAll, closeAll, closeDay, leave, arrive,
     /** The live connection is a contact with the phone too. */
     seen: (sessionHash: string) => db.touchSession(sessionHash),
     /** Wijziging van buitenaf (bijv. beheer): iedereen de nieuwe stand sturen. */

@@ -1,11 +1,11 @@
 // Evenement, rollen en aanmelden.
 import type { ApiError } from './index.ts';
 
-export type PostContactRole = 'lead' | 'member' | 'reserve';
+export type LocationContactRole = 'lead' | 'member' | 'reserve';
 export type TeamKind = 'fixed' | 'mobile';
 export type TeamMobility = 'on_foot' | 'bike' | 'car' | 'other';
 
-export const POST_CONTACT_ROLE_LABEL: Record<PostContactRole, string> = {
+export const LOCATION_CONTACT_ROLE_LABEL: Record<LocationContactRole, string> = {
   lead: 'Locatieverantwoordelijke',
   member: 'Lid',
   reserve: 'Reserve',
@@ -13,9 +13,9 @@ export const POST_CONTACT_ROLE_LABEL: Record<PostContactRole, string> = {
 
 /**
  * Which function of a location matters most, lowest first: it goes on top on the map (#72), and it's the main function of a
- * location with several (#83), which gives its marker the icon and colour. A custom type counts as "anders".
+ * location with several (#83), which gives its marker the icon and colour. A custom type counts as "other".
  */
-export const MARKER_ORDER = ['anders', 'keerpunt', 'toilet', 'verkeer', 'water', 'stempel', 'aed', 'ehbo', 'start_finish'];
+export const MARKER_ORDER = ['other', 'turnaround', 'toilet', 'traffic', 'water', 'stamp', 'aed', 'first_aid', 'start_finish'];
 export const markerRank = (key: string | null | undefined) => Math.max(MARKER_ORDER.indexOf(key ?? ''), 0);
 
 /** The main function of a location: the highest in MARKER_ORDER; between equals the first chosen. */
@@ -29,22 +29,22 @@ export function mainFunction(functionIds: number[], types: { id: number; key: st
  * Unmanned (#69): a fixed AED, toilets and a turnaround have nobody, so no contacts, open or closed, requests or tab.
  * A checkpoint is the stamp post: the app doesn't time runners, so the two are the same.
  */
-export const DEFAULT_POST_TYPES = [
-  { key: 'start_finish', name: 'Start/finish', letter: 'S/F', color: '#16181D', manned: true },
-  { key: 'water', name: 'Waterpost', letter: 'W', color: '#1F6FB2', manned: true },
-  { key: 'stempel', name: 'Stempel-/controlepost', letter: 'St', color: '#7A4BB7', manned: true },
-  { key: 'verkeer', name: 'Verkeer', letter: 'V', color: '#D9781C', personLabel: 'Verkeersregelaar', manned: true },
-  { key: 'ehbo', name: 'EHBO-post', letter: '+', color: '#0A7D4F', manned: true },
+export const DEFAULT_FUNCTION_TYPES = [
+  { key: 'start_finish', name: 'Start/finish', letter: 'S/F', color: '#16181D', staffed: true },
+  { key: 'water', name: 'Waterpost', letter: 'W', color: '#1F6FB2', staffed: true },
+  { key: 'stamp', name: 'Stempel-/controlepost', letter: 'St', color: '#7A4BB7', staffed: true },
+  { key: 'traffic', name: 'Verkeer', letter: 'V', color: '#D9781C', personLabel: 'Verkeersregelaar', staffed: true },
+  { key: 'first_aid', name: 'EHBO-post', letter: '+', color: '#0A7D4F', staffed: true },
   // Magenta: clear of the red for urgent and the green for EHBO.
-  { key: 'aed', name: 'AED', letter: 'AED', color: '#B5179E', manned: false },
-  { key: 'toilet', name: 'Toiletten', letter: 'WC', color: '#5B6B7A', manned: false },
-  { key: 'keerpunt', name: 'Keerpunt', letter: 'K', color: '#6D4C41', manned: false },
-  { key: 'anders', name: 'Anders', letter: 'A', color: '#6B7079', manned: true },
+  { key: 'aed', name: 'AED', letter: 'AED', color: '#B5179E', staffed: false },
+  { key: 'toilet', name: 'Toiletten', letter: 'WC', color: '#5B6B7A', staffed: false },
+  { key: 'turnaround', name: 'Keerpunt', letter: 'K', color: '#6D4C41', staffed: false },
+  { key: 'other', name: 'Anders', letter: 'A', color: '#6B7079', staffed: true },
 ] as const;
 
 /** A location has people when one of its functions has (#69). */
-export const isManned = (post: { functionIds: number[] }, types: { id: number; manned: boolean }[]) =>
-  post.functionIds.some((id) => types.find((t) => t.id === id)?.manned ?? true);
+export const isStaffed = (location: { functionIds: number[] }, types: { id: number; staffed: boolean }[]) =>
+  location.functionIds.some((id) => types.find((t) => t.id === id)?.staffed ?? true);
 
 /** Voorstel voor het kernteam bij een nieuw evenement (functies zonder naam en nummer). */
 export const DEFAULT_CORE_TEAM = [
@@ -161,7 +161,7 @@ export const mobilityLabel = (mobility: TeamMobility | null) => {
 };
 
 export interface Assignment {
-  kind: 'post' | 'team' | 'core_team' | 'admin';
+  kind: 'location' | 'team' | 'core_team' | 'admin';
   /** Bijv. "Lid", "EHBO Team 3", "Evenementcoördinator". */
   title: string;
   /** Bijv. "Waterpost 3 · brug · km 21,1". */
@@ -170,14 +170,14 @@ export interface Assignment {
   times?: string;
   letter: string;
   color: string;
-  postId?: number;
+  locationId?: number;
   teamId?: number;
   /** Alleen bij posten: de locatieverantwoordelijke zet de post open en dicht. */
-  role?: PostContactRole;
+  role?: LocationContactRole;
 }
 
 /** Startscherm na aanmelden, volgens de belangrijkste rol. */
-export type HomeScreen = 'map' | 'first_aid' | 'post';
+export type HomeScreen = 'map' | 'first_aid' | 'location';
 
 /** De aangemelde medewerker: GET /api/me, en het antwoord op POST /api/session. */
 export interface Me {

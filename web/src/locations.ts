@@ -1,42 +1,42 @@
 // Posten in het evenementpakket: contactpersoon, eenheden, dichtstbijzijnde EHBO.
-import { DEFAULT_AT_POST_M, POSITION_MAX_AGE_MS, awayPostIds, distanceKm, formatKm, isAway, isManned, type EventPackage, type LiveIncident, type LngLat, type PackagePost, type PackageTeam, type LiveTeam, type PostContactRole, sameFunction } from '@ehbo/shared';
+import { DEFAULT_AT_LOCATION_M, POSITION_MAX_AGE_MS, awayLocationIds, distanceKm, formatKm, isAway, isStaffed, type EventPackage, type LiveIncident, type LngLat, type PackageLocation, type PackageTeam, type LiveTeam, type LocationContactRole, sameFunction } from '@ehbo/shared';
 
 /** "km 2,1", and "+1" when the longest run comes by more often. */
-export function kmLabel(post: Pick<PackagePost, 'km' | 'passages'>) {
-  if (post.km === null) return null;
-  const more = (post.passages[0]?.km.length ?? 1) - 1;
-  return `km ${formatKm(post.km)}${more > 0 ? ` +${more}` : ''}`;
+export function kmLabel(location: Pick<PackageLocation, 'km' | 'passages'>) {
+  if (location.km === null) return null;
+  const more = (location.passages[0]?.km.length ?? 1) - 1;
+  return `km ${formatKm(location.km)}${more > 0 ? ` +${more}` : ''}`;
 }
-export const lngLat = (p: PackagePost): LngLat | null => (p.lat !== null && p.lng !== null ? [p.lng, p.lat] : null);
+export const lngLat = (p: PackageLocation): LngLat | null => (p.lat !== null && p.lng !== null ? [p.lng, p.lat] : null);
 
 /** Is this post part of this run? It comes by according to the GPX, and start/finish always belongs. A turnaround belongs to its own run only. */
-export const isOnRun = (pkg: EventPackage, post: PackagePost, runId: number) =>
-  (post.runId === null || post.runId === runId)
-  && (post.passages.some((r) => r.runId === runId) || pkg.postTypes.find((t) => t.id === post.typeId)?.key === 'start_finish');
+export const isOnRun = (pkg: EventPackage, location: PackageLocation, runId: number) =>
+  (location.runId === null || location.runId === runId)
+  && (location.passages.some((r) => r.runId === runId) || pkg.functionTypes.find((t) => t.id === location.typeId)?.key === 'start_finish');
 
 /** People are there (#69): an AED, toilets or a turnaround have nobody, so no open or closed. */
-export const manned = (pkg: EventPackage | null, post: PackagePost) => (pkg ? isManned(post, pkg.postTypes) : true);
+export const staffed = (pkg: EventPackage | null, location: PackageLocation) => (pkg ? isStaffed(location, pkg.functionTypes) : true);
 
-/** The posts along a run in its order: a post it passes twice is there twice. Start/finish without a pass comes last. */
+/** The locations along a run in its order: a post it passes twice is there twice. Start/finish without a pass comes last. */
 export function routeStops(pkg: EventPackage, runId: number) {
-  return pkg.posts.filter((post) => isOnRun(pkg, post, runId))
-    .flatMap((post) => (post.passages.find((r) => r.runId === runId)?.km ?? [null]).map((km) => ({ post, km })))
+  return pkg.locations.filter((location) => isOnRun(pkg, location, runId))
+    .flatMap((location) => (location.passages.find((r) => r.runId === runId)?.km ?? [null]).map((km) => ({ location, km })))
     .sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity));
 }
 
 /** A contact's role as a word in a list: verantwoordelijke, lid, reserve. */
-export const ROLE_TEXT: Record<PostContactRole, string> = { lead: 'verantwoordelijke', member: 'lid', reserve: 'reserve' };
+export const ROLE_TEXT: Record<LocationContactRole, string> = { lead: 'verantwoordelijke', member: 'lid', reserve: 'reserve' };
 
 /** Wie je belt voor een post: de verantwoordelijke, anders de eerste contactpersoon. */
-export const primaryContact = (post: PackagePost) =>
-  post.contacts?.find((c) => c.role === 'lead') ?? post.contacts?.[0] ?? null;
+export const primaryContact = (location: PackageLocation) =>
+  location.contacts?.find((c) => c.role === 'lead') ?? location.contacts?.[0] ?? null;
 
 /** EHBO-eenheden die bij deze post horen: vast op deze post, of mobiel met deze post als standplaats. */
-export const teamsAt = (pkg: EventPackage, postId: number) => pkg.teams.filter((u) => u.postId === postId);
+export const teamsAt = (pkg: EventPackage, locationId: number) => pkg.teams.filter((u) => u.locationId === locationId);
 
 export interface TeamDistance {
   team: PackageTeam;
-  post: PackagePost;
+  location: PackageLocation;
   km: number;
 }
 
@@ -45,17 +45,17 @@ export interface TeamDistance {
  * Werkt zonder bereik, uit het evenementpakket. Eenheden zonder plek tellen niet mee; wie uit dienst is (als dat bekend is) ook niet.
  */
 /** Teams by distance from a post, or from where someone asks for help. */
-export function teamsByDistance(pkg: EventPackage, post: { lat: number | null; lng: number | null }, offDuty: (teamId: number) => boolean = () => false): TeamDistance[] {
-  const from = post.lat != null && post.lng != null ? [post.lng, post.lat] as LngLat : null;
+export function teamsByDistance(pkg: EventPackage, location: { lat: number | null; lng: number | null }, offDuty: (teamId: number) => boolean = () => false): TeamDistance[] {
+  const from = location.lat != null && location.lng != null ? [location.lng, location.lat] as LngLat : null;
   if (!from) return [];
   return pkg.teams.flatMap((team) => {
-    const at = team.postId !== null ? pkg.posts.find((p) => p.id === team.postId) : undefined;
+    const at = team.locationId !== null ? pkg.locations.find((p) => p.id === team.locationId) : undefined;
     const to = at && lngLat(at);
-    return at && to && !offDuty(team.id) ? [{ team, post: at, km: distanceKm(from, to) }] : [];
+    return at && to && !offDuty(team.id) ? [{ team, location: at, km: distanceKm(from, to) }] : [];
   }).sort((a, b) => a.km - b.km);
 }
 
-export const nearestTeam = (pkg: EventPackage, post: PackagePost) => teamsByDistance(pkg, post)[0] ?? null;
+export const nearestTeam = (pkg: EventPackage, location: PackageLocation) => teamsByDistance(pkg, location)[0] ?? null;
 
 /** De evenementcoördinator uit het kernteam (alleen in het pakket van medewerkers). */
 export const coordinatorOf = (pkg: EventPackage | null) => pkg?.coreTeam.find((c) => c.isCoordinator) ?? null;
@@ -67,20 +67,20 @@ export interface Ambulance { id: number; name: string; lng: number; lat: number;
 
 /**
  * Mobiele EHBO-eenheden op de kaart. Onderweg (verder dan 50 m van haar standplaats) staat ze er als ambulance op;
- * thuis niet, dan zegt het kruisje bij de post genoeg. awayPostIds: standplaatsen waar nu niemand is, voor een grijs kruisje.
+ * thuis niet, dan zegt het kruisje bij de post genoeg. awayLocationIds: standplaatsen waar nu niemand is, voor een grijs kruisje.
  */
 /** How close counts as at a post, as the admin set it. A package from before the setting has the default. */
-export const atPostM = (pkg: EventPackage | null) => pkg?.event.atPostM ?? DEFAULT_AT_POST_M;
+export const atLocationM = (pkg: EventPackage | null) => pkg?.event.atLocationM ?? DEFAULT_AT_LOCATION_M;
 
-export function mobileTeams(pkg: EventPackage | null, teams: LiveTeam[], now: number): { ambulances: Ambulance[]; awayPostIds: number[] } {
-  if (!pkg) return { ambulances: [], awayPostIds: [] };
+export function mobileTeams(pkg: EventPackage | null, teams: LiveTeam[], now: number): { ambulances: Ambulance[]; awayLocationIds: number[] } {
+  if (!pkg) return { ambulances: [], awayLocationIds: [] };
   const ambulances = teams.flatMap((u) => {
     const team = pkg.teams.find((x) => x.id === u.id);
-    if (!team || !u.position || !isAway(team, u, pkg.posts.find((p) => p.id === team.postId), now, atPostM(pkg))) return [];
+    if (!team || !u.position || !isAway(team, u, pkg.locations.find((p) => p.id === team.locationId), now, atLocationM(pkg))) return [];
     const busy = u.incidentId !== null;
     return [{ id: u.id, name: team.name, lng: u.position.lng, lat: u.position.lat, busy, available: !busy && u.availability === 'available' }];
   });
-  return { ambulances, awayPostIds: awayPostIds(pkg.teams, teams, pkg.posts, now, atPostM(pkg)) };
+  return { ambulances, awayLocationIds: awayLocationIds(pkg.teams, teams, pkg.locations, now, atLocationM(pkg)) };
 }
 
 /**
@@ -91,11 +91,11 @@ export function callLines(pkg: EventPackage | null, teams: LiveTeam[], incidents
   if (!pkg) return [];
   return teams.flatMap((u) => {
     const incident = incidents.find((i) => i.id === u.incidentId && i.status === 'accepted');
-    if (!incident || incident.post.lat === null || incident.post.lng === null) return [];
+    if (!incident || incident.location.lat === null || incident.location.lng === null) return [];
     const fresh = u.position && now - new Date(u.position.at).getTime() <= POSITION_MAX_AGE_MS ? u.position : null;
-    const home = pkg.posts.find((p) => p.id === pkg.teams.find((x) => x.id === u.id)?.postId);
+    const home = pkg.locations.find((p) => p.id === pkg.teams.find((x) => x.id === u.id)?.locationId);
     const from = fresh ? [fresh.lng, fresh.lat] as LngLat : home ? lngLat(home) : null;
-    return from ? [[from, [incident.post.lng, incident.post.lat]] as [LngLat, LngLat]] : [];
+    return from ? [[from, [incident.location.lng, incident.location.lat]] as [LngLat, LngLat]] : [];
   });
 }
 

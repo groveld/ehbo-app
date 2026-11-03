@@ -8,7 +8,7 @@ import { confirmDialog } from '../composables/useDialog.ts';
 import { getNavApp, NAV_APPS, setNavApp, type NavApp } from '../navigate.ts';
 import { isIOS } from '../platform.ts';
 import { keepAwake, setKeepAwake, wakeLockSupported } from '../wakeLock.ts';
-import { coordinatorOf } from '../posts.ts';
+import { coordinatorOf } from '../locations.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
 
@@ -29,7 +29,7 @@ function chooseNavApp(app: NavApp) {
 
 async function logout() {
   // Who is the last one of a post or team closes it: nobody is there any more to get a call.
-  const placed = me.value.assignments.some((a) => a.kind === 'post' || a.kind === 'team');
+  const placed = me.value.assignments.some((a) => a.kind === 'location' || a.kind === 'team');
   if (placed && !await confirmDialog({
     title: 'Afmelden?',
     text: 'Je wordt op al je toestellen afgemeld en krijgt geen meldingen meer. Ben jij de laatste van je locatie of EHBO-eenheid, dan gaat die dicht.',
@@ -50,7 +50,7 @@ async function logout() {
       <span v-if="me.name" class="mono small">{{ formatPhone(me.phone) }}</span>
     </div>
 
-    <div v-for="a in session.functions" :key="`${a.kind}-${a.postId ?? a.teamId ?? a.title}`" class="card place">
+    <div v-for="a in session.functions" :key="`${a.kind}-${a.locationId ?? a.teamId ?? a.title}`" class="card place">
       <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
       <span class="stack text">
         <span class="name">{{ a.title }}</span>

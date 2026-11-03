@@ -4,7 +4,7 @@
 // Een teller op een functie bij een lopende oproep, en op Meldingen voor aanvragen die nog niet zijn opgepakt; allebei even groot.
 import { computed } from 'vue';
 import { useRoute, type RouteLocationRaw } from 'vue-router';
-import { coordinatorOf } from '../posts.ts';
+import { coordinatorOf } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -22,7 +22,7 @@ const pkg = usePackageStore();
 const live = useLiveStore();
 
 /** Vaste kleuren van de tabbladen als ze actief zijn; EHBO in het rood. */
-const COLORS = { ehbo: '#C8261E', kaart: '#0E7C86', meldingen: '#A16207', contacten: '#3F51B5', menu: '#3E434B' };
+const COLORS = { firstAid: '#C8261E', map: '#0E7C86', requests: '#A16207', contacts: '#3F51B5', menu: '#3E434B' };
 
 /** Het kruis van de EHBO-tab in de kleur van de eigen status: beschikbaar groen, niet beschikbaar (pauze of bezig) rood, uit dienst donker. */
 const STATUS = { available: '#0A7D4F', unavailable: '#C8261E', off_duty: 'var(--ink)' } as const;
@@ -31,15 +31,15 @@ const EHBO = ['first-aid', 'self-start', 'assign', 'assign-incident', 'dispatch'
 const MENU = ['menu', 'info', 'check', 'control'];
 
 /** Bij welke post het huidige scherm hoort (startscherm, verzoek, melding, aanvraag of geen bereik), of null. */
-const routePostId = computed(() => {
+const routeLocationId = computed(() => {
   const p = route.params;
   switch (route.name) {
-    case 'post-home': case 'new-incident': case 'post-history': return Number(p.id);
-    case 'post-incident': case 'post-request': return Number(p.postId);
-    case 'incident': return live.incidentById(Number(p.id))?.postId ?? null;
-    case 'add-to-incident': return live.incidentById(Number(p.incidentId))?.postId ?? null;
-    case 'request': return live.requestById(Number(p.id))?.postId ?? null;
-    case 'no-signal': return live.outbox.find((i) => i.clientId === p.clientId)?.postId ?? null;
+    case 'location-home': case 'new-incident': case 'location-history': return Number(p.id);
+    case 'location-incident': case 'location-request': return Number(p.locationId);
+    case 'incident': return live.incidentById(Number(p.id))?.locationId ?? null;
+    case 'add-to-incident': return live.incidentById(Number(p.incidentId))?.locationId ?? null;
+    case 'request': return live.requestById(Number(p.id))?.locationId ?? null;
+    case 'no-signal': return live.outbox.find((i) => i.clientId === p.clientId)?.locationId ?? null;
     default: return null;
   }
 });
@@ -54,24 +54,24 @@ const tabs = computed<Tab[]>(() => {
   const name = String(route.name ?? '');
   const tabs: Tab[] = [];
   if (me.assignments.some((a) => a.kind === 'team')) {
-    tabs.push({ key: 'ehbo', to: { name: 'first-aid' }, label: 'EHBO', icon: 'ehbo', active: EHBO.includes(name), color: COLORS.ehbo, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
+    tabs.push({ key: 'first-aid', to: { name: 'first-aid' }, label: 'EHBO', icon: 'ehbo', active: EHBO.includes(name), color: COLORS.firstAid, iconColor: ehboColor.value, count: live.invitations.length + (live.myActive ? 1 : 0) });
   }
-  const posts = me.assignments.filter((a) => a.kind === 'post');
-  for (const a of posts) {
-    const postId = a.postId!;
+  const locations = me.assignments.filter((a) => a.kind === 'location');
+  for (const a of locations) {
+    const locationId = a.locationId!;
     tabs.push({
-      key: `post-${postId}`, to: { name: 'post-home', params: { id: postId } }, icon: 'pin',
-      label: pkg.postById.get(postId)?.name.split(' · ')[0] ?? 'Locatie',
-      active: routePostId.value === postId,
-      color: pkg.typeById.get(pkg.postById.get(postId)?.typeId ?? -1)?.color,
-      count: live.openIncidents.filter((i) => i.postId === postId && !i.offPost).length,
+      key: `post-${locationId}`, to: { name: 'location-home', params: { id: locationId } }, icon: 'pin',
+      label: pkg.locationById.get(locationId)?.name.split(' · ')[0] ?? 'Locatie',
+      active: routeLocationId.value === locationId,
+      color: pkg.typeById.get(pkg.locationById.get(locationId)?.typeId ?? -1)?.color,
+      count: live.openIncidents.filter((i) => i.locationId === locationId && !i.offLocation).length,
     });
   }
-  tabs.push({ key: 'map', to: { name: 'map' }, label: 'Kaart', icon: 'map', active: name === 'map' || name === 'post', color: COLORS.kaart });
+  tabs.push({ key: 'map', to: { name: 'map' }, label: 'Kaart', icon: 'map', active: name === 'map' || name === 'location', color: COLORS.map });
   if (me.isAdmin || coordinatorOf(pkg.pkg)?.phone === me.phone) {
-    tabs.push({ key: 'requests', to: { name: 'requests' }, label: 'Meldingen', icon: 'bell', active: name === 'requests', color: COLORS.meldingen, count: live.requests.filter((r) => r.status === 'sent').length });
+    tabs.push({ key: 'requests', to: { name: 'requests' }, label: 'Meldingen', icon: 'bell', active: name === 'requests', color: COLORS.requests, count: live.requests.filter((r) => r.status === 'sent').length });
   }
-  tabs.push({ key: 'contacts', to: { name: 'contacts' }, label: 'Contacten', icon: 'people', active: name === 'contacts', color: COLORS.contacten });
+  tabs.push({ key: 'contacts', to: { name: 'contacts' }, label: 'Contacten', icon: 'people', active: name === 'contacts', color: COLORS.contacts });
   tabs.push({ key: 'menu', to: { name: 'menu' }, label: 'Menu', icon: 'menu', active: MENU.includes(name) || name.startsWith('admin'), color: COLORS.menu });
   return tabs;
 });

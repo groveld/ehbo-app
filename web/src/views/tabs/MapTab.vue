@@ -1,14 +1,14 @@
 <script setup lang="ts">
 // 3.4 · Overzicht & kaart: alle posten en EHBO-teams, filter per soort en route, zoeken op naam of km, tellers voor de coördinator, en de lijst met bel- en navigeerknoppen.
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef, watch, watchEffect } from 'vue';
-import { QUIET_AFTER_MIN, isDueOpen, lacksPosition, type EventPackage, type LastSeen, type LngLat, type PackagePost } from '@ehbo/shared';
+import { QUIET_AFTER_MIN, isDueOpen, lacksPosition, type EventPackage, type LastSeen, type LngLat, type PackageLocation } from '@ehbo/shared';
 import { api } from '../../api.ts';
 import { useRouter } from 'vue-router';
 import Icon from '../../components/Icon.vue';
-import PostRow from '../../components/PostRow.vue';
+import LocationRow from '../../components/LocationRow.vue';
 import TeamRow from '../../components/TeamRow.vue';
 import { clock } from '../../incidents.ts';
-import { callLines, coordinatorOf, isOnRun, manned, mobileTeams, type Ambulance } from '../../posts.ts';
+import { callLines, coordinatorOf, isOnRun, staffed, mobileTeams, type Ambulance } from '../../locations.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 import { useSessionStore } from '../../stores/session.ts';
@@ -34,35 +34,35 @@ const query = ref('');
 const chips = computed(() => {
   const pkg = store.pkg;
   if (!pkg) return [];
-  return pkg.postTypes
-    .map((t) => ({ id: t.id, label: t.name.replace(/-?post$/i, ''), count: pkg.posts.filter((p) => p.functionIds.includes(t.id)).length }))
+  return pkg.functionTypes
+    .map((t) => ({ id: t.id, label: t.name.replace(/-?post$/i, ''), count: pkg.locations.filter((p) => p.functionIds.includes(t.id)).length }))
     .filter((c) => c.count > 0);
 });
 /** Posten met een open oproep rood en bovenaan. */
-const alertIds = computed(() => [...new Set(live.openIncidents.filter((i) => !i.offPost).map((i) => i.postId))]);
-/** Posts with a request that's still open. */
-const taskIds = computed(() => [...new Set(live.requests.filter((r) => r.status === 'sent' || r.status === 'accepted').map((r) => r.postId))]);
+const alertIds = computed(() => [...new Set(live.openIncidents.filter((i) => !i.offLocation).map((i) => i.locationId))]);
+/** Locations with a request that's still open. */
+const taskIds = computed(() => [...new Set(live.requests.filter((r) => r.status === 'sent' || r.status === 'accepted').map((r) => r.locationId))]);
 /** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
 const mobile = computed(() => mobileTeams(store.pkg, live.teams, live.serverNow));
 /** Only locations with people can be open or closed (#69). */
-const mannedPosts = computed(() => store.pkg?.posts.filter((p) => manned(store.pkg, p)) ?? []);
-const closedIds = computed(() => mannedPosts.value.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id));
-const matches = (p: PackagePost) => {
+const staffedLocations = computed(() => store.pkg?.locations.filter((p) => staffed(store.pkg, p)) ?? []);
+const closedIds = computed(() => staffedLocations.value.filter((p) => !live.locationOpen(p.id, p.isOpen)).map((p) => p.id));
+const matches = (p: PackageLocation) => {
   const q = query.value.trim().toLowerCase().replace(',', '.');
   const km = q.replace(/^km\s*/, '');
   return !q || p.name.toLowerCase().includes(q) || p.passages.some((r) => r.km.some((k) => String(Math.round(k * 10) / 10).startsWith(km)));
 };
 /** On the map; what isn't on the chosen route steps back there. */
-const mapPosts = computed(() => store.pkg?.posts.filter((p) => (typeof filter.value !== 'number' || p.functionIds.includes(filter.value)) && matches(p)) ?? []);
+const mapLocations = computed(() => store.pkg?.locations.filter((p) => (typeof filter.value !== 'number' || p.functionIds.includes(filter.value)) && matches(p)) ?? []);
 /** In the list: only the chosen route, in its order. Open calls always stay, on top. */
-const routeKm = (p: PackagePost) => p.passages.find((r) => r.runId === route.value)?.km[0] ?? Infinity;
+const routeKm = (p: PackageLocation) => p.passages.find((r) => r.runId === route.value)?.km[0] ?? Infinity;
 const helpHere = computed(() => !session.me?.assignments.some((a) => a.kind === 'team'));
 const isLead = computed(() => Boolean(session.me?.isAdmin || coordinatorOf(store.pkg)?.phone === session.me?.phone));
 /** For the coordinator: a post that should be open by now, and a team nobody can locate. */
-const latePosts = computed(() => {
+const lateLocations = computed(() => {
   const pkg = store.pkg;
   if (!pkg || !isLead.value) return [];
-  return pkg.posts.filter((p) => closedIds.value.includes(p.id) && isDueOpen(p, pkg.event, live.serverNow)).map((p) => p.id);
+  return pkg.locations.filter((p) => closedIds.value.includes(p.id) && isDueOpen(p, pkg.event, live.serverNow)).map((p) => p.id);
 });
 const lostTeams = computed(() => (isLead.value ? store.pkg?.teams.filter((u) => live.teamState(u.id)?.incidentId == null && lacksPosition(u, live.teamState(u.id), live.serverNow)).map((u) => u.id) ?? [] : []));
 /** No contact for a while. Only a signal for the coordinator: a phone in a pocket has no connection either, so nothing closes by this. */
@@ -87,11 +87,11 @@ const quietMinutes = (at: string | null | undefined) => {
   const minutes = Math.floor((live.serverNow - new Date(at).getTime()) / 60_000);
   return minutes >= QUIET_AFTER_MIN ? minutes : null;
 };
-const quietPost = (id: number) => (lastSeen.value && !closedIds.value.includes(id) ? quietMinutes(lastSeen.value.posts[id]) : null);
+const quietLocation = (id: number) => (lastSeen.value && !closedIds.value.includes(id) ? quietMinutes(lastSeen.value.locations[id]) : null);
 const quietTeam = (id: number) => (lastSeen.value ? quietMinutes(lastSeen.value.teams[id]) : null);
-const posts = computed(() => {
+const locations = computed(() => {
   const pkg = store.pkg;
-  const shown = filter.value === 'attention' ? mapPosts.value.filter((p) => alertIds.value.includes(p.id) || latePosts.value.includes(p.id) || quietPost(p.id)) : mapPosts.value;
+  const shown = filter.value === 'attention' ? mapLocations.value.filter((p) => alertIds.value.includes(p.id) || lateLocations.value.includes(p.id) || quietLocation(p.id)) : mapLocations.value;
   const list = route.value === null || !pkg ? shown : shown
     .filter((p) => alertIds.value.includes(p.id) || isOnRun(pkg, p, route.value!))
     .sort((a, b) => routeKm(a) - routeKm(b));
@@ -111,24 +111,24 @@ const counters = computed(() => {
     return state?.availability === 'available' && state.incidentId === null;
   });
   return [
-    { label: 'Locaties', value: `${mannedPosts.value.length - closedIds.value.length}/${mannedPosts.value.length}`, full: 'Locaties open' },
+    { label: 'Locaties', value: `${staffedLocations.value.length - closedIds.value.length}/${staffedLocations.value.length}`, full: 'Locaties open' },
     { label: 'EHBO', value: `${free.length}/${pkg.teams.length}`, full: 'EHBO beschikbaar' },
     { label: 'Oproepen', value: String(live.openIncidents.length), full: 'Open oproepen' },
     { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'sent').length), full: 'Aanvragen nog niet opgepakt' },
   ];
 });
 /** What the map shows. Out of view none of this is read, so nothing live reaches the map; opening the tab brings it up to date in one go. */
-const mapView = shallowRef<{ pkg: EventPackage; posts: PackagePost[]; highlightRunId: number | null; alertPostIds: number[]; taskPostIds: number[]; lines: [LngLat, LngLat][]; ambulances: Ambulance[]; awayPostIds: number[] } | null>(null);
+const mapView = shallowRef<{ pkg: EventPackage; locations: PackageLocation[]; highlightRunId: number | null; alertLocationIds: number[]; taskLocationIds: number[]; lines: [LngLat, LngLat][]; ambulances: Ambulance[]; awayLocationIds: number[] } | null>(null);
 watchEffect(() => {
   if ((!props.active && mapView.value) || !store.pkg) return;
   mapView.value = {
-    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, taskPostIds: taskIds.value, lines: callLines(store.pkg, live.teams, live.incidents, live.serverNow), ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
+    pkg: store.pkg, locations: mapLocations.value, highlightRunId: route.value, alertLocationIds: alertIds.value, taskLocationIds: taskIds.value, lines: callLines(store.pkg, live.teams, live.incidents, live.serverNow), ambulances: mobile.value.ambulances, awayLocationIds: mobile.value.awayLocationIds,
   };
 });
 const banner = computed(() => {
   const open = live.openIncidents;
   if (!open.length) return null;
-  const names = [...new Set(open.map((i) => i.post.name.split(' · ')[0]))].filter(Boolean);
+  const names = [...new Set(open.map((i) => i.location.name.split(' · ')[0]))].filter(Boolean);
   return `${open.length} open ${open.length === 1 ? 'oproep' : 'oproepen'} · ${names.join(', ')}`;
 });
 </script>
@@ -142,12 +142,12 @@ const banner = computed(() => {
         </div>
       </div>
       <div class="map">
-        <EventMap v-if="mapView" v-bind="mapView" :paused="!active" @select="(id) => router.push({ name: 'post', params: { id } })" />
+        <EventMap v-if="mapView" v-bind="mapView" :paused="!active" @select="(id) => router.push({ name: 'location', params: { id } })" />
         <RouterLink v-if="active && banner" :to="{ name: 'requests' }" class="banner"><Icon name="bell" :size="16" />{{ banner }}</RouterLink>
       </div>
 
       <!-- Zoeken en filteren op één regel: het zoekveld, en rechts de soort post. -->
-      <div v-if="active && store.pkg.posts.length" class="find">
+      <div v-if="active && store.pkg.locations.length" class="find">
         <label class="search">
           <Icon name="search" :size="18" />
           <input v-model="query" class="input" type="search" placeholder="Zoek locatie of km" aria-label="Zoek een locatie">
@@ -171,12 +171,12 @@ const banner = computed(() => {
           <div class="list"><TeamRow v-for="u in teamList" :key="u.id" :pkg="store.pkg" :team="u" :attention="lostTeams.includes(u.id)" :quiet-minutes="quietTeam(u.id)" /></div>
         </section>
         <template v-if="filter !== 'teams'">
-          <section v-if="posts.length" class="stack gap-8">
+          <section v-if="locations.length" class="stack gap-8">
             <h2 class="section-title">Locaties</h2>
-            <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="latePosts.includes(p.id)" :quiet-minutes="quietPost(p.id)" /></div>
+            <div class="list"><LocationRow v-for="p in locations" :key="p.id" :pkg="store.pkg" :location="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="lateLocations.includes(p.id)" :quiet-minutes="quietLocation(p.id)" /></div>
           </section>
-          <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen locaties ingevoerd.</p>
-          <p v-else-if="!posts.length && !teamList.length" class="note">{{ filter === 'attention' ? 'Niets vraagt nu aandacht.' : 'Geen locatie gevonden.' }}</p>
+          <p v-if="!store.pkg.locations.length" class="note">Er zijn nog geen locaties ingevoerd.</p>
+          <p v-else-if="!locations.length && !teamList.length" class="note">{{ filter === 'attention' ? 'Niets vraagt nu aandacht.' : 'Geen locatie gevonden.' }}</p>
         </template>
       </div>
     </template>

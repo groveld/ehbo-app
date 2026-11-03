@@ -6,7 +6,7 @@ import type { FirstAidStatus } from '@ehbo/shared';
 import { api } from '../api.ts';
 import CallFirstAid from '../components/CallFirstAid.vue';
 import Icon from '../components/Icon.vue';
-import PostBadge from '../components/PostBadge.vue';
+import LocationBadge from '../components/LocationBadge.vue';
 import { useFavorites } from '../composables/useFavorites.ts';
 import { canUseAsStaff } from '../platform.ts';
 import { useLiveStore } from '../stores/live.ts';
@@ -19,7 +19,7 @@ const store = usePackageStore();
 const { favorites, toggleFavorite } = useFavorites();
 const live = useLiveStore();
 /** Standplaatsen waar de mobiele EHBO nu niet is: grijs kruisje. Zonder bereik blijft de laatste stand staan. */
-const awayPostIds = ref<number[]>([]);
+const awayLocationIds = ref<number[]>([]);
 // Medewerkers zetten de app eerst op het beginscherm; in de browser kan aanmelden alleen met ?browser=1.
 const staffRoute = canUseAsStaff ? { name: 'login' } : { name: 'install' };
 // Elke halve minuut, zolang de pagina in beeld is; mobiele eenheden delen hun positie elke minuut.
@@ -27,7 +27,7 @@ async function refreshEhbo() {
   if (document.visibilityState !== 'visible') return;
   try {
     const status = await api<FirstAidStatus>('/api/first-aid-status');
-    awayPostIds.value = status.awayPostIds;
+    awayLocationIds.value = status.awayLocationIds;
     // Participants have no live connection, so changes in admin reach them this way.
     live.checkData(status.dataVersion);
   } catch {
@@ -54,11 +54,11 @@ const day = computed(() => {
   const date = store.pkg?.runs.find((r) => r.date)?.date ?? store.pkg?.event.startDate;
   return date ? new Date(`${date}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' }) : null;
 });
-/** Explains the map: each post type that occurs in this event, once. The posts per run are on the route page. */
+/** Explains the map: each post type that occurs in this event, once. The locations per run are on the route page. */
 const legend = computed(() => {
   // Every function that occurs, also when it isn't a location's main one (#83).
-  const used = new Set(store.pkg?.posts.flatMap((p) => p.functionIds));
-  return store.pkg?.postTypes.filter((t) => used.has(t.id)) ?? [];
+  const used = new Set(store.pkg?.locations.flatMap((p) => p.functionIds));
+  return store.pkg?.functionTypes.filter((t) => used.has(t.id)) ?? [];
 });
 </script>
 
@@ -72,7 +72,7 @@ const legend = computed(() => {
 
     <template v-if="store.pkg">
       <div class="map">
-        <EventMap :pkg="store.pkg" :away-post-ids="awayPostIds" />
+        <EventMap :pkg="store.pkg" :away-location-ids="awayLocationIds" />
       </div>
 
       <section v-if="runs.length" class="stack gap-8 section">
@@ -93,7 +93,7 @@ const legend = computed(() => {
       <section v-if="legend.length" class="stack gap-8 section">
         <span class="section-label">Legenda</span>
         <div class="list legend">
-          <div v-for="type in legend" :key="type.id" class="list-row legend-item"><PostBadge :type="type" :size="32" /><span class="title-line">{{ type.name }}</span></div>
+          <div v-for="type in legend" :key="type.id" class="list-row legend-item"><LocationBadge :type="type" :size="32" /><span class="title-line">{{ type.name }}</span></div>
         </div>
       </section>
       <!-- What the app does with data, and the map licence (#127). -->

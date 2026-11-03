@@ -6,7 +6,7 @@ import { NOTE_MAX, OUTCOMES, type Outcome } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, postOf, teamOf } from '../incidents.ts';
+import { clock, locationOf, teamOf } from '../incidents.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -17,11 +17,11 @@ const router = useRouter();
 const { busy, error, run } = useSave();
 
 const incident = computed(() => live.incidentById(Number(props.id)));
-const post = computed(() => (incident.value ? postOf(store.postById, incident.value) : undefined));
+const location = computed(() => (incident.value ? locationOf(store.locationById, incident.value) : undefined));
 const myTeam = computed(() => teamOf(store.pkg, incident.value?.dispatches.find((d) => d.acceptedAt && live.myTeamIds.includes(d.teamId))?.teamId ?? null));
-const ownPost = computed(() => (myTeam.value?.postId != null ? store.postById.get(myTeam.value.postId) : undefined));
+const ownLocation = computed(() => (myTeam.value?.locationId != null ? store.locationById.get(myTeam.value.locationId) : undefined));
 /** Alleen een vaste eenheid die niet op haar eigen post is, kan "even blijven". */
-const canStay = computed(() => myTeam.value?.kind === 'fixed' && ownPost.value && ownPost.value.id !== post.value?.id);
+const canStay = computed(() => myTeam.value?.kind === 'fixed' && ownLocation.value && ownLocation.value.id !== location.value?.id);
 
 const outcome = ref<Outcome | null>(null);
 const note = ref('');
@@ -41,12 +41,12 @@ async function finish(pause = false) {
     <header class="page-header">
       <button class="icon-btn" aria-label="Terug" @click="router.back()"><Icon name="back" /></button>
       <div>
-        <span class="eyebrow">{{ post?.name }}<template v-if="incident?.onSiteAt"> · ter plaatse sinds {{ clock(incident.onSiteAt) }}</template></span>
+        <span class="eyebrow">{{ location?.name }}<template v-if="incident?.onSiteAt"> · ter plaatse sinds {{ clock(incident.onSiteAt) }}</template></span>
         <h1>Incident afronden</h1>
       </div>
     </header>
 
-    <NotOnPhone v-if="!incident || !post">Deze oproep staat (nog) niet op deze telefoon.</NotOnPhone>
+    <NotOnPhone v-if="!incident || !location">Deze oproep staat (nog) niet op deze telefoon.</NotOnPhone>
     <div v-else class="stack gap-14 fields">
       <div class="stack gap-8">
         <span class="q">Afloop</span>
@@ -65,11 +65,11 @@ async function finish(pause = false) {
         <span class="q">Waar ben je na afloop?</span>
         <button class="card where" :aria-pressed="stayHere" @click="stayHere = true">
           <span class="radio" />
-          <span class="stack"><strong>Ik blijf hier even</strong><span class="small">Telt als dichtstbij voor {{ post.name }} en omgeving</span></span>
+          <span class="stack"><strong>Ik blijf hier even</strong><span class="small">Telt als dichtstbij voor {{ location.name }} en omgeving</span></span>
         </button>
         <button class="card where" :aria-pressed="!stayHere" @click="stayHere = false">
           <span class="radio" />
-          <span class="stack"><strong>Terug naar {{ ownPost!.name }}</strong><span class="small">Weer beschikbaar vanaf je eigen EHBO-post</span></span>
+          <span class="stack"><strong>Terug naar {{ ownLocation!.name }}</strong><span class="small">Weer beschikbaar vanaf je eigen EHBO-post</span></span>
         </button>
       </div>
     </div>

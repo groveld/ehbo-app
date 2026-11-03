@@ -2,14 +2,14 @@
 // 3.1 · Locatie openen en 3.2 · Post open: wat heb je nodig? Het startscherm van een post.
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { POST_CONTACT_ROLE_LABEL, formatKm, formatPhone, helpRequestType, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
+import { LOCATION_CONTACT_ROLE_LABEL, formatKm, formatPhone, helpRequestType, requestDetailLabel, telHref, type RequestKind } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import { iconOf } from '../icons.ts';
 import NotOnPhone from '../components/NotOnPhone.vue';
-import { confirmClosePost } from '../composables/useDialog.ts';
+import { confirmCloseLocation } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentSummary } from '../incidents.ts';
-import { coordinatorOf, kmLabel, nearestTeam } from '../posts.ts';
+import { coordinatorOf, kmLabel, nearestTeam } from '../locations.ts';
 import { isOpen, useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -21,25 +21,25 @@ const session = useSessionStore();
 const router = useRouter();
 const { busy, error, run } = useSave();
 
-const post = computed(() => store.postById.get(Number(props.id)) ?? null);
-const open = computed(() => (post.value ? live.postOpen(post.value.id, post.value.isOpen) : false));
-const closing = computed(() => (post.value ? live.postState(post.value.id)?.closesAt : null));
-const autoClosed = computed(() => (post.value ? live.postState(post.value.id)?.autoClosedAt : null));
-const myRole = computed(() => session.me?.assignments.find((a) => a.kind === 'post' && a.postId === post.value?.id));
+const location = computed(() => store.locationById.get(Number(props.id)) ?? null);
+const open = computed(() => (location.value ? live.locationOpen(location.value.id, location.value.isOpen) : false));
+const closing = computed(() => (location.value ? live.locationState(location.value.id)?.closesAt : null));
+const autoClosed = computed(() => (location.value ? live.locationState(location.value.id)?.autoClosedAt : null));
+const myRole = computed(() => session.me?.assignments.find((a) => a.kind === 'location' && a.locationId === location.value?.id));
 const canOpen = computed(() => myRole.value?.role === 'lead' || session.me?.isAdmin);
 const coordinator = computed(() => coordinatorOf(store.pkg));
-const nearest = computed(() => (store.pkg && post.value ? nearestTeam(store.pkg, post.value) : null));
-const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id && !i.offPost));
+const nearest = computed(() => (store.pkg && location.value ? nearestTeam(store.pkg, location.value) : null));
+const openIncidents = computed(() => live.openIncidents.filter((i) => i.locationId === location.value?.id && !i.offLocation));
 /** Eerder vandaag, op een eigen scherm. */
-const earlier = computed(() => live.incidents.filter((i) => i.postId === post.value?.id && !i.offPost && !isOpen(i)).length
-  + live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'closed' || r.status === 'withdrawn')).length);
+const earlier = computed(() => live.incidents.filter((i) => i.locationId === location.value?.id && !i.offLocation && !isOpen(i)).length
+  + live.requests.filter((r) => r.locationId === location.value?.id && (r.status === 'closed' || r.status === 'withdrawn')).length);
 /** Meldingen die zonder bereik op deze telefoon wachten. */
-const waiting = computed(() => live.outbox.filter((i) => i.postId === post.value?.id));
+const waiting = computed(() => live.outbox.filter((i) => i.locationId === location.value?.id));
 
 /** Eerst wie je bent, dan de post; "gepland" zolang de post dicht is, anders sinds wanneer hij open is. */
 const eyebrow = computed(() => [myRole.value?.title, session.me?.name].filter(Boolean).join(' · '));
 const planned = computed(() => {
-  const p = post.value;
+  const p = location.value;
   if (!p) return '';
   const times = p.timeFrom && p.timeTo ? `gepland open ${p.timeFrom} – ${p.timeTo}` : null;
   return [kmLabel(p), times].filter(Boolean).join(' · ');
@@ -48,32 +48,32 @@ const planned = computed(() => {
 // A request in the coordinator's queue (5.1): one tile per queue type of the event (#86), in its own colours.
 const tiles = computed(() => (store.pkg?.helpRequestTypes ?? []).filter((t) => t.handling === 'queue'));
 /** Open aanvragen van deze post, onder de tegels. */
-const openRequests = computed(() => live.requests.filter((r) => r.postId === post.value?.id && (r.status === 'sent' || r.status === 'accepted')));
+const openRequests = computed(() => live.requests.filter((r) => r.locationId === location.value?.id && (r.status === 'sent' || r.status === 'accepted')));
 
 async function ask(kind: RequestKind) {
-  if (!post.value) return;
+  if (!location.value) return;
   let id: number | null = null;
   // Zonder bereik gaat dit gewoon door: de aanvraag wacht op de telefoon tot er weer verbinding is.
-  const ok = await run(async () => { id = (await live.request(post.value!.id, kind)).id; });
+  const ok = await run(async () => { id = (await live.request(location.value!.id, kind)).id; });
   if (ok && id !== null) router.push({ name: 'request', params: { id } });
 }
 
 async function setOpen(value: boolean) {
-  if (!post.value) return;
-  if (!value && !await confirmClosePost(post.value.name)) return;
-  await run(() => live.setPostOpen(post.value!.id, value));
+  if (!location.value) return;
+  if (!value && !await confirmCloseLocation(location.value.name)) return;
+  await run(() => live.setLocationOpen(location.value!.id, value));
 }
 </script>
 
 <template>
   <main class="screen tight">
-    <NotOnPhone v-if="!post || !store.pkg" class="top-gap">Deze locatie staat niet (meer) in de gegevens van het evenement.</NotOnPhone>
+    <NotOnPhone v-if="!location || !store.pkg" class="top-gap">Deze locatie staat niet (meer) in de gegevens van het evenement.</NotOnPhone>
     <template v-else>
       <header class="head">
         <div class="stack gap-4 grow">
           <span class="eyebrow">{{ eyebrow }}</span>
-          <h1>{{ post.name }}</h1>
-          <span v-if="open" class="small">{{ kmLabel(post) }}<template v-if="post.km !== null"> · </template><strong class="open">locatie open</strong></span>
+          <h1>{{ location.name }}</h1>
+          <span v-if="open" class="small">{{ kmLabel(location) }}<template v-if="location.km !== null"> · </template><strong class="open">locatie open</strong></span>
           <span v-else class="small">{{ planned }}</span>
         </div>
         <button v-if="open && canOpen" class="close-post" :disabled="busy" @click="setOpen(false)"><Icon name="close" :size="14" />Locatie sluiten</button>
@@ -83,7 +83,7 @@ async function setOpen(value: boolean) {
 
       <div v-if="open && closing" class="note warn closing">
         <span class="grow">Deze locatie sluit om <strong>{{ clock(closing) }}</strong>. De geplande tijd is voorbij.</span>
-        <button v-if="canOpen" class="btn keep" :disabled="busy" @click="run(() => live.keepPost(post!.id))">Open houden</button>
+        <button v-if="canOpen" class="btn keep" :disabled="busy" @click="run(() => live.keepLocation(location!.id))">Open houden</button>
       </div>
 
       <!-- 3.1 · Post is dicht -->
@@ -98,16 +98,16 @@ async function setOpen(value: boolean) {
 
         <span class="section-label people-label">Op deze locatie</span>
         <div class="list">
-          <div v-for="c in post.contacts ?? []" :key="c.phone" class="list-row">
+          <div v-for="c in location.contacts ?? []" :key="c.phone" class="list-row">
             <span class="main">
               <span class="title-line">{{ c.name || formatPhone(c.phone) }}<template v-if="c.phone === session.me?.phone"> (jij)</template></span>
-              <span class="sub">{{ POST_CONTACT_ROLE_LABEL[c.role] }} · {{ formatPhone(c.phone) }}</span>
+              <span class="sub">{{ LOCATION_CONTACT_ROLE_LABEL[c.role] }} · {{ formatPhone(c.phone) }}</span>
             </span>
             <a :href="telHref(c.phone)" class="round" :aria-label="`Bel ${c.name}`"><Icon name="phone" :size="17" /></a>
           </div>
         </div>
         <p v-if="nearest" class="note ok nearest">
-          <Icon name="ehbo" :size="14" /><span>Dichtstbij: <strong>{{ nearest.post.name }}</strong> · {{ formatKm(nearest.km) }} km</span>
+          <Icon name="ehbo" :size="14" /><span>Dichtstbij: <strong>{{ nearest.location.name }}</strong> · {{ formatKm(nearest.km) }} km</span>
         </p>
       </template>
 
@@ -115,7 +115,7 @@ async function setOpen(value: boolean) {
       <template v-else>
         <span class="ask">Wat heb je nodig?</span>
         <div class="tiles">
-          <RouterLink :to="{ name: 'new-incident', params: { id: post.id } }" class="tile ehbo">
+          <RouterLink :to="{ name: 'new-incident', params: { id: location.id } }" class="tile ehbo">
             <span class="tile-icon" style="background: var(--danger)"><Icon name="ehbo" :size="22" /></span>
             <span class="tile-text"><span class="tile-label">EHBO</span><span class="tile-sub">Eerste hulp nodig</span></span>
           </RouterLink>
@@ -158,7 +158,7 @@ async function setOpen(value: boolean) {
       </template>
 
       <div class="list earlier">
-        <RouterLink :to="{ name: 'post-history', params: { id: post.id } }" class="list-row">
+        <RouterLink :to="{ name: 'location-history', params: { id: location.id } }" class="list-row">
           <span class="grow">Eerder vandaag</span>
           <strong>{{ earlier || 'nog niets' }}</strong>
           <Icon name="forward" :size="16" />

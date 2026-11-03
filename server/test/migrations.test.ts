@@ -40,7 +40,9 @@ test('team and contact values become English, and a rebuilt table keeps what ref
   const rows = (sql: string) => db.raw.prepare(sql).all();
   assert.deepEqual(rows('SELECT name, kind, mobility, availability FROM teams ORDER BY id').map((r) => Object.values(r)),
     [['Team 1', 'fixed', null, 'available'], ['Team 2', 'mobile', 'on_foot', 'unavailable']]);
-  assert.deepEqual(rows('SELECT role FROM post_contacts').map((r) => r.role), ['lead']);
+  assert.deepEqual(rows('SELECT role FROM location_contacts').map((r) => r.role), ['lead']);
+  assert.deepEqual(rows('SELECT key FROM function_types').map((r) => r.key), ['first_aid'], 'a post type is a function type, with an English key');
+  assert.deepEqual(rows('SELECT location_id FROM help_requests ORDER BY id').map((r) => r.location_id), [1, 1], 'a help request keeps its location');
   assert.deepEqual(rows('SELECT team_id, phone FROM team_members').map((r) => Object.values(r)), [[1, '+31600000003']], 'members are still there');
   assert.deepEqual(rows('SELECT team_id, reason FROM dispatches').map((r) => Object.values(r)), [[1, 'nearest']], 'and so are the dispatches of the report');
   assert.deepEqual(rows('SELECT id, team_id, status, stage, what, responsive, outcome FROM incidents').map((r) => Object.values(r)),

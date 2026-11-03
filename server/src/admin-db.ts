@@ -2,7 +2,7 @@
 // Telefoonnummers komen hier al genormaliseerd (E.164) binnen; de routes controleren de invoer.
 import type {
   AdminPerson,
-  AdminPost,
+  AdminLocation,
   AdminRun,
   AdminState,
   AdminTeam,
@@ -11,13 +11,13 @@ import type {
   EventSettings,
   InfoSection,
   InfoSettings,
-  PostData,
-  PostPassages,
-  PostTypeInfo,
+  LocationData,
+  LocationPassages,
+  FunctionTypeInfo,
   RunData,
   TeamData,
 } from '@ehbo/shared';
-import { isManned, mainFunction } from '@ehbo/shared';
+import { isStaffed, mainFunction } from '@ehbo/shared';
 import { getBrand, getStyle, saveStyle } from './brand.ts';
 import type { EventDb } from './event-db.ts';
 import { recomputePassages, type Track } from './gpx.ts';
@@ -40,14 +40,14 @@ export function adminDb(events: EventDb) {
   );
 
   function getState(): AdminState {
-    const e = db.prepare('SELECT name, start_location, start_date, end_date, escalation_seconds, at_post_m FROM event WHERE id = 1').get() as Row;
+    const e = db.prepare('SELECT name, start_location, start_date, end_date, escalation_seconds, at_location_m FROM event WHERE id = 1').get() as Row;
     const event: EventSettings = {
       name: e.name as string,
       startLocation: e.start_location as string | null,
       startDate: e.start_date as string | null,
       endDate: e.end_date as string | null,
       escalationSeconds: e.escalation_seconds as number,
-      atPostM: e.at_post_m as number,
+      atLocationM: e.at_location_m as number,
       style: getStyle(events),
     };
 
@@ -61,38 +61,38 @@ export function adminDb(events: EventDb) {
       gpx: r.track_json ? { filename: (r.gpx_filename as string) ?? 'parcours.gpx', points: r.track_points as number, km: r.track_km as number } : null,
     }));
 
-    const postTypes: PostTypeInfo[] = all('SELECT id, key, name, letter, color, manned FROM post_types ORDER BY sort, id').map((t) => ({
-      id: t.id as number, key: t.key as string | null, name: t.name as string, letter: t.letter as string, color: t.color as string, manned: t.manned === 1,
+    const functionTypes: FunctionTypeInfo[] = all('SELECT id, key, name, letter, color, staffed FROM function_types ORDER BY sort, id').map((t) => ({
+      id: t.id as number, key: t.key as string | null, name: t.name as string, letter: t.letter as string, color: t.color as string, staffed: t.staffed === 1,
     }));
 
-    const contactsByPost = new Map<number, PostData['contacts']>();
-    for (const c of all(`SELECT c.post_id, c.phone, c.role, c.time_from, c.time_to, p.name
-                         FROM post_contacts c JOIN people p ON p.phone = c.phone ORDER BY c.id`)) {
-      const list = contactsByPost.get(c.post_id as number) ?? [];
-      list.push({ name: c.name as string, phone: c.phone as string, role: c.role as PostData['contacts'][number]['role'], timeFrom: c.time_from as string | null, timeTo: c.time_to as string | null });
-      contactsByPost.set(c.post_id as number, list);
+    const contactsByLocation = new Map<number, LocationData['contacts']>();
+    for (const c of all(`SELECT c.location_id, c.phone, c.role, c.time_from, c.time_to, p.name
+                         FROM location_contacts c JOIN people p ON p.phone = c.phone ORDER BY c.id`)) {
+      const list = contactsByLocation.get(c.location_id as number) ?? [];
+      list.push({ name: c.name as string, phone: c.phone as string, role: c.role as LocationData['contacts'][number]['role'], timeFrom: c.time_from as string | null, timeTo: c.time_to as string | null });
+      contactsByLocation.set(c.location_id as number, list);
     }
-    const passagesByPost = new Map<number, PostPassages[]>();
-    for (const r of all(`SELECT pp.post_id, pp.run_id, pp.km FROM post_passages pp JOIN runs r ON r.id = pp.run_id
+    const passagesByLocation = new Map<number, LocationPassages[]>();
+    for (const r of all(`SELECT pp.location_id, pp.run_id, pp.km FROM km_points pp JOIN runs r ON r.id = pp.run_id
                          ORDER BY r.track_km DESC, r.id, pp.seq`)) {
-      const list = passagesByPost.get(r.post_id as number) ?? [];
+      const list = passagesByLocation.get(r.location_id as number) ?? [];
       const entry = list.find((e) => e.runId === r.run_id);
       if (entry) entry.km.push(r.km as number);
       else list.push({ runId: r.run_id as number, km: [r.km as number] });
-      passagesByPost.set(r.post_id as number, list);
+      passagesByLocation.set(r.location_id as number, list);
     }
-    const functionsByPost = new Map<number, number[]>();
-    for (const f of all('SELECT post_id, type_id FROM post_functions ORDER BY sort, rowid')) {
-      functionsByPost.set(f.post_id as number, [...(functionsByPost.get(f.post_id as number) ?? []), f.type_id as number]);
+    const functionsByLocation = new Map<number, number[]>();
+    for (const f of all('SELECT location_id, type_id FROM location_functions ORDER BY sort, rowid')) {
+      functionsByLocation.set(f.location_id as number, [...(functionsByLocation.get(f.location_id as number) ?? []), f.type_id as number]);
     }
-    const posts: AdminPost[] = all('SELECT * FROM posts ORDER BY km IS NULL, km, sort, id').map((p) => ({
+    const locations: AdminLocation[] = all('SELECT * FROM locations ORDER BY km IS NULL, km, sort, id').map((p) => ({
       id: p.id as number,
       typeId: p.type_id as number,
-      functionIds: functionsByPost.get(p.id as number) ?? [p.type_id as number],
+      functionIds: functionsByLocation.get(p.id as number) ?? [p.type_id as number],
       runId: p.run_id as number | null,
       name: p.name as string,
       km: p.km as number | null,
-      passages: passagesByPost.get(p.id as number) ?? [],
+      passages: passagesByLocation.get(p.id as number) ?? [],
       lat: p.lat as number | null,
       lng: p.lng as number | null,
       accuracyM: p.accuracy_m as number | null,
@@ -101,7 +101,7 @@ export function adminDb(events: EventDb) {
       timeFrom: p.time_from as string | null,
       timeTo: p.time_to as string | null,
       isOpen: p.is_open === 1,
-      contacts: contactsByPost.get(p.id as number) ?? [],
+      contacts: contactsByLocation.get(p.id as number) ?? [],
     }));
 
     const membersByTeam = new Map<number, TeamData['members']>();
@@ -115,7 +115,7 @@ export function adminDb(events: EventDb) {
       name: u.name as string,
       kind: u.kind as AdminTeam['kind'],
       mobility: u.mobility as AdminTeam['mobility'],
-      postId: u.post_id as number | null,
+      locationId: u.location_id as number | null,
       hasAed: u.has_aed === 1,
       timeFrom: u.time_from as string | null,
       timeTo: u.time_to as string | null,
@@ -134,7 +134,7 @@ export function adminDb(events: EventDb) {
     const admins: AdminPerson[] = all('SELECT a.phone, p.name FROM admins a JOIN people p ON p.phone = a.phone ORDER BY p.name, a.phone')
       .map((a) => ({ phone: a.phone as string, name: a.name as string }));
 
-    return { event, runs, postTypes, posts, teams, coreTeam, emergencyNumbers, admins, brand: getBrand(events), testMode: events.testMode(), sessions: events.countSessions(), info: getInfo() };
+    return { event, runs, functionTypes, locations, teams, coreTeam, emergencyNumbers, admins, brand: getBrand(events), testMode: events.testMode(), sessions: events.countSessions(), info: getInfo() };
   }
 
   function getInfo(): InfoSettings {
@@ -150,8 +150,8 @@ export function adminDb(events: EventDb) {
 
   function saveEvent(e: EventSettings) {
     events.transaction(() => {
-      run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ?, at_post_m = ? WHERE id = 1',
-        e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds, e.atPostM);
+      run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ?, at_location_m = ? WHERE id = 1',
+        e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds, e.atLocationM);
       saveStyle(events, e.style);
     });
   }
@@ -172,48 +172,48 @@ export function adminDb(events: EventDb) {
     return saved;
   }
 
-  function savePost(id: number | null, p: PostData): number | null {
-    if (id !== null && !exists('posts', id)) return null;
+  function saveLocation(id: number | null, p: LocationData): number | null {
+    if (id !== null && !exists('locations', id)) return null;
     return events.transaction(() => {
       // The main function goes first, so lists and the package can take the first one.
-      const types = all('SELECT id, key, manned FROM post_types').map((t) => ({ id: t.id as number, key: t.key as string | null, manned: t.manned === 1 }));
+      const types = all('SELECT id, key, staffed FROM function_types').map((t) => ({ id: t.id as number, key: t.key as string | null, staffed: t.staffed === 1 }));
       const main = mainFunction(p.functionIds, types);
       const functionIds = [main, ...p.functionIds.filter((id) => id !== main)];
       // Nobody at an AED or a turnaround (#69): no people and no times. Only a turnaround has a run.
-      const manned = isManned(p, types);
-      const turnaround = p.functionIds.some((id) => types.find((t) => t.id === id)?.key === 'keerpunt');
+      const staffed = isStaffed(p, types);
+      const turnaround = p.functionIds.some((id) => types.find((t) => t.id === id)?.key === 'turnaround');
       const values = [main, p.name.trim(), p.lat, p.lng, p.accuracyM, p.address?.trim() || null, p.accessRoute?.trim() || null,
-        manned ? p.timeFrom : null, manned ? p.timeTo : null, turnaround ? p.runId : null] as const;
-      let postId = id;
-      if (postId === null) {
-        postId = Number(run(`INSERT INTO posts (type_id, name, lat, lng, accuracy_m, address, access_route, time_from, time_to, run_id)
+        staffed ? p.timeFrom : null, staffed ? p.timeTo : null, turnaround ? p.runId : null] as const;
+      let locationId = id;
+      if (locationId === null) {
+        locationId = Number(run(`INSERT INTO locations (type_id, name, lat, lng, accuracy_m, address, access_route, time_from, time_to, run_id)
                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, ...values).lastInsertRowid);
       } else {
-        run(`UPDATE posts SET type_id = ?, name = ?, lat = ?, lng = ?, accuracy_m = ?, address = ?, access_route = ?, time_from = ?, time_to = ?, run_id = ?
-             WHERE id = ?`, ...values, postId);
-        run('DELETE FROM post_contacts WHERE post_id = ?', postId);
-        run('DELETE FROM post_functions WHERE post_id = ?', postId);
+        run(`UPDATE locations SET type_id = ?, name = ?, lat = ?, lng = ?, accuracy_m = ?, address = ?, access_route = ?, time_from = ?, time_to = ?, run_id = ?
+             WHERE id = ?`, ...values, locationId);
+        run('DELETE FROM location_contacts WHERE location_id = ?', locationId);
+        run('DELETE FROM location_functions WHERE location_id = ?', locationId);
       }
-      functionIds.forEach((typeId, i) => run('INSERT INTO post_functions (post_id, type_id, sort) VALUES (?, ?, ?)', postId, typeId, i));
-      for (const c of manned ? p.contacts : []) {
+      functionIds.forEach((typeId, i) => run('INSERT INTO location_functions (location_id, type_id, sort) VALUES (?, ?, ?)', locationId, typeId, i));
+      for (const c of staffed ? p.contacts : []) {
         upsertPerson(c.phone, c.name);
-        run('INSERT INTO post_contacts (post_id, phone, role, time_from, time_to) VALUES (?, ?, ?, ?, ?)', postId, c.phone, c.role, c.timeFrom, c.timeTo);
+        run('INSERT INTO location_contacts (location_id, phone, role, time_from, time_to) VALUES (?, ?, ?, ?, ?)', locationId, c.phone, c.role, c.timeFrom, c.timeTo);
       }
       recomputePassages(db);
-      return postId;
+      return locationId;
     });
   }
 
   function saveTeam(id: number | null, u: TeamData): number | null {
     if (id !== null && !exists('teams', id)) return null;
     return events.transaction(() => {
-      const values = [u.name.trim(), u.kind, u.kind === 'mobile' ? (u.mobility ?? 'other') : null, u.postId, u.hasAed ? 1 : 0, u.timeFrom ?? null, u.timeTo ?? null] as const;
+      const values = [u.name.trim(), u.kind, u.kind === 'mobile' ? (u.mobility ?? 'other') : null, u.locationId, u.hasAed ? 1 : 0, u.timeFrom ?? null, u.timeTo ?? null] as const;
       let teamId = id;
       if (teamId === null) {
         const sort = (db.prepare('SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM teams').get() as { n: number }).n;
-        teamId = Number(run('INSERT INTO teams (name, kind, mobility, post_id, has_aed, time_from, time_to, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
+        teamId = Number(run('INSERT INTO teams (name, kind, mobility, location_id, has_aed, time_from, time_to, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
       } else {
-        run('UPDATE teams SET name = ?, kind = ?, mobility = ?, post_id = ?, has_aed = ?, time_from = ?, time_to = ? WHERE id = ?', ...values, teamId);
+        run('UPDATE teams SET name = ?, kind = ?, mobility = ?, location_id = ?, has_aed = ?, time_from = ?, time_to = ? WHERE id = ?', ...values, teamId);
         run('DELETE FROM team_members WHERE team_id = ?', teamId);
       }
       for (const m of u.members) {
@@ -259,13 +259,13 @@ export function adminDb(events: EventDb) {
       recomputePassages(db);
       return deleted;
     },
-    savePost,
-    deletePost: (id: number) => run('DELETE FROM posts WHERE id = ?', id).changes > 0,
-    postTypeExists: (id: number) => exists('post_types', id),
+    saveLocation,
+    deleteLocation: (id: number) => run('DELETE FROM locations WHERE id = ?', id).changes > 0,
+    functionTypeExists: (id: number) => exists('function_types', id),
     runExists: (id: number) => exists('runs', id),
-    postExists: (id: number) => exists('posts', id),
+    locationExists: (id: number) => exists('locations', id),
     /** The report needs them: a post with incidents or requests can't be deleted. */
-    postHasHistory: (id: number) => db.prepare('SELECT 1 FROM help_requests WHERE post_id = ?').get(id) !== undefined,
+    locationHasHistory: (id: number) => db.prepare('SELECT 1 FROM help_requests WHERE location_id = ?').get(id) !== undefined,
     saveTeam,
     deleteTeam: (id: number) => run('DELETE FROM teams WHERE id = ?', id).changes > 0,
     saveCoreTeam,

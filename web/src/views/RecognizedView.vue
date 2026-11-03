@@ -12,7 +12,7 @@ const me = computed(() => session.me!);
 const preview = computed(() => {
   switch (me.value.home) {
     case 'first_aid': return 'Oproepen voor jouw EHBO-eenheid, en het volledige overzicht: alle locaties en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
-    case 'post': return 'De hulpknop voor jouw locatie, en het volledige overzicht: alle locaties en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
+    case 'location': return 'De hulpknop voor jouw locatie, en het volledige overzicht: alle locaties en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
     default: return 'Het volledige overzicht: het kernteam, alle locaties en medewerkers op de kaart, die je direct kunt bellen of waar je naartoe kunt navigeren.';
   }
 });
@@ -36,7 +36,7 @@ async function notMe() {
 
     <div class="stack gap-10 places">
       <span class="label">Jij staat ingepland als</span>
-      <div v-for="a in session.functions" :key="`${a.kind}-${a.postId ?? a.teamId ?? a.title}`" class="card place outlined">
+      <div v-for="a in session.functions" :key="`${a.kind}-${a.locationId ?? a.teamId ?? a.title}`" class="card place outlined">
         <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
         <span class="stack text">
           <span class="name">{{ a.title }}</span>
@@ -44,7 +44,7 @@ async function notMe() {
           <span v-if="a.times" class="small">{{ a.times }}</span>
         </span>
       </div>
-      <span v-if="me.assignments.filter((a) => a.kind === 'post' || a.kind === 'team').length > 1" class="small">Elke functie krijgt onderaan een eigen tab, zodat je niet hoeft te wisselen.</span>
+      <span v-if="me.assignments.filter((a) => a.kind === 'location' || a.kind === 'team').length > 1" class="small">Elke functie krijgt onderaan een eigen tab, zodat je niet hoeft te wisselen.</span>
     </div>
 
     <div class="note ok stack gap-6 preview">

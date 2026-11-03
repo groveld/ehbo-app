@@ -6,11 +6,11 @@ import { formatKm, formatPhone, telHref } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import KmPoints from '../components/KmPoints.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
-import PostBadge from '../components/PostBadge.vue';
+import LocationBadge from '../components/LocationBadge.vue';
 import { navigationUrl } from '../navigate.ts';
-import { confirmClosePost } from '../composables/useDialog.ts';
+import { confirmCloseLocation } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
-import { ROLE_TEXT, kmLabel, manned, mobileTeams, nearestTeam, primaryContact, teamsAt } from '../posts.ts';
+import { ROLE_TEXT, kmLabel, staffed, mobileTeams, nearestTeam, primaryContact, teamsAt } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -25,29 +25,29 @@ const session = useSessionStore();
 const router = useRouter();
 const toggle = useSave();
 async function setOpen(open: boolean) {
-  if (open || await confirmClosePost(post.value!.name)) await toggle.run(() => live.setPostOpen(post.value!.id, open));
+  if (open || await confirmCloseLocation(location.value!.name)) await toggle.run(() => live.setLocationOpen(location.value!.id, open));
 }
 
-const post = computed(() => store.postById.get(Number(props.id)) ?? null);
-const type = computed(() => (post.value ? store.typeById.get(post.value.typeId) : undefined));
+const location = computed(() => store.locationById.get(Number(props.id)) ?? null);
+const type = computed(() => (location.value ? store.typeById.get(location.value.typeId) : undefined));
 /** Every function of this location, the main one first (#83). */
-const hasPeople = computed(() => (post.value ? manned(store.pkg, post.value) : true));
+const hasPeople = computed(() => (location.value ? staffed(store.pkg, location.value) : true));
 /** A turnaround's run, by name. */
-const runName = computed(() => (post.value?.runId != null ? store.pkg?.runs.find((r) => r.id === post.value!.runId)?.name ?? null : null));
-const functionNames = computed(() => post.value?.functionIds.map((id) => store.typeById.get(id)?.name).filter(Boolean).join(' · ') ?? '');
-const contact = computed(() => (post.value ? primaryContact(post.value) : null));
-const here = computed(() => (store.pkg && post.value ? teamsAt(store.pkg, post.value.id) : []));
-const nearest = computed(() => (store.pkg && post.value && !here.value.length ? nearestTeam(store.pkg, post.value) : null));
-const isOpen = computed(() => (post.value ? live.postOpen(post.value.id, post.value.isOpen) : false));
+const runName = computed(() => (location.value?.runId != null ? store.pkg?.runs.find((r) => r.id === location.value!.runId)?.name ?? null : null));
+const functionNames = computed(() => location.value?.functionIds.map((id) => store.typeById.get(id)?.name).filter(Boolean).join(' · ') ?? '');
+const contact = computed(() => (location.value ? primaryContact(location.value) : null));
+const here = computed(() => (store.pkg && location.value ? teamsAt(store.pkg, location.value.id) : []));
+const nearest = computed(() => (store.pkg && location.value && !here.value.length ? nearestTeam(store.pkg, location.value) : null));
+const isOpen = computed(() => (location.value ? live.locationOpen(location.value.id, location.value.isOpen) : false));
 const mobile = computed(() => mobileTeams(store.pkg, live.state?.teams ?? [], live.serverNow));
 /** Zoals op de kaart van het overzicht: open oproepen rood, dichte posten grijs. */
-const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
+const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.locationId))]);
 /** Zoals de server: de locatieverantwoordelijke van deze post, of een beheerder. */
 const canToggle = computed(() => session.me?.isAdmin
-  || session.me?.assignments.some((a) => a.kind === 'post' && a.postId === post.value?.id && a.role === 'lead'));
+  || session.me?.assignments.some((a) => a.kind === 'location' && a.locationId === location.value?.id && a.role === 'lead'));
 
 const subtitle = computed(() => {
-  const p = post.value;
+  const p = location.value;
   if (!p) return '';
   const open = p.timeFrom && p.timeTo ? `open ${p.timeFrom} – ${p.timeTo}` : p.timeFrom ? `open vanaf ${p.timeFrom}` : null;
   return [kmLabel(p), open].filter(Boolean).join(' · ');
@@ -57,8 +57,8 @@ const subtitle = computed(() => {
 const back = () => router.back();
 
 /** Wat je doorgeeft als iemand vraagt waar de post is: het adres als dat is ingevuld, anders de GPS-positie. */
-const location = computed(() => {
-  const p = post.value;
+const place = computed(() => {
+  const p = location.value;
   if (p?.address) return p.address;
   return p && p.lat !== null && p.lng !== null ? `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}` : null;
 });
@@ -72,39 +72,39 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'fixed' ? `E
     <header class="top">
       <button class="icon-btn" aria-label="Terug" @click="back"><Icon name="back" /></button>
       <span class="top-title">Locatie</span>
-      <RouterLink v-if="session.me?.isAdmin && post" :to="{ name: 'admin-post', params: { id: post.id } }" class="edit">Bewerken</RouterLink>
+      <RouterLink v-if="session.me?.isAdmin && location" :to="{ name: 'admin-location', params: { id: location.id } }" class="edit">Bewerken</RouterLink>
     </header>
 
-    <NotOnPhone v-if="!post || !store.pkg">Deze locatie bestaat niet (meer).</NotOnPhone>
+    <NotOnPhone v-if="!location || !store.pkg">Deze locatie bestaat niet (meer).</NotOnPhone>
     <template v-else>
       <div class="title">
-        <PostBadge :type="type" :size="56" />
+        <LocationBadge :type="type" :size="56" />
         <div class="stack">
           <span class="type" :style="{ color: type?.color }">{{ functionNames }}<template v-if="runName"> · {{ runName }}</template></span>
-          <h1>{{ post.name }}</h1>
+          <h1>{{ location.name }}</h1>
           <span v-if="subtitle" class="small">{{ subtitle }}</span>
         </div>
       </div>
 
-      <div v-if="post.lat !== null" class="map">
+      <div v-if="location.lat !== null" class="map">
         <!-- Net als op het overzicht: tik op een andere post om die te openen. Die vervangt deze pagina, zodat Terug in één stap teruggaat naar waar je vandaan kwam. -->
         <EventMap
-          :pkg="store.pkg" :focus-post-id="post.id" :alert-post-ids="alertIds"
-          :ambulances="mobile.ambulances" :away-post-ids="mobile.awayPostIds"
-          @select="(id) => id !== post!.id && router.replace({ name: 'post', params: { id } })"
+          :pkg="store.pkg" :focus-location-id="location.id" :alert-location-ids="alertIds"
+          :ambulances="mobile.ambulances" :away-location-ids="mobile.awayLocationIds"
+          @select="(id) => id !== location!.id && router.replace({ name: 'location', params: { id } })"
         />
       </div>
 
       <div class="card stack post-facts">
-        <div v-if="location" class="fact location">
+        <div v-if="place" class="fact location">
           <span class="stack">
             <span class="label">Positie</span>
-            <span :class="post.address ? 'address' : 'mono coords'">{{ location }}</span>
+            <span :class="location.address ? 'address' : 'mono coords'">{{ place }}</span>
           </span>
         </div>
         <div v-else class="fact"><span class="label">Positie</span><span>Nog geen positie vastgelegd</span></div>
-        <div v-if="post.passages.length" class="fact stack gap-6"><span class="label">Km-punten</span><KmPoints :passages="post.passages" :runs="store.pkg.runs" /></div>
-        <div v-if="post.accessRoute" class="fact"><span class="label">Aanrijroute hulpverlening</span><span>{{ post.accessRoute }}</span></div>
+        <div v-if="location.passages.length" class="fact stack gap-6"><span class="label">Km-punten</span><KmPoints :passages="location.passages" :runs="store.pkg.runs" /></div>
+        <div v-if="location.accessRoute" class="fact"><span class="label">Aanrijroute hulpverlening</span><span>{{ location.accessRoute }}</span></div>
       </div>
 
       <!-- Open of dicht, live. Een beheerder kan elke post open en dicht zetten, voor wie minder technisch is. Not where nobody is (#69). -->
@@ -118,8 +118,8 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'fixed' ? `E
       </div>
       <p v-if="toggle.error.value" class="error-text" role="alert">{{ toggle.error.value }}</p>
 
-      <div v-if="post.contacts?.length" class="list">
-        <div v-for="c in post.contacts" :key="c.phone" class="list-row">
+      <div v-if="location.contacts?.length" class="list">
+        <div v-for="c in location.contacts" :key="c.phone" class="list-row">
           <span class="main">
             <span class="title-line">{{ c.name || 'Naam onbekend' }} · <span class="role">{{ ROLE_TEXT[c.role] }}</span></span>
             <span class="sub mono">{{ formatPhone(c.phone) }}</span>
@@ -129,19 +129,19 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'fixed' ? `E
       </div>
 
       <p v-if="here.length" class="note ok nearest">
-        <PostBadge :type="store.pkg.postTypes.find((t) => t.key === 'ehbo')" :size="22" />
+        <LocationBadge :type="store.pkg.functionTypes.find((t) => t.key === 'first_aid')" :size="22" />
         <strong>{{ here.map(hereText).join(' · ') }}</strong>
       </p>
       <p v-else-if="nearest" class="note ok nearest">
-        <PostBadge :type="store.pkg.postTypes.find((t) => t.key === 'ehbo')" :size="22" />
-        <span>Dichtstbijzijnde EHBO: <strong>{{ nearest.team.name }}</strong> bij {{ nearest.post.name }} · {{ formatKm(nearest.km) }} km</span>
+        <LocationBadge :type="store.pkg.functionTypes.find((t) => t.key === 'first_aid')" :size="22" />
+        <span>Dichtstbijzijnde EHBO: <strong>{{ nearest.team.name }}</strong> bij {{ nearest.location.name }} · {{ formatKm(nearest.km) }} km</span>
       </p>
 
       <div class="grow" />
       <div class="actions">
         <a v-if="contact" :href="telHref(contact.phone)" class="btn big"><Icon name="phone" :size="20" />Bel locatie</a>
         <a
-          v-if="post.lat !== null && post.lng !== null" :href="navigationUrl(post.lat, post.lng, post.name)"
+          v-if="location.lat !== null && location.lng !== null" :href="navigationUrl(location.lat, location.lng, location.name)"
           class="btn primary"
         ><Icon name="navigate" :size="20" />Navigeer</a>
       </div>

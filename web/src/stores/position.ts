@@ -4,7 +4,7 @@ import { ref } from 'vue';
 
 export type LocationPermission = 'granted' | 'denied' | 'prompt' | 'unsupported';
 
-export const useLocationStore = defineStore('location', () => {
+export const usePositionStore = defineStore('position', () => {
   const permission = ref<LocationPermission>('geolocation' in navigator ? 'prompt' : 'unsupported');
 
   async function check() {

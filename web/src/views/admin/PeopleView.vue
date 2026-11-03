@@ -33,7 +33,7 @@ const shown = computed(() => {
 
 const linkTo = (link: PersonLink): RouteLocationRaw => {
   switch (link.kind) {
-    case 'post': return { name: 'admin-post', params: { id: link.id! } };
+    case 'location': return { name: 'admin-location', params: { id: link.id! } };
     case 'team': return { name: 'admin-team', params: { id: link.id! } };
     case 'core': return { name: 'admin-core-team' };
     default: return { name: 'admin-admins' };

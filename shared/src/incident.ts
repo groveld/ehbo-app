@@ -52,7 +52,7 @@ export interface NewIncident extends IncidentDetails {
   /** A help request type that's handled by dispatch, such as first_aid. */
   type: string;
   /** The post asking for help; null for a request from where you are, with a GPS position. */
-  postId: number | null;
+  locationId: number | null;
   /** From where you are (#102): the position, sent once with the request and kept as the place of the incident. */
   lat?: number | null;
   lng?: number | null;
@@ -68,7 +68,7 @@ export interface NewSelfIncident extends IncidentDetails {
   clientId: string;
   teamId: number;
   /** The post the team chose, or its own; with a position only the fallback. */
-  postId: number;
+  locationId: number;
   /** GPS of the team, when there is one and no post was chosen by hand. */
   lat: number | null;
   lng: number | null;
@@ -111,7 +111,7 @@ export interface IncidentEvent {
 }
 
 /** What an incident says about its post, so a call works before the new event package has arrived. */
-export interface IncidentPost {
+export interface IncidentLocation {
   typeId: number;
   name: string;
   km: number | null;
@@ -127,12 +127,12 @@ export interface LiveIncident extends IncidentDetails {
   isTest: boolean;
   /** Started by the team that was there, not reported by a post. */
   selfStarted: boolean;
-  /** Not at its post: post then says where it was, and postId is only the nearest post, for the report. */
-  offPost: boolean;
+  /** Not at its post: post then says where it was, and locationId is only the nearest post, for the report. */
+  offLocation: boolean;
   /** How precise the place was, in metres, for a request from a GPS position. */
   accuracyM: number | null;
-  postId: number;
-  post: IncidentPost;
+  locationId: number;
+  location: IncidentLocation;
   /** Phone number of who reported it. */
   reportedBy: string;
   status: IncidentStatus;
@@ -159,14 +159,14 @@ export interface LiveTeam {
   /** De oproep waar de eenheid mee bezig is (geaccepteerd of ter plaatse). */
   incidentId: number | null;
   /** Vaste eenheid die na afronden bij een andere post bleef. */
-  stayPostId: number | null;
+  stayLocationId: number | null;
   /** Mobiele eenheid: laatste GPS-positie (alleen in het geheugen van de server, nooit opgeslagen). */
   position: { lat: number; lng: number; at: string } | null;
   /** The team has been warned: it goes off duty at this time, unless it stays on. */
   closesAt: string | null;
 }
 
-export interface LivePost {
+export interface LiveLocation {
   id: number;
   isOpen: boolean;
   /** The post has been warned: it closes at this time, unless it's kept open. */
@@ -185,14 +185,14 @@ export interface LiveState {
   /** Every help request, newest first: incidents (dispatch) and requests in the coordinator's queue (#86). */
   helpRequests: LiveHelpRequest[];
   teams: LiveTeam[];
-  posts: LivePost[];
+  locations: LiveLocation[];
   /** Testmodus: oproepen en aanvragen zijn proef en komen niet in het rapport. */
   testMode: boolean;
 }
 
-/** GET /api/live/last-seen: last contact by id, for the coordinator. Open posts and teams on duty only. */
+/** GET /api/live/last-seen: last contact by id, for the coordinator. Open locations and teams on duty only. */
 export interface LastSeen {
-  posts: Record<number, string | null>;
+  locations: Record<number, string | null>;
   teams: Record<number, string | null>;
 }
 
@@ -206,31 +206,31 @@ export interface ControlResult {
 export const LIVE_HEARTBEAT_MS = 30_000;
 /** Een mobiele eenheid deelt elke minuut haar positie; ouder dan dit telt niet meer. */
 export const POSITION_MAX_AGE_MS = 3 * 60_000;
-/** At a post: within this distance, unless the admin set another (event.at_post_m, #63). The same as a post's distance to a route in the GPX. */
-export const DEFAULT_AT_POST_M = 30;
+/** At a post: within this distance, unless the admin set another (event.at_location_m, #63). The same as a post's distance to a route in the GPX. */
+export const DEFAULT_AT_LOCATION_M = 30;
 
 /**
- * Onderweg: een mobiele eenheid in dienst met een recente GPS-positie, verder dan atPostM van haar standplaats (of zonder standplaats).
+ * Onderweg: een mobiele eenheid in dienst met een recente GPS-positie, verder dan atLocationM van haar standplaats (of zonder standplaats).
  * Zonder recente positie telt ze als thuis. Een vaste eenheid is altijd op haar post.
  */
-export function isAway(team: { kind: TeamKind }, live: LiveTeam | undefined, base: { lat: number | null; lng: number | null } | undefined, now: number, atPostM: number) {
+export function isAway(team: { kind: TeamKind }, live: LiveTeam | undefined, base: { lat: number | null; lng: number | null } | undefined, now: number, atLocationM: number) {
   if (team.kind !== 'mobile' || !live?.position || live.availability === 'off_duty') return false;
   if (now - new Date(live.position.at).getTime() > POSITION_MAX_AGE_MS) return false;
-  return !(base?.lat != null && base.lng != null && distanceKm([live.position.lng, live.position.lat], [base.lng, base.lat]) * 1000 <= atPostM);
+  return !(base?.lat != null && base.lng != null && distanceKm([live.position.lng, live.position.lat], [base.lng, base.lat]) * 1000 <= atLocationM);
 }
 
 /** Posten waar EHBO hoort maar nu niemand is: elke eenheid met die post als standplaats is onderweg. Voor een grijs kruisje. */
-export function awayPostIds(
-  teams: { id: number; kind: TeamKind; postId: number | null }[], live: LiveTeam[], posts: { id: number; lat: number | null; lng: number | null }[], now: number, atPostM: number,
+export function awayLocationIds(
+  teams: { id: number; kind: TeamKind; locationId: number | null }[], live: LiveTeam[], locations: { id: number; lat: number | null; lng: number | null }[], now: number, atLocationM: number,
 ): number[] {
-  const away = new Set(teams.filter((u) => isAway(u, live.find((l) => l.id === u.id), posts.find((p) => p.id === u.postId), now, atPostM)).map((u) => u.id));
-  const postIds = new Set(teams.flatMap((u) => (u.postId !== null ? [u.postId] : [])));
-  return [...postIds].filter((id) => teams.filter((u) => u.postId === id).every((u) => away.has(u.id)));
+  const away = new Set(teams.filter((u) => isAway(u, live.find((l) => l.id === u.id), locations.find((p) => p.id === u.locationId), now, atLocationM)).map((u) => u.id));
+  const locationIds = new Set(teams.flatMap((u) => (u.locationId !== null ? [u.locationId] : [])));
+  return [...locationIds].filter((id) => teams.filter((u) => u.locationId === id).every((u) => away.has(u.id)));
 }
 
 /** GET /api/first-aid-status: voor iedereen, ook deelnemers. Alleen welke posten nu zonder EHBO zijn; geen posities of namen. */
 export interface FirstAidStatus {
-  awayPostIds: number[];
+  awayLocationIds: number[];
   /** Same as in the live state: participants have no live connection. */
   dataVersion: string;
 }
@@ -276,21 +276,21 @@ export function plannedClose(plan: { timeTo: string | null }, event: { startDate
  * Where a position is: the post itself within the same radius as a mobile team and its standplaats, otherwise a distance from the nearest post.
  * Null without any post with a position.
  */
-export function placeOf(posts: { id: number; name: string; lat: number | null; lng: number | null }[], at: [number, number], atPostM: number) {
-  const nearest = posts.flatMap((p) => (p.lat != null && p.lng != null ? [{ post: p, km: distanceKm(at, [p.lng, p.lat]) }] : [])).sort((a, b) => a.km - b.km)[0];
+export function placeOf(locations: { id: number; name: string; lat: number | null; lng: number | null }[], at: [number, number], atLocationM: number) {
+  const nearest = locations.flatMap((p) => (p.lat != null && p.lng != null ? [{ location: p, km: distanceKm(at, [p.lng, p.lat]) }] : [])).sort((a, b) => a.km - b.km)[0];
   if (!nearest) return null;
-  const { post, km } = nearest;
-  if (km * 1000 <= atPostM) return { postId: post.id, atPost: true, name: post.name };
-  return { postId: post.id, atPost: false, name: `${km < 1 ? `${Math.round(km * 1000)} m` : `${formatKm(km)} km`} van ${post.name}` };
+  const { location, km } = nearest;
+  if (km * 1000 <= atLocationM) return { locationId: location.id, atLocation: true, name: location.name };
+  return { locationId: location.id, atLocation: false, name: `${km < 1 ? `${Math.round(km * 1000)} m` : `${formatKm(km)} km`} van ${location.name}` };
 }
 
 /** Should this post be open by now? Within its time slot, on a day of the event, in Dutch time. */
-export function isDueOpen(post: { timeFrom: string | null; timeTo: string | null }, event: { startDate: string | null; endDate: string | null }, now: number) {
-  if (!post.timeFrom || !event.startDate) return false;
+export function isDueOpen(location: { timeFrom: string | null; timeTo: string | null }, event: { startDate: string | null; endDate: string | null }, now: number) {
+  if (!location.timeFrom || !event.startDate) return false;
   const local = new Date(now).toLocaleString('sv-SE', { timeZone: 'Europe/Amsterdam' });
   const [day, time] = [local.slice(0, 10), local.slice(11, 16)];
   if (day < event.startDate || day > (event.endDate ?? event.startDate)) return false;
-  return time >= post.timeFrom && (!post.timeTo || time < post.timeTo);
+  return time >= location.timeFrom && (!location.timeTo || time < location.timeTo);
 }
 
 /** A mobile team on duty that hasn't shared a position lately, so nobody knows where it is. */

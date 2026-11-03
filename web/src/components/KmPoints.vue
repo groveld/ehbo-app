@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // The km points of a post per run, each as a small chip: commas would clash with the decimal comma.
-import { formatKm, type PostPassages } from '@ehbo/shared';
+import { formatKm, type LocationPassages } from '@ehbo/shared';
 
-defineProps<{ passages: PostPassages[]; runs: { id: number; name: string }[] }>();
+defineProps<{ passages: LocationPassages[]; runs: { id: number; name: string }[] }>();
 </script>
 
 <template>

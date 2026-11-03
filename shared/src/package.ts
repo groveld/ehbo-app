@@ -1,7 +1,7 @@
 // Evenementpakket: alles wat een telefoon nodig heeft om zonder bereik te werken, met één versienummer.
 import type { HelpRequestType } from './request.ts';
-import type { PostPassages, PostTypeInfo } from './admin.ts';
-import type { PostContactRole, TeamKind, TeamMobility } from './event.ts';
+import type { LocationPassages, FunctionTypeInfo } from './admin.ts';
+import type { LocationContactRole, TeamKind, TeamMobility } from './event.ts';
 
 /** [lengtegraad, breedtegraad] */
 export type LngLat = [number, number];
@@ -11,10 +11,10 @@ export type Bbox = [number, number, number, number];
 export interface PackageContact {
   name: string;
   phone: string;
-  role: PostContactRole;
+  role: LocationContactRole;
 }
 
-export interface PackagePost {
+export interface PackageLocation {
   id: number;
   /** The main function: icon, colour and layer of the marker (#83). */
   typeId: number;
@@ -26,7 +26,7 @@ export interface PackagePost {
   /** First pass on the longest run that comes by; null without a GPX or position. */
   km: number | null;
   /** All passes per run, longest run first. */
-  passages: PostPassages[];
+  passages: LocationPassages[];
   lat: number | null;
   lng: number | null;
   isOpen: boolean;
@@ -54,7 +54,7 @@ export interface PackageTeam {
   name: string;
   kind: TeamKind;
   mobility: TeamMobility | null;
-  postId: number | null;
+  locationId: number | null;
   hasAed: boolean;
   timeFrom: string | null;
   timeTo: string | null;
@@ -76,9 +76,9 @@ export interface EventPackage {
   /** Verandert bij elke wijziging; de server antwoordt 304 als de telefoon deze al heeft. */
   version: string;
   staff: boolean;
-  event: { name: string; startDate: string | null; endDate: string | null; startLocation: string | null; atPostM: number };
-  postTypes: PostTypeInfo[];
-  posts: PackagePost[];
+  event: { name: string; startDate: string | null; endDate: string | null; startLocation: string | null; atLocationM: number };
+  functionTypes: FunctionTypeInfo[];
+  locations: PackageLocation[];
   runs: PackageRun[];
   teams: PackageTeam[];
   coreTeam: { function: string; name: string; phone: string; isCoordinator: boolean }[];

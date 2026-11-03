@@ -3,13 +3,13 @@
 import { computed, onMounted, ref } from 'vue';
 import Icon from '../components/Icon.vue';
 import { isIOS } from '../platform.ts';
-import { useLocationStore } from '../stores/location.ts';
+import { usePositionStore } from '../stores/position.ts';
 import { usePushStore } from '../stores/push.ts';
 import { useSessionStore } from '../stores/session.ts';
 
 const session = useSessionStore();
 const push = usePushStore();
-const location = useLocationStore();
+const position = usePositionStore();
 const showQuietHelp = ref(false);
 const showGpsHelp = ref(false);
 const testSent = ref(false);
@@ -23,9 +23,9 @@ const notifications = computed(() => {
   return null;
 });
 const locationState = computed(() => {
-  if (location.permission === 'granted') return { state: 'Aan', tone: 'ok' } as const;
-  if (location.permission === 'denied') return { state: 'Geweigerd', tone: 'bad' } as const;
-  if (location.permission === 'unsupported') return { state: 'Niet mogelijk', tone: 'bad' } as const;
+  if (position.permission === 'granted') return { state: 'Aan', tone: 'ok' } as const;
+  if (position.permission === 'denied') return { state: 'Geweigerd', tone: 'bad' } as const;
+  if (position.permission === 'unsupported') return { state: 'Niet mogelijk', tone: 'bad' } as const;
   return null;
 });
 
@@ -40,7 +40,7 @@ async function test() {
 
 onMounted(() => {
   push.init();
-  location.check();
+  position.check();
 });
 </script>
 
@@ -62,7 +62,7 @@ onMounted(() => {
         <span class="badge icon" :class="locationState?.tone === 'bad' ? 'bad' : 'good'"><Icon name="pin" :size="20" /></span>
         <span class="stack text"><span class="name">Locatie</span><span class="small">Kaart; mobiele EHBO zolang in dienst</span></span>
         <span v-if="locationState" class="state" :class="locationState.tone">{{ locationState.state }}</span>
-        <button v-else class="turn-on" @click="location.request">Aanzetten</button>
+        <button v-else class="turn-on" @click="position.request">Aanzetten</button>
       </div>
       <button class="add-link" :aria-expanded="showGpsHelp" @click="showGpsHelp = !showGpsHelp">Hoe zet ik de GPS aan?</button>
       <div v-if="showGpsHelp" class="note warn stack gap-6">

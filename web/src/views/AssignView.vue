@@ -27,7 +27,7 @@ const deployments = computed(() => (teamId.value !== null ? myDeployments(live.i
     <div v-if="deployments.length" class="list">
       <RouterLink v-for="i in deployments" :key="i.id" :to="{ name: 'assign-incident', params: { id: i.id } }" class="list-row deployment">
         <span class="main">
-          <span class="title-line">{{ i.post.name }}</span>
+          <span class="title-line">{{ i.location.name }}</span>
           <span class="sub">{{ clock(i.reportedAt) }} · {{ incidentSummary(i) }}</span>
         </span>
         <span class="tag" :class="{ ok: i.status === 'closed' }">{{ i.status === 'closed' ? 'afgerond' : 'ingetrokken' }}</span>

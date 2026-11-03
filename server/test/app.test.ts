@@ -133,7 +133,7 @@ test('openbare evenementgegevens met ingevulde info-tekst', async () => {
 });
 
 test('nieuw evenement krijgt standaardsoorten, kernteam en de eerste beheerder', () => {
-  const types = db.raw.prepare('SELECT name FROM post_types ORDER BY sort').all().map((r) => r.name);
+  const types = db.raw.prepare('SELECT name FROM function_types ORDER BY sort').all().map((r) => r.name);
   assert.deepEqual(types, ['Start/finish', 'Waterpost', 'Stempel-/controlepost', 'Verkeer', 'EHBO-post', 'AED', 'Toiletten', 'Keerpunt', 'Anders']);
   assert.equal(db.coordinatorPhone(), DEMO.coordinator);
   assert.ok(db.isAdmin('+31699999999'), 'ADMIN_PHONE is beheerder');
@@ -141,7 +141,7 @@ test('nieuw evenement krijgt standaardsoorten, kernteam en de eerste beheerder',
   // Opnieuw openen voegt geen tweede set toe en maakt een verwijderde beheerder niet opnieuw aan.
   db.raw.prepare('DELETE FROM admins WHERE phone = ?').run('+31699999999');
   const again = openEventDb(dir, 'test', { name: 'Testloop', adminPhone: '+31699999999' });
-  assert.equal((again.raw.prepare('SELECT COUNT(*) AS n FROM post_types').get() as { n: number }).n, 9);
+  assert.equal((again.raw.prepare('SELECT COUNT(*) AS n FROM function_types').get() as { n: number }).n, 9);
   assert.equal(again.isAdmin('+31699999999'), false);
   again.close();
 });
@@ -149,7 +149,7 @@ test('nieuw evenement krijgt standaardsoorten, kernteam en de eerste beheerder',
 test('aanmelden met een bekend nummer: rollen, startscherm en cookie', async () => {
   const lead = await login('06-00 00 00 04');
   assert.equal(lead.me.name, 'Wim Water');
-  assert.equal(lead.me.home, 'post', 'locatieverantwoordelijke start bij de eigen post');
+  assert.equal(lead.me.home, 'location', 'locatieverantwoordelijke start bij de eigen post');
   assert.equal(lead.raw.httpOnly, true);
   assert.equal(lead.raw.sameSite, 'Lax');
   const [first, second] = lead.me.assignments;
@@ -160,9 +160,9 @@ test('aanmelden met een bekend nummer: rollen, startscherm en cookie', async () 
   assert.equal(second?.letter, 'W');
 
   assert.equal((await login(DEMO.ehbo)).me.home, 'first_aid');
-  assert.equal((await login(DEMO.postMember)).me.home, 'post', 'ook een lid van een post begint bij de post');
+  assert.equal((await login(DEMO.locationMember)).me.home, 'location', 'ook een lid van een post begint bij de post');
   const coordinator = (await login(DEMO.coordinator)).me;
-  assert.equal(coordinator.home, 'post', 'kernteam met een post begint bij de post');
+  assert.equal(coordinator.home, 'location', 'kernteam met een post begint bij de post');
   assert.equal(coordinator.assignments[0]?.title, 'Evenementcoördinator');
   const admin = (await login(DEMO.admin)).me;
   assert.equal(admin.isAdmin, true);
@@ -170,7 +170,7 @@ test('aanmelden met een bekend nummer: rollen, startscherm en cookie', async () 
 
   const me = await api('/api/me', 'GET', undefined, lead.cookie);
   assert.equal(me.statusCode, 200);
-  assert.equal(me.json().phone, DEMO.postLead);
+  assert.equal(me.json().phone, DEMO.locationLead);
 });
 
 test('onbekend en ongeldig nummer', async () => {
@@ -185,11 +185,11 @@ test('onbekend en ongeldig nummer', async () => {
 });
 
 test('mislukte aanmeldpogingen vanaf één adres worden afgeremd, gelukte niet', async () => {
-  for (let i = 0; i < 12; i++) await login(DEMO.postMember, '10.0.0.98');
+  for (let i = 0; i < 12; i++) await login(DEMO.locationMember, '10.0.0.98');
   const attempt = () => app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0611111111' }, remoteAddress: '10.0.0.99' });
   for (let i = 0; i < 10; i++) assert.equal((await attempt()).statusCode, 404);
   assert.equal((await attempt()).statusCode, 429);
-  const known = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: DEMO.postMember }, remoteAddress: '10.0.0.99' });
+  const known = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: DEMO.locationMember }, remoteAddress: '10.0.0.99' });
   assert.equal(known.statusCode, 429, 'ook een bekend nummer moet even wachten');
 });
 
@@ -201,7 +201,7 @@ test('zonder aanmelding geen persoonlijke routes', async () => {
 });
 
 test('afmelden maakt de sessie ongeldig', async () => {
-  const { cookie } = await login(DEMO.postMember);
+  const { cookie } = await login(DEMO.locationMember);
   const out = await api('/api/session', 'DELETE', undefined, cookie);
   assert.equal(out.statusCode, 204);
   assert.equal((await api('/api/me', 'GET', undefined, cookie)).statusCode, 401);
@@ -209,10 +209,10 @@ test('afmelden maakt de sessie ongeldig', async () => {
 
 test('wie nergens meer is ingepland, is direct afgemeld', async () => {
   db.raw.prepare('INSERT INTO people (phone, name) VALUES (?, ?)').run('+31600000099', 'Tijdelijk');
-  const traffic = db.raw.prepare("SELECT id FROM posts WHERE name = 'Kruising 4'").get() as { id: number };
-  db.raw.prepare("INSERT INTO post_contacts (post_id, phone, role) VALUES (?, ?, 'reserve')").run(traffic.id, '+31600000099');
+  const traffic = db.raw.prepare("SELECT id FROM locations WHERE name = 'Kruising 4'").get() as { id: number };
+  db.raw.prepare("INSERT INTO location_contacts (location_id, phone, role) VALUES (?, ?, 'reserve')").run(traffic.id, '+31600000099');
   const { cookie } = await login('+31600000099');
-  db.raw.prepare('DELETE FROM post_contacts WHERE phone = ?').run('+31600000099');
+  db.raw.prepare('DELETE FROM location_contacts WHERE phone = ?').run('+31600000099');
   assert.equal((await api('/api/me', 'GET', undefined, cookie)).statusCode, 401);
 });
 
@@ -251,7 +251,7 @@ test('aanmelden voor meldingen, testmelding komt versleuteld aan', async () => {
 
 test('testmelding alleen naar je eigen toestel', async () => {
   const owner = await login(DEMO.coordinator);
-  const other = await login(DEMO.postMember);
+  const other = await login(DEMO.locationMember);
   const sub = fakeSubscription(pushEndpoint.replace('device-1', 'device-4'));
   await api('/api/subscriptions', 'POST', { subscription: sub }, owner.cookie);
   assert.equal((await api('/api/test-push', 'POST', { endpoint: sub.endpoint }, other.cookie)).statusCode, 404);

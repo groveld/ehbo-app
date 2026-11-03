@@ -6,7 +6,7 @@ import { api, ApiRequestError } from '../api.ts';
 import { load, save } from '../storage.ts';
 import { usePackageStore } from './package.ts';
 
-const RANK = { admin: 0, core_team: 1, team: 2, post: 3 } as const;
+const RANK = { admin: 0, core_team: 1, team: 2, location: 3 } as const;
 const LOGOUT_KEY = 'app.logout';
 
 /** This device's push endpoint, so the server stops sending calls here after logging out. */

@@ -1,5 +1,5 @@
 // Beheer: vorm van de gegevens die het beheerscherm leest en opslaat.
-import type { Brand, EventStyle, InfoSection, PostContactRole, TeamKind, TeamMobility } from './event.ts';
+import type { Brand, EventStyle, InfoSection, LocationContactRole, TeamKind, TeamMobility } from './event.ts';
 import type { TeamAvailability } from './incident.ts';
 
 /** Datum als jjjj-mm-dd, tijd als uu:mm. */
@@ -9,9 +9,9 @@ export const TIME_PATTERN = '^([01]\\d|2[0-3]):[0-5]\\d$';
 export const ESCALATION_MIN_SECONDS = 10;
 export const ESCALATION_MAX_SECONDS = 120;
 /** Within this distance of a post you count as at that post (#63). GPS on a phone is often 10–30 m off. */
-export const AT_POST_MIN_M = 20;
-export const AT_POST_MAX_M = 500;
-export const AT_POST_STEP_M = 10;
+export const AT_LOCATION_MIN_M = 20;
+export const AT_LOCATION_MAX_M = 500;
+export const AT_LOCATION_STEP_M = 10;
 
 export interface EventSettings {
   name: string;
@@ -21,7 +21,7 @@ export interface EventSettings {
   /** Na zoveel seconden zonder acceptatie gaat een EHBO-oproep naar alle beschikbare eenheden. */
   escalationSeconds: number;
   /** Within this many metres of a post a position counts as that post: a mobile team at its standplaats, a self-started incident, a help request. */
-  atPostM: number;
+  atLocationM: number;
   style: EventStyle;
 }
 
@@ -40,32 +40,32 @@ export interface AdminRun extends RunData {
   gpx: { filename: string; points: number; km: number } | null;
 }
 
-export interface PostTypeInfo {
+export interface FunctionTypeInfo {
   id: number;
   key: string | null;
   name: string;
   letter: string;
   color: string;
   /** People are there (#69). An AED, toilets or a turnaround aren't. */
-  manned: boolean;
+  staffed: boolean;
 }
 
 /** Bij opslaan mag het nummer in elke schrijfwijze; de server maakt er E.164 van. */
 export interface ContactData {
   name: string;
   phone: string;
-  role: PostContactRole;
+  role: LocationContactRole;
   timeFrom: string | null;
   timeTo: string | null;
 }
 
 /** The passes of one run along a post, in km from the start, calculated from the GPX. */
-export interface PostPassages {
+export interface LocationPassages {
   runId: number;
   km: number[];
 }
 
-export interface PostData {
+export interface LocationData {
   /** What's at this location (#83), at least one. The main function follows from MARKER_ORDER. */
   functionIds: number[];
   /** A turnaround belongs to one run (#69); null otherwise. */
@@ -82,7 +82,7 @@ export interface PostData {
   contacts: ContactData[];
 }
 
-export interface AdminPost extends PostData {
+export interface AdminLocation extends LocationData {
   id: number;
   /** The main function: icon, colour and layer of the marker. */
   typeId: number;
@@ -90,7 +90,7 @@ export interface AdminPost extends PostData {
   /** First pass on the longest run that comes by; null without a GPX or position. */
   km: number | null;
   /** Per run, longest run first. */
-  passages: PostPassages[];
+  passages: LocationPassages[];
 }
 
 export interface MemberData {
@@ -104,7 +104,7 @@ export interface TeamData {
   /** Alleen bij mobiel. */
   mobility: TeamMobility | null;
   /** Vast: de eigen EHBO-post. Mobiel: de standplaats (optioneel). */
-  postId: number | null;
+  locationId: number | null;
   hasAed: boolean;
   /** Planned shift, like a post. Calls keep going to a team that's available, whatever these say. */
   timeFrom: string | null;
@@ -139,8 +139,8 @@ export interface AdminPerson {
 export interface AdminState {
   event: EventSettings;
   runs: AdminRun[];
-  postTypes: PostTypeInfo[];
-  posts: AdminPost[];
+  functionTypes: FunctionTypeInfo[];
+  locations: AdminLocation[];
   teams: AdminTeam[];
   coreTeam: CoreTeamEntry[];
   emergencyNumbers: EmergencyNumber[];
@@ -184,7 +184,7 @@ export interface ImportRequest {
 
 /** Beheer › Mensen (#70): where someone is listed, linking to that page. */
 export interface PersonLink {
-  kind: 'post' | 'team' | 'core' | 'admin';
+  kind: 'location' | 'team' | 'core' | 'admin';
   /** Post or team; null for the core team and the admin list, which are one page each. */
   id: number | null;
   label: string;

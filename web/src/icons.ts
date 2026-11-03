@@ -49,5 +49,5 @@ export const iconSvg = (name: IconName, size: number, strokeWidth = 2) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[name]}</svg>`;
 
 /** Icoon per standaardsoort post; een eigen soort zonder vast icoon houdt zijn letter. EHBO is het gevulde kruis. */
-const TYPE_ICON: Record<string, IconName> = { start_finish: 'flag', water: 'drop', stempel: 'stamp', verkeer: 'cone', anders: 'more', aed: 'aed', toilet: 'toilet', keerpunt: 'uturn' };
-export const postTypeIcon = (key: string | null | undefined): IconName | null => (key ? TYPE_ICON[key] ?? null : null);
+const TYPE_ICON: Record<string, IconName> = { start_finish: 'flag', water: 'drop', stamp: 'stamp', traffic: 'cone', other: 'more', aed: 'aed', toilet: 'toilet', turnaround: 'uturn' };
+export const functionTypeIcon = (key: string | null | undefined): IconName | null => (key ? TYPE_ICON[key] ?? null : null);

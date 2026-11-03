@@ -3,11 +3,11 @@
 import { computed } from 'vue';
 import { formatPhone, telHref } from '@ehbo/shared';
 import Icon from '../../components/Icon.vue';
-import { ROLE_TEXT } from '../../posts.ts';
+import { ROLE_TEXT } from '../../locations.ts';
 import { usePackageStore } from '../../stores/package.ts';
 
 const store = usePackageStore();
-const postsWithContacts = computed(() => store.pkg?.posts.filter((p) => p.contacts?.length) ?? []);
+const locationsWithContacts = computed(() => store.pkg?.locations.filter((p) => p.contacts?.length) ?? []);
 </script>
 
 <template>
@@ -55,10 +55,10 @@ const postsWithContacts = computed(() => store.pkg?.posts.filter((p) => p.contac
         </div>
       </section>
 
-      <section v-if="postsWithContacts.length" class="stack gap-8">
+      <section v-if="locationsWithContacts.length" class="stack gap-8">
         <h2 class="section-title">Locaties</h2>
         <div class="list">
-          <template v-for="p in postsWithContacts" :key="p.id">
+          <template v-for="p in locationsWithContacts" :key="p.id">
             <div v-for="c in p.contacts" :key="`${p.id}-${c.phone}`" class="list-row">
               <span class="main">
                 <span class="title-line">{{ c.name || formatPhone(c.phone) }}</span>

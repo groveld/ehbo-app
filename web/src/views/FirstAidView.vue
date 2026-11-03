@@ -6,7 +6,7 @@ import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
 import { clock, myDeployments, teamOf } from '../incidents.ts';
-import { coordinatorOf, coreTeamMember, kmLabel, shiftText } from '../posts.ts';
+import { coordinatorOf, coreTeamMember, kmLabel, shiftText } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -26,7 +26,7 @@ const active = computed(() => (state.value?.incidentId ? live.incidentById(state
 const label = computed(() => {
   const u = team.value;
   if (!u) return '';
-  const base = u.postId !== null ? store.postById.get(u.postId)?.name : null;
+  const base = u.locationId !== null ? store.locationById.get(u.locationId)?.name : null;
   return [`EHBO ${u.name}`, u.kind === 'fixed' ? 'fixed' : mobilityLabel(u.mobility), u.kind === 'fixed' ? base : null].filter(Boolean).join(' · ');
 });
 
@@ -43,9 +43,9 @@ const shown = computed<TeamAvailability>(() => (active.value ? 'unavailable' : a
 const position = computed(() => {
   const u = team.value;
   if (!u) return '–';
-  const stay = state.value?.stayPostId != null ? store.postById.get(state.value.stayPostId) : null;
+  const stay = state.value?.stayLocationId != null ? store.locationById.get(state.value.stayLocationId) : null;
   if (stay) return `${stay.name} (gebleven)`;
-  const base = u.postId !== null ? store.postById.get(u.postId) : null;
+  const base = u.locationId !== null ? store.locationById.get(u.locationId) : null;
   if (u.kind === 'mobile') return availability.value === 'off_duty' ? (base ? `Standplaats ${base.name}` : '–') : `GPS${base ? `, anders ${base.name}` : ''}`;
   return base ? [base.name, kmLabel(base)].filter(Boolean).join(' · ') : '–';
 });
@@ -84,7 +84,7 @@ const setAvailability = (value: TeamAvailability) => teamId.value !== null && ru
         <button class="btn keep" :disabled="busy" @click="run(() => live.keepTeam(teamId!))">In dienst blijven</button>
       </div>
       <RouterLink v-for="i in live.invitations" :key="i.id" :to="{ name: 'dispatch', params: { id: i.id } }" class="btn danger gap-top">
-        Oproep · {{ i.post.name }}
+        Oproep · {{ i.location.name }}
       </RouterLink>
 
       <div class="stack gap-8 gap-top">

@@ -14,21 +14,21 @@ const AT = '2026-12-31T11:00:00.000Z';
 const context: ActionContext = {
   me: { name: 'Mo', phone: '0600000006' },
   teams: [
-    { id: 1, name: 'Team 1', kind: 'fixed', postId: 10, members: [{ phone: '0600000005' }] },
-    { id: 2, name: 'Team 2', kind: 'mobile', postId: 11, members: [{ phone: '0600000006' }] },
+    { id: 1, name: 'Team 1', kind: 'fixed', locationId: 10, members: [{ phone: '0600000005' }] },
+    { id: 2, name: 'Team 2', kind: 'mobile', locationId: 11, members: [{ phone: '0600000006' }] },
   ],
 };
 
 const incident = (changes: Partial<LiveIncident> = {}): LiveIncident => ({
-  id: 7, type: 'first_aid', handling: 'dispatch', isTest: false, selfStarted: false, offPost: false, accuracyM: null, reportedBy: '0600000004', postId: 20, post: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'sent', stage: 'nearest', aed: false,
+  id: 7, type: 'first_aid', handling: 'dispatch', isTest: false, selfStarted: false, offLocation: false, accuracyM: null, reportedBy: '0600000004', locationId: 20, location: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 }, status: 'sent', stage: 'nearest', aed: false,
   reportedAt: AT, sentAt: AT, escalatesAt: AT, teamId: null, acceptedBy: null, acceptedAt: null, onSiteAt: null, closedAt: null, outcome: null,
   dispatches: [{ teamId: 2, at: AT, reason: 'nearest', distanceKm: 1, declinedAt: null, acceptedAt: null }], events: [],
   what: 'unwell', persons: '1', responsive: null, note: null, ...changes,
 });
 
 const state = (changes: Partial<LiveState> = {}): LiveState => ({
-  version: 1, dataVersion: '1.1', serverTime: AT, helpRequests: [incident()], testMode: false, posts: [{ id: 10, isOpen: false, closesAt: null, autoClosedAt: null }],
-  teams: [{ id: 1, availability: 'off_duty', incidentId: null, stayPostId: null, position: null, closesAt: null }, { id: 2, availability: 'available', incidentId: null, stayPostId: null, position: null, closesAt: null }],
+  version: 1, dataVersion: '1.1', serverTime: AT, helpRequests: [incident()], testMode: false, locations: [{ id: 10, isOpen: false, closesAt: null, autoClosedAt: null }],
+  teams: [{ id: 1, availability: 'off_duty', incidentId: null, stayLocationId: null, position: null, closesAt: null }, { id: 2, availability: 'available', incidentId: null, stayLocationId: null, position: null, closesAt: null }],
   ...changes,
 });
 
@@ -55,25 +55,25 @@ test('applying is pure, and an action already in the state adds no second log li
 test('closing and taking a break; a fixed team can stay where it was', () => {
   const fixed = state({ helpRequests: [incident({ status: 'on_site', dispatches: [{ teamId: 1, at: AT, reason: 'all', distanceKm: 1, declinedAt: null, acceptedAt: AT }] })] });
   const after = applyAction(fixed, { id: 'x', at: AT, action: { type: 'close', incidentId: 7, body: { outcome: 'false_alarm', persons: null, note: null, stayHere: true, pause: true } } }, { ...context, me: { name: 'Eva', phone: '0600000005' } });
-  assert.deepEqual([after.teams[0]?.availability, after.teams[0]?.stayPostId], ['unavailable', 20]);
+  assert.deepEqual([after.teams[0]?.availability, after.teams[0]?.stayLocationId], ['unavailable', 20]);
 });
 
 test('a fixed team and its post go together; a phone with no state yet still shows its own change', () => {
-  assert.equal(apply(state(), { type: 'availability', teamId: 1, availability: 'available' }).posts[0]?.isOpen, true);
-  const closedPost = apply(state({ teams: [{ id: 1, availability: 'available', incidentId: null, stayPostId: null, position: null, closesAt: null }] }), { type: 'postOpen', postId: 10, open: false });
-  assert.equal(closedPost.teams[0]?.availability, 'off_duty');
+  assert.equal(apply(state(), { type: 'availability', teamId: 1, availability: 'available' }).locations[0]?.isOpen, true);
+  const closedLocation = apply(state({ teams: [{ id: 1, availability: 'available', incidentId: null, stayLocationId: null, position: null, closesAt: null }] }), { type: 'locationOpen', locationId: 10, open: false });
+  assert.equal(closedLocation.teams[0]?.availability, 'off_duty');
   assert.equal(apply(state({ teams: [] }), { type: 'availability', teamId: 2, availability: 'unavailable' }).teams[0]?.availability, 'unavailable');
 });
 
 test('a request made without signal is there at once, and follows its steps', () => {
-  const after = apply(state(), { type: 'requestNew', tempId: -5, clientId: 'abc', postId: 20, postName: 'Waterpost', kind: 'water' }, { type: 'requestDetail', requestId: -5, detail: 'lots' }, { type: 'requestWithdraw', requestId: -5 });
+  const after = apply(state(), { type: 'requestNew', tempId: -5, clientId: 'abc', locationId: 20, locationName: 'Waterpost', kind: 'water' }, { type: 'requestDetail', requestId: -5, detail: 'lots' }, { type: 'requestWithdraw', requestId: -5 });
   assert.deepEqual([requestsOf(after)[0]?.id, requestsOf(after)[0]?.detail, requestsOf(after)[0]?.status], [-5, 'lots', 'withdrawn']);
 });
 
 test('an incident started without signal is there at once, on site, and can be closed', () => {
   const started = apply(state({ helpRequests: [] }), {
-    type: 'selfStart', tempId: -9, postId: 20, offPost: true, post: { typeId: 1, name: '120 m van Waterpost', km: 3, lat: 53, lng: 5 },
-    body: { clientId: 'abcdefgh', teamId: 2, postId: 20, lat: 53, lng: 5, what: 'cramp', persons: '1', responsive: null, note: null },
+    type: 'selfStart', tempId: -9, locationId: 20, offLocation: true, location: { typeId: 1, name: '120 m van Waterpost', km: 3, lat: 53, lng: 5 },
+    body: { clientId: 'abcdefgh', teamId: 2, locationId: 20, lat: 53, lng: 5, what: 'cramp', persons: '1', responsive: null, note: null },
   });
   assert.deepEqual([incidentsOf(started)[0]?.status, incidentsOf(started)[0]?.teamId, started.teams[1]?.incidentId], ['on_site', 2, -9]);
   const closed = apply(started, { type: 'close', incidentId: -9, body: { outcome: 'treated', persons: '1', note: null, stayHere: false } });
@@ -95,13 +95,13 @@ test('the server carries out a queued change once, with the time it happened', a
     return `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
   };
   const id = (table: string, name: string) => (db.raw.prepare(`SELECT id FROM ${table} WHERE name = ?`).get(name) as { id: number }).id;
-  const [post, team] = [id('posts', 'Waterpost 3 · brug'), id('teams', 'Team 2')];
-  const [lead, ehbo] = [await cookie(DEMO.postLead), await cookie(DEMO.mobileEhbo)];
+  const [location, team] = [id('locations', 'Waterpost 3 · brug'), id('teams', 'Team 2')];
+  const [lead, ehbo] = [await cookie(DEMO.locationLead), await cookie(DEMO.mobileEhbo)];
   const send = (who: string, method: 'POST' | 'PUT', url: string, payload?: object, headers: Record<string, string> = {}) => app.inject({ method, url, payload, headers: { cookie: who, ...headers } });
 
-  await send(lead, 'PUT', `/api/posts/${post}/open`, { open: true });
+  await send(lead, 'PUT', `/api/locations/${location}/open`, { open: true });
   await send(ehbo, 'PUT', `/api/teams/${team}/availability`, { availability: 'available' });
-  const report: NewIncident = { type: 'first_aid', postId: post, clientId: 'queue-test-1', what: 'unwell', persons: '1', responsive: null, note: null };
+  const report: NewIncident = { type: 'first_aid', locationId: location, clientId: 'queue-test-1', what: 'unwell', persons: '1', responsive: null, note: null };
   const created = (await send(lead, 'POST', '/api/help-requests', report)).json<LiveIncident>();
   await send(ehbo, 'POST', `/api/help-requests/${created.id}/accept`, { teamId: team });
 

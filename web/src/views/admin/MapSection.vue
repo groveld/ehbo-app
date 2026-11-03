@@ -43,7 +43,7 @@ const percent = computed(() => (status.value && status.value.total ? Math.round(
 const outside = computed(() => {
   if (!current.value || !admin.state) return [];
   const [w, s, e, n] = current.value.bbox;
-  return admin.state.posts.filter((p) => p.lat !== null && p.lng !== null && (p.lng < w || p.lng > e || p.lat < s || p.lat > n));
+  return admin.state.locations.filter((p) => p.lat !== null && p.lng !== null && (p.lng < w || p.lng > e || p.lat < s || p.lat > n));
 });
 </script>
 

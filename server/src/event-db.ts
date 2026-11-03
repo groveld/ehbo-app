@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { recomputePassages } from './gpx.ts';
-import { DEFAULT_CORE_TEAM, DEFAULT_HELP_REQUEST_TYPES, DEFAULT_POST_TYPES, PLAIN_HELP_REQUEST_COLORS, normalizeEmergencyNumber, type HelpRequestType, type PostContactRole, type PushSubscriptionData, type TeamKind, type TeamMobility } from '@ehbo/shared';
+import { DEFAULT_CORE_TEAM, DEFAULT_HELP_REQUEST_TYPES, DEFAULT_FUNCTION_TYPES, PLAIN_HELP_REQUEST_COLORS, normalizeEmergencyNumber, type HelpRequestType, type LocationContactRole, type PushSubscriptionData, type TeamKind, type TeamMobility } from '@ehbo/shared';
 
 // Elke stap draait één keer; PRAGMA user_version onthoudt tot waar het bestand is bijgewerkt.
 // Een stap is SQL, of een functie als de gegevens zelf omgezet moeten worden.
@@ -263,10 +263,10 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
         PRIMARY KEY (post_id, run_id, seq)
       );
     `);
-    recomputePassages(db);
+    // The km points themselves are calculated at the end of migration 25, on the table names of today.
   },
-  // 13: km points to the metre, so posts close together keep their order. They're shown with one decimal.
-  (db) => recomputePassages(db),
+  // 13: km points to the metre, so posts close together keep their order. They're shown with one decimal. Calculated in 25.
+  () => {},
   // 14: changes from a phone's queue that have been carried out: sending one again after a lost answer does nothing.
   `
   CREATE TABLE client_actions (
@@ -324,7 +324,7 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
     if (!db.prepare('SELECT 1 FROM post_types').get()) return;
     const add = db.prepare(`INSERT INTO post_types (key, name, letter, color, manned, sort)
                             SELECT ?, ?, ?, ?, 0, (SELECT COALESCE(MAX(sort), 0) + 1 FROM post_types) WHERE NOT EXISTS (SELECT 1 FROM post_types WHERE key = ?)`);
-    for (const t of DEFAULT_POST_TYPES.filter((t) => !t.manned)) add.run(t.key, t.name, t.letter, t.color, t.key);
+    for (const t of DEFAULT_FUNCTION_TYPES.filter((t) => !t.staffed)) add.run(t.key, t.name, t.letter, t.color, t.key);
   },
   // 21: team and contact values in English (docs/begrippen.md). A CHECK can't be altered, so both tables are rebuilt.
   `
@@ -513,6 +513,41 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
     const set = db.prepare('UPDATE help_request_types SET name = ?, sub = ?, ask = ?, choices_json = ?, icon = ?, colors_json = ? WHERE key = ?');
     for (const t of DEFAULT_HELP_REQUEST_TYPES) set.run(t.name, t.sub, t.ask, JSON.stringify(t.choices), t.icon, JSON.stringify(t.colors), t.key);
   },
+  // 25: a post is a location, a post type a function type, a passage a km point, and manned is staffed (#84, docs/begrippen.md).
+  // SQLite moves foreign keys and indexes along with a renamed table or column; the two views are made again on the new names.
+  // The keys of the functions are English. The km points are calculated again, for a file from before migration 12.
+  (db) => {
+    db.exec(`
+  DROP VIEW incidents;
+  DROP VIEW queue_requests;
+  ALTER TABLE posts RENAME TO locations;
+  ALTER TABLE post_types RENAME TO function_types;
+  ALTER TABLE function_types RENAME COLUMN manned TO staffed;
+  ALTER TABLE post_functions RENAME TO location_functions;
+  ALTER TABLE location_functions RENAME COLUMN post_id TO location_id;
+  ALTER TABLE post_contacts RENAME TO location_contacts;
+  ALTER TABLE location_contacts RENAME COLUMN post_id TO location_id;
+  ALTER TABLE post_passages RENAME TO km_points;
+  ALTER TABLE km_points RENAME COLUMN post_id TO location_id;
+  ALTER TABLE teams RENAME COLUMN post_id TO location_id;
+  ALTER TABLE teams RENAME COLUMN stay_post_id TO stay_location_id;
+  ALTER TABLE help_requests RENAME COLUMN post_id TO location_id;
+  ALTER TABLE event RENAME COLUMN at_post_m TO at_location_m;
+  UPDATE function_types SET key = CASE key
+    WHEN 'stempel' THEN 'stamp' WHEN 'verkeer' THEN 'traffic' WHEN 'keerpunt' THEN 'turnaround' WHEN 'anders' THEN 'other' WHEN 'ehbo' THEN 'first_aid' ELSE key END;
+  CREATE VIEW incidents AS
+    SELECT h.id, t.key AS type, h.client_id, h.location_id, h.reported_by, h.status, h.is_test, h.reported_at, h.accepted_at, h.accepted_by, h.closed_at,
+           h.place_name, h.place_lat, h.place_lng, h.place_accuracy_m, d.what, d.persons, d.responsive, d.note, d.aed, d.stage, d.sent_at,
+           d.escalates_at, d.team_id, d.on_site_at, d.outcome, d.outcome_persons, d.outcome_note, d.self_started
+    FROM help_requests h JOIN dispatch_details d ON d.help_request_id = h.id JOIN help_request_types t ON t.id = h.type_id;
+  CREATE VIEW queue_requests AS
+    SELECT h.id, h.client_id, h.location_id, t.key AS kind, h.detail, h.status, h.reported_by, h.reported_at AS created_at,
+           h.accepted_at AS picked_at, h.accepted_by AS picked_by, h.closed_at AS done_at, h.is_test
+    FROM help_requests h JOIN help_request_types t ON t.id = h.type_id
+    WHERE t.handling = 'queue';
+    `);
+    recomputePassages(db);
+  },
 ];
 
 export interface EventRow {
@@ -530,11 +565,11 @@ export interface PersonRow {
   name: string;
 }
 
-export interface PostAssignmentRow {
-  post_id: number;
-  post_name: string;
+export interface LocationAssignmentRow {
+  location_id: number;
+  location_name: string;
   km: number | null;
-  role: PostContactRole;
+  role: LocationContactRole;
   time_from: string | null;
   time_to: string | null;
   type_letter: string;
@@ -549,7 +584,7 @@ export interface TeamAssignmentRow {
   mobility: TeamMobility | null;
   time_from: string | null;
   time_to: string | null;
-  post_name: string | null;
+  location_name: string | null;
 }
 
 export interface CoreTeamAssignmentRow {
@@ -616,8 +651,8 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
   if (!db.prepare('SELECT 1 FROM event').get()) {
     transaction(() => {
       db.prepare('INSERT INTO event (id, name) VALUES (1, ?)').run(name);
-      const type = db.prepare('INSERT INTO post_types (key, name, letter, color, person_label, manned, sort) VALUES (?, ?, ?, ?, ?, ?, ?)');
-      DEFAULT_POST_TYPES.forEach((t, i) => type.run(t.key, t.name, t.letter, t.color, 'personLabel' in t ? t.personLabel : null, t.manned ? 1 : 0, i));
+      const type = db.prepare('INSERT INTO function_types (key, name, letter, color, person_label, staffed, sort) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      DEFAULT_FUNCTION_TYPES.forEach((t, i) => type.run(t.key, t.name, t.letter, t.color, 'personLabel' in t ? t.personLabel : null, t.staffed ? 1 : 0, i));
       const core = db.prepare('INSERT INTO core_team (function, is_coordinator, sort) VALUES (?, ?, ?)');
       DEFAULT_CORE_TEAM.forEach((f, i) => core.run(f, i === 0 ? 1 : 0, i));
     });
@@ -631,15 +666,15 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     getEvent: db.prepare('SELECT name, start_date, end_date, escalation_seconds, info_json, info_policy, info_contact FROM event WHERE id = 1'),
     getPerson: db.prepare('SELECT phone, name FROM people WHERE phone = ?'),
     isAdmin: db.prepare('SELECT 1 FROM admins WHERE phone = ?'),
-    postAssignments: db.prepare(`
-      SELECT p.id AS post_id, p.name AS post_name, p.km, c.role,
+    locationAssignments: db.prepare(`
+      SELECT p.id AS location_id, p.name AS location_name, p.km, c.role,
              COALESCE(c.time_from, p.time_from) AS time_from, COALESCE(c.time_to, p.time_to) AS time_to,
              t.letter AS type_letter, t.color AS type_color, t.person_label
-      FROM post_contacts c JOIN posts p ON p.id = c.post_id JOIN post_types t ON t.id = p.type_id
+      FROM location_contacts c JOIN locations p ON p.id = c.location_id JOIN function_types t ON t.id = p.type_id
       WHERE c.phone = ? ORDER BY COALESCE(c.time_from, p.time_from), p.sort, p.id`),
     teamAssignments: db.prepare(`
-      SELECT u.id AS team_id, u.name AS team_name, u.kind, u.mobility, u.time_from, u.time_to, p.name AS post_name
-      FROM team_members m JOIN teams u ON u.id = m.team_id LEFT JOIN posts p ON p.id = u.post_id
+      SELECT u.id AS team_id, u.name AS team_name, u.kind, u.mobility, u.time_from, u.time_to, p.name AS location_name
+      FROM team_members m JOIN teams u ON u.id = m.team_id LEFT JOIN locations p ON p.id = u.location_id
       WHERE m.phone = ? ORDER BY u.sort, u.id`),
     coreTeamAssignments: db.prepare('SELECT function, is_coordinator FROM core_team WHERE phone = ? ORDER BY sort, id'),
     coordinatorPhone: db.prepare('SELECT phone FROM core_team WHERE is_coordinator = 1 AND phone IS NOT NULL ORDER BY sort, id LIMIT 1'),
@@ -686,7 +721,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     getEvent: () => q.getEvent.get() as unknown as EventRow,
     getPerson: (phone: string) => q.getPerson.get(phone) as PersonRow | undefined,
     isAdmin: (phone: string) => q.isAdmin.get(phone) !== undefined,
-    postAssignments: (phone: string) => q.postAssignments.all(phone) as unknown as PostAssignmentRow[],
+    locationAssignments: (phone: string) => q.locationAssignments.all(phone) as unknown as LocationAssignmentRow[],
     teamAssignments: (phone: string) => q.teamAssignments.all(phone) as unknown as TeamAssignmentRow[],
     coreTeamAssignments: (phone: string) => q.coreTeamAssignments.all(phone) as unknown as CoreTeamAssignmentRow[],
     coordinatorPhone: () => (q.coordinatorPhone.get() as { phone: string } | undefined)?.phone ?? null,

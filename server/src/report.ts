@@ -1,6 +1,6 @@
 // Rapport na afloop (functioneel ontwerp, "Incidentregistratie en rapport"): per incident de tijden en afloop, plus totalen.
 // Proefoproepen en -aanvragen uit de testmodus tellen niet mee.
-import { INCIDENT_WHAT, OUTCOMES, helpRequestType, type Outcome, type Report, type ReportIncident, type ReportPostPassages, type RequestKind, formatKm, formatKmList } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, helpRequestType, type Outcome, type Report, type ReportIncident, type ReportLocationPassages, type RequestKind, formatKm, formatKmList } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
 
 type Row = Record<string, string | number | null>;
@@ -16,11 +16,11 @@ export function buildReport(db: EventDb, now = new Date()): Report {
   const event = db.getEvent();
 
   const incidents: ReportIncident[] = all(`
-    SELECT i.*, COALESCE(i.place_name, p.name) AS post_name, p.km, u.name AS team_name FROM incidents i
-    JOIN posts p ON p.id = i.post_id LEFT JOIN teams u ON u.id = i.team_id
+    SELECT i.*, COALESCE(i.place_name, p.name) AS location_name, p.km, u.name AS team_name FROM incidents i
+    JOIN locations p ON p.id = i.location_id LEFT JOIN teams u ON u.id = i.team_id
     WHERE i.is_test = 0 ORDER BY i.reported_at, i.id`).map((r, n) => ({
     number: n + 1,
-    postName: r.post_name as string,
+    locationName: r.location_name as string,
     km: r.km as number | null,
     what: r.what as ReportIncident['what'],
     persons: r.persons as ReportIncident['persons'],
@@ -44,22 +44,22 @@ export function buildReport(db: EventDb, now = new Date()): Report {
   const travels = incidents.flatMap((i) => (i.travelSeconds === null ? [] : [i.travelSeconds]));
   const byOutcome: Partial<Record<Outcome, number>> = {};
   for (const i of incidents) if (i.outcome) byOutcome[i.outcome] = (byOutcome[i.outcome] ?? 0) + 1;
-  const byPost = new Map<string, number>();
-  for (const i of incidents) if (i.status !== 'withdrawn') byPost.set(i.postName, (byPost.get(i.postName) ?? 0) + 1);
+  const byLocation = new Map<string, number>();
+  for (const i of incidents) if (i.status !== 'withdrawn') byLocation.set(i.locationName, (byLocation.get(i.locationName) ?? 0) + 1);
   const requestsByKind: Partial<Record<RequestKind, number>> = {};
   for (const r of all("SELECT kind, COUNT(*) AS n FROM queue_requests WHERE is_test = 0 AND status <> 'withdrawn' GROUP BY kind")) {
     requestsByKind[r.kind as RequestKind] = r.n as number;
   }
 
-  const passages = new Map<string, ReportPostPassages>();
-  for (const r of all(`SELECT p.name AS post_name, r.name AS run_name, pp.km FROM post_passages pp
-                       JOIN posts p ON p.id = pp.post_id JOIN runs r ON r.id = pp.run_id
+  const passages = new Map<string, ReportLocationPassages>();
+  for (const r of all(`SELECT p.name AS location_name, r.name AS run_name, pp.km FROM km_points pp
+                       JOIN locations p ON p.id = pp.location_id JOIN runs r ON r.id = pp.run_id
                        ORDER BY p.km, p.sort, p.id, r.track_km DESC, r.id, pp.seq`)) {
-    const post = passages.get(r.post_name as string) ?? { postName: r.post_name as string, runs: [] };
-    const run = post.runs.find((x) => x.runName === r.run_name);
+    const location = passages.get(r.location_name as string) ?? { locationName: r.location_name as string, runs: [] };
+    const run = location.runs.find((x) => x.runName === r.run_name);
     if (run) run.km.push(r.km as number);
-    else post.runs.push({ runName: r.run_name as string, km: [r.km as number] });
-    passages.set(post.postName, post);
+    else location.runs.push({ runName: r.run_name as string, km: [r.km as number] });
+    passages.set(location.locationName, location);
   }
 
   return {
@@ -67,9 +67,9 @@ export function buildReport(db: EventDb, now = new Date()): Report {
     generatedAt: now.toISOString(),
     helpRequestTypes: db.helpRequestTypes(),
     counts: {
-      posts: count('SELECT COUNT(*) AS n FROM posts'),
+      locations: count('SELECT COUNT(*) AS n FROM locations'),
       // Iedereen die ergens is ingepland: bij een post, een EHBO-eenheid of in het kernteam.
-      staff: count(`SELECT COUNT(*) AS n FROM (SELECT phone FROM post_contacts UNION SELECT phone FROM team_members
+      staff: count(`SELECT COUNT(*) AS n FROM (SELECT phone FROM location_contacts UNION SELECT phone FROM team_members
                     UNION SELECT phone FROM core_team WHERE phone IS NOT NULL)`),
       teams: count('SELECT COUNT(*) AS n FROM teams'),
     },
@@ -83,7 +83,7 @@ export function buildReport(db: EventDb, now = new Date()): Report {
       maxResponseSeconds: responses.length ? Math.max(...responses) : null,
       avgTravelSeconds: average(travels),
       byOutcome,
-      byPost: [...byPost].map(([postName, n]) => ({ postName, count: n })).sort((a, b) => b.count - a.count || a.postName.localeCompare(b.postName)),
+      byLocation: [...byLocation].map(([locationName, n]) => ({ locationName, count: n })).sort((a, b) => b.count - a.count || a.locationName.localeCompare(b.locationName)),
       requestsByKind,
     },
     testItems: count('SELECT COUNT(*) AS n FROM help_requests WHERE is_test = 1'),
@@ -104,7 +104,7 @@ export function reportCsv(report: Report) {
   const header = ['Nr', 'Locatie', 'Km', 'Melding', 'Personen', 'AED', 'Status', 'Gemeld', 'Geaccepteerd', 'Ter plaatse', 'Afgerond',
     'Reactietijd (m:ss)', 'Aanrijtijd (m:ss)', 'Eenheid', 'Naar alle eenheden', 'Zelf gestart', 'Afloop', 'Notitie'];
   const rows = report.incidents.map((i) => [
-    i.number, i.postName, i.km === null ? null : formatKm(i.km), i.what ? INCIDENT_WHAT[i.what] : null, i.persons,
+    i.number, i.locationName, i.km === null ? null : formatKm(i.km), i.what ? INCIDENT_WHAT[i.what] : null, i.persons,
     i.aed ? 'ja' : 'nee', STATUS[i.status], localTime(i.reportedAt), localTime(i.acceptedAt), localTime(i.onSiteAt), localTime(i.closedAt),
     minutesSeconds(i.responseSeconds), minutesSeconds(i.travelSeconds), i.teamName, i.escalated ? 'ja' : 'nee', i.selfStarted ? 'ja' : 'nee', i.outcome ? OUTCOMES[i.outcome] : null, i.note,
   ]);
@@ -112,7 +112,7 @@ export function reportCsv(report: Report) {
   const lines = [header, ...rows, [], ['Totaal'], ['Incidenten', report.totals.incidents], ['Ingetrokken', report.totals.withdrawn],
     ['Naar alle eenheden', report.totals.escalated], ...requests,
     [], ['Km-punten per locatie'], ['Locatie', 'Loop', 'Km-punten'],
-    ...report.passages.flatMap((p) => p.runs.map((r) => [p.postName, r.runName, formatKmList(r.km)])),
+    ...report.passages.flatMap((p) => p.runs.map((r) => [p.locationName, r.runName, formatKmList(r.km)])),
   ];
   return `﻿${lines.map((line) => line.map(cell).join(';')).join('\r\n')}\r\n`;
 }

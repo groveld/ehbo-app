@@ -8,7 +8,7 @@ import { cleanGpx, type GpxWaypoint } from '../gpx.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
-const PACKAGE_FORMAT = 11;
+const PACKAGE_FORMAT = 12;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
@@ -27,9 +27,9 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   return {
     version: `${db.dataVersion()}.${staff ? 's' : 'p'}${PACKAGE_FORMAT}`,
     staff,
-    event: { name: state.event.name, startDate: state.event.startDate, endDate: state.event.endDate, startLocation: state.event.startLocation, atPostM: state.event.atPostM },
-    postTypes: state.postTypes,
-    posts: state.posts.map((p) => ({
+    event: { name: state.event.name, startDate: state.event.startDate, endDate: state.event.endDate, startLocation: state.event.startLocation, atLocationM: state.event.atLocationM },
+    functionTypes: state.functionTypes,
+    locations: state.locations.map((p) => ({
       id: p.id, typeId: p.typeId, functionIds: p.functionIds, runId: p.runId, name: p.name, km: p.km, passages: p.passages, lat: p.lat, lng: p.lng, isOpen: p.isOpen, timeFrom: p.timeFrom, timeTo: p.timeTo,
       // Namen, nummers en aanrijroutes alleen voor medewerkers.
       ...(staff ? { address: p.address, accessRoute: p.accessRoute, contacts: p.contacts.map(({ name, phone, role }) => ({ name, phone, role })) } : {}),
@@ -63,8 +63,8 @@ export async function packageRoutes(app: FastifyInstance, { db, calls }: { db: E
     // Every post this run passes, in the order you meet them; the symbol of its main function, and all its functions in the text (#83).
     const waypoints = (db.raw.prepare(`
       SELECT p.name, p.lat, p.lng, t.key, json_group_array(pp.km) AS km,
-             (SELECT group_concat(name, ' · ') FROM (SELECT ft.name FROM post_functions f JOIN post_types ft ON ft.id = f.type_id WHERE f.post_id = p.id ORDER BY f.sort)) AS type_name
-      FROM post_passages pp JOIN posts p ON p.id = pp.post_id JOIN post_types t ON t.id = p.type_id
+             (SELECT group_concat(name, ' · ') FROM (SELECT ft.name FROM location_functions f JOIN function_types ft ON ft.id = f.type_id WHERE f.location_id = p.id ORDER BY f.sort)) AS type_name
+      FROM km_points pp JOIN locations p ON p.id = pp.location_id JOIN function_types t ON t.id = p.type_id
       WHERE pp.run_id = ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL AND (p.run_id IS NULL OR p.run_id = pp.run_id)
       GROUP BY p.id ORDER BY MIN(pp.km)`).all(Number(id)) as { name: string; lat: number; lng: number; key: string | null; type_name: string; km: string }[])
       .map((r): GpxWaypoint => ({ name: r.name, lat: r.lat, lng: r.lng, typeKey: r.key, typeName: r.type_name, km: (JSON.parse(r.km) as number[]).sort((a, b) => a - b) }));

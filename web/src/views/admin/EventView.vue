@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 1.1 · Evenement instellen: naam, data, lopen, de kaart, stijl en de EHBO-escalatietijd.
 import { computed, onBeforeUnmount, reactive, ref, watch, watchEffect } from 'vue';
-import { AT_POST_MAX_M, AT_POST_MIN_M, AT_POST_STEP_M, DEFAULT_AT_POST_M, DEFAULT_STYLE, ESCALATION_MAX_SECONDS, ESCALATION_MIN_SECONDS, SHORT_NAME_MAX, styleProblem, type EventSettings } from '@ehbo/shared';
+import { AT_LOCATION_MAX_M, AT_LOCATION_MIN_M, AT_LOCATION_STEP_M, DEFAULT_AT_LOCATION_M, DEFAULT_STYLE, ESCALATION_MAX_SECONDS, ESCALATION_MIN_SECONDS, SHORT_NAME_MAX, styleProblem, type EventSettings } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 import MapSection from './MapSection.vue';
@@ -14,7 +14,7 @@ import { applyTheme } from '../../theme.ts';
 
 const admin = useAdminStore();
 const session = useSessionStore();
-const form = reactive<EventSettings>({ name: '', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atPostM: DEFAULT_AT_POST_M, style: { ...DEFAULT_STYLE } });
+const form = reactive<EventSettings>({ name: '', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atLocationM: DEFAULT_AT_LOCATION_M, style: { ...DEFAULT_STYLE } });
 const loaded = ref(false);
 const saved = ref(false);
 const { busy, error, run } = useSave();
@@ -54,8 +54,8 @@ const step = (delta: number) => {
   form.escalationSeconds = Math.min(ESCALATION_MAX_SECONDS, Math.max(ESCALATION_MIN_SECONDS, form.escalationSeconds + delta));
 };
 
-const stepAtPost = (delta: number) => {
-  form.atPostM = Math.min(AT_POST_MAX_M, Math.max(AT_POST_MIN_M, form.atPostM + delta));
+const stepAtLocation = (delta: number) => {
+  form.atLocationM = Math.min(AT_LOCATION_MAX_M, Math.max(AT_LOCATION_MIN_M, form.atLocationM + delta));
 };
 
 async function save() {
@@ -147,9 +147,9 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
 
       <div class="card escalation at-post">
         <span class="grow"><strong>Op de locatie binnen:</strong></span>
-        <button class="step" aria-label="Kleiner" @click="stepAtPost(-AT_POST_STEP_M)">−</button>
-        <span class="mono seconds">{{ form.atPostM }} m</span>
-        <button class="step" aria-label="Groter" @click="stepAtPost(AT_POST_STEP_M)">+</button>
+        <button class="step" aria-label="Kleiner" @click="stepAtLocation(-AT_LOCATION_STEP_M)">−</button>
+        <span class="mono seconds">{{ form.atLocationM }} m</span>
+        <button class="step" aria-label="Groter" @click="stepAtLocation(AT_LOCATION_STEP_M)">+</button>
       </div>
       <p class="small">Zo dichtbij telt een plek als de locatie zelf: een mobiele EHBO-eenheid is thuis bij haar standplaats, en een incident of hulpvraag daar hoort bij die locatie. GPS op een telefoon wijkt vaak 10–30 m af; te klein, en een eenheid die stilstaat springt heen en weer tussen thuis en onderweg.</p>
     </template>

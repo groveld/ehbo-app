@@ -2,10 +2,10 @@
 // One EHBO team in a list: its status, where it is, AED, and a call button.
 import { computed } from 'vue';
 import { POSITION_MAX_AGE_MS, TEAM_AVAILABILITY, isAway, telHref, type EventPackage, type PackageTeam } from '@ehbo/shared';
-import { atPostM, shiftText } from '../posts.ts';
+import { atLocationM, shiftText } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import Icon from './Icon.vue';
-import PostBadge from './PostBadge.vue';
+import LocationBadge from './LocationBadge.vue';
 
 /** attention: something is off with this team (marked for the coordinator). */
 const props = defineProps<{ pkg: EventPackage; team: PackageTeam; attention?: boolean; quietMinutes?: number | null }>();
@@ -13,7 +13,7 @@ const live = useLiveStore();
 
 const state = computed(() => live.teamState(props.team.id));
 const incident = computed(() => (state.value?.incidentId != null ? live.incidentById(state.value.incidentId) : null));
-const postOf = (id: number | null | undefined) => props.pkg.posts.find((p) => p.id === id);
+const locationOf = (id: number | null | undefined) => props.pkg.locations.find((p) => p.id === id);
 
 const status = computed(() => {
   if (incident.value) return { tone: 'busy', label: incident.value.status === 'on_site' ? 'Ter plaatse' : 'Onderweg' };
@@ -23,26 +23,26 @@ const status = computed(() => {
 
 /** During a call the post it's going to; otherwise its own place, and for a mobile team how fresh its position is. */
 const where = computed(() => {
-  if (incident.value) return incident.value.post.name;
+  if (incident.value) return incident.value.location.name;
   const { team } = props;
-  const home = postOf(team.postId);
-  const base = team.kind === 'fixed' ? postOf(state.value?.stayPostId ?? team.postId)?.name : home?.name;
+  const home = locationOf(team.locationId);
+  const base = team.kind === 'fixed' ? locationOf(state.value?.stayLocationId ?? team.locationId)?.name : home?.name;
   if (team.kind === 'fixed') return base ?? 'Geen locatie';
   const position = state.value?.position;
   const age = position ? live.serverNow - new Date(position.at).getTime() : Infinity;
   if (age > POSITION_MAX_AGE_MS) return base ? `${base} · geen recente positie` : 'Geen recente positie';
-  const away = isAway(team, state.value ?? undefined, home, live.serverNow, atPostM(props.pkg));
+  const away = isAway(team, state.value ?? undefined, home, live.serverNow, atLocationM(props.pkg));
   const minutes = Math.floor(age / 60_000);
   return `${away ? 'Onderweg' : `Thuis${base ? ` · ${base}` : ''}`} · positie ${minutes ? `${minutes} min oud` : 'net bijgewerkt'}`;
 });
 const shift = computed(() => shiftText(props.team));
-const ehboType = computed(() => props.pkg.postTypes.find((t) => t.key === 'ehbo'));
+const ehboType = computed(() => props.pkg.functionTypes.find((t) => t.key === 'first_aid'));
 const phone = computed(() => props.team.members[0]?.phone ?? null);
 </script>
 
 <template>
   <div class="team-row list-row">
-    <PostBadge :type="ehboType" :size="40" class="status-ring" :class="{ on: status.tone === 'available', off: status.tone === 'off_duty' }" />
+    <LocationBadge :type="ehboType" :size="40" class="status-ring" :class="{ on: status.tone === 'available', off: status.tone === 'off_duty' }" />
     <span class="text">
       <span class="name">{{ team.name }}<span class="status" :class="status.tone">{{ status.label }}</span></span>
       <span class="sub" :class="{ attention }">{{ where }}<template v-if="team.hasAed"> · AED</template><template v-if="shift"> · {{ shift }}</template></span>

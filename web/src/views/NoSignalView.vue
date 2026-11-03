@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 import { formatKm, telHref } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
-import { coordinatorOf, teamsByDistance } from '../posts.ts';
+import { coordinatorOf, teamsByDistance } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -16,9 +16,9 @@ const router = useRouter();
 
 const item = computed(() => live.outbox.find((i) => i.clientId === props.clientId));
 const refused = computed(() => live.refused[props.clientId]);
-const post = computed(() => store.postById.get(item.value?.postId ?? -1));
+const location = computed(() => store.locationById.get(item.value?.locationId ?? -1));
 /** From a post, or from where you asked for help. */
-const from = computed(() => post.value ?? (item.value?.lat != null ? { lat: item.value.lat, lng: item.value.lng ?? null } : undefined));
+const from = computed(() => location.value ?? (item.value?.lat != null ? { lat: item.value.lat, lng: item.value.lng ?? null } : undefined));
 const coordinator = computed(() => coordinatorOf(store.pkg));
 /** Op afstand; wie volgens de laatst bekende stand uit dienst is, laten we weg. */
 const teams = computed(() => (store.pkg && from.value
@@ -44,7 +44,7 @@ watch(() => live.delivered[props.clientId], (id) => {
         <span class="icon"><Icon name="phone" :size="22" /></span>
         <span class="stack grow">
           <span class="who">Bel {{ first.team.name }}</span>
-          <span class="sub">Dichtstbij · {{ first.post.name }} · {{ formatKm(first.km) }} km</span>
+          <span class="sub">Dichtstbij · {{ first.location.name }} · {{ formatKm(first.km) }} km</span>
         </span>
       </a>
       <a v-if="coordinator" :href="telHref(coordinator.phone)" class="call">

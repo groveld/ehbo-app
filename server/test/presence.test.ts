@@ -17,12 +17,12 @@ let dir: string;
 let pushes: { phones: string[]; payload: PushPayload }[];
 
 const set = (query: string, ...params: (string | number | null)[]) => db.raw.prepare(query).run(...params);
-const isOpen = (name: string) => (db.raw.prepare('SELECT is_open FROM posts WHERE name = ?').get(name) as { is_open: number }).is_open === 1;
+const isOpen = (name: string) => (db.raw.prepare('SELECT is_open FROM locations WHERE name = ?').get(name) as { is_open: number }).is_open === 1;
 const availability = (name: string) => (db.raw.prepare('SELECT availability FROM teams WHERE name = ?').get(name) as { availability: string }).availability;
 const subscriptions = (phone: string) => (db.raw.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE phone = ?').get(phone) as { n: number }).n;
 const WATER = 'Waterpost 3 · brug';
 const CROSSING = 'Kruising 4';
-const EHBO_POST = 'EHBO-post 1 · start';
+const EHBO_LOCATION = 'EHBO-post 1 · start';
 
 const start = async () => {
   app = buildApp({
@@ -58,9 +58,9 @@ afterEach(async () => {
 });
 
 test('the last one to log out closes the post, and the coordinator hears it', async () => {
-  const wim = await login(DEMO.postLead);
-  const vera = await login(DEMO.postMember);
-  set('UPDATE posts SET is_open = 1 WHERE name IN (?, ?)', WATER, CROSSING);
+  const wim = await login(DEMO.locationLead);
+  const vera = await login(DEMO.locationMember);
+  set('UPDATE locations SET is_open = 1 WHERE name IN (?, ?)', WATER, CROSSING);
 
   await logout(vera);
   assert.equal(isOpen(CROSSING), true, 'Wim is still at Kruising 4');
@@ -71,40 +71,40 @@ test('the last one to log out closes the post, and the coordinator hears it', as
 });
 
 test('the first one to log in finds the post closed; a second device changes nothing', async () => {
-  set('UPDATE posts SET is_open = 1 WHERE name = ?', WATER);
-  await login(DEMO.postLead);
+  set('UPDATE locations SET is_open = 1 WHERE name = ?', WATER);
+  await login(DEMO.locationLead);
   assert.equal(isOpen(WATER), false, 'a wrong status from before is gone');
-  set('UPDATE posts SET is_open = 1 WHERE name = ?', WATER);
-  await login(DEMO.postLead);
+  set('UPDATE locations SET is_open = 1 WHERE name = ?', WATER);
+  await login(DEMO.locationLead);
   assert.equal(isOpen(WATER), true);
 });
 
 test('an EHBO team goes off duty with its post when its last member logs out', async () => {
   const eva = await login(DEMO.ehbo);
   set("UPDATE teams SET availability = 'available' WHERE name = 'Team 1'");
-  set('UPDATE posts SET is_open = 1 WHERE name = ?', EHBO_POST);
+  set('UPDATE locations SET is_open = 1 WHERE name = ?', EHBO_LOCATION);
   await logout(eva);
   assert.equal(availability('Team 1'), 'off_duty');
-  assert.equal(isOpen(EHBO_POST), false);
+  assert.equal(isOpen(EHBO_LOCATION), false);
 });
 
 test('logging out is everywhere: a forgotten session on another device keeps nothing open, and no device gets pushes', async () => {
-  const phone = await login(DEMO.postLead);
+  const phone = await login(DEMO.locationLead);
   // An old install, or Safari next to the app, that was never logged out.
-  const forgotten = await login(DEMO.postLead);
-  subscribe(DEMO.postLead, 'https://push.example/phone');
-  subscribe(DEMO.postLead, 'https://push.example/old');
-  set('UPDATE posts SET is_open = 1 WHERE name = ?', WATER);
+  const forgotten = await login(DEMO.locationLead);
+  subscribe(DEMO.locationLead, 'https://push.example/phone');
+  subscribe(DEMO.locationLead, 'https://push.example/old');
+  set('UPDATE locations SET is_open = 1 WHERE name = ?', WATER);
 
   await logout(phone, { endpoint: 'https://push.example/phone' });
   assert.equal((await me(forgotten)).statusCode, 401, 'the other device is logged out too');
-  assert.equal(subscriptions(DEMO.postLead), 0);
+  assert.equal(subscriptions(DEMO.locationLead), 0);
   assert.equal(isOpen(WATER), false, 'so the post closes');
 });
 
 test('sessions that ran out count as logging out', async () => {
-  await login(DEMO.postLead);
-  set('UPDATE posts SET is_open = 1 WHERE name = ?', WATER);
+  await login(DEMO.locationLead);
+  set('UPDATE locations SET is_open = 1 WHERE name = ?', WATER);
   set("UPDATE sessions SET expires_at = '2000-01-01 00:00:00'");
   await app.close();
   await start();
@@ -115,7 +115,7 @@ test('in the test mode a session lasts until midnight, also one that was already
   assert.equal(sessionExpiry('2026-12-31', new Date('2026-12-30T15:00:00Z'), true).toISOString(), '2026-12-30T23:00:00.000Z');
   assert.equal(nextMidnight(new Date('2026-07-01T10:00:00Z')).toISOString(), '2026-07-01T22:00:00.000Z', 'summer time');
 
-  await login(DEMO.postLead);
+  await login(DEMO.locationLead);
   const admin = await login(DEMO.admin);
   await app.inject({ url: '/api/admin/test-mode', method: 'PUT', payload: { on: true }, headers: { cookie: admin } });
   const latest = (db.raw.prepare('SELECT MAX(expires_at) AS at FROM sessions').get() as { at: string }).at;
@@ -123,18 +123,18 @@ test('in the test mode a session lasts until midnight, also one that was already
 });
 
 test('everyone logged out, except the admin who pressed it', async () => {
-  const wim = await login(DEMO.postLead);
+  const wim = await login(DEMO.locationLead);
   const admin = await login(DEMO.admin);
-  subscribe(DEMO.postLead, 'https://push.example/wim');
+  subscribe(DEMO.locationLead, 'https://push.example/wim');
   subscribe(DEMO.admin, 'https://push.example/admin');
-  set('UPDATE posts SET is_open = 1 WHERE name = ?', WATER);
+  set('UPDATE locations SET is_open = 1 WHERE name = ?', WATER);
 
   const state = await app.inject({ url: '/api/admin/logout-all', method: 'POST', headers: { cookie: admin } });
   assert.equal(state.statusCode, 200);
   assert.equal(state.json().sessions, 1);
   assert.equal((await me(wim)).statusCode, 401);
   assert.equal((await me(admin)).statusCode, 200);
-  assert.equal(subscriptions(DEMO.postLead), 0);
+  assert.equal(subscriptions(DEMO.locationLead), 0);
   assert.equal(subscriptions(DEMO.admin), 1);
   assert.equal(isOpen(WATER), false);
 });
