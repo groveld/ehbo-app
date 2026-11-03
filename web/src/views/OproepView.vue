@@ -146,7 +146,7 @@ async function onSite() {
       <div v-else class="list others gap-top">
         <span class="small others-label">Ook opgeroepen</span>
         <div v-for="o in others" :key="o.name" class="list-row">
-          <span class="dot" :class="o.state" /><span class="grow">{{ o.name }}<template v-if="o.kind === 'mobiel'"> · mobiel</template></span>
+          <span class="dot" :class="o.state" /><span class="grow">{{ o.name }}<template v-if="o.kind === 'mobile'"> · mobiel</template></span>
           <span class="small">{{ o.state === 'declined' ? 'kan niet' : o.state === 'accepted' ? 'gaat' : o.km !== null ? `${formatKm(o.km)} km` : 'geen reactie' }}</span>
         </div>
         <div class="list-row"><span class="dot coordinator" /><span class="grow">Coördinator</span><span class="small">kijkt mee</span></div>
@@ -227,7 +227,7 @@ async function onSite() {
         <div v-if="incident.acceptedAt" class="list-row"><span class="grow muted">Aangenomen</span><span class="mono">{{ clock(incident.acceptedAt) }}</span></div>
         <div v-if="myUnitId !== null" class="list-row">
           <span class="grow muted">Jouw status</span>
-          <strong class="free">{{ live.unitState(myUnitId)?.availability === 'vrij' ? 'Weer beschikbaar' : live.unitState(myUnitId)?.availability === 'pauze' ? 'Niet beschikbaar (pauze)' : 'Uit dienst' }}</strong>
+          <strong class="free">{{ live.unitState(myUnitId)?.availability === 'available' ? 'Weer beschikbaar' : live.unitState(myUnitId)?.availability === 'unavailable' ? 'Niet beschikbaar (pauze)' : 'Uit dienst' }}</strong>
         </div>
       </div>
       <div class="grow" />

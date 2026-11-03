@@ -17,7 +17,7 @@ const postOf = (id: number | null | undefined) => props.pkg.posts.find((p) => p.
 
 const status = computed(() => {
   if (incident.value) return { tone: 'busy', label: incident.value.status === 'ter_plaatse' ? 'Ter plaatse' : 'Onderweg' };
-  const availability = state.value?.availability ?? 'uit_dienst';
+  const availability = state.value?.availability ?? 'off_duty';
   return { tone: availability, label: UNIT_AVAILABILITY[availability] };
 });
 
@@ -26,8 +26,8 @@ const where = computed(() => {
   if (incident.value) return incident.value.post.name;
   const { unit } = props;
   const home = postOf(unit.postId);
-  const base = unit.kind === 'vast' ? postOf(state.value?.stayPostId ?? unit.postId)?.name : home?.name;
-  if (unit.kind === 'vast') return base ?? 'Geen locatie';
+  const base = unit.kind === 'fixed' ? postOf(state.value?.stayPostId ?? unit.postId)?.name : home?.name;
+  if (unit.kind === 'fixed') return base ?? 'Geen locatie';
   const position = state.value?.position;
   const age = position ? live.serverNow - new Date(position.at).getTime() : Infinity;
   if (age > POSITION_MAX_AGE_MS) return base ? `${base} · geen recente positie` : 'Geen recente positie';
@@ -42,7 +42,7 @@ const phone = computed(() => props.unit.members[0]?.phone ?? null);
 
 <template>
   <div class="team-row list-row">
-    <PostBadge :type="ehboType" :size="40" class="status-ring" :class="{ on: status.tone === 'vrij', off: status.tone === 'uit_dienst' }" />
+    <PostBadge :type="ehboType" :size="40" class="status-ring" :class="{ on: status.tone === 'available', off: status.tone === 'off_duty' }" />
     <span class="text">
       <span class="name">{{ unit.name }}<span class="status" :class="status.tone">{{ status.label }}</span></span>
       <span class="sub" :class="{ attention }">{{ where }}<template v-if="unit.hasAed"> · AED</template><template v-if="shift"> · {{ shift }}</template></span>
@@ -59,8 +59,8 @@ const phone = computed(() => props.unit.members[0]?.phone ?? null);
 .sub { font-size: 13px; color: var(--muted); }
 .sub.attention { color: var(--warn); font-weight: 600; }
 .status { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--ink-2); }
-.status.vrij { background: var(--ok-bg); color: var(--ok-text); }
-.status.pauze, .status.busy { background: #FBE3E1; color: #8A1A14; }
-.status.uit_dienst { background: var(--off); color: #FFFFFF; }
+.status.available { background: var(--ok-bg); color: var(--ok-text); }
+.status.unavailable, .status.busy { background: #FBE3E1; color: #8A1A14; }
+.status.off_duty { background: var(--off); color: #FFFFFF; }
 .round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--ink); }
 </style>

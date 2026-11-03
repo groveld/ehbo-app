@@ -260,7 +260,7 @@ export const useLiveStore = defineStore('live', () => {
   // (nearest team, ambulance on the map); at once on a change of status, so everyone's map is right straight away.
   // Een webapp krijgt geen positie zolang hij op de achtergrond staat; dan telt na 3 minuten weer de standplaats.
   const sharingUnit = computed(() => myUnitIds.value.find((id) =>
-    pkg.pkg?.units.find((u) => u.id === id)?.kind === 'mobiel' && (unitState(id)?.availability ?? 'uit_dienst') !== 'uit_dienst') ?? null);
+    pkg.pkg?.units.find((u) => u.id === id)?.kind === 'mobile' && (unitState(id)?.availability ?? 'off_duty') !== 'off_duty') ?? null);
   let geoWatch: number | null = null;
   let lastSent = 0;
   /** This phone's own position while it shares: every fix, not once a minute. It stays on the phone; the server gets one a minute. */

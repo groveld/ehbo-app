@@ -63,7 +63,7 @@ beforeEach(async () => {
   });
   await app.ready();
   await ok(DEMO.postLead, 'PUT', `/api/posts/${id('posts', 'Waterpost 3 · brug')}/open`, { open: true });
-  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${id('ehbo_units', 'Team 2')}/availability`, { availability: 'vrij' });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${id('ehbo_units', 'Team 2')}/availability`, { availability: 'available' });
 });
 
 afterEach(async () => {

@@ -14,8 +14,8 @@ const AT = '2026-12-31T11:00:00.000Z';
 const context: ActionContext = {
   me: { name: 'Mo', phone: '0600000006' },
   units: [
-    { id: 1, name: 'Team 1', kind: 'vast', postId: 10, members: [{ phone: '0600000005' }] },
-    { id: 2, name: 'Team 2', kind: 'mobiel', postId: 11, members: [{ phone: '0600000006' }] },
+    { id: 1, name: 'Team 1', kind: 'fixed', postId: 10, members: [{ phone: '0600000005' }] },
+    { id: 2, name: 'Team 2', kind: 'mobile', postId: 11, members: [{ phone: '0600000006' }] },
   ],
 };
 
@@ -28,7 +28,7 @@ const incident = (changes: Partial<LiveIncident> = {}): LiveIncident => ({
 
 const state = (changes: Partial<LiveState> = {}): LiveState => ({
   version: 1, dataVersion: '1.1', serverTime: AT, incidents: [incident()], testMode: false, requests: [], posts: [{ id: 10, isOpen: false, closesAt: null, autoClosedAt: null }],
-  units: [{ id: 1, availability: 'uit_dienst', incidentId: null, stayPostId: null, position: null, closesAt: null }, { id: 2, availability: 'vrij', incidentId: null, stayPostId: null, position: null, closesAt: null }],
+  units: [{ id: 1, availability: 'off_duty', incidentId: null, stayPostId: null, position: null, closesAt: null }, { id: 2, availability: 'available', incidentId: null, stayPostId: null, position: null, closesAt: null }],
   ...changes,
 });
 
@@ -41,7 +41,7 @@ test('accept, on site and close on the phone: the unit is free again', () => {
 
   const closed = apply(after, { type: 'close', incidentId: 7, body: { outcome: 'geholpen', persons: '1', note: null, stayHere: false } });
   assert.equal(closed.incidents[0]?.status, 'afgerond');
-  assert.deepEqual([closed.units[1]?.incidentId, closed.units[1]?.availability], [null, 'vrij']);
+  assert.deepEqual([closed.units[1]?.incidentId, closed.units[1]?.availability], [null, 'available']);
   assert.deepEqual(closed.incidents[0]?.events.map((e) => e.type), ['geaccepteerd', 'ter_plaatse', 'afgerond']);
 });
 
@@ -55,14 +55,14 @@ test('applying is pure, and an action already in the state adds no second log li
 test('closing and taking a break; a fixed unit can stay where it was', () => {
   const fixed = state({ incidents: [incident({ status: 'ter_plaatse', dispatches: [{ unitId: 1, at: AT, reason: 'alle', distanceKm: 1, declinedAt: null, acceptedAt: AT }] })] });
   const after = applyAction(fixed, { id: 'x', at: AT, action: { type: 'close', incidentId: 7, body: { outcome: 'loos', persons: null, note: null, stayHere: true, pause: true } } }, { ...context, me: { name: 'Eva', phone: '0600000005' } });
-  assert.deepEqual([after.units[0]?.availability, after.units[0]?.stayPostId], ['pauze', 20]);
+  assert.deepEqual([after.units[0]?.availability, after.units[0]?.stayPostId], ['unavailable', 20]);
 });
 
 test('a fixed unit and its post go together; a phone with no state yet still shows its own change', () => {
-  assert.equal(apply(state(), { type: 'availability', unitId: 1, availability: 'vrij' }).posts[0]?.isOpen, true);
-  const closedPost = apply(state({ units: [{ id: 1, availability: 'vrij', incidentId: null, stayPostId: null, position: null, closesAt: null }] }), { type: 'postOpen', postId: 10, open: false });
-  assert.equal(closedPost.units[0]?.availability, 'uit_dienst');
-  assert.equal(apply(state({ units: [] }), { type: 'availability', unitId: 2, availability: 'pauze' }).units[0]?.availability, 'pauze');
+  assert.equal(apply(state(), { type: 'availability', unitId: 1, availability: 'available' }).posts[0]?.isOpen, true);
+  const closedPost = apply(state({ units: [{ id: 1, availability: 'available', incidentId: null, stayPostId: null, position: null, closesAt: null }] }), { type: 'postOpen', postId: 10, open: false });
+  assert.equal(closedPost.units[0]?.availability, 'off_duty');
+  assert.equal(apply(state({ units: [] }), { type: 'availability', unitId: 2, availability: 'unavailable' }).units[0]?.availability, 'unavailable');
 });
 
 test('a request made without signal is there at once, and follows its steps', () => {
@@ -100,7 +100,7 @@ test('the server carries out a queued change once, with the time it happened', a
   const send = (who: string, method: 'POST' | 'PUT', url: string, payload?: object, headers: Record<string, string> = {}) => app.inject({ method, url, payload, headers: { cookie: who, ...headers } });
 
   await send(lead, 'PUT', `/api/posts/${post}/open`, { open: true });
-  await send(ehbo, 'PUT', `/api/units/${unit}/availability`, { availability: 'vrij' });
+  await send(ehbo, 'PUT', `/api/units/${unit}/availability`, { availability: 'available' });
   const report: NewIncident = { postId: post, clientId: 'queue-test-1', what: 'onwel', persons: '1', responsive: null, note: null };
   const created = (await send(lead, 'POST', '/api/incidents', report)).json<LiveIncident>();
   await send(ehbo, 'POST', `/api/incidents/${created.id}/accept`, { unitId: unit });

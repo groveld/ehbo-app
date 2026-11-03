@@ -81,10 +81,10 @@ test('the first one to log in finds the post closed; a second device changes not
 
 test('an EHBO team goes off duty with its post when its last member logs out', async () => {
   const eva = await login(DEMO.ehbo);
-  set("UPDATE ehbo_units SET availability = 'vrij' WHERE name = 'Team 1'");
+  set("UPDATE ehbo_units SET availability = 'available' WHERE name = 'Team 1'");
   set('UPDATE posts SET is_open = 1 WHERE name = ?', EHBO_POST);
   await logout(eva);
-  assert.equal(availability('Team 1'), 'uit_dienst');
+  assert.equal(availability('Team 1'), 'off_duty');
   assert.equal(isOpen(EHBO_POST), false);
 });
 

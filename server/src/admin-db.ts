@@ -207,7 +207,7 @@ export function adminDb(events: EventDb) {
   function saveUnit(id: number | null, u: UnitData): number | null {
     if (id !== null && !exists('ehbo_units', id)) return null;
     return events.transaction(() => {
-      const values = [u.name.trim(), u.kind, u.kind === 'mobiel' ? (u.mobility ?? 'anders') : null, u.postId, u.hasAed ? 1 : 0, u.timeFrom ?? null, u.timeTo ?? null] as const;
+      const values = [u.name.trim(), u.kind, u.kind === 'mobile' ? (u.mobility ?? 'other') : null, u.postId, u.hasAed ? 1 : 0, u.timeFrom ?? null, u.timeTo ?? null] as const;
       let unitId = id;
       if (unitId === null) {
         const sort = (db.prepare('SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM ehbo_units').get() as { n: number }).n;

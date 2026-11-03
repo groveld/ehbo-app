@@ -83,20 +83,20 @@ test('a team that becomes available gets a waiting call at once, unless another 
   assert.equal(waiting.dispatches.length, 0, 'nobody on duty');
   pushes.length = 0;
 
-  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'vrij' });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'available' });
   assert.deepEqual((await incident(waiting.id)).dispatches.map((d) => d.unitId), [TEAM2()]);
   assert.ok(pushesTo(DEMO.mobileEhbo).some((p) => p.payload.urgent), 'with the alarm, straight away');
 
   // Team 2 has it and can still react: Team 1 waits for the round to all teams.
   pushes.length = 0;
-  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'vrij' });
+  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'available' });
   assert.deepEqual((await incident(waiting.id)).dispatches.map((d) => d.unitId), [TEAM2()]);
   assert.equal(pushesTo(DEMO.ehbo).length, 0);
 });
 
 test('a team that finishes a call gets the one that was waiting, and a team that said no gets asked again', async () => {
   await onDuty();
-  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'pauze' });
+  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'unavailable' });
   const first = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
   await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${first.id}/accept`, { unitId: TEAM2() });
   const second = await ok<LiveIncident>(DEMO.postLead, 'POST', '/api/incidents', request());
@@ -106,16 +106,16 @@ test('a team that finishes a call gets the one that was waiting, and a team that
   assert.deepEqual((await incident(second.id)).dispatches.map((d) => d.unitId), [TEAM2()]);
 
   await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${second.id}/decline`, { unitId: TEAM2() });
-  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'pauze' });
-  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'vrij' });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'unavailable' });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'available' });
   assert.equal((await incident(second.id)).dispatches.find((d) => d.unitId === TEAM2())?.declinedAt, null);
 });
 
 /** Waterpost open, beide eenheden in dienst. */
 async function onDuty() {
   await ok(DEMO.postLead, 'PUT', `/api/posts/${WATER()}/open`, { open: true });
-  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'vrij' });
-  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'vrij' });
+  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'available' });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'available' });
   pushes.length = 0;
 }
 
@@ -148,11 +148,11 @@ test('post open en dicht: alleen de locatieverantwoordelijke; een dichte post ka
 
 test('vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde', async () => {
   const ehboPost = idOf('posts', 'EHBO-post 1 · start');
-  let state = await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'vrij' });
+  let state = await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'available' });
   assert.equal(state.posts.find((p) => p.id === ehboPost)?.isOpen, true);
   state = await ok(DEMO.ehbo, 'PUT', `/api/posts/${ehboPost}/open`, { open: false });
-  assert.equal(state.units.find((u) => u.id === TEAM1())?.availability, 'uit_dienst');
-  assert.equal((await call(DEMO.ehbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'vrij' })).statusCode, 403, 'niet je eigen eenheid');
+  assert.equal(state.units.find((u) => u.id === TEAM1())?.availability, 'off_duty');
+  assert.equal((await call(DEMO.ehbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'available' })).statusCode, 403, 'niet je eigen eenheid');
 });
 
 test('oproep naar de dichtstbijzijnde beschikbare eenheid, kopie naar de coördinator, accepteren', async () => {
@@ -275,7 +275,7 @@ test('ter plaatse en afronden; een vaste eenheid die blijft, telt vanaf die post
   assert.equal(state.incidents[0]?.status, 'afgerond');
   assert.equal(state.incidents[0]?.outcome, 'geholpen');
   const team1 = state.units.find((u) => u.id === TEAM1())!;
-  assert.deepEqual([team1.incidentId, team1.stayPostId, team1.availability], [null, WATER(), 'vrij'], 'weer vrij, bij de waterpost');
+  assert.deepEqual([team1.incidentId, team1.stayPostId, team1.availability], [null, WATER(), 'available'], 'weer vrij, bij de waterpost');
 
   // Een GPS-positie ouder dan 3 minuten telt niet meer: Team 2 staat weer bij zijn standplaats.
   clock = new Date(clock.getTime() + 4 * 60_000);
@@ -316,7 +316,7 @@ test('geen beschikbare eenheid: meteen alle eenheden, de coördinator krijgt een
   assert.match(alarm.body, /Geen beschikbare EHBO-eenheid/);
 
   // Team 2 komt in dienst en krijgt bij de herhaling alsnog de oproep.
-  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'vrij' });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'available' });
   runNextTimer();
   const current = await incident(inc.id);
   assert.deepEqual(current.dispatches.map((d) => d.unitId), [TEAM2()]);
@@ -444,7 +444,7 @@ test('a position is shared by a person, and only on a mobile team on duty', asyn
   assert.equal((await call(DEMO.mobileEhbo, 'PUT', '/api/position', { lat: 53.15, lng: 5.83 })).statusCode, 204);
   const team = async () => (await ok(DEMO.coordinator, 'GET', '/api/live/state')).units.find((u) => u.id === TEAM2())!;
   assert.equal((await team()).position?.lat, 53.15);
-  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'uit_dienst' });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${TEAM2()}/availability`, { availability: 'off_duty' });
   assert.equal((await team()).position, null, 'off duty: the position is gone');
 });
 
@@ -488,12 +488,12 @@ test('a location with EHBO and water: the water lead opening it does not make th
   const EHBO_POST = () => idOf('posts', 'EHBO-post 1 · start');
   const water = (db.raw.prepare("SELECT id FROM post_types WHERE key = 'water'").get() as { id: number }).id;
   db.raw.prepare('INSERT INTO post_functions (post_id, type_id, sort) VALUES (?, ?, 1)').run(EHBO_POST(), water);
-  db.raw.prepare("INSERT INTO post_contacts (post_id, phone, role) VALUES (?, ?, 'verantwoordelijke')").run(EHBO_POST(), DEMO.postLead);
+  db.raw.prepare("INSERT INTO post_contacts (post_id, phone, role) VALUES (?, ?, 'lead')").run(EHBO_POST(), DEMO.postLead);
   const team1 = async () => (await ok(DEMO.coordinator, 'GET', '/api/live/state')).units.find((u) => u.id === TEAM1())!.availability;
 
   await ok(DEMO.postLead, 'PUT', `/api/posts/${EHBO_POST()}/open`, { open: true });
-  assert.equal(await team1(), 'uit_dienst', 'the team says itself when it is there');
-  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'vrij' });
+  assert.equal(await team1(), 'off_duty', 'the team says itself when it is there');
+  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'available' });
   await ok(DEMO.postLead, 'PUT', `/api/posts/${EHBO_POST()}/open`, { open: false });
-  assert.equal(await team1(), 'vrij', 'and closing the water post does not take it off duty');
+  assert.equal(await team1(), 'available', 'and closing the water post does not take it off duty');
 });

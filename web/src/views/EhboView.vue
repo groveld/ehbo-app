@@ -20,24 +20,24 @@ const { busy, error, run } = useSave();
 const unitId = computed(() => live.myUnitIds[0] ?? null);
 const unit = computed(() => unitOf(store.pkg, unitId.value));
 const state = computed(() => (unitId.value !== null ? live.unitState(unitId.value) : null));
-const availability = computed<UnitAvailability>(() => state.value?.availability ?? 'uit_dienst');
+const availability = computed<UnitAvailability>(() => state.value?.availability ?? 'off_duty');
 const active = computed(() => (state.value?.incidentId ? live.incidentById(state.value.incidentId) : null));
 
 const label = computed(() => {
   const u = unit.value;
   if (!u) return '';
   const base = u.postId !== null ? store.postById.get(u.postId)?.name : null;
-  return [`EHBO ${u.name}`, u.kind === 'vast' ? 'vast' : mobilityLabel(u.mobility), u.kind === 'vast' ? base : null].filter(Boolean).join(' · ');
+  return [`EHBO ${u.name}`, u.kind === 'fixed' ? 'fixed' : mobilityLabel(u.mobility), u.kind === 'fixed' ? base : null].filter(Boolean).join(' · ');
 });
 
 const block = computed(() => {
   if (active.value) return { tone: 'red' as const, title: 'Bezig met een oproep' };
-  if (availability.value === 'vrij') return { tone: 'green' as const, title: 'Beschikbaar' };
-  if (availability.value === 'pauze') return { tone: 'red' as const, title: 'Niet beschikbaar' };
+  if (availability.value === 'available') return { tone: 'green' as const, title: 'Beschikbaar' };
+  if (availability.value === 'unavailable') return { tone: 'red' as const, title: 'Niet beschikbaar' };
   return { tone: 'dark' as const, title: 'Uit dienst' };
 });
 /** During a call you're there but not available, so the buttons say the same as the header. */
-const shown = computed<UnitAvailability>(() => (active.value ? 'pauze' : availability.value));
+const shown = computed<UnitAvailability>(() => (active.value ? 'unavailable' : availability.value));
 
 /** Waar de eenheid voor "dichtstbij" telt. */
 const position = computed(() => {
@@ -46,16 +46,16 @@ const position = computed(() => {
   const stay = state.value?.stayPostId != null ? store.postById.get(state.value.stayPostId) : null;
   if (stay) return `${stay.name} (gebleven)`;
   const base = u.postId !== null ? store.postById.get(u.postId) : null;
-  if (u.kind === 'mobiel') return availability.value === 'uit_dienst' ? (base ? `Standplaats ${base.name}` : '–') : `GPS${base ? `, anders ${base.name}` : ''}`;
+  if (u.kind === 'mobile') return availability.value === 'off_duty' ? (base ? `Standplaats ${base.name}` : '–') : `GPS${base ? `, anders ${base.name}` : ''}`;
   return base ? [base.name, kmLabel(base)].filter(Boolean).join(' · ') : '–';
 });
 const shift = computed(() => shiftText(unit.value));
 /** Someone comes to you: possible while you're there and not busy. */
-const canStart = computed(() => availability.value !== 'uit_dienst' && !active.value);
+const canStart = computed(() => availability.value !== 'off_duty' && !active.value);
 const teammates = computed(() => unit.value?.members.filter((m) => m.phone !== session.me?.phone) ?? []);
 const othersFree = computed(() => {
   const others = (live.state?.units ?? []).filter((u) => u.id !== unitId.value);
-  return { free: others.filter((u) => u.availability === 'vrij' && u.incidentId === null).length, total: others.length };
+  return { free: others.filter((u) => u.availability === 'available' && u.incidentId === null).length, total: others.length };
 });
 const today = computed(() => (unitId.value !== null ? myDeployments(live.incidents, unitId.value) : []));
 const ehboCoordinator = computed(() => coreTeamMember(store.pkg, 'EHBO-coördinator'));
@@ -69,7 +69,7 @@ const callNext = computed(() => {
 });
 
 /** The buttons: "Bezet" is shorter to tap than the status it sets, which still reads Niet beschikbaar everywhere. */
-const BUTTONS: Record<UnitAvailability, string> = { ...UNIT_AVAILABILITY, pauze: 'Bezet' };
+const BUTTONS: Record<UnitAvailability, string> = { ...UNIT_AVAILABILITY, unavailable: 'Bezet' };
 const setAvailability = (value: UnitAvailability) => unitId.value !== null && run(() => live.setAvailability(unitId.value!, value));
 </script>
 
@@ -130,9 +130,9 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
 .option[aria-pressed="true"] { font-weight: 700; }
 /* Green is here and available, red is here but not available, dark is not here. Fixed colors, not the event's. */
 .option[aria-pressed="true"] { color: #FFFFFF; }
-.option.vrij[aria-pressed="true"] { border-color: var(--ok); background: var(--ok); }
-.option.pauze[aria-pressed="true"] { border-color: var(--danger); background: var(--danger); }
-.option.uit_dienst[aria-pressed="true"] { border-color: var(--off); background: var(--off); }
+.option.available[aria-pressed="true"] { border-color: var(--ok); background: var(--ok); }
+.option.unavailable[aria-pressed="true"] { border-color: var(--danger); background: var(--danger); }
+.option.off_duty[aria-pressed="true"] { border-color: var(--off); background: var(--off); }
 .facts-list { margin-top: 14px; }
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
 /* De onderrand van het scherm telt al; anders staan de knoppen dubbel zo ver van de tabbalk. */

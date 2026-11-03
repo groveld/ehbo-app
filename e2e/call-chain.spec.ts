@@ -392,7 +392,7 @@ test('a new post in admin: open phones get it by themselves, and a call works be
   const created = await admin.request.post('/api/admin/posts', {
     data: {
       functionIds: [postTypes.find((t) => t.key === 'water')!.id], runId: null, name: NEW_POST, lat: 53.16, lng: 5.84, accuracyM: null, address: null, accessRoute: null,
-      timeFrom: null, timeTo: null, contacts: [{ name: 'Nieuwe Leider', phone: '0600000011', role: 'verantwoordelijke', timeFrom: null, timeTo: null }],
+      timeFrom: null, timeTo: null, contacts: [{ name: 'Nieuwe Leider', phone: '0600000011', role: 'lead', timeFrom: null, timeTo: null }],
     },
   });
   expect(created.ok()).toBe(true);
@@ -714,4 +714,21 @@ test('import and export: the export comes back unchanged, and a CSV adds what is
 
   // Clean up: back to the numbers from before.
   await admin.request.put('/api/admin/emergency-numbers', { data: emergencyNumbers.filter((n) => n.label !== 'Tandarts') });
+});
+
+test('updating the app: a change still waiting in the old words is converted and sent', async ({ browser }) => {
+  const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
+  const { units } = await (await ehbo.request.get('/api/package')).json() as { units: { id: number; name: string }[] };
+  const team2 = units.find((u) => u.name === 'Team 2')!.id;
+  // As an older version of the app left it: Dutch values, and no storage version yet.
+  await ehbo.evaluate((unitId) => {
+    localStorage.setItem('ehbo.queue', JSON.stringify([{ id: crypto.randomUUID(), at: new Date().toISOString(), action: { type: 'availability', unitId, availability: 'pauze' } }]));
+    localStorage.removeItem('ehbo.storage');
+  }, team2);
+  await ehbo.reload();
+  await expect.poll(async () => {
+    const state = await (await ehbo.request.get('/api/live/state')).json() as { units: { id: number; availability: string }[] };
+    return state.units.find((u) => u.id === team2)!.availability;
+  }, { timeout: 15_000 }).toBe('unavailable');
+  expect((await ehbo.request.put(`/api/units/${team2}/availability`, { data: { availability: 'off_duty' } })).ok()).toBe(true);
 });

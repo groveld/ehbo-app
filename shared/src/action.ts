@@ -37,7 +37,7 @@ export const ACTION_MAX_AGE_MS = 12 * 3600_000;
 /** What applying an action needs to know from the fixed data. */
 export interface ActionContext {
   me: { name: string; phone: string } | null;
-  units: { id: number; name: string; kind: 'vast' | 'mobiel'; postId: number | null; members?: { phone: string }[] }[];
+  units: { id: number; name: string; kind: 'fixed' | 'mobile'; postId: number | null; members?: { phone: string }[] }[];
 }
 
 const OPEN_REQUEST = ['aangevraagd', 'opgepakt'];
@@ -48,7 +48,7 @@ const changeIncident = (state: LiveState, id: number, change: (incident: LiveInc
 /** A unit or post the state doesn't list yet (a phone that never had a connection) is added. */
 function changeUnit(state: LiveState, id: number, change: (unit: LiveUnit) => LiveUnit): LiveState {
   if (state.units.some((u) => u.id === id)) return { ...state, units: state.units.map((u) => (u.id === id ? change(u) : u)) };
-  return { ...state, units: [...state.units, change({ id, availability: 'uit_dienst', incidentId: null, stayPostId: null, position: null, closesAt: null })] };
+  return { ...state, units: [...state.units, change({ id, availability: 'off_duty', incidentId: null, stayPostId: null, position: null, closesAt: null })] };
 }
 
 function setPostOpen(state: LiveState, id: number, isOpen: boolean): LiveState {
@@ -81,7 +81,7 @@ function take(state: LiveState, at: string, incidentId: number, unitId: number, 
       : {};
     return logged({ ...i, dispatches, ...first }, at, manual ? 'toegewezen' : 'geaccepteerd', manual ? `Toegewezen aan ${name}` : `Geaccepteerd door ${name} (${context.me?.name})`, unitId);
   });
-  return changeUnit(accepted, unitId, (u) => ({ ...u, availability: 'vrij', stayPostId: null, incidentId }));
+  return changeUnit(accepted, unitId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId }));
 }
 
 /** The state as this phone should show it after the action, the same way the server will do it. An unknown incident or request changes nothing. */
@@ -97,7 +97,7 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
         dispatches: [{ unitId: body.unitId, at, reason: 'handmatig', distanceKm: 0, declinedAt: null, acceptedAt: at }],
         events: [{ at, type: 'gemeld', unitId: body.unitId, text: `Zelf gestart door ${name} · ${post.name}` }],
       };
-      return changeUnit({ ...state, incidents: [incident, ...state.incidents] }, body.unitId, (u) => ({ ...u, availability: 'vrij', stayPostId: null, incidentId: tempId }));
+      return changeUnit({ ...state, incidents: [incident, ...state.incidents] }, body.unitId, (u) => ({ ...u, availability: 'available', stayPostId: null, incidentId: tempId }));
     }
     case 'accept': return take(state, at, action.incidentId, action.unitId, false, context);
     case 'assign': return take(state, at, action.incidentId, action.unitId, true, context);
@@ -124,8 +124,8 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
         `Afgerond door ${unit?.name ?? 'Eenheid'}${pause ? ', daarna pauze' : ''}`, unit?.id ?? null,
       ));
       if (!unit) return closed;
-      const stay = stayHere && unit.kind === 'vast' && incident.postId !== unit.postId ? incident.postId : null;
-      return changeUnit(closed, unit.id, (u) => ({ ...u, incidentId: null, stayPostId: stay, availability: pause ? 'pauze' : u.availability }));
+      const stay = stayHere && unit.kind === 'fixed' && incident.postId !== unit.postId ? incident.postId : null;
+      return changeUnit(closed, unit.id, (u) => ({ ...u, incidentId: null, stayPostId: stay, availability: pause ? 'unavailable' : u.availability }));
     }
     case 'withdraw': {
       const withdrawn = changeIncident(state, action.incidentId, (i) => logged(
@@ -136,22 +136,22 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
     case 'update': return changeIncident(state, action.incidentId, (i) => ({ ...i, ...action.details, aed: i.aed || action.details.responsive === 'nee' }));
     case 'availability': {
       const { availability, unitId } = action;
-      const changed = changeUnit(state, unitId, (u) => (availability === 'uit_dienst' ? { ...u, availability, stayPostId: null, position: null, closesAt: null } : { ...u, availability }));
+      const changed = changeUnit(state, unitId, (u) => (availability === 'off_duty' ? { ...u, availability, stayPostId: null, position: null, closesAt: null } : { ...u, availability }));
       const unit = context.units.find((u) => u.id === unitId);
-      if (unit?.kind !== 'vast' || unit.postId === null || availability === 'pauze') return changed;
+      if (unit?.kind !== 'fixed' || unit.postId === null || availability === 'unavailable') return changed;
       // A fixed unit on duty and its own EHBO post open are the same thing, as long as no other shift is still there.
-      const othersOnDuty = context.units.some((u) => u.id !== unitId && u.kind === 'vast' && u.postId === unit.postId
-        && (changed.units.find((l) => l.id === u.id)?.availability ?? 'uit_dienst') !== 'uit_dienst');
-      return availability === 'vrij' || !othersOnDuty ? setPostOpen(changed, unit.postId, availability === 'vrij') : changed;
+      const othersOnDuty = context.units.some((u) => u.id !== unitId && u.kind === 'fixed' && u.postId === unit.postId
+        && (changed.units.find((l) => l.id === u.id)?.availability ?? 'off_duty') !== 'off_duty');
+      return availability === 'available' || !othersOnDuty ? setPostOpen(changed, unit.postId, availability === 'available') : changed;
     }
     case 'keepPost': return { ...state, posts: state.posts.map((p) => (p.id === action.postId ? { ...p, isOpen: true, closesAt: null, autoClosedAt: null } : p)) };
     case 'keepUnit': return changeUnit(state, action.unitId, (u) => ({ ...u, closesAt: null }));
     case 'postOpen': {
-      const fixed = context.units.filter((u) => u.kind === 'vast' && u.postId === action.postId);
+      const fixed = context.units.filter((u) => u.kind === 'fixed' && u.postId === action.postId);
       // Opening: your own team, when you're on one; the other shift stays as it is.
       const mine = fixed.filter((u) => u.members?.some((m) => m.phone === context.me?.phone));
       return (action.open && mine.length ? mine : fixed).reduce(
-        (s, u) => (s.units.find((l) => l.id === u.id)?.availability === 'pauze' ? s : changeUnit(s, u.id, (l) => ({ ...l, availability: action.open ? 'vrij' : 'uit_dienst' }))),
+        (s, u) => (s.units.find((l) => l.id === u.id)?.availability === 'unavailable' ? s : changeUnit(s, u.id, (l) => ({ ...l, availability: action.open ? 'available' : 'off_duty' }))),
         setPostOpen(state, action.postId, action.open),
       );
     }

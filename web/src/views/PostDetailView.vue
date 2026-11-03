@@ -10,7 +10,7 @@ import PostBadge from '../components/PostBadge.vue';
 import { navigationUrl } from '../navigate.ts';
 import { confirmClosePost } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
-import { kmLabel, manned, mobileUnits, nearestUnit, primaryContact, unitsAt } from '../posts.ts';
+import { ROLE_TEXT, kmLabel, manned, mobileUnits, nearestUnit, primaryContact, unitsAt } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -44,7 +44,7 @@ const mobile = computed(() => mobileUnits(store.pkg, live.state?.units ?? [], li
 const alertIds = computed(() => [...new Set(live.openIncidents.map((i) => i.postId))]);
 /** Zoals de server: de locatieverantwoordelijke van deze post, of een beheerder. */
 const canToggle = computed(() => session.me?.isAdmin
-  || session.me?.assignments.some((a) => a.kind === 'post' && a.postId === post.value?.id && a.role === 'verantwoordelijke'));
+  || session.me?.assignments.some((a) => a.kind === 'post' && a.postId === post.value?.id && a.role === 'lead'));
 
 const subtitle = computed(() => {
   const p = post.value;
@@ -64,7 +64,7 @@ const location = computed(() => {
 });
 
 /** Welke EHBO-eenheid hier hoort: een vaste eenheid op haar eigen EHBO-post, of een mobiele eenheid met hier haar standplaats. */
-const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EHBO ${u.name} staat op deze locatie` : `Standplaats van EHBO ${u.name} (mobiel)`);
+const hereText = (u: { name: string; kind: string }) => (u.kind === 'fixed' ? `EHBO ${u.name} staat op deze locatie` : `Standplaats van EHBO ${u.name} (mobiel)`);
 </script>
 
 <template>
@@ -121,7 +121,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <div v-if="post.contacts?.length" class="list">
         <div v-for="c in post.contacts" :key="c.phone" class="list-row">
           <span class="main">
-            <span class="title-line">{{ c.name || 'Naam onbekend' }} · <span class="role">{{ c.role }}</span></span>
+            <span class="title-line">{{ c.name || 'Naam onbekend' }} · <span class="role">{{ ROLE_TEXT[c.role] }}</span></span>
             <span class="sub mono">{{ formatPhone(c.phone) }}</span>
           </span>
           <a :href="telHref(c.phone)" class="round" :aria-label="`Bel ${c.name || 'contactpersoon'}`"><Icon name="phone" :size="20" /></a>

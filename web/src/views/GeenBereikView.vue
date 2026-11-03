@@ -22,7 +22,7 @@ const from = computed(() => post.value ?? (item.value?.lat != null ? { lat: item
 const coordinator = computed(() => coordinatorOf(store.pkg));
 /** Op afstand; wie volgens de laatst bekende stand uit dienst is, laten we weg. */
 const units = computed(() => (store.pkg && from.value
-  ? unitsByDistance(store.pkg, from.value, (id) => live.unitState(id)?.availability === 'uit_dienst').filter((u) => u.unit.members.length)
+  ? unitsByDistance(store.pkg, from.value, (id) => live.unitState(id)?.availability === 'off_duty').filter((u) => u.unit.members.length)
   : []));
 const first = computed(() => units.value[0]);
 const rest = computed(() => units.value.slice(1, 3));

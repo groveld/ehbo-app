@@ -17,7 +17,7 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
     assignments.push({ kind: 'kernteam', title: r.function, letter: r.function.charAt(0).toUpperCase(), color: INK });
   }
   for (const r of db.unitAssignments(phone)) {
-    const detail = r.kind === 'vast'
+    const detail = r.kind === 'fixed'
       ? (r.post_name ?? 'Vaste EHBO-post')
       : `${mobilityLabel(r.mobility).replace('m', 'M')}${r.post_name ? ` · Standplaats ${r.post_name}` : ''}`;
     assignments.push({ kind: 'ehbo', title: `EHBO ${r.unit_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, unitId: r.unit_id });
@@ -25,7 +25,7 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
   for (const r of db.postAssignments(phone)) {
     assignments.push({
       kind: 'post',
-      title: r.role === 'verantwoordelijke' ? POST_CONTACT_ROLE_LABEL.verantwoordelijke : (r.person_label ?? POST_CONTACT_ROLE_LABEL[r.role]),
+      title: r.role === 'lead' ? POST_CONTACT_ROLE_LABEL.lead : (r.person_label ?? POST_CONTACT_ROLE_LABEL[r.role]),
       detail: `${r.post_name}${km(r.km)}`,
       times: times(r.time_from, r.time_to),
       letter: r.type_letter,

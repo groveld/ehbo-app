@@ -17,11 +17,11 @@ export const clock = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }) : '–';
 
 /** Gemiddelde snelheid in km/u voor een ruwe reistijd; hemelsbreed, dus het blijft een schatting. Een vaste eenheid telt als "anders". */
-const SPEED: Record<UnitMobility, number> = { te_voet: 5, fiets: 15, auto: 30, anders: 15 };
+const SPEED: Record<UnitMobility, number> = { on_foot: 5, bike: 15, car: 30, other: 15 };
 
 export function travelMinutes(km: number | null, unit: PackageUnit | undefined) {
   if (km === null) return null;
-  return Math.max(1, Math.round((km / SPEED[unit?.mobility ?? 'anders']) * 60));
+  return Math.max(1, Math.round((km / SPEED[unit?.mobility ?? 'other']) * 60));
 }
 
 /** The post of an incident; until the new event package has arrived, what the incident itself says about it. */

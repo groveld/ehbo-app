@@ -33,8 +33,8 @@ export const OUTCOMES = {
 export type Outcome = keyof typeof OUTCOMES;
 
 /** Wat de eenheid zelf instelt. "Bezet" volgt uit een lopende oproep. */
-export type UnitAvailability = 'vrij' | 'pauze' | 'uit_dienst';
-export const UNIT_AVAILABILITY = { vrij: 'Beschikbaar', pauze: 'Niet beschikbaar', uit_dienst: 'Uit dienst' } as const;
+export type UnitAvailability = 'available' | 'unavailable' | 'off_duty';
+export const UNIT_AVAILABILITY = { available: 'Beschikbaar', unavailable: 'Niet beschikbaar', off_duty: 'Uit dienst' } as const;
 
 export const NOTE_MAX = 500;
 
@@ -210,7 +210,7 @@ export const DEFAULT_AT_POST_M = 30;
  * Zonder recente positie telt ze als thuis. Een vaste eenheid is altijd op haar post.
  */
 export function isAway(unit: { kind: UnitKind }, live: LiveUnit | undefined, base: { lat: number | null; lng: number | null } | undefined, now: number, atPostM: number) {
-  if (unit.kind !== 'mobiel' || !live?.position || live.availability === 'uit_dienst') return false;
+  if (unit.kind !== 'mobile' || !live?.position || live.availability === 'off_duty') return false;
   if (now - new Date(live.position.at).getTime() > POSITION_MAX_AGE_MS) return false;
   return !(base?.lat != null && base.lng != null && distanceKm([live.position.lng, live.position.lat], [base.lng, base.lat]) * 1000 <= atPostM);
 }
@@ -291,6 +291,6 @@ export function isDueOpen(post: { timeFrom: string | null; timeTo: string | null
 
 /** A mobile team on duty that hasn't shared a position lately, so nobody knows where it is. */
 export function lacksPosition(unit: { kind: UnitKind }, live: LiveUnit | undefined | null, now: number) {
-  if (unit.kind !== 'mobiel' || !live || live.availability === 'uit_dienst') return false;
+  if (unit.kind !== 'mobile' || !live || live.availability === 'off_duty') return false;
   return !live.position || now - new Date(live.position.at).getTime() > POSITION_MAX_AGE_MS;
 }
