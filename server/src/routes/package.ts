@@ -8,7 +8,7 @@ import { cleanGpx, type GpxWaypoint } from '../gpx.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
-const PACKAGE_FORMAT = 9;
+const PACKAGE_FORMAT = 10;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
@@ -36,7 +36,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
     })),
     runs: state.runs.map((r) => ({ id: r.id, name: r.name, distanceKm: r.distanceKm, discipline: r.discipline, date: r.date, startTime: r.startTime, line: lines.get(r.id) ?? null })),
     // Deelnemers zien waar EHBO staat (het kruisje op de kaart), maar niet wie.
-    units: state.units.map(({ availability: _, ...u }) => (staff ? u : { ...u, name: '', mobility: null, hasAed: false, timeFrom: null, timeTo: null, members: [] })),
+    teams: state.teams.map(({ availability: _, ...u }) => (staff ? u : { ...u, name: '', mobility: null, hasAed: false, timeFrom: null, timeTo: null, members: [] })),
     coreTeam: staff ? state.coreTeam.filter((c) => c.phone).map((c) => ({ ...c, phone: c.phone! })) : [],
     emergencyNumbers: staff ? state.emergencyNumbers : [],
     ehboPhone: (state.coreTeam.find((c) => c.phone && sameFunction(c.function, 'EHBO-coördinator')) ?? state.coreTeam.find((c) => c.phone && c.isCoordinator))?.phone ?? null,

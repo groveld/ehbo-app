@@ -17,12 +17,12 @@ const { busy, error, run } = useSave();
 const counts = computed(() => {
   // Only locations with people open and close (#69).
   const posts = store.pkg?.posts.filter((p) => manned(store.pkg, p)) ?? [];
-  const units = store.pkg?.units ?? [];
+  const teams = store.pkg?.teams ?? [];
   return {
     posts: posts.length,
     openPosts: posts.filter((p) => live.postOpen(p.id, p.isOpen)).length,
-    units: units.length,
-    onDuty: units.filter((u) => (live.unitState(u.id)?.availability ?? 'off_duty') !== 'off_duty').length,
+    teams: teams.length,
+    onDuty: teams.filter((u) => (live.teamState(u.id)?.availability ?? 'off_duty') !== 'off_duty').length,
   };
 });
 
@@ -36,9 +36,9 @@ async function act(action: 'open-all' | 'close-all' | 'close-day') {
 }
 
 async function openAll() {
-  const { posts, openPosts, units, onDuty } = counts.value;
+  const { posts, openPosts, teams, onDuty } = counts.value;
   if (await confirmDialog({
-    title: `${posts - openPosts} locaties en ${units - onDuty} EHBO-eenheden openen?`,
+    title: `${posts - openPosts} locaties en ${teams - onDuty} EHBO-eenheden openen?`,
     text: 'Alleen waar iemand is aangemeld. Eenheden gaan op Beschikbaar, ook als de EHBO\'er er misschien nog niet is. Wie Niet beschikbaar staat, blijft zo staan. Iedereen krijgt een melding.',
     confirm: 'Alles openen',
   })) await act('open-all');
@@ -75,7 +75,7 @@ async function closeDay() {
 
     <div class="facts" style="--facts: 2">
       <div class="fact"><span class="value mono">{{ counts.openPosts }}/{{ counts.posts }}</span><span class="label">Locaties open</span></div>
-      <div class="fact"><span class="value mono">{{ counts.onDuty }}/{{ counts.units }}</span><span class="label">EHBO in dienst</span></div>
+      <div class="fact"><span class="value mono">{{ counts.onDuty }}/{{ counts.teams }}</span><span class="label">EHBO in dienst</span></div>
     </div>
 
     <p class="note top">Na de geplande eindtijd sluiten locaties en eenheden vanzelf, 10 minuten na een waarschuwing. Nooit tijdens een open melding. Meldt de laatste van een locatie of eenheid zich af, dan gaat die ook dicht.</p>

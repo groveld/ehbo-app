@@ -16,11 +16,11 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
   for (const r of db.coreTeamAssignments(phone)) {
     assignments.push({ kind: 'kernteam', title: r.function, letter: r.function.charAt(0).toUpperCase(), color: INK });
   }
-  for (const r of db.unitAssignments(phone)) {
+  for (const r of db.teamAssignments(phone)) {
     const detail = r.kind === 'fixed'
       ? (r.post_name ?? 'Vaste EHBO-post')
       : `${mobilityLabel(r.mobility).replace('m', 'M')}${r.post_name ? ` · Standplaats ${r.post_name}` : ''}`;
-    assignments.push({ kind: 'ehbo', title: `EHBO ${r.unit_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, unitId: r.unit_id });
+    assignments.push({ kind: 'ehbo', title: `EHBO ${r.team_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, teamId: r.team_id });
   }
   for (const r of db.postAssignments(phone)) {
     assignments.push({

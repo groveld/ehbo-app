@@ -8,7 +8,7 @@ import Icon from '../../components/Icon.vue';
 import PostRow from '../../components/PostRow.vue';
 import TeamRow from '../../components/TeamRow.vue';
 import { clock } from '../../incidents.ts';
-import { callLines, coordinatorOf, isOnRun, manned, mobileUnits, type Ambulance } from '../../posts.ts';
+import { callLines, coordinatorOf, isOnRun, manned, mobileTeams, type Ambulance } from '../../posts.ts';
 import { useLiveStore } from '../../stores/live.ts';
 import { usePackageStore } from '../../stores/package.ts';
 import { useSessionStore } from '../../stores/session.ts';
@@ -43,7 +43,7 @@ const alertIds = computed(() => [...new Set(live.openIncidents.filter((i) => !i.
 /** Posts with a request that's still open. */
 const taskIds = computed(() => [...new Set(live.requests.filter((r) => r.status === 'aangevraagd' || r.status === 'opgepakt').map((r) => r.postId))]);
 /** Mobiele EHBO onderweg als ambulance; haar standplaats dan grijs. */
-const mobile = computed(() => mobileUnits(store.pkg, live.units, live.serverNow));
+const mobile = computed(() => mobileTeams(store.pkg, live.teams, live.serverNow));
 /** Only locations with people can be open or closed (#69). */
 const mannedPosts = computed(() => store.pkg?.posts.filter((p) => manned(store.pkg, p)) ?? []);
 const closedIds = computed(() => mannedPosts.value.filter((p) => !live.postOpen(p.id, p.isOpen)).map((p) => p.id));
@@ -64,7 +64,7 @@ const latePosts = computed(() => {
   if (!pkg || !isLead.value) return [];
   return pkg.posts.filter((p) => closedIds.value.includes(p.id) && isDueOpen(p, pkg.event, live.serverNow)).map((p) => p.id);
 });
-const lostTeams = computed(() => (isLead.value ? store.pkg?.units.filter((u) => live.unitState(u.id)?.incidentId == null && lacksPosition(u, live.unitState(u.id), live.serverNow)).map((u) => u.id) ?? [] : []));
+const lostTeams = computed(() => (isLead.value ? store.pkg?.teams.filter((u) => live.teamState(u.id)?.incidentId == null && lacksPosition(u, live.teamState(u.id), live.serverNow)).map((u) => u.id) ?? [] : []));
 /** No contact for a while. Only a signal for the coordinator: a phone in a pocket has no connection either, so nothing closes by this. */
 const lastSeen = ref<LastSeen | null>(null);
 async function loadLastSeen() {
@@ -88,7 +88,7 @@ const quietMinutes = (at: string | null | undefined) => {
   return minutes >= QUIET_AFTER_MIN ? minutes : null;
 };
 const quietPost = (id: number) => (lastSeen.value && !closedIds.value.includes(id) ? quietMinutes(lastSeen.value.posts[id]) : null);
-const quietUnit = (id: number) => (lastSeen.value ? quietMinutes(lastSeen.value.units[id]) : null);
+const quietTeam = (id: number) => (lastSeen.value ? quietMinutes(lastSeen.value.teams[id]) : null);
 const posts = computed(() => {
   const pkg = store.pkg;
   const shown = filter.value === 'attention' ? mapPosts.value.filter((p) => alertIds.value.includes(p.id) || latePosts.value.includes(p.id) || quietPost(p.id)) : mapPosts.value;
@@ -97,22 +97,22 @@ const posts = computed(() => {
     .sort((a, b) => routeKm(a) - routeKm(b));
   return [...list].sort((a, b) => Number(alertIds.value.includes(b.id)) - Number(alertIds.value.includes(a.id)));
 });
-const teams = computed(() => {
+const teamList = computed(() => {
   const q = query.value.trim().toLowerCase();
   if (typeof filter.value === 'number') return [];
-  return store.pkg?.units.filter((u) => (!q || u.name.toLowerCase().includes(q)) && (filter.value !== 'attention' || lostTeams.value.includes(u.id) || quietUnit(u.id))) ?? [];
+  return store.pkg?.teams.filter((u) => (!q || u.name.toLowerCase().includes(q)) && (filter.value !== 'attention' || lostTeams.value.includes(u.id) || quietTeam(u.id))) ?? [];
 });
 /** How the event is doing, for the coordinator and admins. */
 const counters = computed(() => {
   const pkg = store.pkg;
   if (!pkg || !isLead.value) return null;
-  const free = pkg.units.filter((u) => {
-    const state = live.unitState(u.id);
+  const free = pkg.teams.filter((u) => {
+    const state = live.teamState(u.id);
     return state?.availability === 'available' && state.incidentId === null;
   });
   return [
     { label: 'Locaties', value: `${mannedPosts.value.length - closedIds.value.length}/${mannedPosts.value.length}`, full: 'Locaties open' },
-    { label: 'EHBO', value: `${free.length}/${pkg.units.length}`, full: 'EHBO beschikbaar' },
+    { label: 'EHBO', value: `${free.length}/${pkg.teams.length}`, full: 'EHBO beschikbaar' },
     { label: 'Oproepen', value: String(live.openIncidents.length), full: 'Open oproepen' },
     { label: 'Aanvragen', value: String(live.requests.filter((r) => r.status === 'aangevraagd').length), full: 'Aanvragen nog niet opgepakt' },
   ];
@@ -122,7 +122,7 @@ const mapView = shallowRef<{ pkg: EventPackage; posts: PackagePost[]; highlightR
 watchEffect(() => {
   if ((!props.active && mapView.value) || !store.pkg) return;
   mapView.value = {
-    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, taskPostIds: taskIds.value, lines: callLines(store.pkg, live.units, live.incidents, live.serverNow), ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
+    pkg: store.pkg, posts: mapPosts.value, highlightRunId: route.value, alertPostIds: alertIds.value, taskPostIds: taskIds.value, lines: callLines(store.pkg, live.teams, live.incidents, live.serverNow), ambulances: mobile.value.ambulances, awayPostIds: mobile.value.awayPostIds,
   };
 });
 const banner = computed(() => {
@@ -155,7 +155,7 @@ const banner = computed(() => {
         <select v-model="filter" class="input type" aria-label="Functie">
           <option :value="null">Alle</option>
           <option v-for="c in chips" :key="c.id" :value="c.id">{{ c.label }}</option>
-          <option v-if="store.pkg.units.length" value="teams">EHBO</option>
+          <option v-if="store.pkg.teams.length" value="teams">EHBO</option>
           <option v-if="isLead" value="attention">Vraagt aandacht</option>
         </select>
         <select v-if="routes.length" v-model="route" class="input route" :class="{ chosen: route !== null }" aria-label="Route">
@@ -166,9 +166,9 @@ const banner = computed(() => {
       </div>
 
       <div v-if="active" class="stack gap-14">
-        <section v-if="teams.length" class="stack gap-8">
+        <section v-if="teamList.length" class="stack gap-8">
           <h2 class="section-title">EHBO<template v-if="!live.connected && live.state"> · laatste stand {{ clock(live.state.serverTime) }}</template></h2>
-          <div class="list"><TeamRow v-for="u in teams" :key="u.id" :pkg="store.pkg" :unit="u" :attention="lostTeams.includes(u.id)" :quiet-minutes="quietUnit(u.id)" /></div>
+          <div class="list"><TeamRow v-for="u in teamList" :key="u.id" :pkg="store.pkg" :team="u" :attention="lostTeams.includes(u.id)" :quiet-minutes="quietTeam(u.id)" /></div>
         </section>
         <template v-if="filter !== 'teams'">
           <section v-if="posts.length" class="stack gap-8">
@@ -176,7 +176,7 @@ const banner = computed(() => {
             <div class="list"><PostRow v-for="p in posts" :key="p.id" :pkg="store.pkg" :post="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="latePosts.includes(p.id)" :quiet-minutes="quietPost(p.id)" /></div>
           </section>
           <p v-if="!store.pkg.posts.length" class="note">Er zijn nog geen locaties ingevoerd.</p>
-          <p v-else-if="!posts.length && !teams.length" class="note">{{ filter === 'attention' ? 'Niets vraagt nu aandacht.' : 'Geen locatie gevonden.' }}</p>
+          <p v-else-if="!posts.length && !teamList.length" class="note">{{ filter === 'attention' ? 'Niets vraagt nu aandacht.' : 'Geen locatie gevonden.' }}</p>
         </template>
       </div>
     </template>

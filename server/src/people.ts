@@ -31,9 +31,9 @@ export function peopleOverview(db: EventDb): PeopleOverview {
     entry.links.push({ kind: 'post', id: c.id as number, label });
     if (c.time_from && c.time_to) entry.slots.push({ label: c.name as string, from: c.time_from as string, to: c.time_to as string });
   }
-  for (const m of all(`SELECT m.phone, u.id, u.name, u.time_from, u.time_to FROM ehbo_unit_members m JOIN ehbo_units u ON u.id = m.unit_id ORDER BY u.sort, u.id`)) {
+  for (const m of all(`SELECT m.phone, u.id, u.name, u.time_from, u.time_to FROM team_members m JOIN teams u ON u.id = m.team_id ORDER BY u.sort, u.id`)) {
     const entry = person(m.phone as string, '');
-    entry.links.push({ kind: 'unit', id: m.id as number, label: `${m.name as string} (EHBO)` });
+    entry.links.push({ kind: 'team', id: m.id as number, label: `${m.name as string} (EHBO)` });
     if (m.time_from && m.time_to) entry.slots.push({ label: m.name as string, from: m.time_from as string, to: m.time_to as string });
   }
   for (const c of all('SELECT phone, function FROM core_team WHERE phone IS NOT NULL ORDER BY sort, id')) {
@@ -55,10 +55,10 @@ export function peopleOverview(db: EventDb): PeopleOverview {
   const gaps: PeopleOverview['gaps'] = [
     // An EHBO post with a fixed team is run by that team, so it needs no lead.
     ...all(`SELECT id, name FROM posts p WHERE NOT EXISTS (SELECT 1 FROM post_contacts c WHERE c.post_id = p.id AND c.role = 'lead')
-              AND NOT EXISTS (SELECT 1 FROM ehbo_units u WHERE u.post_id = p.id AND u.kind = 'fixed') ORDER BY sort, id`)
+              AND NOT EXISTS (SELECT 1 FROM teams u WHERE u.post_id = p.id AND u.kind = 'fixed') ORDER BY sort, id`)
       .map((p): PersonLink => ({ kind: 'post', id: p.id as number, label: `${p.name as string}: nog geen locatieverantwoordelijke` })),
-    ...all('SELECT id, name FROM ehbo_units u WHERE NOT EXISTS (SELECT 1 FROM ehbo_unit_members m WHERE m.unit_id = u.id) ORDER BY sort, id')
-      .map((u): PersonLink => ({ kind: 'unit', id: u.id as number, label: `${u.name as string}: nog geen leden` })),
+    ...all('SELECT id, name FROM teams u WHERE NOT EXISTS (SELECT 1 FROM team_members m WHERE m.team_id = u.id) ORDER BY sort, id')
+      .map((u): PersonLink => ({ kind: 'team', id: u.id as number, label: `${u.name as string}: nog geen leden` })),
     ...all('SELECT function FROM core_team WHERE phone IS NULL ORDER BY sort, id')
       .map((c): PersonLink => ({ kind: 'core', id: null, label: `Kernteam · ${c.function as string}: nog geen nummer` })),
   ];

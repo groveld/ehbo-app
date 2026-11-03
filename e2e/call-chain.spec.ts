@@ -718,17 +718,17 @@ test('import and export: the export comes back unchanged, and a CSV adds what is
 
 test('updating the app: a change still waiting in the old words is converted and sent', async ({ browser }) => {
   const ehbo = await staffPhone(browser, PHONE.mobileEhbo);
-  const { units } = await (await ehbo.request.get('/api/package')).json() as { units: { id: number; name: string }[] };
-  const team2 = units.find((u) => u.name === 'Team 2')!.id;
-  // As an older version of the app left it: Dutch values, and no storage version yet.
-  await ehbo.evaluate((unitId) => {
-    localStorage.setItem('ehbo.queue', JSON.stringify([{ id: crypto.randomUUID(), at: new Date().toISOString(), action: { type: 'availability', unitId, availability: 'pauze' } }]));
+  const { teams } = await (await ehbo.request.get('/api/package')).json() as { teams: { id: number; name: string }[] };
+  const secondTeamId = teams.find((u) => u.name === 'Team 2')!.id;
+  // As the oldest version of the app left it: Dutch values, a unit instead of a team, and no storage version yet.
+  await ehbo.evaluate((id) => {
+    localStorage.setItem('ehbo.queue', JSON.stringify([{ id: crypto.randomUUID(), at: new Date().toISOString(), action: { type: 'availability', unitId: id, availability: 'pauze' } }]));
     localStorage.removeItem('ehbo.storage');
-  }, team2);
+  }, secondTeamId);
   await ehbo.reload();
   await expect.poll(async () => {
-    const state = await (await ehbo.request.get('/api/live/state')).json() as { units: { id: number; availability: string }[] };
-    return state.units.find((u) => u.id === team2)!.availability;
+    const state = await (await ehbo.request.get('/api/live/state')).json() as { teams: { id: number; availability: string }[] };
+    return state.teams.find((u) => u.id === secondTeamId)!.availability;
   }, { timeout: 15_000 }).toBe('unavailable');
-  expect((await ehbo.request.put(`/api/units/${team2}/availability`, { data: { availability: 'off_duty' } })).ok()).toBe(true);
+  expect((await ehbo.request.put(`/api/teams/${secondTeamId}/availability`, { data: { availability: 'off_duty' } })).ok()).toBe(true);
 });

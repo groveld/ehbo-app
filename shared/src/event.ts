@@ -2,8 +2,8 @@
 import type { ApiError } from './index.ts';
 
 export type PostContactRole = 'lead' | 'member' | 'reserve';
-export type UnitKind = 'fixed' | 'mobile';
-export type UnitMobility = 'on_foot' | 'bike' | 'car' | 'other';
+export type TeamKind = 'fixed' | 'mobile';
+export type TeamMobility = 'on_foot' | 'bike' | 'car' | 'other';
 
 export const POST_CONTACT_ROLE_LABEL: Record<PostContactRole, string> = {
   lead: 'Locatieverantwoordelijke',
@@ -152,10 +152,10 @@ export interface PublicEvent {
 }
 
 /** Eén plek of functie waarop iemand is ingepland. */
-const MOBILITY_LABEL: Record<UnitMobility, string | null> = { on_foot: 'te voet', bike: 'fiets', car: 'auto', other: null };
+const MOBILITY_LABEL: Record<TeamMobility, string | null> = { on_foot: 'te voet', bike: 'fiets', car: 'auto', other: null };
 
 /** "mobiel (auto)", or just "mobiel" when it's nothing in particular. */
-export const mobilityLabel = (mobility: UnitMobility | null) => {
+export const mobilityLabel = (mobility: TeamMobility | null) => {
   const how = MOBILITY_LABEL[mobility ?? 'other'];
   return how ? `mobiel (${how})` : 'mobiel';
 };
@@ -171,7 +171,7 @@ export interface Assignment {
   letter: string;
   color: string;
   postId?: number;
-  unitId?: number;
+  teamId?: number;
   /** Alleen bij posten: de locatieverantwoordelijke zet de post open en dicht. */
   role?: PostContactRole;
 }

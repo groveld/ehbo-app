@@ -1,13 +1,13 @@
 <script setup lang="ts">
 // 1.4 · EHBO-eenheden: overzicht.
-import { mobilityLabel, type AdminUnit } from '@ehbo/shared';
+import { mobilityLabel, type AdminTeam } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 import { useAdminStore } from '../../stores/admin.ts';
 
 const admin = useAdminStore();
 
-function describe(u: AdminUnit) {
+function describe(u: AdminTeam) {
   const post = u.postId !== null ? admin.postById.get(u.postId) : undefined;
   const km = post?.km != null ? ` · km ${post.km.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}` : '';
   const members = u.members.length === 1 ? '1 lid' : `${u.members.length} leden`;
@@ -19,8 +19,8 @@ function describe(u: AdminUnit) {
 <template>
   <AdminPage title="EHBO-eenheden" eyebrow="Beheer" :back="{ name: 'beheer' }">
     <template #default="{ state }">
-      <div v-if="state.units.length" class="stack gap-8">
-        <RouterLink v-for="u in state.units" :key="u.id" :to="{ name: 'beheer-eenheid', params: { id: u.id } }" class="card unit">
+      <div v-if="state.teams.length" class="stack gap-8">
+        <RouterLink v-for="u in state.teams" :key="u.id" :to="{ name: 'beheer-eenheid', params: { id: u.id } }" class="card team">
           <span class="badge cross" :class="u.kind"><Icon name="ehbo" :size="22" /></span>
           <span class="main">
             <span class="title-line">
@@ -42,7 +42,7 @@ function describe(u: AdminUnit) {
 </template>
 
 <style scoped>
-.unit { display: flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; }
+.team { display: flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; }
 .cross { width: 40px; height: 40px; border-radius: 12px; background: var(--ok); color: #FFFFFF; }
 .cross.mobile { background: var(--ok-bg); color: var(--ok); }
 .main { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; }

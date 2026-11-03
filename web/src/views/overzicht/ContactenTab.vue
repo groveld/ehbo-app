@@ -40,10 +40,10 @@ const postsWithContacts = computed(() => store.pkg?.posts.filter((p) => p.contac
         </div>
       </section>
 
-      <section v-if="store.pkg.units.length" class="stack gap-8">
+      <section v-if="store.pkg.teams.length" class="stack gap-8">
         <h2 class="section-title">EHBO</h2>
         <div class="list">
-          <template v-for="u in store.pkg.units" :key="u.id">
+          <template v-for="u in store.pkg.teams" :key="u.id">
             <div v-for="m in u.members" :key="`${u.id}-${m.phone}`" class="list-row">
               <span class="main">
                 <span class="title-line">{{ m.name || formatPhone(m.phone) }}</span>

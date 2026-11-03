@@ -16,8 +16,8 @@ export function buildReport(db: EventDb, now = new Date()): Report {
   const event = db.getEvent();
 
   const incidents: ReportIncident[] = all(`
-    SELECT i.*, COALESCE(i.place_name, p.name) AS post_name, p.km, u.name AS unit_name FROM incidents i
-    JOIN posts p ON p.id = i.post_id LEFT JOIN ehbo_units u ON u.id = i.unit_id
+    SELECT i.*, COALESCE(i.place_name, p.name) AS post_name, p.km, u.name AS team_name FROM incidents i
+    JOIN posts p ON p.id = i.post_id LEFT JOIN teams u ON u.id = i.team_id
     WHERE i.is_test = 0 ORDER BY i.reported_at, i.id`).map((r, n) => ({
     number: n + 1,
     postName: r.post_name as string,
@@ -33,7 +33,7 @@ export function buildReport(db: EventDb, now = new Date()): Report {
     // Started by the team that was there: nothing to measure, and a zero would flatter the averages.
     responseSeconds: r.self_started === 1 ? null : seconds(r.reported_at, r.accepted_at),
     travelSeconds: r.self_started === 1 ? null : seconds(r.accepted_at, r.on_site_at),
-    unitName: r.unit_name as string | null,
+    teamName: r.team_name as string | null,
     escalated: r.stage === 'alle',
     selfStarted: r.self_started === 1,
     outcome: r.outcome as Outcome | null,
@@ -68,9 +68,9 @@ export function buildReport(db: EventDb, now = new Date()): Report {
     counts: {
       posts: count('SELECT COUNT(*) AS n FROM posts'),
       // Iedereen die ergens is ingepland: bij een post, een EHBO-eenheid of in het kernteam.
-      staff: count(`SELECT COUNT(*) AS n FROM (SELECT phone FROM post_contacts UNION SELECT phone FROM ehbo_unit_members
+      staff: count(`SELECT COUNT(*) AS n FROM (SELECT phone FROM post_contacts UNION SELECT phone FROM team_members
                     UNION SELECT phone FROM core_team WHERE phone IS NOT NULL)`),
-      units: count('SELECT COUNT(*) AS n FROM ehbo_units'),
+      teams: count('SELECT COUNT(*) AS n FROM teams'),
     },
     incidents,
     passages: [...passages.values()],
@@ -105,7 +105,7 @@ export function reportCsv(report: Report) {
   const rows = report.incidents.map((i) => [
     i.number, i.postName, i.km === null ? null : formatKm(i.km), i.what ? INCIDENT_WHAT[i.what] : null, i.persons,
     i.aed ? 'ja' : 'nee', STATUS[i.status], localTime(i.reportedAt), localTime(i.acceptedAt), localTime(i.onSiteAt), localTime(i.closedAt),
-    minutesSeconds(i.responseSeconds), minutesSeconds(i.travelSeconds), i.unitName, i.escalated ? 'ja' : 'nee', i.selfStarted ? 'ja' : 'nee', i.outcome ? OUTCOMES[i.outcome] : null, i.note,
+    minutesSeconds(i.responseSeconds), minutesSeconds(i.travelSeconds), i.teamName, i.escalated ? 'ja' : 'nee', i.selfStarted ? 'ja' : 'nee', i.outcome ? OUTCOMES[i.outcome] : null, i.note,
   ]);
   const requests = Object.entries(report.totals.requestsByKind).map(([kind, n]) => [`Aanvragen ${REQUEST_KINDS[kind as RequestKind].label.toLowerCase()}`, n]);
   const lines = [header, ...rows, [], ['Totaal'], ['Incidenten', report.totals.incidents], ['Ingetrokken', report.totals.withdrawn],

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 // 3.3 · EHBO: het scherm van de EHBO'er. Eigen status, positie, team en de oproepen van vandaag.
 import { computed } from 'vue';
-import { UNIT_AVAILABILITY, formatPhone, mobilityLabel, telHref, type UnitAvailability } from '@ehbo/shared';
+import { TEAM_AVAILABILITY, formatPhone, mobilityLabel, telHref, type TeamAvailability } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, myDeployments, unitOf } from '../incidents.ts';
+import { clock, myDeployments, teamOf } from '../incidents.ts';
 import { coordinatorOf, coreTeamMember, kmLabel, shiftText } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -17,14 +17,14 @@ const session = useSessionStore();
 const { busy, error, run } = useSave();
 
 /** De gekozen plek als die een eenheid is, anders de eerste eenheid van deze medewerker. */
-const unitId = computed(() => live.myUnitIds[0] ?? null);
-const unit = computed(() => unitOf(store.pkg, unitId.value));
-const state = computed(() => (unitId.value !== null ? live.unitState(unitId.value) : null));
-const availability = computed<UnitAvailability>(() => state.value?.availability ?? 'off_duty');
+const teamId = computed(() => live.myTeamIds[0] ?? null);
+const team = computed(() => teamOf(store.pkg, teamId.value));
+const state = computed(() => (teamId.value !== null ? live.teamState(teamId.value) : null));
+const availability = computed<TeamAvailability>(() => state.value?.availability ?? 'off_duty');
 const active = computed(() => (state.value?.incidentId ? live.incidentById(state.value.incidentId) : null));
 
 const label = computed(() => {
-  const u = unit.value;
+  const u = team.value;
   if (!u) return '';
   const base = u.postId !== null ? store.postById.get(u.postId)?.name : null;
   return [`EHBO ${u.name}`, u.kind === 'fixed' ? 'fixed' : mobilityLabel(u.mobility), u.kind === 'fixed' ? base : null].filter(Boolean).join(' · ');
@@ -37,11 +37,11 @@ const block = computed(() => {
   return { tone: 'dark' as const, title: 'Uit dienst' };
 });
 /** During a call you're there but not available, so the buttons say the same as the header. */
-const shown = computed<UnitAvailability>(() => (active.value ? 'unavailable' : availability.value));
+const shown = computed<TeamAvailability>(() => (active.value ? 'unavailable' : availability.value));
 
 /** Waar de eenheid voor "dichtstbij" telt. */
 const position = computed(() => {
-  const u = unit.value;
+  const u = team.value;
   if (!u) return '–';
   const stay = state.value?.stayPostId != null ? store.postById.get(state.value.stayPostId) : null;
   if (stay) return `${stay.name} (gebleven)`;
@@ -49,15 +49,15 @@ const position = computed(() => {
   if (u.kind === 'mobile') return availability.value === 'off_duty' ? (base ? `Standplaats ${base.name}` : '–') : `GPS${base ? `, anders ${base.name}` : ''}`;
   return base ? [base.name, kmLabel(base)].filter(Boolean).join(' · ') : '–';
 });
-const shift = computed(() => shiftText(unit.value));
+const shift = computed(() => shiftText(team.value));
 /** Someone comes to you: possible while you're there and not busy. */
 const canStart = computed(() => availability.value !== 'off_duty' && !active.value);
-const teammates = computed(() => unit.value?.members.filter((m) => m.phone !== session.me?.phone) ?? []);
+const teammates = computed(() => team.value?.members.filter((m) => m.phone !== session.me?.phone) ?? []);
 const othersFree = computed(() => {
-  const others = (live.state?.units ?? []).filter((u) => u.id !== unitId.value);
+  const others = (live.state?.teams ?? []).filter((u) => u.id !== teamId.value);
   return { free: others.filter((u) => u.availability === 'available' && u.incidentId === null).length, total: others.length };
 });
-const today = computed(() => (unitId.value !== null ? myDeployments(live.incidents, unitId.value) : []));
+const today = computed(() => (teamId.value !== null ? myDeployments(live.incidents, teamId.value) : []));
 const ehboCoordinator = computed(() => coreTeamMember(store.pkg, 'EHBO-coördinator'));
 const coordinator = computed(() => coordinatorOf(store.pkg));
 /** De volgende in de lijn: de EHBO-coördinator, of de evenementcoördinator als je zelf EHBO-coördinator bent. */
@@ -69,19 +69,19 @@ const callNext = computed(() => {
 });
 
 /** The buttons: "Bezet" is shorter to tap than the status it sets, which still reads Niet beschikbaar everywhere. */
-const BUTTONS: Record<UnitAvailability, string> = { ...UNIT_AVAILABILITY, unavailable: 'Bezet' };
-const setAvailability = (value: UnitAvailability) => unitId.value !== null && run(() => live.setAvailability(unitId.value!, value));
+const BUTTONS: Record<TeamAvailability, string> = { ...TEAM_AVAILABILITY, unavailable: 'Bezet' };
+const setAvailability = (value: TeamAvailability) => teamId.value !== null && run(() => live.setAvailability(teamId.value!, value));
 </script>
 
 <template>
   <main class="screen tight">
-    <p v-if="!unit" class="note warn top-gap">Je staat (nog) niet bij een EHBO-eenheid, of de gegevens van het evenement zijn nog niet geladen.</p>
+    <p v-if="!team" class="note warn top-gap">Je staat (nog) niet bij een EHBO-eenheid, of de gegevens van het evenement zijn nog niet geladen.</p>
     <template v-else>
       <StatusBlock :tone="block.tone" :label="label" :title="block.title" />
 
       <div v-if="state?.closesAt && !active" class="note warn closing gap-top">
         <span class="grow">Je dienst stopt om <strong>{{ clock(state.closesAt) }}</strong>.</span>
-        <button class="btn keep" :disabled="busy" @click="run(() => live.keepUnit(unitId!))">In dienst blijven</button>
+        <button class="btn keep" :disabled="busy" @click="run(() => live.keepTeam(teamId!))">In dienst blijven</button>
       </div>
       <RouterLink v-for="i in live.invitations" :key="i.id" :to="{ name: 'oproep', params: { id: i.id } }" class="btn danger gap-top">
         Oproep · {{ i.post.name }}

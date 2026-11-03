@@ -9,7 +9,7 @@ import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { confirmDialog } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentLog, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentLog, incidentSummary, postOf, travelMinutes, teamOf } from '../incidents.ts';
 import { coordinatorOf } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
@@ -33,30 +33,30 @@ const canChange = computed(() => atPost.value || isCoordinator.value || incident
 const pending = computed(() => incident.value?.dispatches.filter((d) => !d.declinedAt && !d.acceptedAt) ?? []);
 const accepted = computed(() => incident.value?.dispatches.filter((d) => d.acceptedAt) ?? []);
 const left = computed(() => (incident.value ? live.secondsLeft(incident.value) : null));
-const unitName = (id: number) => unitOf(store.pkg, id)?.name ?? 'Eenheid';
+const teamName = (id: number) => teamOf(store.pkg, id)?.name ?? 'Eenheid';
 
 /** Eerste eenheid die komt: naam, nummer en vanaf waar. */
 const helper = computed(() => {
   const i = incident.value;
-  const unit = unitOf(store.pkg, i?.unitId ?? null);
-  if (!i || !unit) return null;
-  const from = unit.postId !== null ? store.postById.get(unit.postId)?.name : null;
-  const dispatch = i.dispatches.find((d) => d.unitId === unit.id);
+  const team = teamOf(store.pkg, i?.teamId ?? null);
+  if (!i || !team) return null;
+  const from = team.postId !== null ? store.postById.get(team.postId)?.name : null;
+  const dispatch = i.dispatches.find((d) => d.teamId === team.id);
   return {
-    name: i.acceptedBy?.name ?? unit.members[0]?.name ?? unit.name,
-    phone: i.acceptedBy?.phone ?? unit.members[0]?.phone ?? null,
-    detail: [unit.name, from ? `vanaf ${from}` : unit.kind === 'mobile' ? 'mobile' : null].filter(Boolean).join(' · '),
-    minutes: travelMinutes(dispatch?.distanceKm ?? null, unit),
+    name: i.acceptedBy?.name ?? team.members[0]?.name ?? team.name,
+    phone: i.acceptedBy?.phone ?? team.members[0]?.phone ?? null,
+    detail: [team.name, from ? `vanaf ${from}` : team.kind === 'mobile' ? 'mobile' : null].filter(Boolean).join(' · '),
+    minutes: travelMinutes(dispatch?.distanceKm ?? null, team),
   };
 });
 /** Bij niet aanspreekbaar kan er een tweede eenheid met AED komen. */
-const others = computed(() => accepted.value.filter((d) => d.unitId !== incident.value?.unitId).map((d) => unitOf(store.pkg, d.unitId)).filter(Boolean));
+const others = computed(() => accepted.value.filter((d) => d.teamId !== incident.value?.teamId).map((d) => teamOf(store.pkg, d.teamId)).filter(Boolean));
 const emergency = computed(() => store.pkg?.emergencyNumbers.filter((n) => n.number.replace(/\D/g, '') !== '112') ?? []);
 
 /** Eenheden die de coördinator kan inzetten: niet al bezig met een andere oproep. */
-const assignable = computed(() => (store.pkg?.units ?? []).filter((u) => {
-  const s = live.unitState(u.id);
-  return !accepted.value.some((d) => d.unitId === u.id) && (s?.incidentId == null || s.incidentId === incident.value?.id);
+const assignable = computed(() => (store.pkg?.teams ?? []).filter((u) => {
+  const s = live.teamState(u.id);
+  return !accepted.value.some((d) => d.teamId === u.id) && (s?.incidentId == null || s.incidentId === incident.value?.id);
 }));
 
 async function withdraw() {
@@ -79,8 +79,8 @@ const back = () => router.back();
       <div class="card steps">
         <div class="step"><span class="mark done"><Icon name="check" :size="14" /></span><span class="grow">Melding ontvangen door de server</span></div>
         <template v-if="incident.stage === 'dichtstbij'">
-          <div v-for="d in pending" :key="d.unitId" class="step">
-            <span class="mark busy" /><span class="grow"><strong>{{ unitName(d.unitId) }}</strong> ({{ d.reason === 'aed' ? 'AED' : 'dichtstbij' }}) wordt opgeroepen</span>
+          <div v-for="d in pending" :key="d.teamId" class="step">
+            <span class="mark busy" /><span class="grow"><strong>{{ teamName(d.teamId) }}</strong> ({{ d.reason === 'aed' ? 'AED' : 'dichtstbij' }}) wordt opgeroepen</span>
             <span v-if="left !== null" class="mono countdown">nog {{ left }} s</span>
           </div>
           <div class="step later"><span class="mark" /><span class="grow">Daarna alle beschikbare eenheden tegelijk</span></div>
@@ -122,7 +122,7 @@ const back = () => router.back();
         <span class="stack grow"><span class="name">{{ u!.name }}</span><span class="small">komt ook{{ u!.hasAed ? ', met AED' : '' }}</span></span>
         <a v-if="u!.members[0]" :href="telHref(u!.members[0].phone)" class="round green" :aria-label="`Bel ${u!.name}`"><Icon name="phone" :size="18" /></a>
       </div>
-      <p v-if="incident.aed && !accepted.some((d) => unitOf(store.pkg, d.unitId)?.hasAed)" class="note warn gap-top">Nog geen eenheid met AED onderweg. Bel 112.</p>
+      <p v-if="incident.aed && !accepted.some((d) => teamOf(store.pkg, d.teamId)?.hasAed)" class="note warn gap-top">Nog geen eenheid met AED onderweg. Bel 112.</p>
 
       <div class="card yours">
         <span class="small">Melding</span>
@@ -164,9 +164,9 @@ const back = () => router.back();
           <span class="main">
             <span class="title-line">{{ u.name }}</span>
             <span class="sub">
-              {{ live.unitState(u.id)?.availability === 'available' ? 'beschikbaar' : live.unitState(u.id)?.availability === 'unavailable' ? 'niet beschikbaar' : 'uit dienst' }}<template
-                v-if="incident.dispatches.find((d) => d.unitId === u.id)?.distanceKm != null"
-              > · {{ formatKm(incident.dispatches.find((d) => d.unitId === u.id)!.distanceKm!) }} km</template>
+              {{ live.teamState(u.id)?.availability === 'available' ? 'beschikbaar' : live.teamState(u.id)?.availability === 'unavailable' ? 'niet beschikbaar' : 'uit dienst' }}<template
+                v-if="incident.dispatches.find((d) => d.teamId === u.id)?.distanceKm != null"
+              > · {{ formatKm(incident.dispatches.find((d) => d.teamId === u.id)!.distanceKm!) }} km</template>
             </span>
           </span>
           <a v-if="u.members[0]" :href="telHref(u.members[0].phone)" class="round" :aria-label="`Bel ${u.name}`"><Icon name="phone" :size="17" /></a>

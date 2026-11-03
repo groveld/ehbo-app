@@ -45,7 +45,7 @@ const routePostId = computed(() => {
 });
 
 const ehboColor = computed(() => {
-  const state = live.myUnitIds[0] !== undefined ? live.unitState(live.myUnitIds[0]) : null;
+  const state = live.myTeamIds[0] !== undefined ? live.teamState(live.myTeamIds[0]) : null;
   return state?.incidentId || live.myActive ? STATUS.unavailable : STATUS[state?.availability ?? 'off_duty'];
 });
 

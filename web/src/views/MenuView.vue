@@ -50,7 +50,7 @@ async function logout() {
       <span v-if="me.name" class="mono small">{{ formatPhone(me.phone) }}</span>
     </div>
 
-    <div v-for="a in session.functions" :key="`${a.kind}-${a.postId ?? a.unitId ?? a.title}`" class="card place">
+    <div v-for="a in session.functions" :key="`${a.kind}-${a.postId ?? a.teamId ?? a.title}`" class="card place">
       <span class="badge letter" :style="{ background: a.color }">{{ a.letter }}</span>
       <span class="stack text">
         <span class="name">{{ a.title }}</span>

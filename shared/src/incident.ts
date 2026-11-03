@@ -1,5 +1,5 @@
 // EHBO-oproepen: van verzoek tot afronden, en de live stand die alle medewerkers zien.
-import type { UnitKind } from './event.ts';
+import type { TeamKind } from './event.ts';
 import { distanceKm, formatKm } from './geo.ts';
 import type { LiveRequest } from './request.ts';
 
@@ -33,8 +33,8 @@ export const OUTCOMES = {
 export type Outcome = keyof typeof OUTCOMES;
 
 /** Wat de eenheid zelf instelt. "Bezet" volgt uit een lopende oproep. */
-export type UnitAvailability = 'available' | 'unavailable' | 'off_duty';
-export const UNIT_AVAILABILITY = { available: 'Beschikbaar', unavailable: 'Niet beschikbaar', off_duty: 'Uit dienst' } as const;
+export type TeamAvailability = 'available' | 'unavailable' | 'off_duty';
+export const TEAM_AVAILABILITY = { available: 'Beschikbaar', unavailable: 'Niet beschikbaar', off_duty: 'Uit dienst' } as const;
 
 export const NOTE_MAX = 500;
 
@@ -63,7 +63,7 @@ export interface NewIncident extends IncidentDetails {
 /** POST /api/incidents/self: someone came to an EHBO team, which is already there. */
 export interface NewSelfIncident extends IncidentDetails {
   clientId: string;
-  unitId: number;
+  teamId: number;
   /** The post the team chose, or its own; with a position only the fallback. */
   postId: number;
   /** GPS of the team, when there is one and no post was chosen by hand. */
@@ -85,7 +85,7 @@ export type DispatchReason = 'dichtstbij' | 'aed' | 'alle' | 'handmatig';
 
 /** Een eenheid die deze oproep heeft gekregen. */
 export interface Dispatch {
-  unitId: number;
+  teamId: number;
   at: string;
   reason: DispatchReason;
   /** Hemelsbreed, in km; null als de positie van de eenheid onbekend is. */
@@ -103,7 +103,7 @@ export type IncidentEventType =
 export interface IncidentEvent {
   at: string;
   type: IncidentEventType;
-  unitId: number | null;
+  teamId: number | null;
   text: string;
 }
 
@@ -138,7 +138,7 @@ export interface LiveIncident extends IncidentDetails {
   sentAt: string;
   /** Wanneer de oproep naar alle eenheden gaat, zolang hij nog bij de dichtstbijzijnde ligt. */
   escalatesAt: string | null;
-  unitId: number | null;
+  teamId: number | null;
   acceptedBy: { name: string; phone: string } | null;
   acceptedAt: string | null;
   onSiteAt: string | null;
@@ -148,9 +148,9 @@ export interface LiveIncident extends IncidentDetails {
   events: IncidentEvent[];
 }
 
-export interface LiveUnit {
+export interface LiveTeam {
   id: number;
-  availability: UnitAvailability;
+  availability: TeamAvailability;
   /** De oproep waar de eenheid mee bezig is (geaccepteerd of ter plaatse). */
   incidentId: number | null;
   /** Vaste eenheid die na afronden bij een andere post bleef. */
@@ -178,7 +178,7 @@ export interface LiveState {
   dataVersion: string;
   serverTime: string;
   incidents: LiveIncident[];
-  units: LiveUnit[];
+  teams: LiveTeam[];
   posts: LivePost[];
   /** Aanvragen voor water, verkeer en vrijwilligers (wachtrij van de coördinator). */
   requests: LiveRequest[];
@@ -189,7 +189,7 @@ export interface LiveState {
 /** GET /api/live/last-seen: last contact by id, for the coordinator. Open posts and teams on duty only. */
 export interface LastSeen {
   posts: Record<number, string | null>;
-  units: Record<number, string | null>;
+  teams: Record<number, string | null>;
 }
 
 /** Opening or closing everything: the new state, and what was skipped (closing: busy with a call; opening: nobody logged in). */
@@ -209,19 +209,19 @@ export const DEFAULT_AT_POST_M = 30;
  * Onderweg: een mobiele eenheid in dienst met een recente GPS-positie, verder dan atPostM van haar standplaats (of zonder standplaats).
  * Zonder recente positie telt ze als thuis. Een vaste eenheid is altijd op haar post.
  */
-export function isAway(unit: { kind: UnitKind }, live: LiveUnit | undefined, base: { lat: number | null; lng: number | null } | undefined, now: number, atPostM: number) {
-  if (unit.kind !== 'mobile' || !live?.position || live.availability === 'off_duty') return false;
+export function isAway(team: { kind: TeamKind }, live: LiveTeam | undefined, base: { lat: number | null; lng: number | null } | undefined, now: number, atPostM: number) {
+  if (team.kind !== 'mobile' || !live?.position || live.availability === 'off_duty') return false;
   if (now - new Date(live.position.at).getTime() > POSITION_MAX_AGE_MS) return false;
   return !(base?.lat != null && base.lng != null && distanceKm([live.position.lng, live.position.lat], [base.lng, base.lat]) * 1000 <= atPostM);
 }
 
 /** Posten waar EHBO hoort maar nu niemand is: elke eenheid met die post als standplaats is onderweg. Voor een grijs kruisje. */
 export function awayPostIds(
-  units: { id: number; kind: UnitKind; postId: number | null }[], live: LiveUnit[], posts: { id: number; lat: number | null; lng: number | null }[], now: number, atPostM: number,
+  teams: { id: number; kind: TeamKind; postId: number | null }[], live: LiveTeam[], posts: { id: number; lat: number | null; lng: number | null }[], now: number, atPostM: number,
 ): number[] {
-  const away = new Set(units.filter((u) => isAway(u, live.find((l) => l.id === u.id), posts.find((p) => p.id === u.postId), now, atPostM)).map((u) => u.id));
-  const postIds = new Set(units.flatMap((u) => (u.postId !== null ? [u.postId] : [])));
-  return [...postIds].filter((id) => units.filter((u) => u.postId === id).every((u) => away.has(u.id)));
+  const away = new Set(teams.filter((u) => isAway(u, live.find((l) => l.id === u.id), posts.find((p) => p.id === u.postId), now, atPostM)).map((u) => u.id));
+  const postIds = new Set(teams.flatMap((u) => (u.postId !== null ? [u.postId] : [])));
+  return [...postIds].filter((id) => teams.filter((u) => u.postId === id).every((u) => away.has(u.id)));
 }
 
 /** GET /api/ehbo-status: voor iedereen, ook deelnemers. Alleen welke posten nu zonder EHBO zijn; geen posities of namen. */
@@ -290,7 +290,7 @@ export function isDueOpen(post: { timeFrom: string | null; timeTo: string | null
 }
 
 /** A mobile team on duty that hasn't shared a position lately, so nobody knows where it is. */
-export function lacksPosition(unit: { kind: UnitKind }, live: LiveUnit | undefined | null, now: number) {
-  if (unit.kind !== 'mobile' || !live || live.availability === 'off_duty') return false;
+export function lacksPosition(team: { kind: TeamKind }, live: LiveTeam | undefined | null, now: number) {
+  if (team.kind !== 'mobile' || !live || live.availability === 'off_duty') return false;
   return !live.position || now - new Date(live.position.at).getTime() > POSITION_MAX_AGE_MS;
 }

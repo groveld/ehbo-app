@@ -14,7 +14,7 @@ import type {
   NewIncident,
   QueuedAction,
   RequestKind,
-  UnitAvailability,
+  TeamAvailability,
 } from '@ehbo/shared';
 import { ACTION_AT_HEADER, ACTION_ID_HEADER, LIVE_HEARTBEAT_MS, POSITION_SHARE_MS, actionRequest, applyAction, placeOf } from '@ehbo/shared';
 import { api, ApiRequestError, noAnswer } from '../api.ts';
@@ -71,9 +71,9 @@ export const useLiveStore = defineStore('live', () => {
   /** What every screen shows: the server's state with this phone's own changes on top, so nothing ever waits for the network. */
   const state = computed<LiveState | null>(() => {
     if (!queue.value.length) return base.value;
-    const context = { me: session.me, units: pkg.pkg?.units ?? [] };
+    const context = { me: session.me, teams: pkg.pkg?.teams ?? [] };
     return queue.value.reduce((s, item) => applyAction(s, item, context), base.value ?? {
-      version: 0, dataVersion: '', serverTime: new Date().toISOString(), incidents: [], units: [], posts: [], requests: [], testMode: false,
+      version: 0, dataVersion: '', serverTime: new Date().toISOString(), incidents: [], teams: [], posts: [], requests: [], testMode: false,
     });
   });
   /** Nog niet bij de server aangekomen. De server telt dezelfde clientId maar één keer, dus opnieuw versturen kan altijd. */
@@ -222,36 +222,36 @@ export const useLiveStore = defineStore('live', () => {
     const real = incidentIds.value[id] ?? id;
     return incidents.value.find((i) => i.id === real) ?? null;
   };
-  const unitState = (id: number) => state.value?.units.find((u) => u.id === id) ?? null;
+  const teamState = (id: number) => state.value?.teams.find((u) => u.id === id) ?? null;
   /** Live open/dicht; zonder live stand wat in het evenementpakket staat. */
   const postOpen = (postId: number, fallback = false) => state.value?.posts.find((p) => p.id === postId)?.isOpen ?? fallback;
   const postState = (postId: number) => state.value?.posts.find((p) => p.id === postId) ?? null;
 
-  const myUnitIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'ehbo').map((a) => a.unitId!) ?? []);
+  const myTeamIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'ehbo').map((a) => a.teamId!) ?? []);
   const myPostIds = computed(() => session.me?.assignments.filter((a) => a.kind === 'post').map((a) => a.postId!) ?? []);
 
-  const hasAed = (unitId: number) => pkg.pkg?.units.find((u) => u.id === unitId)?.hasAed ?? false;
+  const hasAed = (teamId: number) => pkg.pkg?.teams.find((u) => u.id === teamId)?.hasAed ?? false;
 
   /** Bij niet aanspreekbaar blijft een eenheid met AED opgeroepen tot er een eenheid met AED heeft geaccepteerd (zoals de server). */
-  const needsAed = (incident: LiveIncident, unitId: number) =>
-    incident.aed && hasAed(unitId) && !incident.dispatches.some((d) => d.acceptedAt && hasAed(d.unitId));
+  const needsAed = (incident: LiveIncident, teamId: number) =>
+    incident.aed && hasAed(teamId) && !incident.dispatches.some((d) => d.acceptedAt && hasAed(d.teamId));
 
   /** Oproepen waar een eenheid van mij op kan reageren: opgeroepen, niet geweigerd, nog niet aangenomen. */
   const invitations = computed(() => openIncidents.value.filter((i) => i.dispatches.some((d) =>
-    myUnitIds.value.includes(d.unitId) && !d.declinedAt && !d.acceptedAt && (i.status === 'verstuurd' || needsAed(i, d.unitId)))));
+    myTeamIds.value.includes(d.teamId) && !d.declinedAt && !d.acceptedAt && (i.status === 'verstuurd' || needsAed(i, d.teamId)))));
 
   /** Oproep waar een eenheid van mij mee bezig is. */
-  const myActive = computed(() => openIncidents.value.find((i) => i.dispatches.some((d) => myUnitIds.value.includes(d.unitId) && d.acceptedAt)) ?? null);
+  const myActive = computed(() => openIncidents.value.find((i) => i.dispatches.some((d) => myTeamIds.value.includes(d.teamId) && d.acceptedAt)) ?? null);
 
-  // Safety net: something refers to a post or unit this phone doesn't know yet. Don't wait: this may be a call.
+  // Safety net: something refers to a post or team this phone doesn't know yet. Don't wait: this may be a call.
   const unknownData = computed(() => {
     if (!pkg.pkg) return '';
     const assignments = session.me?.assignments ?? [];
     const posts = [...incidents.value.map((i) => i.postId), ...(state.value?.requests ?? []).map((r) => r.postId), ...myPostIds.value];
-    const units = [...(state.value?.units ?? []).map((u) => u.id), ...assignments.flatMap((a) => (a.unitId == null ? [] : [a.unitId]))];
+    const teams = [...(state.value?.teams ?? []).map((u) => u.id), ...assignments.flatMap((a) => (a.teamId == null ? [] : [a.teamId]))];
     return [
       ...posts.filter((id) => !pkg.postById.has(id)).map((id) => `post ${id}`),
-      ...units.filter((id) => !pkg.pkg!.units.some((u) => u.id === id)).map((id) => `unit ${id}`),
+      ...teams.filter((id) => !pkg.pkg!.teams.some((u) => u.id === id)).map((id) => `team ${id}`),
     ].join();
   });
   watch(unknownData, (unknown) => { if (unknown) void syncData(); });
@@ -259,8 +259,8 @@ export const useLiveStore = defineStore('live', () => {
   // Sharing a position belongs to a person (#101), but only with a reason: being on a mobile team on duty. Every minute to the server
   // (nearest team, ambulance on the map); at once on a change of status, so everyone's map is right straight away.
   // Een webapp krijgt geen positie zolang hij op de achtergrond staat; dan telt na 3 minuten weer de standplaats.
-  const sharingUnit = computed(() => myUnitIds.value.find((id) =>
-    pkg.pkg?.units.find((u) => u.id === id)?.kind === 'mobile' && (unitState(id)?.availability ?? 'off_duty') !== 'off_duty') ?? null);
+  const sharingTeam = computed(() => myTeamIds.value.find((id) =>
+    pkg.pkg?.teams.find((u) => u.id === id)?.kind === 'mobile' && (teamState(id)?.availability ?? 'off_duty') !== 'off_duty') ?? null);
   let geoWatch: number | null = null;
   let lastSent = 0;
   /** This phone's own position while it shares: every fix, not once a minute. It stays on the phone; the server gets one a minute. */
@@ -273,22 +273,22 @@ export const useLiveStore = defineStore('live', () => {
       body: JSON.stringify({ lat: coords.latitude, lng: coords.longitude }),
     }).catch(() => {});
   };
-  watch(sharingUnit, (unitId) => {
+  watch(sharingTeam, (teamId) => {
     if (geoWatch !== null) navigator.geolocation.clearWatch(geoWatch);
     geoWatch = null;
     ownFix.value = null;
-    if (unitId === null || !('geolocation' in navigator)) return;
+    if (teamId === null || !('geolocation' in navigator)) return;
     geoWatch = navigator.geolocation.watchPosition(({ coords }) => {
       ownFix.value = { lat: coords.latitude, lng: coords.longitude, at: new Date(serverNow.value).toISOString() };
       if (Date.now() - lastSent >= POSITION_SHARE_MS) sendPosition(coords);
     }, () => {}, { enableHighAccuracy: true, maximumAge: 5_000 });
   }, { immediate: true });
   /** The teams as the server has them, with my own mobile team at my live position: on my own map I don't lag behind myself. */
-  const units = computed(() => (state.value?.units ?? []).map((u) => (u.id === sharingUnit.value && ownFix.value ? { ...u, position: ownFix.value } : u)));
+  const teams = computed(() => (state.value?.teams ?? []).map((u) => (u.id === sharingTeam.value && ownFix.value ? { ...u, position: ownFix.value } : u)));
   // Status gewijzigd (bijv. van pauze naar beschikbaar): de positie meteen sturen, niet pas na een minuut.
-  watch(() => (sharingUnit.value !== null ? unitState(sharingUnit.value)?.availability : null), (availability, before) => {
-    const unitId = sharingUnit.value;
-    if (unitId === null || !availability || availability === before || !('geolocation' in navigator)) return;
+  watch(() => (sharingTeam.value !== null ? teamState(sharingTeam.value)?.availability : null), (availability, before) => {
+    const teamId = sharingTeam.value;
+    if (teamId === null || !availability || availability === before || !('geolocation' in navigator)) return;
     navigator.geolocation.getCurrentPosition(({ coords }) => sendPosition(coords), () => {}, { enableHighAccuracy: true, maximumAge: 15_000, timeout: 15_000 });
   });
 
@@ -462,20 +462,20 @@ export const useLiveStore = defineStore('live', () => {
   }
 
   return {
-    state, units, connected, offline, syncing, serverNow, sharingUnit, incidents, openIncidents, invitations, myActive, myUnitIds, myPostIds,
-    incidentById, unitState, postOpen, postState, secondsLeft, needsAed, refresh, connect, report, checkData,
+    state, teams, connected, offline, syncing, serverNow, sharingTeam, incidents, openIncidents, invitations, myActive, myTeamIds, myPostIds,
+    incidentById, teamState, postOpen, postState, secondsLeft, needsAed, refresh, connect, report, checkData,
     /** "Opnieuw laden": everything at once. */
     reload: () => Promise.all([syncData(), refresh()]),
     outbox, delivered, refused, flush,
     update: (incidentId: number, details: IncidentDetails) => act({ type: 'update', incidentId, details }),
-    accept: (incidentId: number, unitId: number) => act({ type: 'accept', incidentId, unitId }),
-    decline: (incidentId: number, unitId: number) => act({ type: 'decline', incidentId, unitId }),
-    assign: (incidentId: number, unitId: number) => act({ type: 'assign', incidentId, unitId }),
+    accept: (incidentId: number, teamId: number) => act({ type: 'accept', incidentId, teamId }),
+    decline: (incidentId: number, teamId: number) => act({ type: 'decline', incidentId, teamId }),
+    assign: (incidentId: number, teamId: number) => act({ type: 'assign', incidentId, teamId }),
     onSite: (incidentId: number) => act({ type: 'onSite', incidentId }),
     close: (incidentId: number, body: CloseIncident) => act({ type: 'close', incidentId, body }),
     withdraw: (incidentId: number) => act({ type: 'withdraw', incidentId }),
     /** Someone came to the team. Gives the id to open it with; without signal that's a temporary one, which keeps working afterwards. */
-    async selfStart({ unitId, postId, position, ...details }: IncidentDetails & { unitId: number; postId: number; position: LngLat | null }) {
+    async selfStart({ teamId, postId, position, ...details }: IncidentDetails & { teamId: number; postId: number; position: LngLat | null }) {
       const tempId = -Date.now();
       const known = pkg.postById.get(postId);
       const place = position ? placeOf(pkg.pkg?.posts ?? [], position, atPostM(pkg.pkg)) : null;
@@ -486,14 +486,14 @@ export const useLiveStore = defineStore('live', () => {
           typeId: shown?.typeId ?? 0, name: place?.name ?? shown?.name ?? 'Locatie', km: shown?.km ?? null,
           lat: place && !place.atPost ? position![1] : shown?.lat ?? null, lng: place && !place.atPost ? position![0] : shown?.lng ?? null,
         },
-        body: { clientId: crypto.randomUUID(), unitId, postId, lat: position?.[1] ?? null, lng: position?.[0] ?? null, ...details },
+        body: { clientId: crypto.randomUUID(), teamId, postId, lat: position?.[1] ?? null, lng: position?.[0] ?? null, ...details },
       });
       return incidentIds.value[tempId] ?? tempId;
     },
-    setAvailability: (unitId: number, availability: UnitAvailability) => act({ type: 'availability', unitId, availability }),
+    setAvailability: (teamId: number, availability: TeamAvailability) => act({ type: 'availability', teamId, availability }),
     setPostOpen: (postId: number, open: boolean) => act({ type: 'postOpen', postId, open }),
     keepPost: (postId: number) => act({ type: 'keepPost', postId }),
-    keepUnit: (unitId: number) => act({ type: 'keepUnit', unitId }),
+    keepTeam: (teamId: number) => act({ type: 'keepTeam', teamId }),
     /** The coordinator's buttons: these change everything at once, so they need the server. */
     async control(action: 'open-all' | 'close-all' | 'close-day') {
       const answer = await api<ControlResult>(`/api/control/${action}`, { method: 'POST' });

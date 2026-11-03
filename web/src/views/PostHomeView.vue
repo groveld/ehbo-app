@@ -8,7 +8,7 @@ import NotOnPhone from '../components/NotOnPhone.vue';
 import { confirmClosePost } from '../composables/useDialog.ts';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentSummary } from '../incidents.ts';
-import { coordinatorOf, kmLabel, nearestUnit } from '../posts.ts';
+import { coordinatorOf, kmLabel, nearestTeam } from '../posts.ts';
 import { isOpen, useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -27,7 +27,7 @@ const autoClosed = computed(() => (post.value ? live.postState(post.value.id)?.a
 const myRole = computed(() => session.me?.assignments.find((a) => a.kind === 'post' && a.postId === post.value?.id));
 const canOpen = computed(() => myRole.value?.role === 'lead' || session.me?.isAdmin);
 const coordinator = computed(() => coordinatorOf(store.pkg));
-const nearest = computed(() => (store.pkg && post.value ? nearestUnit(store.pkg, post.value) : null));
+const nearest = computed(() => (store.pkg && post.value ? nearestTeam(store.pkg, post.value) : null));
 const openIncidents = computed(() => live.openIncidents.filter((i) => i.postId === post.value?.id && !i.offPost));
 /** Eerder vandaag, op een eigen scherm. */
 const earlier = computed(() => live.incidents.filter((i) => i.postId === post.value?.id && !i.offPost && !isOpen(i)).length

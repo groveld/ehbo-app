@@ -19,7 +19,7 @@ export interface ReportIncident {
   responseSeconds: number | null;
   /** Van geaccepteerd tot ter plaatse (aanrijtijd), in seconden. */
   travelSeconds: number | null;
-  unitName: string | null;
+  teamName: string | null;
   /** Ging naar alle eenheden. */
   escalated: boolean;
   /** Someone came to the team; no response or travel time. */
@@ -37,7 +37,7 @@ export interface ReportPostPassages {
 export interface Report {
   event: { name: string; startDate: string | null; endDate: string | null };
   generatedAt: string;
-  counts: { posts: number; staff: number; units: number };
+  counts: { posts: number; staff: number; teams: number };
   incidents: ReportIncident[];
   passages: ReportPostPassages[];
   totals: {

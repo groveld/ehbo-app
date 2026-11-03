@@ -42,11 +42,11 @@ export function seedDemo(db: EventDb) {
     contact.run(traffic, DEMO.postMember, 'member', null, null);
     contact.run(start, DEMO.coordinator, 'member', null, null);
 
-    const unit = Number(sql.prepare("INSERT INTO ehbo_units (name, kind, post_id, has_aed) VALUES ('Team 1', 'fixed', ?, 1)").run(ehboPost).lastInsertRowid);
-    sql.prepare('INSERT INTO ehbo_unit_members (unit_id, phone) VALUES (?, ?)').run(unit, DEMO.ehbo);
+    const team = Number(sql.prepare("INSERT INTO teams (name, kind, post_id, has_aed) VALUES ('Team 1', 'fixed', ?, 1)").run(ehboPost).lastInsertRowid);
+    sql.prepare('INSERT INTO team_members (team_id, phone) VALUES (?, ?)').run(team, DEMO.ehbo);
     // Mobiel, zonder AED, met standplaats bij Kruising 4: dichter bij de waterpost dan Team 1.
-    const mobile = Number(sql.prepare("INSERT INTO ehbo_units (name, kind, mobility, post_id, has_aed, sort) VALUES ('Team 2', 'mobile', 'bike', ?, 0, 1)").run(traffic).lastInsertRowid);
-    sql.prepare('INSERT INTO ehbo_unit_members (unit_id, phone) VALUES (?, ?)').run(mobile, DEMO.mobileEhbo);
+    const mobile = Number(sql.prepare("INSERT INTO teams (name, kind, mobility, post_id, has_aed, sort) VALUES ('Team 2', 'mobile', 'bike', ?, 0, 1)").run(traffic).lastInsertRowid);
+    sql.prepare('INSERT INTO team_members (team_id, phone) VALUES (?, ?)').run(mobile, DEMO.mobileEhbo);
 
     const run = sql.prepare('INSERT INTO runs (name, distance_km, discipline, date, start_time, sort) VALUES (?, ?, ?, ?, ?, ?)');
     run.run('Kidsrun', 1, 'hardlopen', '2026-12-31', '12:00', 0);

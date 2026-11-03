@@ -167,11 +167,11 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | GET | `/api/live/state` | medewerker | Dezelfde stand in één antwoord |
 | POST | `/api/incidents` | post, medewerker | EHBO-verzoek `{ postId, clientId, what, persons, responsive, note }`; dezelfde `clientId` telt één keer. Vanaf je plek: `postId: null` met `lat`, `lng`, `accuracyM` |
 | PUT | `/api/incidents/:id` | post | Melding aanvullen |
-| POST | `/api/incidents/:id/accept`, `/decline` | EHBO-eenheid | Accepteren of "kan niet" `{ unitId }` |
+| POST | `/api/incidents/:id/accept`, `/decline` | EHBO-eenheid | Accepteren of "kan niet" `{ teamId }` |
 | POST | `/api/incidents/:id/on-site`, `/close` | EHBO-eenheid | Ter plaatse; afronden `{ outcome, persons, note, stayHere }` |
 | POST | `/api/incidents/:id/withdraw` | post | Melding intrekken |
-| POST | `/api/incidents/:id/assign` | coördinator | Oproep toewijzen aan een eenheid `{ unitId }` |
-| PUT | `/api/units/:id/availability` | EHBO-eenheid | Beschikbaar, pauze of uit dienst |
+| POST | `/api/incidents/:id/assign` | coördinator | Oproep toewijzen aan een eenheid `{ teamId }` |
+| PUT | `/api/teams/:id/availability` | EHBO-eenheid | Beschikbaar, pauze of uit dienst |
 | PUT | `/api/position` | mobiele EHBO in dienst | Eigen positie `{ lat, lng }` (alleen in het geheugen van de server); van anderen geweigerd |
 | PUT | `/api/posts/:id/open` | postverantwoordelijke | Post open of dicht `{ open }` |
 | POST | `/api/requests` | post | Aanvraag water, verkeer of vrijwilliger `{ postId, kind, detail, clientId }` |

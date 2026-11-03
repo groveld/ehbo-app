@@ -1,54 +1,54 @@
 <script setup lang="ts">
 // One EHBO team in a list: its status, where it is, AED, and a call button.
 import { computed } from 'vue';
-import { POSITION_MAX_AGE_MS, UNIT_AVAILABILITY, isAway, telHref, type EventPackage, type PackageUnit } from '@ehbo/shared';
+import { POSITION_MAX_AGE_MS, TEAM_AVAILABILITY, isAway, telHref, type EventPackage, type PackageTeam } from '@ehbo/shared';
 import { atPostM, shiftText } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import Icon from './Icon.vue';
 import PostBadge from './PostBadge.vue';
 
 /** attention: something is off with this team (marked for the coordinator). */
-const props = defineProps<{ pkg: EventPackage; unit: PackageUnit; attention?: boolean; quietMinutes?: number | null }>();
+const props = defineProps<{ pkg: EventPackage; team: PackageTeam; attention?: boolean; quietMinutes?: number | null }>();
 const live = useLiveStore();
 
-const state = computed(() => live.unitState(props.unit.id));
+const state = computed(() => live.teamState(props.team.id));
 const incident = computed(() => (state.value?.incidentId != null ? live.incidentById(state.value.incidentId) : null));
 const postOf = (id: number | null | undefined) => props.pkg.posts.find((p) => p.id === id);
 
 const status = computed(() => {
   if (incident.value) return { tone: 'busy', label: incident.value.status === 'ter_plaatse' ? 'Ter plaatse' : 'Onderweg' };
   const availability = state.value?.availability ?? 'off_duty';
-  return { tone: availability, label: UNIT_AVAILABILITY[availability] };
+  return { tone: availability, label: TEAM_AVAILABILITY[availability] };
 });
 
 /** During a call the post it's going to; otherwise its own place, and for a mobile team how fresh its position is. */
 const where = computed(() => {
   if (incident.value) return incident.value.post.name;
-  const { unit } = props;
-  const home = postOf(unit.postId);
-  const base = unit.kind === 'fixed' ? postOf(state.value?.stayPostId ?? unit.postId)?.name : home?.name;
-  if (unit.kind === 'fixed') return base ?? 'Geen locatie';
+  const { team } = props;
+  const home = postOf(team.postId);
+  const base = team.kind === 'fixed' ? postOf(state.value?.stayPostId ?? team.postId)?.name : home?.name;
+  if (team.kind === 'fixed') return base ?? 'Geen locatie';
   const position = state.value?.position;
   const age = position ? live.serverNow - new Date(position.at).getTime() : Infinity;
   if (age > POSITION_MAX_AGE_MS) return base ? `${base} · geen recente positie` : 'Geen recente positie';
-  const away = isAway(unit, state.value ?? undefined, home, live.serverNow, atPostM(props.pkg));
+  const away = isAway(team, state.value ?? undefined, home, live.serverNow, atPostM(props.pkg));
   const minutes = Math.floor(age / 60_000);
   return `${away ? 'Onderweg' : `Thuis${base ? ` · ${base}` : ''}`} · positie ${minutes ? `${minutes} min oud` : 'net bijgewerkt'}`;
 });
-const shift = computed(() => shiftText(props.unit));
+const shift = computed(() => shiftText(props.team));
 const ehboType = computed(() => props.pkg.postTypes.find((t) => t.key === 'ehbo'));
-const phone = computed(() => props.unit.members[0]?.phone ?? null);
+const phone = computed(() => props.team.members[0]?.phone ?? null);
 </script>
 
 <template>
   <div class="team-row list-row">
     <PostBadge :type="ehboType" :size="40" class="status-ring" :class="{ on: status.tone === 'available', off: status.tone === 'off_duty' }" />
     <span class="text">
-      <span class="name">{{ unit.name }}<span class="status" :class="status.tone">{{ status.label }}</span></span>
-      <span class="sub" :class="{ attention }">{{ where }}<template v-if="unit.hasAed"> · AED</template><template v-if="shift"> · {{ shift }}</template></span>
+      <span class="name">{{ team.name }}<span class="status" :class="status.tone">{{ status.label }}</span></span>
+      <span class="sub" :class="{ attention }">{{ where }}<template v-if="team.hasAed"> · AED</template><template v-if="shift"> · {{ shift }}</template></span>
       <span v-if="quietMinutes" class="sub attention">{{ quietMinutes }} min niet gezien</span>
     </span>
-    <a v-if="phone" :href="telHref(phone)" class="round" :aria-label="`Bel ${unit.name}`"><Icon name="phone" :size="20" /></a>
+    <a v-if="phone" :href="telHref(phone)" class="round" :aria-label="`Bel ${team.name}`"><Icon name="phone" :size="20" /></a>
   </div>
 </template>
 

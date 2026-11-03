@@ -18,7 +18,7 @@ let pushes: { phones: string[]; payload: PushPayload }[];
 
 const set = (query: string, ...params: (string | number | null)[]) => db.raw.prepare(query).run(...params);
 const isOpen = (name: string) => (db.raw.prepare('SELECT is_open FROM posts WHERE name = ?').get(name) as { is_open: number }).is_open === 1;
-const availability = (name: string) => (db.raw.prepare('SELECT availability FROM ehbo_units WHERE name = ?').get(name) as { availability: string }).availability;
+const availability = (name: string) => (db.raw.prepare('SELECT availability FROM teams WHERE name = ?').get(name) as { availability: string }).availability;
 const subscriptions = (phone: string) => (db.raw.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE phone = ?').get(phone) as { n: number }).n;
 const WATER = 'Waterpost 3 · brug';
 const CROSSING = 'Kruising 4';
@@ -81,7 +81,7 @@ test('the first one to log in finds the post closed; a second device changes not
 
 test('an EHBO team goes off duty with its post when its last member logs out', async () => {
   const eva = await login(DEMO.ehbo);
-  set("UPDATE ehbo_units SET availability = 'available' WHERE name = 'Team 1'");
+  set("UPDATE teams SET availability = 'available' WHERE name = 'Team 1'");
   set('UPDATE posts SET is_open = 1 WHERE name = ?', EHBO_POST);
   await logout(eva);
   assert.equal(availability('Team 1'), 'off_duty');

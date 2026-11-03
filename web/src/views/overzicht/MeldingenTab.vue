@@ -3,7 +3,7 @@
 import { computed } from 'vue';
 import { REQUEST_KINDS, requestDetailLabel, telHref, type LiveRequest } from '@ehbo/shared';
 import Icon from '../../components/Icon.vue';
-import { clock, incidentSummary, unitOf } from '../../incidents.ts';
+import { clock, incidentSummary, teamOf } from '../../incidents.ts';
 import { useSave } from '../../composables/useSave.ts';
 import { kmLabel, primaryContact } from '../../posts.ts';
 import { isOpen, useLiveStore } from '../../stores/live.ts';
@@ -37,7 +37,7 @@ const pickedText = (r: LiveRequest) => (r.status === 'opgepakt'
   : r.status === 'afgehandeld' ? 'Afgehandeld' : r.status === 'ingetrokken' ? 'Ingetrokken' : '');
 
 const STATUS = { verstuurd: 'zoekt EHBO', geaccepteerd: 'onderweg', ter_plaatse: 'ter plaatse', afgerond: 'afgerond', ingetrokken: 'ingetrokken' } as const;
-const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
+const who = (teamId: number | null) => teamOf(store.pkg, teamId)?.name;
 </script>
 
 <template>
@@ -49,7 +49,7 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
       <RouterLink v-for="i in live.openIncidents" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="card incident open">
         <div class="request-top">
           <span class="kind ehbo">EHBO</span>
-          <span class="picked grow state" :class="i.status">{{ STATUS[i.status] }}<template v-if="who(i.unitId)"> · {{ who(i.unitId) }}</template><template v-if="i.selfStarted"> · zelf gestart</template></span>
+          <span class="picked grow state" :class="i.status">{{ STATUS[i.status] }}<template v-if="who(i.teamId)"> · {{ who(i.teamId) }}</template><template v-if="i.selfStarted"> · zelf gestart</template></span>
           <span class="mono at">{{ clock(i.reportedAt) }}</span>
         </div>
         <span class="request-line">{{ i.post.name }} · {{ incidentSummary(i) }}{{ i.aed ? ' · AED' : '' }}</span>
@@ -75,7 +75,7 @@ const who = (unitId: number | null) => unitOf(store.pkg, unitId)?.name;
         <RouterLink v-for="i in closed" :key="i.id" :to="{ name: 'melding', params: { id: i.id } }" class="card incident">
           <div class="request-top">
             <span class="kind ehbo">EHBO</span>
-            <span class="picked grow">{{ STATUS[i.status] }}<template v-if="who(i.unitId)"> · {{ who(i.unitId) }}</template><template v-if="i.selfStarted"> · zelf gestart</template></span>
+            <span class="picked grow">{{ STATUS[i.status] }}<template v-if="who(i.teamId)"> · {{ who(i.teamId) }}</template><template v-if="i.selfStarted"> · zelf gestart</template></span>
             <span class="mono at">{{ clock(i.reportedAt) }}</span>
           </div>
           <span class="request-line">{{ i.post.name }} · {{ incidentSummary(i) }}</span>

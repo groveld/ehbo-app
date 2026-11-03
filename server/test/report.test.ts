@@ -40,7 +40,7 @@ async function incident(accept: number, travel: number, outcome = 'geholpen') {
     postId: id('posts', 'Waterpost 3 · brug'), clientId: `rapport-${++n}-abcdef`, what: 'onwel', persons: '1', responsive: null, note: null,
   });
   later(accept);
-  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { unitId: id('ehbo_units', 'Team 2') });
+  await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/accept`, { teamId: id('teams', 'Team 2') });
   later(travel);
   await ok(DEMO.mobileEhbo, 'POST', `/api/incidents/${inc.id}/on-site`);
   later(300);
@@ -63,7 +63,7 @@ beforeEach(async () => {
   });
   await app.ready();
   await ok(DEMO.postLead, 'PUT', `/api/posts/${id('posts', 'Waterpost 3 · brug')}/open`, { open: true });
-  await ok(DEMO.mobileEhbo, 'PUT', `/api/units/${id('ehbo_units', 'Team 2')}/availability`, { availability: 'available' });
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${id('teams', 'Team 2')}/availability`, { availability: 'available' });
 });
 
 afterEach(async () => {
@@ -80,10 +80,10 @@ test('rapport: tijden per incident en totalen; alleen voor beheerders', async ()
 
   const report = await ok<Report>(DEMO.admin, 'GET', '/api/admin/report');
   assert.equal(report.event.name, 'Silvesterloop 2026');
-  assert.deepEqual(report.counts, { posts: 4, staff: 5, units: 2 });
+  assert.deepEqual(report.counts, { posts: 4, staff: 5, teams: 2 });
   assert.equal(report.incidents.length, 2);
   const [first] = report.incidents;
-  assert.deepEqual([first!.number, first!.postName, first!.unitName, first!.responseSeconds, first!.travelSeconds], [1, 'Waterpost 3 · brug', 'Team 2', 40, 240]);
+  assert.deepEqual([first!.number, first!.postName, first!.teamName, first!.responseSeconds, first!.travelSeconds], [1, 'Waterpost 3 · brug', 'Team 2', 40, 240]);
   assert.equal(report.totals.incidents, 2);
   assert.equal(report.totals.avgResponseSeconds, 50);
   assert.equal(report.totals.maxResponseSeconds, 60);
