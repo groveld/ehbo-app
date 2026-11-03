@@ -483,3 +483,17 @@ test('how close counts as at a post follows the setting', async () => {
   const at = await ok<LiveIncident>(DEMO.postMember, 'POST', '/api/incidents', request(near));
   assert.deepEqual([at.offPost, at.postId], [false, WATER()]);
 });
+
+test('a location with EHBO and water: the water lead opening it does not make the EHBO team available', async () => {
+  const EHBO_POST = () => idOf('posts', 'EHBO-post 1 · start');
+  const water = (db.raw.prepare("SELECT id FROM post_types WHERE key = 'water'").get() as { id: number }).id;
+  db.raw.prepare('INSERT INTO post_functions (post_id, type_id, sort) VALUES (?, ?, 1)').run(EHBO_POST(), water);
+  db.raw.prepare("INSERT INTO post_contacts (post_id, phone, role) VALUES (?, ?, 'verantwoordelijke')").run(EHBO_POST(), DEMO.postLead);
+  const team1 = async () => (await ok(DEMO.coordinator, 'GET', '/api/live/state')).units.find((u) => u.id === TEAM1())!.availability;
+
+  await ok(DEMO.postLead, 'PUT', `/api/posts/${EHBO_POST()}/open`, { open: true });
+  assert.equal(await team1(), 'uit_dienst', 'the team says itself when it is there');
+  await ok(DEMO.ehbo, 'PUT', `/api/units/${TEAM1()}/availability`, { availability: 'vrij' });
+  await ok(DEMO.postLead, 'PUT', `/api/posts/${EHBO_POST()}/open`, { open: false });
+  assert.equal(await team1(), 'vrij', 'and closing the water post does not take it off duty');
+});

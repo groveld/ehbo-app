@@ -56,7 +56,8 @@ const day = computed(() => {
 });
 /** Explains the map: each post type that occurs in this event, once. The posts per run are on the route page. */
 const legend = computed(() => {
-  const used = new Set(store.pkg?.posts.map((p) => p.typeId));
+  // Every function that occurs, also when it isn't a location's main one (#83).
+  const used = new Set(store.pkg?.posts.flatMap((p) => p.functionIds));
   return store.pkg?.postTypes.filter((t) => used.has(t.id)) ?? [];
 });
 </script>

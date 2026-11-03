@@ -41,7 +41,7 @@ watchEffect(() => {
 // Vast: een EHBO-post; mobiel: elke post kan standplaats zijn.
 const ehboPosts = computed(() => {
   const ehboType = admin.state?.postTypes.find((t) => t.key === 'ehbo')?.id;
-  return admin.state?.posts.filter((p) => p.typeId === ehboType) ?? [];
+  return admin.state?.posts.filter((p) => ehboType !== undefined && p.functionIds.includes(ehboType)) ?? [];
 });
 const postChoices = computed(() => (form.kind === 'vast' ? ehboPosts.value : admin.state?.posts ?? []));
 const selectedPost = computed(() => (form.postId !== null ? admin.postById.get(form.postId) : undefined));

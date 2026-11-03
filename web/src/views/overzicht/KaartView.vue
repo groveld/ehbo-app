@@ -35,7 +35,7 @@ const chips = computed(() => {
   const pkg = store.pkg;
   if (!pkg) return [];
   return pkg.postTypes
-    .map((t) => ({ id: t.id, label: t.name.replace(/-?post$/i, ''), count: pkg.posts.filter((p) => p.typeId === t.id).length }))
+    .map((t) => ({ id: t.id, label: t.name.replace(/-?post$/i, ''), count: pkg.posts.filter((p) => p.functionIds.includes(t.id)).length }))
     .filter((c) => c.count > 0);
 });
 /** Posten met een open oproep rood en bovenaan. */
@@ -51,7 +51,7 @@ const matches = (p: PackagePost) => {
   return !q || p.name.toLowerCase().includes(q) || p.passages.some((r) => r.km.some((k) => String(Math.round(k * 10) / 10).startsWith(km)));
 };
 /** On the map; what isn't on the chosen route steps back there. */
-const mapPosts = computed(() => store.pkg?.posts.filter((p) => (typeof filter.value !== 'number' || p.typeId === filter.value) && matches(p)) ?? []);
+const mapPosts = computed(() => store.pkg?.posts.filter((p) => (typeof filter.value !== 'number' || p.functionIds.includes(filter.value)) && matches(p)) ?? []);
 /** In the list: only the chosen route, in its order. Open calls always stay, on top. */
 const routeKm = (p: PackagePost) => p.passages.find((r) => r.runId === route.value)?.km[0] ?? Infinity;
 const helpHere = computed(() => !session.me?.assignments.some((a) => a.kind === 'ehbo'));

@@ -114,9 +114,9 @@ const personSchema = {
 
 const postSchema = {
   type: 'object',
-  required: ['typeId', 'name', 'lat', 'lng', 'accuracyM', 'address', 'accessRoute', 'timeFrom', 'timeTo', 'contacts'],
+  required: ['functionIds', 'name', 'lat', 'lng', 'accuracyM', 'address', 'accessRoute', 'timeFrom', 'timeTo', 'contacts'],
   properties: {
-    typeId: { type: 'integer' },
+    functionIds: { type: 'array', minItems: 1, maxItems: 12, uniqueItems: true, items: { type: 'integer' } },
     name: { type: 'string', minLength: 1, maxLength: 80 },
     lat: { type: ['number', 'null'], minimum: -90, maximum: 90 },
     lng: { type: ['number', 'null'], minimum: -180, maximum: 180 },
@@ -290,7 +290,9 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
 
   // Posten
   const checkPost = (body: PostData): PostData => {
-    if (!admin.postTypeExists(body.typeId)) throw badRequest('Onbekende soort post');
+    if (!body.functionIds.every((id) => admin.postTypeExists(id))) throw badRequest('Onbekende functie');
+    // One lead per location (#83): two people responsible apart from each other means two locations.
+    if (body.contacts.filter((c) => c.role === 'verantwoordelijke').length > 1) throw badRequest(`${body.name.trim()}: kies één locatieverantwoordelijke`);
     if ((body.lat === null) !== (body.lng === null)) throw badRequest('Vul zowel breedte- als lengtegraad in');
     return { ...body, contacts: body.contacts.map((c) => ({ ...c, name: c.name.trim(), phone: phoneOf(c.phone, c.name) })) };
   };

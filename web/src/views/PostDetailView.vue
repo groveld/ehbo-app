@@ -30,6 +30,8 @@ async function setOpen(open: boolean) {
 
 const post = computed(() => store.postById.get(Number(props.id)) ?? null);
 const type = computed(() => (post.value ? store.typeById.get(post.value.typeId) : undefined));
+/** Every function of this location, the main one first (#83). */
+const functionNames = computed(() => post.value?.functionIds.map((id) => store.typeById.get(id)?.name).filter(Boolean).join(' · ') ?? '');
 const contact = computed(() => (post.value ? primaryContact(post.value) : null));
 const here = computed(() => (store.pkg && post.value ? unitsAt(store.pkg, post.value.id) : []));
 const nearest = computed(() => (store.pkg && post.value && !here.value.length ? nearestUnit(store.pkg, post.value) : null));
@@ -75,7 +77,7 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'vast' ? `EH
       <div class="title">
         <PostBadge :type="type" :size="56" />
         <div class="stack">
-          <span class="type" :style="{ color: type?.color }">{{ type?.name }}</span>
+          <span class="type" :style="{ color: type?.color }">{{ functionNames }}</span>
           <h1>{{ post.name }}</h1>
           <span v-if="subtitle" class="small">{{ subtitle }}</span>
         </div>

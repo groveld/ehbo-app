@@ -152,11 +152,35 @@ test('loop toevoegen, GPX uploaden en verwijderen', async () => {
   assert.equal((await call('DELETE', `/api/admin/runs/${run.id}`)).statusCode, 404);
 });
 
+test('a location with several functions: the main one from the marker order, and one lead', async () => {
+  const state = (await call('GET', '/api/admin')).json() as AdminState;
+  const type = (key: string) => state.postTypes.find((t) => t.key === key)!.id;
+  const post: PostData = {
+    functionIds: [type('water'), type('ehbo'), type('stempel')], name: 'Brug', lat: 53.17, lng: 5.86, accuracyM: null, address: null,
+    accessRoute: null, timeFrom: null, timeTo: null, contacts: [],
+  };
+  const saved = ((await call('POST', '/api/admin/posts', post)).json() as AdminState).posts.find((p) => p.name === 'Brug')!;
+  assert.equal(saved.typeId, type('ehbo'), 'EHBO is above water and stamp');
+  assert.deepEqual(saved.functionIds, [type('ehbo'), type('water'), type('stempel')], 'main function first');
+  const pkg = (await app.inject({ url: '/api/package' })).json() as EventPackage;
+  assert.deepEqual(pkg.posts.find((p) => p.id === saved.id)!.functionIds, saved.functionIds);
+
+  assert.equal((await call('PUT', `/api/admin/posts/${saved.id}`, { ...post, functionIds: [] })).statusCode, 400, 'at least one function');
+  const two = { ...post, contacts: [
+    { name: 'Een', phone: '0611111101', role: 'verantwoordelijke', timeFrom: null, timeTo: null },
+    { name: 'Twee', phone: '0611111102', role: 'verantwoordelijke', timeFrom: null, timeTo: null },
+  ] };
+  const refused = await call('PUT', `/api/admin/posts/${saved.id}`, two);
+  assert.equal(refused.statusCode, 400);
+  assert.match(refused.json().error, /Brug: kies één locatieverantwoordelijke/);
+  assert.equal((await call('DELETE', `/api/admin/posts/${saved.id}`)).statusCode, 200);
+});
+
 test('post met contactpersonen; nieuw nummer kan daarna aanmelden', async () => {
   const state = (await call('GET', '/api/admin')).json() as AdminState;
   const water = state.postTypes.find((t) => t.key === 'water')!;
   const post: PostData = {
-    typeId: water.id, name: 'Waterpost 5', lat: 53.16, lng: 5.85, accuracyM: 4, address: null,
+    functionIds: [water.id], name: 'Waterpost 5', lat: 53.16, lng: 5.85, accuracyM: 4, address: null,
     accessRoute: 'Via de dijk', timeFrom: '11:00', timeTo: '14:00',
     contacts: [{ name: 'Nieuwe Vrijwilliger', phone: '06-1234 5678', role: 'verantwoordelijke', timeFrom: null, timeTo: null }],
   };
@@ -177,7 +201,7 @@ test('post met contactpersonen; nieuw nummer kan daarna aanmelden', async () => 
   const invalid = await call('POST', '/api/admin/posts', { ...post, contacts: [{ ...post.contacts[0], name: 'Piet', phone: '123' }] });
   assert.equal(invalid.statusCode, 400);
   assert.match(invalid.json().error, /Piet/);
-  assert.equal((await call('POST', '/api/admin/posts', { ...post, typeId: 999 })).statusCode, 400);
+  assert.equal((await call('POST', '/api/admin/posts', { ...post, functionIds: [999] })).statusCode, 400);
   assert.equal((await call('POST', '/api/admin/posts', { ...post, lng: null })).statusCode, 400);
 
   assert.equal((await call('DELETE', `/api/admin/posts/${saved.id}`)).statusCode, 200);

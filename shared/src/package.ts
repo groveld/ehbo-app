@@ -15,7 +15,10 @@ export interface PackageContact {
 
 export interface PackagePost {
   id: number;
+  /** The main function: icon, colour and layer of the marker (#83). */
   typeId: number;
+  /** Every function of this location, the main one first. Participants get only those meant for them. */
+  functionIds: number[];
   name: string;
   /** First pass on the longest run that comes by; null without a GPX or position. */
   km: number | null;

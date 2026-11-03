@@ -32,7 +32,7 @@ const ROLES: { value: PostContactRole; label: string }[] = [
 ];
 
 const form = reactive<PostData>({
-  typeId: 0, name: '', lat: null, lng: null, accuracyM: null, address: null, accessRoute: null, timeFrom: null, timeTo: null, contacts: [],
+  functionIds: [], name: '', lat: null, lng: null, accuracyM: null, address: null, accessRoute: null, timeFrom: null, timeTo: null, contacts: [],
 });
 const coordsText = ref('');
 const showCoords = ref(false);
@@ -41,19 +41,27 @@ const loaded = ref(false);
 const { dirty, markClean } = useDirty(() => form);
 const canSave = computed(() => isNew.value || dirty.value);
 
-const emptyContact = (): ContactData => ({ name: '', phone: '', role: form.contacts.length ? 'lid' : 'verantwoordelijke', timeFrom: null, timeTo: null });
+const emptyContact = (): ContactData => ({ name: '', phone: '', role: form.contacts.some((c) => c.role === 'verantwoordelijke') ? 'lid' : 'verantwoordelijke', timeFrom: null, timeTo: null });
 
 watchEffect(() => {
   if (loaded.value || !admin.state) return;
   if (post.value) {
     Object.assign(form, post.value, { contacts: post.value.contacts.map((c) => ({ ...c, phone: formatPhone(c.phone) })) });
   } else {
-    form.typeId = admin.state.postTypes[0]?.id ?? 0;
+    form.functionIds = admin.state.postTypes[0] ? [admin.state.postTypes[0].id] : [];
     form.contacts = [emptyContact()];
   }
   markClean();
   loaded.value = true;
 });
+
+/** At least one function stays chosen. */
+function toggleFunction(id: number) {
+  if (!form.functionIds.includes(id)) form.functionIds = [...form.functionIds, id];
+  else if (form.functionIds.length > 1) form.functionIds = form.functionIds.filter((f) => f !== id);
+}
+/** One lead per location (#83): once someone is, the others can't be chosen as lead. */
+const leadTaken = (i: number) => form.contacts.some((c, j) => j !== i && c.role === 'verantwoordelijke');
 
 async function captureGps() {
   const fix = await gps.start();
@@ -101,13 +109,14 @@ async function remove() {
       <p v-if="!isNew && !post" class="note warn">Deze post bestaat niet (meer).</p>
       <template v-else>
         <div class="form-field">
-          <span class="section-label">Soort post</span>
+          <span class="section-label">Functies</span>
           <div class="choice-grid">
             <button
               v-for="t in state.postTypes" :key="t.id" class="option" :style="optionStyle(t.color)"
-              :aria-pressed="form.typeId === t.id" @click="form.typeId = t.id"
+              :aria-pressed="form.functionIds.includes(t.id)" @click="toggleFunction(t.id)"
             >{{ t.name }}</button>
           </div>
+          <span class="small">Wat is er op deze locatie? Kies er één of meer. De belangrijkste bepaalt het icoon op de kaart. Staan er twee ploegen los van elkaar, maak dan twee locaties.</span>
         </div>
 
         <div class="form-field">
@@ -178,7 +187,7 @@ async function remove() {
             </div>
             <div class="contact-role">
               <select v-model="c.role" class="input" aria-label="Rol bij de post">
-                <option v-for="r in ROLES" :key="r.value" :value="r.value">{{ r.label }}</option>
+                <option v-for="r in ROLES" :key="r.value" :value="r.value" :disabled="r.value === 'verantwoordelijke' && leadTaken(i)">{{ r.label }}</option>
               </select>
               <button class="icon-btn" aria-label="Contactpersoon verwijderen" @click="form.contacts.splice(i, 1)"><Icon name="trash" :size="20" /></button>
             </div>

@@ -58,6 +58,7 @@ export function seedDemo(db: EventDb) {
     const line: LngLat[] = [[5.8107, 53.1406], [5.8111, 53.1409], [5.8279, 53.1488], [5.8344, 53.1512], [5.8279, 53.1488], [5.8111, 53.1409], [5.8107, 53.1406]];
     const trackKm = line.slice(1).reduce((sum, p, i) => sum + distanceKm(line[i]!, p), 0);
     sql.prepare("UPDATE runs SET track_json = ?, track_points = ?, track_km = ? WHERE name = '10 km'").run(JSON.stringify(line), line.length, trackKm);
+    sql.prepare('INSERT OR IGNORE INTO post_functions (post_id, type_id) SELECT id, type_id FROM posts').run();
     recomputePassages(sql);
   });
 }

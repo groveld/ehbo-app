@@ -10,7 +10,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { LIGHT, layers, type Flavor } from '@protomaps/basemaps';
 // MapLibre laadt zijn worker als los bestand; Vite ziet dat adres niet vanzelf, dus geven we het mee.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import type { Bbox, EventPackage, LngLat, PackagePost } from '@ehbo/shared';
+import { MARKER_ORDER, markerRank, type Bbox, type EventPackage, type LngLat, type PackagePost } from '@ehbo/shared';
 import { iconSvg, postTypeIcon } from '../icons.ts';
 import { isOnRun, type Ambulance } from '../posts.ts';
 import { assetUrl, tileUrl } from '../stores/package.ts';
@@ -69,7 +69,7 @@ const CROSS = iconSvg('ehbo', 16);
 const AMBULANCE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 10H6"/><path d="M8 8v4"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.3a1 1 0 0 0-.7-.9l-1.9-.7a1 1 0 0 1-.6-.5l-1.5-3a1 1 0 0 0-.9-.6H14"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
 
 /** Volgorde van de markeringen per soort, van onder naar boven. Eigen soorten liggen onderop, bij Anders. */
-const MARKER_ORDER = ['anders', 'verkeer', 'water', 'stempel', 'ehbo', 'start_finish'];
+// The order of functions lives in @ehbo/shared (MARKER_ORDER): it also decides a location's main function.
 /** Boven alle posten: de ambulance en je eigen positie. */
 const EHBO_RANK = MARKER_ORDER.indexOf('ehbo');
 const UNIT_LAYER = MARKER_ORDER.length + EHBO_RANK + 1;
@@ -169,7 +169,7 @@ function runFeatures() {
  */
 function postLayer(post: PackagePost, typeKey: string | null | undefined, onTop: boolean) {
   if (onTop) return TOP_LAYER;
-  const rank = Math.max(MARKER_ORDER.indexOf(typeKey ?? ''), 0);
+  const rank = markerRank(typeKey);
   const raised = rank >= EHBO_RANK || props.pkg.units.some((u) => u.postId === post.id);
   return rank + (raised ? EHBO_RANK : 0) + 1;
 }

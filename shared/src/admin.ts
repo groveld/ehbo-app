@@ -64,7 +64,8 @@ export interface PostPassages {
 }
 
 export interface PostData {
-  typeId: number;
+  /** What's at this location (#83), at least one. The main function follows from MARKER_ORDER. */
+  functionIds: number[];
   name: string;
   lat: number | null;
   lng: number | null;
@@ -79,6 +80,8 @@ export interface PostData {
 
 export interface AdminPost extends PostData {
   id: number;
+  /** The main function: icon, colour and layer of the marker. */
+  typeId: number;
   isOpen: boolean;
   /** First pass on the longest run that comes by; null without a GPX or position. */
   km: number | null;
