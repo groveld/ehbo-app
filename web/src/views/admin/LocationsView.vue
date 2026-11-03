@@ -2,6 +2,7 @@
 // Lijst van posten (niet in het schermontwerp; zelfde opzet als 1.4 EHBO-eenheden).
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
+import LocationBadge from '../../components/LocationBadge.vue';
 import { useAdminStore } from '../../stores/admin.ts';
 
 const admin = useAdminStore();
@@ -13,7 +14,7 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
     <template #default="{ state }">
       <div v-if="state.locations.length" class="list">
         <RouterLink v-for="p in state.locations" :key="p.id" :to="{ name: 'admin-location', params: { id: p.id } }" class="list-row">
-          <span class="badge letter" :style="{ background: admin.functionTypeById.get(p.typeId)?.color }">{{ admin.functionTypeById.get(p.typeId)?.letter }}</span>
+          <LocationBadge :type="admin.functionTypeById.get(p.typeId)" />
           <span v-if="p.functionIds.length > 1" class="more-functions" :aria-label="`${p.functionIds.length} functies`">+{{ p.functionIds.length - 1 }}</span>
           <span class="main">
             <span class="title-line">{{ p.name }}</span>
@@ -32,7 +33,6 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
 </template>
 
 <style scoped>
-.letter { width: 40px; height: 40px; color: #FFFFFF; font-size: 15px; }
 .tag { margin-left: 0; flex-shrink: 0; }
 .more-functions { margin-left: -18px; align-self: flex-end; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; border: 2px solid var(--card); background: var(--ink-2); color: #FFFFFF; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 </style>

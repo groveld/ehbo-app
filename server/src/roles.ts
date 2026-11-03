@@ -20,7 +20,7 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
     const detail = r.kind === 'fixed'
       ? (r.location_name ?? 'Vaste EHBO-post')
       : `${mobilityLabel(r.mobility).replace('m', 'M')}${r.location_name ? ` · Standplaats ${r.location_name}` : ''}`;
-    assignments.push({ kind: 'team', title: `EHBO ${r.team_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, teamId: r.team_id });
+    assignments.push({ kind: 'team', title: `EHBO ${r.team_name}`, detail, times: times(r.time_from, r.time_to), letter: '+', color: EHBO_COLOR, functionKey: 'first_aid', teamId: r.team_id });
   }
   for (const r of db.locationAssignments(phone)) {
     assignments.push({
@@ -30,6 +30,7 @@ export function resolveMe(db: EventDb, phone: string): Me | undefined {
       times: times(r.time_from, r.time_to),
       letter: r.type_letter,
       color: r.type_color,
+      functionKey: r.type_key,
       locationId: r.location_id,
       role: r.role,
     });

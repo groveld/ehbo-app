@@ -5,7 +5,7 @@ import type { FunctionTypeInfo } from '@ehbo/shared';
 import { functionTypeIcon } from '../icons.ts';
 import Icon from './Icon.vue';
 
-const props = withDefaults(defineProps<{ type?: FunctionTypeInfo; size?: number }>(), { type: undefined, size: 40 });
+const props = withDefaults(defineProps<{ type?: Pick<FunctionTypeInfo, 'key' | 'letter' | 'color'>; size?: number }>(), { type: undefined, size: 40 });
 const ehbo = computed(() => props.type?.key === 'first_aid');
 const icon = computed(() => functionTypeIcon(props.type?.key));
 const fontSize = computed(() => Math.round(props.size * ((props.type?.letter.length ?? 1) > 1 ? 0.32 : 0.4)));
