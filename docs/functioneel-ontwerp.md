@@ -443,6 +443,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Bel EHBO button (31 Oct) | The participant button shows a cross and the text "Bel EHBO" ("Bel 112" without a number), because a lone cross looks like an add button. It stays at the bottom right and grows to the left, with the normal primary button size and radius |
 | Participant legend (31 Oct) | The first participant screen no longer lists posts, because every post of every run is hard to read. It has a legend instead: each post type that occurs, once, with icon and name. The posts per run are on the route page |
 | Map credit and info link (31 Oct) | Maps show only the map, without an attribution button. The credit for OpenStreetMap and Protomaps, which the licence requires, is on the intro, and on the info page with a link to the licence. For now participants have no link to the info page; a new place is decided later |
+| Info link for participants (3 Nov) | The participant page has a link Info & voorwaarden below Soorten posten, with room under it so Bel EHBO never covers it. It takes participants to what the app does with data and to the map licence, which the OpenStreetMap attribution guidelines ask for. This replaces "for now participants have no link" above (#127) |
 
 **Nog open**
 
