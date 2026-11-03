@@ -117,6 +117,20 @@ const STORAGE_STEPS: ((read: <T>(key: string) => T | null, write: (key: string, 
     const outbox = read<Any[]>('ehbo.outbox');
     if (outbox) write('ehbo.outbox', outbox.map((item) => ({ type: 'first_aid', ...item })));
   },
+  // 5: one queue for everything (#86): an EHBO request waiting in the outbox goes at the end of the queue, as it was sent after it.
+  (read, write) => {
+    type Any = Record<string, any>;
+    const outbox = read<Any[]>('ehbo.outbox');
+    if (outbox?.length) {
+      const queue = read<Any[]>('ehbo.queue') ?? [];
+      write('ehbo.queue', [...queue, ...outbox.map((body) => ({ id: crypto.randomUUID(), at: body.reportedAt ?? new Date().toISOString(), action: { type: 'report', body } }))]);
+    }
+    write('ehbo.outbox', null);
+    const ids = { ...(read<Record<string, number>>('ehbo.incidentIds') ?? {}), ...(read<Record<string, number>>('ehbo.requestIds') ?? {}) };
+    if (Object.keys(ids).length) write('ehbo.tempIds', ids);
+    write('ehbo.incidentIds', null);
+    write('ehbo.requestIds', null);
+  },
 ];
 
 export function upgradeStorage() {
