@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { recomputePassages } from './gpx.ts';
-import { DEFAULT_CORE_TEAM, DEFAULT_POST_TYPES, normalizeEmergencyNumber, type PostContactRole, type PushSubscriptionData, type TeamKind, type TeamMobility } from '@ehbo/shared';
+import { DEFAULT_CORE_TEAM, DEFAULT_HELP_REQUEST_TYPES, DEFAULT_POST_TYPES, PLAIN_HELP_REQUEST_COLORS, normalizeEmergencyNumber, type HelpRequestType, type PostContactRole, type PushSubscriptionData, type TeamKind, type TeamMobility } from '@ehbo/shared';
 
 // Elke stap draait één keer; PRAGMA user_version onthoudt tot waar het bestand is bijgewerkt.
 // Een stap is SQL, of een functie als de gegevens zelf omgezet moeten worden.
@@ -494,6 +494,25 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
     FROM help_requests h JOIN help_request_types t ON t.id = h.type_id
     WHERE t.handling = 'queue';
   `,
+  // 24: a help request type says what it looks like too (#86): subtitle, question, choices, icon and colours. They were in the code.
+  // The view of incidents gets the type, now that an incident can be of any dispatch type.
+  (db) => {
+    db.exec(`
+      ALTER TABLE help_request_types ADD COLUMN sub TEXT;
+      ALTER TABLE help_request_types ADD COLUMN ask TEXT;
+      ALTER TABLE help_request_types ADD COLUMN choices_json TEXT NOT NULL DEFAULT '[]';
+      ALTER TABLE help_request_types ADD COLUMN icon TEXT NOT NULL DEFAULT 'more';
+      ALTER TABLE help_request_types ADD COLUMN colors_json TEXT NOT NULL DEFAULT '{}';
+      DROP VIEW incidents;
+      CREATE VIEW incidents AS
+        SELECT h.id, t.key AS type, h.client_id, h.post_id, h.reported_by, h.status, h.is_test, h.reported_at, h.accepted_at, h.accepted_by, h.closed_at,
+               h.place_name, h.place_lat, h.place_lng, h.place_accuracy_m, d.what, d.persons, d.responsive, d.note, d.aed, d.stage, d.sent_at,
+               d.escalates_at, d.team_id, d.on_site_at, d.outcome, d.outcome_persons, d.outcome_note, d.self_started
+        FROM help_requests h JOIN dispatch_details d ON d.help_request_id = h.id JOIN help_request_types t ON t.id = h.type_id;
+    `);
+    const set = db.prepare('UPDATE help_request_types SET name = ?, sub = ?, ask = ?, choices_json = ?, icon = ?, colors_json = ? WHERE key = ?');
+    for (const t of DEFAULT_HELP_REQUEST_TYPES) set.run(t.name, t.sub, t.ask, JSON.stringify(t.choices), t.icon, JSON.stringify(t.colors), t.key);
+  },
 ];
 
 export interface EventRow {
@@ -649,6 +668,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     bumpVersion: db.prepare('UPDATE event SET version = version + 1 WHERE id = 1'),
     dataVersion: db.prepare('SELECT version, map_version FROM event WHERE id = 1'),
     testMode: db.prepare('SELECT test_mode FROM event WHERE id = 1'),
+    helpRequestTypes: db.prepare('SELECT key, name, handling, sub, ask, choices_json, icon, colors_json FROM help_request_types ORDER BY sort, id'),
   };
 
   if (adminPhone && (q.countAdmins.get() as { n: number }).n === 0) {
@@ -716,6 +736,12 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
 
     /** Testmodus: oproepen en aanvragen zijn proef (melding met "Test" ervoor) en komen niet in het rapport. */
     testMode: () => (q.testMode.get() as { test_mode: number }).test_mode === 1,
+
+    /** What a location can ask for (#86): the rows of help_request_types. */
+    helpRequestTypes: (): HelpRequestType[] => (q.helpRequestTypes.all() as Record<string, string>[]).map((t) => ({
+      key: t.key!, name: t.name!, handling: t.handling as HelpRequestType['handling'], sub: t.sub ?? null, ask: t.ask ?? null,
+      choices: JSON.parse(t.choices_json!), icon: t.icon!, colors: { ...PLAIN_HELP_REQUEST_COLORS, ...JSON.parse(t.colors_json!) },
+    })),
 
     close: () => db.close(),
   };

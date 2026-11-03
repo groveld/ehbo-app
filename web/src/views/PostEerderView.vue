@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Eerder vandaag: de afgeronde meldingen en aanvragen van een post, vanaf het poststartscherm. Tik voor het logboek.
 import { computed } from 'vue';
-import { REQUEST_KINDS, requestDetailLabel } from '@ehbo/shared';
+import { helpRequestType, requestDetailLabel } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import { clock, incidentSummary } from '../incidents.ts';
 import { useLiveStore } from '../stores/live.ts';
@@ -20,7 +20,7 @@ const history = computed(() => [
     to: { name: 'post-melding', params: { postId: postId.value, id: i.id } },
   })),
   ...live.requests.filter((r) => r.postId === postId.value && (r.status === 'closed' || r.status === 'withdrawn')).map((r) => ({
-    key: `r${r.id}`, at: r.reportedAt, text: [REQUEST_KINDS[r.type].label, requestDetailLabel(r.type, r.detail)].filter(Boolean).join(' · '), done: r.status === 'closed',
+    key: `r${r.id}`, at: r.reportedAt, text: [helpRequestType(store.pkg?.helpRequestTypes, r.type).name, requestDetailLabel(store.pkg?.helpRequestTypes, r.type, r.detail)].filter(Boolean).join(' · '), done: r.status === 'closed',
     state: r.status === 'closed' ? 'afgehandeld' : 'ingetrokken', to: { name: 'post-aanvraag', params: { postId: postId.value, id: r.id } },
   })),
 ].sort((a, b) => b.at.localeCompare(a.at)));

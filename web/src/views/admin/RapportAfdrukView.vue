@@ -2,7 +2,7 @@
 // Rapport als afdrukpagina: "Opslaan als PDF" in het afdrukvenster geeft het PDF-rapport. Op A4, met het groot logo.
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, formatDuration, formatKm, formatKmList, type Report, type RequestKind } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, formatDuration, helpRequestType, formatKm, formatKmList, type Report, type RequestKind } from '@ehbo/shared';
 import { formatDate } from '../../format.ts';
 import { clock } from '../../incidents.ts';
 import { useAdminStore } from '../../stores/admin.ts';
@@ -83,7 +83,7 @@ onMounted(async () => {
           </table>
           <table v-if="requests.length">
             <thead><tr><th>Aanvragen</th><th class="num">Aantal</th></tr></thead>
-            <tbody><tr v-for="[kind, n] in requests" :key="kind"><td>{{ REQUEST_KINDS[kind].label }}</td><td class="num">{{ n }}</td></tr></tbody>
+            <tbody><tr v-for="[kind, n] in requests" :key="kind"><td>{{ helpRequestType(report.helpRequestTypes, kind).name }}</td><td class="num">{{ n }}</td></tr></tbody>
           </table>
         </div>
       </section>

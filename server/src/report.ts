@@ -1,6 +1,6 @@
 // Rapport na afloop (functioneel ontwerp, "Incidentregistratie en rapport"): per incident de tijden en afloop, plus totalen.
 // Proefoproepen en -aanvragen uit de testmodus tellen niet mee.
-import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type Outcome, type Report, type ReportIncident, type ReportPostPassages, type RequestKind, formatKm, formatKmList } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, helpRequestType, type Outcome, type Report, type ReportIncident, type ReportPostPassages, type RequestKind, formatKm, formatKmList } from '@ehbo/shared';
 import type { EventDb } from './event-db.ts';
 
 type Row = Record<string, string | number | null>;
@@ -65,6 +65,7 @@ export function buildReport(db: EventDb, now = new Date()): Report {
   return {
     event: { name: event.name, startDate: event.start_date, endDate: event.end_date },
     generatedAt: now.toISOString(),
+    helpRequestTypes: db.helpRequestTypes(),
     counts: {
       posts: count('SELECT COUNT(*) AS n FROM posts'),
       // Iedereen die ergens is ingepland: bij een post, een EHBO-eenheid of in het kernteam.
@@ -107,10 +108,10 @@ export function reportCsv(report: Report) {
     i.aed ? 'ja' : 'nee', STATUS[i.status], localTime(i.reportedAt), localTime(i.acceptedAt), localTime(i.onSiteAt), localTime(i.closedAt),
     minutesSeconds(i.responseSeconds), minutesSeconds(i.travelSeconds), i.teamName, i.escalated ? 'ja' : 'nee', i.selfStarted ? 'ja' : 'nee', i.outcome ? OUTCOMES[i.outcome] : null, i.note,
   ]);
-  const requests = Object.entries(report.totals.requestsByKind).map(([kind, n]) => [`Aanvragen ${REQUEST_KINDS[kind as RequestKind].label.toLowerCase()}`, n]);
+  const requests = Object.entries(report.totals.requestsByKind).map(([kind, n]) => [`Aanvragen ${helpRequestType(report.helpRequestTypes, kind).name.toLowerCase()}`, n ?? 0]);
   const lines = [header, ...rows, [], ['Totaal'], ['Incidenten', report.totals.incidents], ['Ingetrokken', report.totals.withdrawn],
     ['Naar alle eenheden', report.totals.escalated], ...requests,
-    [], ['Km-punten per locatie'], ['Post', 'Loop', 'Km-punten'],
+    [], ['Km-punten per locatie'], ['Locatie', 'Loop', 'Km-punten'],
     ...report.passages.flatMap((p) => p.runs.map((r) => [p.postName, r.runName, formatKmList(r.km)])),
   ];
   return `﻿${lines.map((line) => line.map(cell).join(';')).join('\r\n')}\r\n`;

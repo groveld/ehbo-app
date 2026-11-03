@@ -250,7 +250,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const place = row.place_name as string | null;
     return {
       id: row.id as number,
-      type: 'first_aid',
+      type: row.type as string,
       handling: 'dispatch',
       postId: row.post_id as number,
       post: { typeId, name: place ?? name, km, lat: (row.place_lat as number | null) ?? lat, lng: (row.place_lng as number | null) ?? lng },
@@ -328,9 +328,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const keys = Object.keys(values);
     return [keys.filter((k) => SHARED.has(k)), keys.filter((k) => !SHARED.has(k))];
   };
-  function insertIncident(values: Row) {
+  function insertIncident(typeKey: string, values: Row) {
     const [shared, details] = split(values);
-    const type = get("SELECT id FROM help_request_types WHERE key = 'first_aid'")!.id as number;
+    const type = get('SELECT id FROM help_request_types WHERE key = ?', typeKey)!.id as number;
     const id = Number(run(`INSERT INTO help_requests (type_id, ${shared.join(', ')}) VALUES (?, ${shared.map(() => '?').join(', ')})`, type, ...shared.map((k) => values[k]!)).lastInsertRowid);
     run(`INSERT INTO dispatch_details (help_request_id, ${details.join(', ')}) VALUES (?, ${details.map(() => '?').join(', ')})`, id, ...details.map((k) => values[k]!));
     return id;
@@ -510,7 +510,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const escalatesAt = first ? new Date(now().getTime() + escalationMs()).toISOString() : null;
 
     const id = db.transaction(() => {
-      const incidentId = insertIncident({
+      const incidentId = insertIncident(body.type, {
         client_id: body.clientId, post_id: post.id, reported_by: me.phone, what: body.what, persons: body.persons, responsive: body.responsive,
         note: body.note?.trim() || null, aed: aed ? 1 : 0, status: 'sent', stage: 'nearest', reported_at: reportedAt, sent_at: sentAt, escalates_at: escalatesAt,
         is_test: db.testMode() ? 1 : 0, place_name: offPost ? place.name : null, place_lat: offPost ? position![1] : null, place_lng: offPost ? position![0] : null,
@@ -557,7 +557,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const aed = body.responsive === 'no';
 
     const id = db.transaction(() => {
-      const incidentId = insertIncident({
+      const incidentId = insertIncident('first_aid', {
         client_id: body.clientId, post_id: post.id, reported_by: me.phone, what: body.what, persons: body.persons, responsive: body.responsive,
         note: body.note?.trim() || null, aed: aed ? 1 : 0, status: 'on_site', stage: 'nearest', reported_at: at, sent_at: at,
         team_id: team.id, accepted_by: me.phone, accepted_at: at, on_site_at: at, is_test: db.testMode() ? 1 : 0, self_started: 1,

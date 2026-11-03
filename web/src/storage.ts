@@ -1,4 +1,5 @@
 // Lokaal bewaren voor gebruik zonder bereik. localStorage kan ontbreken (privévenster); dan werkt alles nog, alleen niet offline.
+import { DEFAULT_HELP_REQUEST_TYPES } from '@ehbo/shared';
 export function load<T>(key: string): T | null {
   try {
     const value = localStorage.getItem(key);
@@ -130,6 +131,11 @@ const STORAGE_STEPS: ((read: <T>(key: string) => T | null, write: (key: string, 
     if (Object.keys(ids).length) write('ehbo.tempIds', ids);
     write('ehbo.incidentIds', null);
     write('ehbo.requestIds', null);
+  },
+  // 6: the kinds of help request come with the package (#86); until the new one arrives, the ones an event starts with.
+  (read, write) => {
+    const pkg = read<Record<string, unknown>>('ehbo.package');
+    if (pkg?.staff && !pkg.helpRequestTypes) write('ehbo.package', { ...pkg, helpRequestTypes: DEFAULT_HELP_REQUEST_TYPES });
   },
 ];
 

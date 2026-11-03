@@ -8,7 +8,7 @@ import { cleanGpx, type GpxWaypoint } from '../gpx.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
-const PACKAGE_FORMAT = 10;
+const PACKAGE_FORMAT = 11;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
@@ -39,6 +39,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
     teams: state.teams.map(({ availability: _, ...u }) => (staff ? u : { ...u, name: '', mobility: null, hasAed: false, timeFrom: null, timeTo: null, members: [] })),
     coreTeam: staff ? state.coreTeam.filter((c) => c.phone).map((c) => ({ ...c, phone: c.phone! })) : [],
     emergencyNumbers: staff ? state.emergencyNumbers : [],
+    helpRequestTypes: staff ? db.helpRequestTypes() : [],
     ehboPhone: (state.coreTeam.find((c) => c.phone && sameFunction(c.function, 'EHBO-coördinator')) ?? state.coreTeam.find((c) => c.phone && c.isCoordinator))?.phone ?? null,
     map,
   };

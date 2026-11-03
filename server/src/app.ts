@@ -94,7 +94,7 @@ export function buildApp({ db, vapid, build, webDir, allowInsecureEndpoints = fa
   app.register(sessionRoutes, { db, calls });
   app.register(pushRoutes, { db, notifier, allowInsecureEndpoints });
   app.register(callRoutes, { calls, requests });
-  app.register(helpRequestRoutes, { calls, requests });
+  app.register(helpRequestRoutes, { db, calls, requests });
   app.register(adminRoutes, { db, calls });
   app.register(brandRoutes, { db });
   app.register(packageRoutes, { db, calls });

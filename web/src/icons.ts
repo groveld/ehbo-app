@@ -41,6 +41,9 @@ export const PATHS = {
 
 export type IconName = keyof typeof PATHS;
 
+/** An icon named in the data (a kind of help request): one that doesn't exist shows as "more". */
+export const iconOf = (name: string): IconName => (name in PATHS ? (name as IconName) : 'more');
+
 /** Het icoon als SVG-tekst, voor plekken zonder Vue (kaartmarkers). */
 export const iconSvg = (name: IconName, size: number, strokeWidth = 2) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[name]}</svg>`;

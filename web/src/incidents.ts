@@ -1,5 +1,5 @@
 // Weergave van oproepen: korte omschrijving, tijden, reistijd.
-import { INCIDENT_WHAT, OUTCOMES, REQUEST_KINDS, type EventPackage, type IncidentDetails, type IncidentEventType, type IncidentPersons, type LiveIncident, type LiveRequest, type PackagePost, type PackageTeam, type TeamMobility } from '@ehbo/shared';
+import { INCIDENT_WHAT, OUTCOMES, helpRequestType, type HelpRequestType, type EventPackage, type IncidentDetails, type IncidentEventType, type IncidentPersons, type LiveIncident, type LiveRequest, type PackagePost, type PackageTeam, type TeamMobility } from '@ehbo/shared';
 
 const PERSONS: Record<IncidentPersons, string> = { '1': '1 persoon', '2': '2 personen', '3+': '3 of meer personen' };
 
@@ -50,8 +50,8 @@ export function incidentLog(incident: LiveIncident): LogEntry[] {
   return log;
 }
 
-export function requestLog(request: LiveRequest): LogEntry[] {
-  const log: LogEntry[] = [{ at: request.reportedAt, text: `${REQUEST_KINDS[request.type].label} aangevraagd door ${request.postName}` }];
+export function requestLog(request: LiveRequest, types: HelpRequestType[] | undefined): LogEntry[] {
+  const log: LogEntry[] = [{ at: request.reportedAt, text: `${helpRequestType(types, request.type).name} aangevraagd door ${request.postName}` }];
   if (request.acceptedAt) log.push({ at: request.acceptedAt, text: `Opgepakt door ${request.acceptedBy?.name ?? 'de coördinator'}` });
   if (request.status === 'closed') log.push({ at: request.closedAt, text: 'Afgehandeld' });
   else if (request.status === 'withdrawn') log.push({ at: request.closedAt, text: 'Ingetrokken', tone: 'stop' });

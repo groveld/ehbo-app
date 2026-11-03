@@ -6,17 +6,19 @@ import {
   INCIDENT_WHAT,
   NOTE_MAX,
   OUTCOMES,
-  REQUEST_KINDS,
   RESPONSIVE,
   type CloseIncident,
   type IncidentDetails,
   type LiveHelpRequest,
   type LiveState,
   type NewHelpRequest,
+  type NewIncident,
+  type NewRequest,
   type NewSelfIncident,
 } from '@ehbo/shared';
 import { requireMe } from '../auth.ts';
 import type { Calls } from '../calls.ts';
+import type { EventDb } from '../event-db.ts';
 import type { Requests } from '../requests.ts';
 import { actionHeaders } from './calls.ts';
 
@@ -40,7 +42,7 @@ type Id = { Params: { id: number } };
 
 const httpError = (statusCode: number, message: string) => Object.assign(new Error(message), { statusCode });
 
-export async function helpRequestRoutes(app: FastifyInstance, { calls, requests }: { calls: Calls; requests: Requests }) {
+export async function helpRequestRoutes(app: FastifyInstance, { db, calls, requests }: { db: EventDb; calls: Calls; requests: Requests }) {
   app.addHook('preHandler', requireMe);
 
   /** This help request is handled this way, or the action doesn't apply to it. */
@@ -56,28 +58,29 @@ export async function helpRequestRoutes(app: FastifyInstance, { calls, requests 
       body: {
         type: 'object',
         required: ['type', 'postId', 'clientId'],
-        properties: { type: { enum: ['first_aid', ...Object.keys(REQUEST_KINDS)] }, clientId },
-        if: { properties: { type: { const: 'first_aid' } } },
-        then: {
-          required: detailsRequired,
-          properties: {
-            postId: { type: ['integer', 'null'], minimum: 1 },
-            reportedAt: { type: 'string', format: 'date-time' },
-            lat: coordinate(90),
-            lng: coordinate(180),
-            accuracyM: { type: ['number', 'null'], minimum: 0, maximum: 100000 },
-            ...details,
-          },
+        properties: {
+          type: { type: 'string', maxLength: 40 },
+          clientId,
+          postId: { type: ['integer', 'null'], minimum: 1 },
+          reportedAt: { type: 'string', format: 'date-time' },
+          lat: coordinate(90),
+          lng: coordinate(180),
+          accuracyM: { type: ['number', 'null'], minimum: 0, maximum: 100000 },
+          ...details,
+          detail,
         },
-        else: { required: ['detail'], properties: { postId: { type: 'integer', minimum: 1 }, detail } },
       },
     },
   }, async (request, reply) => {
-    const body = request.body as NewHelpRequest;
-    const created = body.type === 'first_aid'
-      ? calls.report(request.me!, body)
-      : calls.at(actionHeaders(request)[1], () => requests.create(request.me!, body));
-    return reply.code(201).send(created);
+    const body = request.body as NewHelpRequest & Record<string, unknown>;
+    const type = db.helpRequestTypes().find((t) => t.key === body.type);
+    if (!type) throw httpError(400, 'Onbekende soort hulpvraag');
+    if (type.handling === 'dispatch') {
+      if (!detailsRequired.every((k) => k in body)) throw httpError(400, 'Ongeldig verzoek');
+      return reply.code(201).send(calls.report(request.me!, body as NewIncident));
+    }
+    if (typeof body.postId !== 'number' || !('detail' in body)) throw httpError(400, 'Ongeldig verzoek');
+    return reply.code(201).send(calls.at(actionHeaders(request)[1], () => requests.create(request.me!, body as NewRequest)));
   });
 
   app.post<{ Body: NewSelfIncident }>('/api/help-requests/self', {
