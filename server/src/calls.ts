@@ -518,15 +518,31 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     return state().incidents.find((i) => i.id === id)!;
   }
 
+  /** What an addition changes, in words for a push. Never the note itself: that doesn't belong on a lock screen. */
+  function changes(row: Row, details: IncidentDetails, note: string | null) {
+    const list: string[] = [];
+    if (details.what !== row.what) list.push(details.what ? INCIDENT_WHAT[details.what] : 'Wat er is: weggehaald');
+    if (details.persons !== row.persons) list.push(details.persons ? PERSONS_TEXT[details.persons] : 'Aantal personen: weggehaald');
+    if (details.responsive !== row.responsive) {
+      list.push(details.responsive === 'nee' ? 'Niet aanspreekbaar' : details.responsive === 'ja' ? 'Aanspreekbaar' : 'Aanspreekbaar: weet niet');
+    }
+    if (note !== row.note) list.push(!row.note ? 'Notitie toegevoegd' : note ? 'Notitie gewijzigd' : 'Notitie weggehaald');
+    return list;
+  }
+
   function update(me: Me, id: number, details: IncidentDetails) {
     const row = incidentRow(id);
     if (!atPost(me, row.post_id as number) && !me.isAdmin && !isCoordinator(me)) throw httpError(403, 'Alleen de post kan de melding aanvullen');
     if (!['verstuurd', 'geaccepteerd', 'ter_plaatse'].includes(row.status as string)) throw httpError(409, 'Deze melding is al afgesloten');
+    const note = details.note?.trim() || null;
+    const differences = changes(row, details, note);
+    // Sent again without a change (say from the queue): nothing to log, and no alert.
+    if (!differences.length) return state();
     const becameAed = row.aed !== 1 && details.responsive === 'nee';
     db.transaction(() => {
       run('UPDATE incidents SET what = ?, persons = ?, responsive = ?, note = ?, aed = ? WHERE id = ?',
-        details.what, details.persons, details.responsive, details.note?.trim() || null, row.aed === 1 || becameAed ? 1 : 0, id);
-      log(id, 'aangevuld', `Aangevuld: ${summary(incidentRow(id))}${becameAed ? ', niet aanspreekbaar' : ''}`);
+        details.what, details.persons, details.responsive, note, row.aed === 1 || becameAed ? 1 : 0, id);
+      log(id, 'aangevuld', `Aangevuld: ${differences.join(', ').toLowerCase()}`);
     });
     const updated = incidentRow(id);
     // Niet aanspreekbaar geworden: de dichtstbijzijnde beschikbare AED-eenheid alsnog oproepen, als er nog geen AED komt.
@@ -540,8 +556,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       }
     }
     const accepted = dispatchesOf(id).filter((d) => d.acceptedAt).map((d) => d.unitId);
+    // The app plays its own short sound when it's in view; the push then stays silent (quietInApp).
+    const post = posts().get(updated.post_id as number)!;
     for (const unit of units().filter((u) => accepted.includes(u.id))) {
-      notify(unit.members, { title: 'Melding aangevuld', body: `${summary(updated)}${becameAed ? ' · niet aanspreekbaar' : ''}`, tag: `aangevuld-${id}`, url: unitUrl(id) });
+      notify(unit.members, { title: `Melding aangevuld · ${post.name}`, body: differences.join(' · '), tag: `aangevuld-${id}`, url: unitUrl(id), quietInApp: true });
     }
     changed();
     return state();

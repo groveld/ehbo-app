@@ -86,6 +86,9 @@ self.addEventListener('push', (event) => {
     timestamp: Date.now(),
   };
   event.waitUntil((async () => {
+    // Every push must show a notification (iOS), but with the app in view it plays its own sound: no second alert.
+    const windows = await self.clients.matchAll({ type: 'window' });
+    if (data.quietInApp && windows.some((c) => c.visibilityState === 'visible')) Object.assign(options, { silent: true, vibrate: [] });
     await self.registration.showNotification(title, options);
     for (const client of await self.clients.matchAll({ type: 'window' })) client.postMessage({ type: 'push-received', title });
   })());

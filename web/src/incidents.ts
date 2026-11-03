@@ -8,6 +8,11 @@ export const incidentSummary = (d: IncidentDetails) =>
   [d.what ? INCIDENT_WHAT[d.what] : null, d.persons ? PERSONS[d.persons] : null].filter(Boolean).join(' · ') || 'EHBO nodig';
 
 /** "11:02" in Nederlandse tijd. */
+export const personsText = (persons: IncidentPersons | null) => (persons ? PERSONS[persons] : null);
+
+/** When the post last added to the incident, or null. */
+export const lastAddition = (incident: LiveIncident) => incident.events.filter((e) => e.type === 'aangevuld').at(-1)?.at ?? null;
+
 export const clock = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }) : '–';
 

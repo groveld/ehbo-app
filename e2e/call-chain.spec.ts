@@ -62,6 +62,9 @@ test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter
   await expect(post.locator('.helper').getByText('Mo Mobiel')).toBeVisible();
 
   await expect(ehbo.getByText(/Onderweg · sinds/i)).toBeVisible();
+  // En route: everything the post entered.
+  await expect(ehbo.locator('.details')).toContainText('Onwel / flauw');
+  await expect(ehbo.locator('.details')).toContainText('1 persoon');
   await ehbo.getByRole('button', { name: 'Ik ben ter plaatse' }).click();
   await expect(post.getByRole('heading', { name: 'EHBO is er' })).toBeVisible({ timeout: 10_000 });
 

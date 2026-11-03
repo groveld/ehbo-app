@@ -5,6 +5,8 @@ import { useRouter } from 'vue-router';
 import { formatPhone } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import { getNavApp, NAV_APPS, setNavApp, type NavApp } from '../navigate.ts';
+import { isIOS } from '../platform.ts';
+import { keepAwake, setKeepAwake, wakeLockSupported } from '../wakeLock.ts';
 import { coordinatorOf } from '../posts.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -61,6 +63,18 @@ async function logout() {
       </select>
     </div>
 
+    <div class="card awake">
+      <span class="stack grow">
+        <strong>Scherm aan houden</strong>
+        <span v-if="wakeLockSupported" class="small">Het scherm gaat niet uit zolang de app open is, bijvoorbeeld in de auto of op de post. Kost meer batterij.</span>
+        <span v-else class="small">Dit toestel kan het scherm niet aan houden. Zet de automatische vergrendeling langer: {{ isIOS ? 'Instellingen › Scherm en helderheid › Automatisch slot' : 'Instellingen › Scherm › Time-out scherm' }}.</span>
+      </span>
+      <button
+        v-if="wakeLockSupported" class="switch" role="switch" :aria-checked="keepAwake" aria-label="Scherm aan houden"
+        @click="setKeepAwake(!keepAwake)"
+      />
+    </div>
+
     <button class="btn link logout" @click="logout">Afmelden</button>
   </main>
 </template>
@@ -79,5 +93,6 @@ async function logout() {
 .detail { font-size: 14px; color: var(--ink-2); }
 .menu { margin-top: 18px; }
 .nav-app { margin: 18px 0 6px; }
+.awake { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
 select.input { appearance: auto; }
 </style>

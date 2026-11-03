@@ -1,18 +1,19 @@
 <script setup lang="ts">
 // EHBO: 4.3 · oproep (aftellen), 4.4 · naar alle eenheden, 4.5 · al aangenomen, 4.7 · onderweg → ter plaatse.
-import { computed, defineAsyncComponent } from 'vue';
+import { computed, defineAsyncComponent, onBeforeUnmount, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { formatKm, telHref } from '@ehbo/shared';
+import { INCIDENT_WHAT, RESPONSIVE, formatKm, telHref } from '@ehbo/shared';
 import ActivityLog from '../components/ActivityLog.vue';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
-import { clock, incidentLog, incidentSummary, postOf, travelMinutes, unitOf } from '../incidents.ts';
+import { clock, incidentLog, incidentSummary, lastAddition, personsText, postOf, travelMinutes, unitOf } from '../incidents.ts';
 import { navigationUrl } from '../navigate.ts';
 import { callLines, primaryContact } from '../posts.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
+import { load, save } from '../storage.ts';
 
 // The map library is large: the screen doesn't wait for it.
 const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue'));
@@ -70,6 +71,18 @@ const others = computed(() => (incident.value?.dispatches ?? []).filter((d) => d
 /** From this team to the call, on the map. */
 const lines = computed(() => callLines(store.pkg, (live.state?.units ?? []).filter((u) => u.id === myUnitId.value), live.incidents, live.serverNow));
 const navUrl = computed(() => (post.value?.lat != null && post.value.lng != null ? navigationUrl(post.value.lat, post.value.lng, post.value.name) : null));
+
+// En route: what the post added is marked new until the team has seen it (a tap, or leaving the screen).
+const SEEN_KEY = 'ehbo.seen-additions';
+const seen = ref<Record<string, string>>(load(SEEN_KEY) ?? {});
+const added = computed(() => (incident.value ? lastAddition(incident.value) : null));
+const fresh = computed(() => mode.value === 'enroute' && added.value !== null && seen.value[props.id] !== added.value);
+function markSeen() {
+  if (!fresh.value) return;
+  seen.value = { ...seen.value, [props.id]: added.value! };
+  save(SEEN_KEY, seen.value);
+}
+onBeforeUnmount(markSeen);
 
 async function accept() {
   if (!incident.value || myUnitId.value === null) return;
@@ -168,9 +181,21 @@ async function onSite() {
         <a v-if="navUrl" :href="navUrl" class="btn">Navigatie openen</a>
         <a v-if="contact" :href="telHref(contact.phone)" class="btn">Bel de post</a>
       </div>
-      <p class="card what gap-top"><strong>{{ incidentSummary(incident) }}</strong></p>
+      <!-- Everything the post entered, also on site. -->
+      <div class="card details gap-top" :class="{ fresh }">
+        <div v-if="fresh" class="fresh-row">
+          <span class="new-chip">Nieuw · aangevuld {{ clock(added) }}</span>
+          <button class="btn link seen" @click="markSeen">Gezien</button>
+        </div>
+        <dl>
+          <div><dt>Wat</dt><dd>{{ incident.what ? INCIDENT_WHAT[incident.what] : 'Niet ingevuld' }}</dd></div>
+          <div><dt>Personen</dt><dd>{{ personsText(incident.persons) ?? 'Niet ingevuld' }}</dd></div>
+          <div><dt>Aanspreekbaar</dt><dd :class="{ alarm: incident.responsive === 'nee' }">{{ incident.responsive ? RESPONSIVE[incident.responsive] : 'Niet ingevuld' }}</dd></div>
+          <div v-if="incident.note"><dt>Notitie</dt><dd>{{ incident.note }}</dd></div>
+          <div><dt>Gemeld</dt><dd class="mono">{{ clock(incident.reportedAt) }}<template v-if="added"> · aangevuld {{ clock(added) }}</template></dd></div>
+        </dl>
+      </div>
       <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar.</strong>{{ myUnit?.hasAed ? ' AED meenemen.' : '' }} Is 112 gebeld?</p>
-      <p v-if="incident.note" class="note gap-top">{{ incident.note }}</p>
 
       <div class="grow" />
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
@@ -221,6 +246,16 @@ async function onSite() {
 .ring-text .mono { font-size: 20px; }
 .sec { font-size: 10px; margin-top: 2px; }
 .what { font-size: 15px; }
+.details { display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
+.details.fresh { box-shadow: 0 0 0 2px var(--warn-line); }
+.details dl { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.details dl div { display: flex; gap: 12px; }
+.details dt { width: 112px; flex-shrink: 0; color: var(--muted); font-size: 13px; padding-top: 2px; }
+.details dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.details dd.alarm { color: var(--danger); }
+.fresh-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.new-chip { background: var(--warn-line); color: var(--ink); padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.seen { min-height: 44px; padding: 0 8px; }
 .map { margin-top: 14px; height: 190px; border-radius: 16px; overflow: hidden; }
 .small-map { height: clamp(150px, 22dvh, 260px); }
 .route { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 14px; line-height: 1.45; }

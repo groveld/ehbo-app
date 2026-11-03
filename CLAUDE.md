@@ -45,6 +45,8 @@ Where the main pieces live:
 - **Map tab:** `KaartView` stays mounted in `App.vue` for staff, out of sight (`map-waiting`), built just after the first screen, so the tab is instant. Out of view it does nothing: no live updates, no GPS, no list (`active`, `mapView`, `paused`). Opening the tab brings it up to date in one go. The route `kaart` itself renders nothing.
 - **Route page:** `views/RouteView.vue` at `/route/:id`, public. A tap on a run on the participant page opens it. `GET /gpx/<id>.gpx` serves a clean GPX (`cleanGpx` in `gpx.ts`), kept in the `ehbo-gpx` cache for offline use. `routeStops` in `web/src/posts.ts` gives the posts in order.
 - **Live state on the phone:** `web/src/stores/live.ts`: SSE with a watchdog (the heartbeat is a real `ping` event), the queue of changes, the outbox for EHBO requests without signal (resent with the same `clientId`), GPS sharing for mobile units. `web/src/alarm.ts` is the repeating sound and vibration.
+- **Screen on:** `web/src/wakeLock.ts` (Screen Wake Lock, on by default for staff, `ehbo.awake`), held from `App.vue`, switch in `MenuView`.
+- **Additions en route:** `update()` in `calls.ts` only logs and pushes a real change, saying what changed; the push has `quietInApp`, so the service worker shows it silently with the app in view. `App.vue` plays `chime()` (`alarm.ts`) once when `lastAddition` of `live.myActive` changes; 4.7 marks it new until seen (`ehbo.seen-additions`).
 - **End-to-end:** `e2e/` with Playwright; `e2e/server.ts` starts a seeded server on 3090. One worker; tests clean up after themselves.
 
 ## Chosen stack (decided 28 Oct 2026)
