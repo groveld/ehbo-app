@@ -158,7 +158,7 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | GET | `/map/<versie>/…` | iedereen | Kaarttegels, lettertypen en iconen |
 | GET/POST | `/api/admin/map` | beheerder | Kaart ophalen (op de achtergrond) en de voortgang |
 | POST | `/api/session` | iedereen | Aanmelden `{ phone }`; zet de sessiecookie. 404 als het nummer onbekend is |
-| DELETE | `/api/session` | iedereen | Afmelden `{ endpoint? }`: dit toestel krijgt geen meldingen meer. Is de laatste van een post of eenheid weg, dan gaat die dicht |
+| DELETE | `/api/session` | iedereen | Afmelden `{ endpoint? }`: het nummer wordt op al zijn toestellen afgemeld en krijgt geen meldingen meer. Is de laatste van een post of eenheid weg, dan gaat die dicht |
 | GET | `/api/me` | medewerker | Naam, rollen en startscherm |
 | POST | `/api/subscriptions` | medewerker | Abonnement opslaan `{ subscription }` |
 | DELETE | `/api/subscriptions` | medewerker | Abonnement verwijderen `{ endpoint }` |

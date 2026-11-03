@@ -630,6 +630,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     deleteSession: db.prepare('DELETE FROM sessions WHERE token_hash = ?'),
     deleteExpiredSessions: db.prepare("DELETE FROM sessions WHERE expires_at <= datetime('now') RETURNING phone"),
     deleteOtherSessions: db.prepare('DELETE FROM sessions WHERE token_hash IS NOT ? RETURNING phone'),
+    deleteSessionsFor: db.prepare('DELETE FROM sessions WHERE phone = ?'),
     shortenSessions: db.prepare('UPDATE sessions SET expires_at = ? WHERE expires_at > ?'),
     hasSession: db.prepare("SELECT 1 FROM sessions WHERE phone = ? AND expires_at > datetime('now')"),
     loggedIn: db.prepare("SELECT DISTINCT phone FROM sessions WHERE expires_at > datetime('now')"),
@@ -681,6 +682,8 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     deleteExpiredSessions: () => (q.deleteExpiredSessions.all() as { phone: string }[]).map((r) => r.phone),
     /** Iedereen afmelden: every session except this one. Gives the numbers that were logged out. */
     deleteOtherSessions: (keepHash: string | null) => (q.deleteOtherSessions.all(keepHash) as { phone: string }[]).map((r) => r.phone),
+    /** Logging out: every device of this number, so a forgotten session can't keep a location open. */
+    deleteSessionsFor: (phone: string) => { q.deleteSessionsFor.run(phone); },
     /** No session lasts beyond this time (test mode: midnight). */
     shortenSessions: (expiresAt: string) => { q.shortenSessions.run(expiresAt, expiresAt); },
     hasSession: (phone: string) => q.hasSession.get(phone) !== undefined,

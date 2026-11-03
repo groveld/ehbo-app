@@ -79,13 +79,14 @@ export async function sessionRoutes(app: FastifyInstance, { db, calls }: { db: E
 
   app.get('/api/me', { preHandler: requireMe }, async (request) => request.me!);
 
-  // The phone sends its push endpoint along: a logged-out phone gets no calls, also when the same person is still logged in elsewhere.
+  // Logging out is the person leaving: every device of this number is logged out, also an old install or Safari next to the app,
+  // so nothing keeps their location or team open. With no session left the number gets no pushes; the endpoint is sent along anyway.
   app.delete<{ Body: { endpoint?: unknown } | undefined }>('/api/session', async (request, reply) => {
     const me = request.me;
     if (me && request.sessionHash) {
       const endpoint = request.body?.endpoint;
       if (typeof endpoint === 'string' && db.getSubscription(endpoint)?.phone === me.phone) db.deleteSubscription(endpoint);
-      db.deleteSession(request.sessionHash);
+      db.deleteSessionsFor(me.phone);
       sessionsEnded(db, calls, [me.phone]);
     }
     reply.clearCookie(SESSION_COOKIE, { path: '/' });

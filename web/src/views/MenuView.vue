@@ -32,7 +32,7 @@ async function logout() {
   const placed = me.value.assignments.some((a) => a.kind === 'post' || a.kind === 'ehbo');
   if (placed && !await confirmDialog({
     title: 'Afmelden?',
-    text: 'Ben jij de laatste van je locatie of EHBO-eenheid die nog is aangemeld, dan gaat die dicht. Je krijgt op dit toestel geen meldingen meer.',
+    text: 'Je wordt op al je toestellen afgemeld en krijgt geen meldingen meer. Ben jij de laatste van je locatie of EHBO-eenheid, dan gaat die dicht.',
     reassure: 'Weer aanmelden kan altijd; zet je locatie daarna zelf weer open.',
     confirm: 'Afmelden',
     tone: 'danger',
