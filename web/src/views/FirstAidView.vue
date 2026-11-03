@@ -38,6 +38,8 @@ const block = computed(() => {
 });
 /** During a call you're there but not available, so the buttons say the same as the header. */
 const shown = computed<TeamAvailability>(() => (active.value ? 'unavailable' : availability.value));
+/** During a call: the status the team goes to once it's over. Picking one during the call plans it. */
+const next = computed<TeamAvailability | null>(() => (active.value ? state.value?.nextAvailability ?? 'available' : null));
 
 /** Waar de eenheid voor "dichtstbij" telt. */
 const position = computed(() => {
@@ -91,10 +93,11 @@ const setAvailability = (value: TeamAvailability) => teamId.value !== null && ru
         <span class="section-title">Mijn status</span>
         <div class="choice-grid">
           <button
-            v-for="(text, key) in BUTTONS" :key="key" class="option" :class="key"
+            v-for="(text, key) in BUTTONS" :key="key" class="option" :class="[key, { next: next === key }]"
             :aria-pressed="shown === key" :disabled="busy" @click="setAvailability(key)"
           >{{ text }}</button>
         </div>
+        <p v-if="next" class="small">Na deze oproep: <strong>{{ TEAM_AVAILABILITY[next] }}</strong></p>
         <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       </div>
 
@@ -133,6 +136,19 @@ const setAvailability = (value: TeamAvailability) => teamId.value !== null && ru
 .option.available[aria-pressed="true"] { border-color: var(--ok); background: var(--ok); }
 .option.unavailable[aria-pressed="true"] { border-color: var(--danger); background: var(--danger); }
 .option.off_duty[aria-pressed="true"] { border-color: var(--off); background: var(--off); }
+/* The status after the call: its colour, slowly pulsing. */
+.option.available { --glow: var(--ok); }
+.option.unavailable { --glow: var(--danger); }
+.option.off_duty { --glow: var(--off); }
+.option.next { animation: next-status 2.4s ease-in-out infinite; }
+.option.next:not([aria-pressed="true"]) { border: 2px solid var(--glow); color: var(--glow); font-weight: 700; }
+@keyframes next-status {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--glow) 30%, transparent), 0 0 14px color-mix(in srgb, var(--glow) 40%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .option.next { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--glow) 30%, transparent); }
+}
 .facts-list { margin-top: 14px; }
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
 /* De onderrand van het scherm telt al; anders staan de knoppen dubbel zo ver van de tabbalk. */

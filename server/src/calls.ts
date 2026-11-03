@@ -12,6 +12,7 @@ import {
   formatKm,
   placeOf,
   plannedClose,
+  AFTER_CALL,
   type CloseIncident,
   type ControlResult,
   type Dispatch,
@@ -66,6 +67,8 @@ interface Team {
   locationId: number | null;
   hasAed: boolean;
   availability: TeamAvailability;
+  /** Picked during a call, carried out once it's over. */
+  nextAvailability: Exclude<TeamAvailability, 'available'> | null;
   stayLocationId: number | null;
   timeTo: string | null;
   keepUntil: string | null;
@@ -128,13 +131,14 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     for (const m of all('SELECT team_id, phone FROM team_members ORDER BY rowid')) {
       members.set(m.team_id as number, [...(members.get(m.team_id as number) ?? []), m.phone as string]);
     }
-    return all('SELECT id, name, kind, location_id, has_aed, availability, stay_location_id, time_to, keep_until, closes_at FROM teams ORDER BY sort, id').map((u) => ({
+    return all('SELECT id, name, kind, location_id, has_aed, availability, next_availability, stay_location_id, time_to, keep_until, closes_at FROM teams ORDER BY sort, id').map((u) => ({
       id: u.id as number,
       name: u.name as string,
       kind: u.kind as Team['kind'],
       locationId: u.location_id as number | null,
       hasAed: u.has_aed === 1,
       availability: u.availability as TeamAvailability,
+      nextAvailability: u.next_availability as Team['nextAvailability'],
       stayLocationId: u.stay_location_id as number | null,
       timeTo: u.time_to as string | null,
       keepUntil: u.keep_until as string | null,
@@ -284,7 +288,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const busy = busyTeams();
     return teams().map((u) => {
       const fix = teamFix(u);
-      return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayLocationId: u.stayLocationId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null, closesAt: u.closesAt };
+      return { id: u.id, availability: u.availability, incidentId: busy.get(u.id) ?? null, stayLocationId: u.stayLocationId, position: fix ? { lat: fix.lat, lng: fix.lng, at: new Date(fix.at).toISOString() } : null, closesAt: u.closesAt, nextAvailability: u.nextAvailability };
     });
   }
 
@@ -732,9 +736,11 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       // Alleen een vaste eenheid "blijft hier"; een mobiele eenheid geeft haar positie zelf door.
       const stay = body.stayHere && team.kind === 'fixed' && row.location_id !== team.locationId ? (row.location_id as number) : null;
       run('UPDATE teams SET stay_location_id = ? WHERE id = ?', stay, teamId);
-      // In dezelfde stap op pauze, zodat er tussendoor geen oproep binnenkomt.
-      if (body.pause) run("UPDATE teams SET availability = 'unavailable' WHERE id = ?", teamId);
-      log(id, 'closed', `Afgerond door ${team.name}${body.pause ? ', daarna pauze' : ''}`, teamId);
+      // The status afterwards in the same step, so no call comes in between.
+      const then = body.then ?? team.nextAvailability ?? 'available';
+      run('UPDATE teams SET next_availability = ? WHERE id = ?', then === 'available' ? null : then, teamId);
+      afterCalls();
+      log(id, 'closed', `Afgerond door ${team.name}${AFTER_CALL[then]}`, teamId);
     });
     copyToCoordinator(incidentRow(id), `Afgerond door ${team.name}.`);
     offerOpenCalls([teamId]);
@@ -750,6 +756,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     db.transaction(() => {
       setIncident(id, { status: 'withdrawn', closed_at: stamp(), escalates_at: null });
       log(id, 'withdrawn', `Ingetrokken door ${personName(me.phone)}`);
+      afterCalls();
     });
     cancelTimer(id);
     const reached = dispatchesOf(id).filter((d) => !d.declinedAt).map((d) => d.teamId);
@@ -761,20 +768,35 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     return state();
   }
 
+  /** Puts a team on this status, with what comes with it. Inside a transaction. */
+  function putAvailability(team: Team, availability: TeamAvailability) {
+    run('UPDATE teams SET availability = ?, next_availability = NULL WHERE id = ?', availability, team.id);
+    // Vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde (functioneel ontwerp, "Post open of dicht"), zolang er geen andere dienst staat.
+    if (team.kind === 'fixed' && team.locationId !== null && availability === 'available') setLocation(team.locationId, true);
+    if (team.kind === 'fixed' && team.locationId !== null && availability === 'off_duty' && !otherShiftOnDuty(team)) setLocation(team.locationId, false);
+    if (availability === 'off_duty') {
+      run('UPDATE teams SET stay_location_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?', team.id);
+      forgetPositions(team);
+    } else if (team.availability === 'off_duty') {
+      run('UPDATE teams SET keep_until = ?, closes_at = NULL WHERE id = ?', keepAfterOpening(planOf(team)), team.id);
+    }
+  }
+
+  /** Teams whose call is over carry out the status they picked during it. Inside a transaction. */
+  function afterCalls() {
+    const busy = busyTeams();
+    for (const team of teams().filter((u) => u.nextAvailability && !busy.has(u.id))) putAvailability(team, team.nextAvailability!);
+  }
+
   function setAvailability(me: Me, teamId: number, availability: TeamAvailability) {
     const team = requireTeamMember(me, teamId);
-    db.transaction(() => {
-      run('UPDATE teams SET availability = ? WHERE id = ?', availability, team.id);
-      // Vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde (functioneel ontwerp, "Post open of dicht"), zolang er geen andere dienst staat.
-      if (team.kind === 'fixed' && team.locationId !== null && availability === 'available') setLocation(team.locationId, true);
-      if (team.kind === 'fixed' && team.locationId !== null && availability === 'off_duty' && !otherShiftOnDuty(team)) setLocation(team.locationId, false);
-      if (availability === 'off_duty') {
-        run('UPDATE teams SET stay_location_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?', team.id);
-        forgetPositions(team);
-      } else if (team.availability === 'off_duty') {
-        run('UPDATE teams SET keep_until = ?, closes_at = NULL WHERE id = ?', keepAfterOpening(planOf(team)), team.id);
-      }
-    });
+    // During a call the team is there but busy: the status it picks waits until the call is over.
+    if (busyTeams().has(team.id)) {
+      run('UPDATE teams SET next_availability = ? WHERE id = ?', availability === 'available' ? null : availability, team.id);
+      changed();
+      return state();
+    }
+    db.transaction(() => putAvailability(team, availability));
     if (availability === 'available') offerOpenCalls([team.id]);
     changed();
     return state();

@@ -2,7 +2,7 @@
 // 4.8 · EHBO: incident afronden. Afloop, korte notitie (geen namen of medische details) en waar je daarna bent.
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { NOTE_MAX, OUTCOMES, type Outcome } from '@ehbo/shared';
+import { NOTE_MAX, OUTCOMES, type Outcome, type TeamAvailability } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import NotOnPhone from '../components/NotOnPhone.vue';
 import { useSave } from '../composables/useSave.ts';
@@ -27,10 +27,14 @@ const outcome = ref<Outcome | null>(null);
 const note = ref('');
 const stayHere = ref(true);
 
-async function finish(pause = false) {
+/** The status picked during the call is the main button; the other way out is below it. */
+const planned = computed(() => (myTeam.value ? live.teamState(myTeam.value.id)?.nextAvailability ?? null : null));
+const FINISH: Record<TeamAvailability, string> = { available: 'Afronden & weer beschikbaar', unavailable: 'Afronden & pauze', off_duty: 'Afronden & uit dienst' };
+
+async function finish(then: TeamAvailability) {
   if (!incident.value || !outcome.value) return;
   const ok = await run(() => live.close(incident.value!.id, {
-    outcome: outcome.value!, persons: incident.value!.persons, note: note.value.trim() || null, stayHere: Boolean(canStay.value && stayHere.value), pause,
+    outcome: outcome.value!, persons: incident.value!.persons, note: note.value.trim() || null, stayHere: Boolean(canStay.value && stayHere.value), then,
   }));
   if (ok) router.replace({ name: 'first-aid' });
 }
@@ -77,8 +81,8 @@ async function finish(pause = false) {
     <div class="grow" />
     <p v-if="error" class="error-text" role="alert">{{ error }}</p>
     <p v-else-if="!outcome" class="small center">Kies de afloop om af te ronden.</p>
-    <button class="btn go footer" :disabled="busy || !outcome" @click="finish()">Afronden &amp; weer beschikbaar</button>
-    <button class="btn pause" :disabled="busy || !outcome" @click="finish(true)">Afronden &amp; pauze</button>
+    <button class="btn footer" :class="planned ? 'primary' : 'go'" :disabled="busy || !outcome" @click="finish(planned ?? 'available')">{{ FINISH[planned ?? 'available'] }}</button>
+    <button class="btn pause" :disabled="busy || !outcome" @click="finish(planned ? 'available' : 'unavailable')">{{ FINISH[planned ? 'available' : 'unavailable'] }}</button>
   </main>
 </template>
 

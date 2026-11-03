@@ -148,7 +148,7 @@ Alles wat je nodig hebt om iemand te bellen of te bereiken, staat ook op de tele
 
 Elke oproep wordt een incident met tijdlijn; na afloop maakt een beheerder er met één knop een rapport van, voor de verantwoording achteraf.
 
-**Afronden door de EHBO'er:** afloop kiezen (ter plaatse geholpen · gestopt, naar finish · ambulance via 112 · doorverwezen naar SEH/arts · hulp geweigerd · loos alarm), aantal personen, korte notitie zonder namen of medische details, en de positie na afloop.
+**Afronden door de EHBO'er:** afloop kiezen (ter plaatse geholpen · gestopt, naar finish · ambulance via 112 · doorverwezen naar SEH/arts · hulp geweigerd · loos alarm), aantal personen, korte notitie zonder namen of medische details, en de positie na afloop. During the call the team can already pick its next status on 3.3 (Beschikbaar, Bezet, Uit dienst); it's carried out once the call is closed or withdrawn, and the closing screen offers it as its main button.
 
 **Het rapport bevat:**
 
@@ -459,6 +459,7 @@ Alle vragen zijn beantwoord; dit zijn de besluiten waarop de bouw start. Kleine 
 | Participant legend (31 Oct) | The first participant screen no longer lists posts, because every post of every run is hard to read. It has a legend instead: each post type that occurs, once, with icon and name. The posts per run are on the route page |
 | Map credit and info link (31 Oct) | Maps show only the map, without an attribution button. The credit for OpenStreetMap and Protomaps, which the licence requires, is on the intro, and on the info page with a link to the licence. For now participants have no link to the info page; a new place is decided later |
 | Info link for participants (3 Nov) | The participant page has a link Info & voorwaarden below Soorten posten, with room under it so Bel EHBO never covers it. It takes participants to what the app does with data and to the map licence, which the OpenStreetMap attribution guidelines ask for. This replaces "for now participants have no link" above (#127) |
+| Next status during a call (3 Nov) | During a call the status buttons on the EHBO screen plan what comes after it instead of changing it: the team stays busy, and the chosen status is carried out once the call is closed or withdrawn, with what comes with it (off duty closes a fixed team's own post and stops sharing a position). The button of the next status pulses slowly in its own colour, with a line Na deze oproep under it; without a choice that's Beschikbaar. Closing offers the planned status as its main button (Afronden & pauze, Afronden & uit dienst) with Afronden & weer beschikbaar under it. In the menu, on Herkend and in Beheer › Locaties a function shows the same badge as elsewhere: the solid cross on a green square for EHBO |
 
 **Nog open**
 

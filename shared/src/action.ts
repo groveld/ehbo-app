@@ -1,6 +1,6 @@
 // Changes a phone makes to the live state. The phone applies each one to its own state at once and queues it for the server,
 // so nothing ever waits for the network; the queue goes out in order as soon as there is a connection.
-import { incidentsOf, requestsOf } from './incident.ts';
+import { AFTER_CALL, incidentsOf, requestsOf } from './incident.ts';
 import type { CloseIncident, Dispatch, IncidentDetails, IncidentEventType, IncidentLocation, LiveIncident, LiveState, LiveTeam, NewIncident, NewSelfIncident, TeamAvailability } from './incident.ts';
 import type { LiveRequest, NewRequest, RequestKind } from './request.ts';
 
@@ -51,7 +51,7 @@ const changeIncident = (state: LiveState, id: number, change: (incident: LiveInc
 /** A team or post the state doesn't list yet (a phone that never had a connection) is added. */
 function changeTeam(state: LiveState, id: number, change: (team: LiveTeam) => LiveTeam): LiveState {
   if (state.teams.some((u) => u.id === id)) return { ...state, teams: state.teams.map((u) => (u.id === id ? change(u) : u)) };
-  return { ...state, teams: [...state.teams, change({ id, availability: 'off_duty', incidentId: null, stayLocationId: null, position: null, closesAt: null })] };
+  return { ...state, teams: [...state.teams, change({ id, availability: 'off_duty', incidentId: null, stayLocationId: null, position: null, closesAt: null, nextAvailability: null })] };
 }
 
 function setLocationOpen(state: LiveState, id: number, isOpen: boolean): LiveState {
@@ -59,6 +59,23 @@ function setLocationOpen(state: LiveState, id: number, isOpen: boolean): LiveSta
   if (state.locations.some((p) => p.id === id)) return { ...state, locations: state.locations.map((p) => (p.id === id ? { ...p, ...change } : p)) };
   return { ...state, locations: [...state.locations, { id, ...change }] };
 }
+
+/** A team on this status, with what comes with it: a fixed team on duty and its own EHBO post open are the same thing, as long as no other shift is still there. */
+function putAvailability(state: LiveState, teamId: number, availability: TeamAvailability, context: ActionContext): LiveState {
+  const changed = changeTeam(state, teamId, (u) => (availability === 'off_duty'
+    ? { ...u, availability, nextAvailability: null, stayLocationId: null, position: null, closesAt: null }
+    : { ...u, availability, nextAvailability: null }));
+  const team = context.teams.find((u) => u.id === teamId);
+  if (team?.kind !== 'fixed' || team.locationId === null || availability === 'unavailable') return changed;
+  const othersOnDuty = context.teams.some((u) => u.id !== teamId && u.kind === 'fixed' && u.locationId === team.locationId
+    && (changed.teams.find((l) => l.id === u.id)?.availability ?? 'off_duty') !== 'off_duty');
+  return availability === 'available' || !othersOnDuty ? setLocationOpen(changed, team.locationId, availability === 'available') : changed;
+}
+
+/** Teams whose call is over carry out the status they picked during it. */
+const afterCalls = (state: LiveState, context: ActionContext) => state.teams
+  .filter((u) => u.incidentId === null && u.nextAvailability)
+  .reduce((s, u) => putAvailability(s, u.id, u.nextAvailability!, context), state);
 
 const changeRequest = (state: LiveState, id: number, change: (request: LiveRequest) => LiveRequest): LiveState =>
   ({ ...state, helpRequests: state.helpRequests.map((h) => (h.id === id && h.handling === 'queue' ? change(h) : h)) });
@@ -84,7 +101,7 @@ function take(state: LiveState, at: string, incidentId: number, teamId: number, 
       : {};
     return logged({ ...i, dispatches, ...first }, at, manual ? 'assigned' : 'accepted', manual ? `Toegewezen aan ${name}` : `Geaccepteerd door ${name} (${context.me?.name})`, teamId);
   });
-  return changeTeam(accepted, teamId, (u) => ({ ...u, availability: 'available', stayLocationId: null, incidentId }));
+  return changeTeam(accepted, teamId, (u) => ({ ...u, availability: 'available', nextAvailability: null, stayLocationId: null, incidentId }));
 }
 
 /** The state as this phone should show it after the action, the same way the server will do it. An unknown incident or request changes nothing. */
@@ -100,7 +117,7 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
         dispatches: [{ teamId: body.teamId, at, reason: 'manual', distanceKm: 0, declinedAt: null, acceptedAt: at }],
         events: [{ at, type: 'reported', teamId: body.teamId, text: `Zelf gestart door ${name} · ${location.name}` }],
       };
-      return changeTeam({ ...state, helpRequests: [incident, ...state.helpRequests] }, body.teamId, (u) => ({ ...u, availability: 'available', stayLocationId: null, incidentId: tempId }));
+      return changeTeam({ ...state, helpRequests: [incident, ...state.helpRequests] }, body.teamId, (u) => ({ ...u, availability: 'available', nextAvailability: null, stayLocationId: null, incidentId: tempId }));
     }
     case 'accept': return take(state, at, action.incidentId, action.teamId, false, context);
     case 'assign': return take(state, at, action.incidentId, action.teamId, true, context);
@@ -121,31 +138,31 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
       const incident = incidentsOf(state).find((i) => i.id === action.incidentId);
       if (!incident) return state;
       const team = myAcceptedTeam(incident, context);
-      const { outcome, pause, stayHere } = action.body;
+      const { outcome, stayHere } = action.body;
+      const then = action.body.then ?? state.teams.find((u) => u.id === team?.id)?.nextAvailability ?? 'available';
       const closed = changeIncident(state, action.incidentId, (i) => logged(
         { ...i, status: 'closed', closedAt: at, outcome, onSiteAt: i.onSiteAt ?? at }, at, 'closed',
-        `Afgerond door ${team?.name ?? 'Eenheid'}${pause ? ', daarna pauze' : ''}`, team?.id ?? null,
+        `Afgerond door ${team?.name ?? 'Eenheid'}${AFTER_CALL[then]}`, team?.id ?? null,
       ));
       if (!team) return closed;
       const stay = stayHere && team.kind === 'fixed' && incident.locationId !== team.locationId ? incident.locationId : null;
-      return changeTeam(closed, team.id, (u) => ({ ...u, incidentId: null, stayLocationId: stay, availability: pause ? 'unavailable' : u.availability }));
+      const free = changeTeam(closed, team.id, (u) => ({ ...u, incidentId: null, stayLocationId: stay, nextAvailability: then === 'available' ? null : then }));
+      return afterCalls({ ...free, teams: free.teams.map((u) => (u.incidentId === action.incidentId ? { ...u, incidentId: null } : u)) }, context);
     }
     case 'withdraw': {
       const withdrawn = changeIncident(state, action.incidentId, (i) => logged(
         { ...i, status: 'withdrawn', closedAt: at, escalatesAt: null }, at, 'withdrawn', `Ingetrokken door ${context.me?.name}`,
       ));
-      return { ...withdrawn, teams: withdrawn.teams.map((u) => (u.incidentId === action.incidentId ? { ...u, incidentId: null } : u)) };
+      return afterCalls({ ...withdrawn, teams: withdrawn.teams.map((u) => (u.incidentId === action.incidentId ? { ...u, incidentId: null } : u)) }, context);
     }
     case 'update': return changeIncident(state, action.incidentId, (i) => ({ ...i, ...action.details, aed: i.aed || action.details.responsive === 'no' }));
     case 'availability': {
       const { availability, teamId } = action;
-      const changed = changeTeam(state, teamId, (u) => (availability === 'off_duty' ? { ...u, availability, stayLocationId: null, position: null, closesAt: null } : { ...u, availability }));
-      const team = context.teams.find((u) => u.id === teamId);
-      if (team?.kind !== 'fixed' || team.locationId === null || availability === 'unavailable') return changed;
-      // A fixed team on duty and its own EHBO post open are the same thing, as long as no other shift is still there.
-      const othersOnDuty = context.teams.some((u) => u.id !== teamId && u.kind === 'fixed' && u.locationId === team.locationId
-        && (changed.teams.find((l) => l.id === u.id)?.availability ?? 'off_duty') !== 'off_duty');
-      return availability === 'available' || !othersOnDuty ? setLocationOpen(changed, team.locationId, availability === 'available') : changed;
+      // During a call the team is there but busy: the status it picks waits until the call is over.
+      if (state.teams.find((u) => u.id === teamId)?.incidentId != null) {
+        return changeTeam(state, teamId, (u) => ({ ...u, nextAvailability: availability === 'available' ? null : availability }));
+      }
+      return putAvailability(state, teamId, availability, context);
     }
     case 'keepLocation': return { ...state, locations: state.locations.map((p) => (p.id === action.locationId ? { ...p, isOpen: true, closesAt: null, autoClosedAt: null } : p)) };
     case 'keepTeam': return changeTeam(state, action.teamId, (u) => ({ ...u, closesAt: null }));
