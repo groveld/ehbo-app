@@ -68,6 +68,8 @@ const callNext = computed(() => {
   return null;
 });
 
+/** The buttons: "Bezet" is shorter to tap than the status it sets, which still reads Niet beschikbaar everywhere. */
+const BUTTONS: Record<UnitAvailability, string> = { ...UNIT_AVAILABILITY, pauze: 'Bezet' };
 const setAvailability = (value: UnitAvailability) => unitId.value !== null && run(() => live.setAvailability(unitId.value!, value));
 </script>
 
@@ -89,7 +91,7 @@ const setAvailability = (value: UnitAvailability) => unitId.value !== null && ru
         <span class="section-title">Mijn status</span>
         <div class="choice-grid">
           <button
-            v-for="(text, key) in UNIT_AVAILABILITY" :key="key" class="option" :class="key"
+            v-for="(text, key) in BUTTONS" :key="key" class="option" :class="key"
             :aria-pressed="shown === key" :disabled="busy" @click="setAvailability(key)"
           >{{ text }}</button>
         </div>

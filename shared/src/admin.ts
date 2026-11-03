@@ -8,6 +8,10 @@ export const TIME_PATTERN = '^([01]\\d|2[0-3]):[0-5]\\d$';
 
 export const ESCALATION_MIN_SECONDS = 10;
 export const ESCALATION_MAX_SECONDS = 120;
+/** Within this distance of a post you count as at that post (#63). GPS on a phone is often 10–30 m off. */
+export const AT_POST_MIN_M = 20;
+export const AT_POST_MAX_M = 500;
+export const AT_POST_STEP_M = 10;
 
 export interface EventSettings {
   name: string;
@@ -16,6 +20,8 @@ export interface EventSettings {
   endDate: string | null;
   /** Na zoveel seconden zonder acceptatie gaat een EHBO-oproep naar alle beschikbare eenheden. */
   escalationSeconds: number;
+  /** Within this many metres of a post a position counts as that post: a mobile team at its standplaats, a self-started incident, a help request. */
+  atPostM: number;
   style: EventStyle;
 }
 

@@ -3,6 +3,8 @@ import type { FastifyInstance } from 'fastify';
 import {
   COLOR_PATTERN,
   DATE_PATTERN,
+  AT_POST_MAX_M,
+  AT_POST_MIN_M,
   ESCALATION_MAX_SECONDS,
   ESCALATION_MIN_SECONDS,
   IMAGE_MAX_BASE64,
@@ -56,13 +58,14 @@ const idParams = { type: 'object', required: ['id'], properties: { id: { type: '
 
 const eventSchema = {
   type: 'object',
-  required: ['name', 'startLocation', 'startDate', 'endDate', 'escalationSeconds', 'style'],
+  required: ['name', 'startLocation', 'startDate', 'endDate', 'escalationSeconds', 'atPostM', 'style'],
   properties: {
     name: { type: 'string', minLength: 1, maxLength: 80 },
     startLocation: optionalText(120),
     startDate: date,
     endDate: date,
     escalationSeconds: { type: 'integer', minimum: ESCALATION_MIN_SECONDS, maximum: ESCALATION_MAX_SECONDS },
+    atPostM: { type: 'integer', minimum: AT_POST_MIN_M, maximum: AT_POST_MAX_M },
     style: {
       type: 'object',
       required: ['shortName', 'primaryColor', 'accentColor'],

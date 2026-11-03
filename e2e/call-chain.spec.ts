@@ -362,6 +362,16 @@ test('participant: looking at a run keeps the favorites, and there can be severa
   await expect(star(second!)).toHaveAttribute('aria-pressed', 'true');
   await expect(star(third!)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.run-name').first()).toHaveText(second!);
+
+  // Info & voorwaarden below the legend, out from under Bel EHBO, and back again.
+  const info = page.getByRole('link', { name: 'Info & voorwaarden' });
+  await info.scrollIntoViewIfNeeded();
+  const [link, call] = [await info.boundingBox(), await page.locator('.call-ehbo').boundingBox()];
+  expect(link!.y + link!.height <= call!.y || link!.x + link!.width <= call!.x).toBe(true);
+  await info.click();
+  await expect(page.getByRole('link', { name: 'OpenStreetMap-bijdragers' })).toBeVisible();
+  await page.getByRole('button', { name: 'Terug' }).click();
+  await expect(page.getByText('Soorten posten')).toBeVisible();
   await context.close();
 });
 

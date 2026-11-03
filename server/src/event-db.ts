@@ -295,6 +295,11 @@ const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   `
   ALTER TABLE incidents ADD COLUMN place_accuracy_m REAL;
   `,
+  // 18: how close counts as at a post (#63): a mobile team at its standplaats, a self-started incident, a help request from GPS.
+  // 30 m, the same as a post's distance to a route in the GPX.
+  `
+  ALTER TABLE event ADD COLUMN at_post_m INTEGER NOT NULL DEFAULT 30;
+  `,
 ];
 
 export interface EventRow {

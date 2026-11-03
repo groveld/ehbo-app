@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { DEFAULT_STYLE, type AdminState, type PeopleOverview, type PostData, type UnitData } from '@ehbo/shared';
+import { DEFAULT_STYLE, type AdminState, type EventPackage, type PeopleOverview, type PostData, type UnitData } from '@ehbo/shared';
 import { buildApp } from '../src/app.ts';
 import { DEMO, seedDemo } from '../src/demo.ts';
 import { openEventDb, type EventDb } from '../src/event-db.ts';
@@ -27,7 +27,7 @@ const call = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: 
 const version = () => (db.raw.prepare('SELECT version FROM event').get() as { version: number }).version;
 
 const EVENT = {
-  name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 30, style: DEFAULT_STYLE,
+  name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 30, atPostM: 30, style: DEFAULT_STYLE,
 };
 
 /** Begin van een PNG met de gevraagde maat, als base64; meer leest de server niet. */
@@ -78,6 +78,16 @@ test('evenement opslaan; einddatum niet voor begindatum', async () => {
   assert.equal((await call('PUT', '/api/admin/event', { ...event, endDate: '2026-12-30' })).statusCode, 400);
   assert.equal((await call('PUT', '/api/admin/event', { ...event, escalationSeconds: 5 })).statusCode, 400);
   assert.equal((await call('PUT', '/api/admin/event', { ...event, startDate: '31-12-2026' })).statusCode, 400);
+});
+
+test('how close counts as at a post: set by the admin, in the package, and used for a place', async () => {
+  const res = await call('PUT', '/api/admin/event', { ...EVENT, atPostM: 120 });
+  assert.equal((res.json() as AdminState).event.atPostM, 120);
+  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, atPostM: 10 })).statusCode, 400, 'below the minimum');
+  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, atPostM: 600 })).statusCode, 400, 'above the maximum');
+  const pkg = (await app.inject({ url: '/api/package' })).json() as EventPackage;
+  assert.equal(pkg.event.atPostM, 120, 'participants get it too, for the grey cross');
+  await call('PUT', '/api/admin/event', EVENT);
 });
 
 test('stijl: korte naam en kleuren, alleen leesbare kleuren', async () => {

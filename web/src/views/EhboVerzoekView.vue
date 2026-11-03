@@ -8,7 +8,7 @@ import Icon from '../components/Icon.vue';
 import Sos112Bar from '../components/Sos112Bar.vue';
 import { useDirty } from '../composables/useDirty.ts';
 import { useGpsFix } from '../composables/useGpsFix.ts';
-import { kmLabel } from '../posts.ts';
+import { atPostM, kmLabel } from '../posts.ts';
 import { OfflineError, useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
@@ -25,7 +25,7 @@ const gps = useGpsFix();
 onMounted(() => { if (here.value) void gps.start(); });
 /** Above this the team may not find you: say where you are in the note. */
 const ROUGH_M = 100;
-const place = computed(() => (gps.best.value && store.pkg ? placeOf(store.pkg.posts, [gps.best.value.lng, gps.best.value.lat]) : null));
+const place = computed(() => (gps.best.value && store.pkg ? placeOf(store.pkg.posts, [gps.best.value.lng, gps.best.value.lat], atPostM(store.pkg)) : null));
 const form = reactive<IncidentDetails>({
   what: existing.value?.what ?? null,
   persons: existing.value?.persons ?? null,

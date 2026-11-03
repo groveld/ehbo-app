@@ -114,6 +114,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   // ---- Gegevens ----
 
   const escalationMs = () => (get('SELECT escalation_seconds FROM event WHERE id = 1')!.escalation_seconds as number) * 1000;
+  /** Within this many metres of a post a position counts as that post (#63). */
+  const atPostM = () => get('SELECT at_post_m FROM event WHERE id = 1')!.at_post_m as number;
   const coordinator = () => db.coordinatorPhone();
 
   function units(): Unit[] {
@@ -274,7 +276,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** Voor deelnemers: welke standplaatsen nu leeg zijn. Zonder de oproepen, dus licht genoeg om vaak op te vragen. */
   function ehboStatus(): EhboStatus {
-    return { awayPostIds: awayPostIds(units(), liveUnits(), [...posts().values()], now().getTime()), dataVersion: db.dataVersion() };
+    return { awayPostIds: awayPostIds(units(), liveUnits(), [...posts().values()], now().getTime(), atPostM()), dataVersion: db.dataVersion() };
   }
 
   function state(): LiveState {
@@ -454,7 +456,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     // within the radius of a post it counts as that post.
     const position: [number, number] | null = body.lat != null && body.lng != null ? [body.lng, body.lat] : null;
     if (body.postId === null && !position) throw httpError(400, 'Zonder post is je locatie nodig');
-    const place = body.postId === null && position ? placeOf([...posts().values()], position) : null;
+    const place = body.postId === null && position ? placeOf([...posts().values()], position, atPostM()) : null;
     const post = posts().get(body.postId ?? place?.postId ?? -1);
     if (!post) throw body.postId === null ? httpError(409, 'Er zijn nog geen posten met een plek') : httpError(404, 'Post niet gevonden');
     if (body.postId !== null) {
@@ -515,7 +517,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
     const postMap = posts();
     const position: [number, number] | null = body.lat !== null && body.lng !== null ? [body.lng, body.lat] : null;
-    const place = position ? placeOf([...postMap.values()], position) : null;
+    const place = position ? placeOf([...postMap.values()], position, atPostM()) : null;
     const post = postMap.get(place?.postId ?? body.postId);
     if (!post) throw httpError(404, 'Post niet gevonden');
     const offPost = place !== null && !place.atPost;
