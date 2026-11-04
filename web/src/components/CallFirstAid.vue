@@ -1,14 +1,17 @@
 <script setup lang="ts">
 // Bel EHBO for participants: a floating button at the bottom right that grows to the left with its text. The EHBO coordinator (or the event coordinator) sends help; without a number it calls 112.
+// Only while the event is open (a staffed location or a team on duty): before and after, nobody answers that number.
 import { telHref } from '@ehbo/shared';
+import { useFirstAidStatus } from '../composables/useFirstAidStatus.ts';
 import { usePackageStore } from '../stores/package.ts';
 import Icon from './Icon.vue';
 
 const store = usePackageStore();
+const { open } = useFirstAidStatus();
 </script>
 
 <template>
-  <a :href="store.pkg?.ehboPhone ? telHref(store.pkg.ehboPhone) : 'tel:112'" class="call-ehbo" :aria-label="store.pkg?.ehboPhone ? 'Bel EHBO' : 'Noodgeval: bel 112'">
+  <a v-if="open" :href="store.pkg?.ehboPhone ? telHref(store.pkg.ehboPhone) : 'tel:112'" class="call-ehbo" :aria-label="store.pkg?.ehboPhone ? 'Bel EHBO' : 'Noodgeval: bel 112'">
     <Icon name="ehbo" :size="24" />{{ store.pkg?.ehboPhone ? 'Bel EHBO' : 'Bel 112' }}
   </a>
 </template>

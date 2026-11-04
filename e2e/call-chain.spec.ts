@@ -363,12 +363,23 @@ test('participant: looking at a run keeps the favorites, and there can be severa
   await expect(star(third!)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.run-name').first()).toHaveText(second!);
 
-  // Info & voorwaarden below the legend, out from under Bel EHBO, and back again.
-  const info = page.getByRole('link', { name: 'Info & voorwaarden' });
-  await info.scrollIntoViewIfNeeded();
-  const [link, call] = [await info.boundingBox(), await page.locator('.call-ehbo').boundingBox()];
-  expect(link!.y + link!.height <= call!.y || link!.x + link!.width <= call!.x).toBe(true);
-  await info.click();
+  // Two runs side by side on a phone; Info & voorwaarden is a round i in the header, and back again.
+  const [one, two, three] = await Promise.all([0, 1, 2].map((i) => page.locator('.run').nth(i).boundingBox()));
+  expect(one!.y).toBe(two!.y);
+  expect(three!.y).toBeGreaterThan(one!.y);
+  // Phone, light or dark from the header too, kept on the phone: each tap goes to the next.
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.getByRole('button', { name: 'Weergave: telefoon' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByRole('button', { name: 'Weergave: licht' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await page.getByRole('button', { name: 'Weergave: donker' }).click();
+  await expect(page.getByRole('button', { name: 'Weergave: telefoon' })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByRole('link', { name: 'Info & voorwaarden' }).click();
   await expect(page.getByRole('link', { name: 'OpenStreetMap-bijdragers' })).toBeVisible();
   await page.getByRole('button', { name: 'Terug' }).click();
   await expect(page.getByText('Legenda')).toBeVisible();
@@ -620,7 +631,9 @@ test('route page: details, locations in order, GPX download and the star', async
 
   await expect(page).toHaveURL(/\/route\/\d+$/);
   await expect(page.getByRole('heading', { name: '10 km', level: 1 })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Bel EHBO' })).toBeVisible();
+  // Bel EHBO only while the event is open (a staffed location or a team on duty); earlier tests may have left one open.
+  const { open } = await (await page.request.get('/api/first-aid-status')).json() as { open: boolean };
+  await expect(page.getByRole('link', { name: 'Bel EHBO' })).toHaveCount(open ? 1 : 0);
   await expect(page.locator('.list-row').filter({ hasText: 'Kruising 4' })).toHaveCount(2);
   await expect(page.locator('.list-row').filter({ hasText: 'Waterpost 9' })).toHaveCount(0);
   await expect(page.locator('.list-row .km').first()).toHaveText('km 0,0');

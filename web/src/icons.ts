@@ -37,6 +37,11 @@ export const PATHS = {
   aed: '<path d="M12 20.5 4.6 13.2A4.8 4.8 0 0 1 12 6.5a4.8 4.8 0 0 1 7.4 6.7z"/><path d="m12.8 9-2.3 3.6h3l-2.3 3.6"/>',
   toilet: '<circle cx="7" cy="4.5" r="1.8"/><path d="M5 21v-6H3.5L5.5 8h3l2 7H9v6"/><circle cx="17" cy="4.5" r="1.8"/><path d="M15 21V8h4v13"/>',
   uturn: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.3 17.7-1.4 1.4"/><path d="m19.1 4.9-1.4 1.4"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  account: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.7v-1.7a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v1.7"/>',
+  /** Light or dark follows the phone: a circle half filled. */
+  contrast: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor"/>',
 } as const;
 
 export type IconName = keyof typeof PATHS;
