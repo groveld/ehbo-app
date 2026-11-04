@@ -8,7 +8,7 @@ import { cleanGpx, type GpxWaypoint } from '../gpx.ts';
 import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
-const PACKAGE_FORMAT = 12;
+const PACKAGE_FORMAT = 13;
 
 export function buildPackage(db: EventDb, staff: boolean): EventPackage {
   const state = adminDb(db).getState();
@@ -35,6 +35,7 @@ export function buildPackage(db: EventDb, staff: boolean): EventPackage {
       ...(staff ? { address: p.address, accessRoute: p.accessRoute, contacts: p.contacts.map(({ name, phone, role }) => ({ name, phone, role })) } : {}),
     })),
     runs: state.runs.map((r) => ({ id: r.id, name: r.name, distanceKm: r.distanceKm, discipline: r.discipline, date: r.date, startTime: r.startTime, line: lines.get(r.id) ?? null })),
+    zones: state.zones,
     // Deelnemers zien waar EHBO staat (het kruisje op de kaart), maar niet wie.
     teams: state.teams.map(({ availability: _, ...u }) => (staff ? u : { ...u, name: '', mobility: null, hasAed: false, timeFrom: null, timeTo: null, members: [] })),
     coreTeam: staff ? state.coreTeam.filter((c) => c.phone).map((c) => ({ ...c, phone: c.phone! })) : [],

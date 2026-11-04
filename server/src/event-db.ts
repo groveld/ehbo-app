@@ -552,6 +552,16 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   `ALTER TABLE teams ADD COLUMN next_availability TEXT CHECK (next_availability IN ('unavailable', 'off_duty'));`,
   // 27: a waiting call goes to a team other than its own (the nearest) only after this many minutes.
   `ALTER TABLE event ADD COLUMN share_after_min INTEGER NOT NULL DEFAULT 5;`,
+  // 28: zones on the map for parking and food (#172); the points as JSON [[lng, lat], …].
+  `CREATE TABLE zones (
+    id          INTEGER PRIMARY KEY,
+    kind        TEXT NOT NULL CHECK (kind IN ('parking', 'food')),
+    shape       TEXT NOT NULL CHECK (shape IN ('strip', 'area')),
+    name        TEXT NOT NULL,
+    note        TEXT,
+    points_json TEXT NOT NULL,
+    sort        INTEGER NOT NULL DEFAULT 0
+  );`,
 ];
 
 export interface EventRow {

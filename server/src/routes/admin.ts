@@ -30,6 +30,9 @@ import {
   type Report,
   type RunData,
   type TeamData,
+  type ZoneData,
+  ZONE_POINTS_MAX,
+  zoneProblem,
 } from '@ehbo/shared';
 import { adminDb } from '../admin-db.ts';
 import { BRAND_IMAGES, ICON_IMAGES, LOGO_MAX_SIDE, pngSize, setBrandImages } from '../brand.ts';
@@ -117,6 +120,19 @@ const runSchema = {
     discipline: optionalText(60),
     date,
     startTime: time,
+  },
+} as const;
+
+const coordinate = { type: 'array', minItems: 2, maxItems: 2, items: [{ type: 'number', minimum: -180, maximum: 180 }, { type: 'number', minimum: -90, maximum: 90 }] } as const;
+const zoneSchema = {
+  type: 'object',
+  required: ['kind', 'shape', 'name', 'note', 'points'],
+  properties: {
+    kind: { type: 'string', enum: ['parking', 'food'] },
+    shape: { type: 'string', enum: ['strip', 'area'] },
+    name: { type: 'string', minLength: 1, maxLength: 60 },
+    note: optionalText(200),
+    points: { type: 'array', maxItems: ZONE_POINTS_MAX, items: coordinate },
   },
 } as const;
 
@@ -330,6 +346,25 @@ export async function adminRoutes(app: FastifyInstance, { db, calls }: { db: Eve
       throw badRequest((err as Error).message);
     }
     if (!admin.setRunGpx(request.params.id, request.query.filename || 'parcours.gpx', request.body, track)) throw notFound('Loop niet gevonden');
+    return admin.getState();
+  });
+
+  // Zones (#172)
+  const checkZone = (body: ZoneData) => {
+    const problem = zoneProblem(body);
+    if (problem) throw badRequest(`${body.name.trim()}: ${problem.toLowerCase()}`);
+    return body;
+  };
+  app.post<{ Body: ZoneData; Reply: AdminState }>('/api/admin/zones', { schema: { body: zoneSchema } }, async (request) => {
+    admin.saveZone(null, checkZone(request.body));
+    return admin.getState();
+  });
+  app.put<{ Params: { id: number }; Body: ZoneData; Reply: AdminState }>('/api/admin/zones/:id', { schema: { params: idParams, body: zoneSchema } }, async (request) => {
+    if (admin.saveZone(request.params.id, checkZone(request.body)) === null) throw notFound('Zone niet gevonden');
+    return admin.getState();
+  });
+  app.delete<{ Params: { id: number }; Reply: AdminState }>('/api/admin/zones/:id', { schema: { params: idParams } }, async (request) => {
+    if (!admin.deleteZone(request.params.id)) throw notFound('Zone niet gevonden');
     return admin.getState();
   });
 

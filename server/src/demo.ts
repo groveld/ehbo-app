@@ -60,5 +60,10 @@ export function seedDemo(db: EventDb) {
     sql.prepare("UPDATE runs SET track_json = ?, track_points = ?, track_km = ? WHERE name = '10 km'").run(JSON.stringify(line), line.length, trackKm);
     sql.prepare('INSERT OR IGNORE INTO location_functions (location_id, type_id) SELECT id, type_id FROM locations').run();
     recomputePassages(sql);
+
+    // Zones (#172): a parking strip along the road to the start, and a field to eat and drink next to it.
+    const zone = sql.prepare('INSERT INTO zones (kind, shape, name, note, points_json, sort) VALUES (?, ?, ?, ?, ?, ?)');
+    zone.run('parking', 'strip', 'Parkeren Buorren', 'Vol vanaf 11:00', JSON.stringify([[5.8060, 53.1390], [5.8072, 53.1394], [5.8084, 53.1398]]), 0);
+    zone.run('food', 'area', 'Eten bij De Trilker', null, JSON.stringify([[5.8090, 53.1418], [5.8104, 53.1418], [5.8104, 53.1426], [5.8090, 53.1426]]), 1);
   });
 }

@@ -16,6 +16,8 @@ import type {
   FunctionTypeInfo,
   RunData,
   TeamData,
+  Zone,
+  ZoneData,
 } from '@ehbo/shared';
 import { isStaffed, mainFunction } from '@ehbo/shared';
 import { getBrand, getStyle, saveStyle } from './brand.ts';
@@ -60,6 +62,11 @@ export function adminDb(events: EventDb) {
       date: r.date as string | null,
       startTime: r.start_time as string | null,
       gpx: r.track_json ? { filename: (r.gpx_filename as string) ?? 'parcours.gpx', points: r.track_points as number, km: r.track_km as number } : null,
+    }));
+
+    const zones: Zone[] = all('SELECT * FROM zones ORDER BY sort, id').map((z) => ({
+      id: z.id as number, kind: z.kind as Zone['kind'], shape: z.shape as Zone['shape'], name: z.name as string, note: z.note as string | null,
+      points: JSON.parse(z.points_json as string) as Zone['points'],
     }));
 
     const functionTypes: FunctionTypeInfo[] = all('SELECT id, key, name, letter, color, staffed FROM function_types ORDER BY sort, id').map((t) => ({
@@ -135,7 +142,7 @@ export function adminDb(events: EventDb) {
     const admins: AdminPerson[] = all('SELECT a.phone, p.name FROM admins a JOIN people p ON p.phone = a.phone ORDER BY p.name, a.phone')
       .map((a) => ({ phone: a.phone as string, name: a.name as string }));
 
-    return { event, runs, functionTypes, locations, teams, coreTeam, emergencyNumbers, admins, brand: getBrand(events), testMode: events.testMode(), sessions: events.countSessions(), info: getInfo() };
+    return { event, runs, zones, functionTypes, locations, teams, coreTeam, emergencyNumbers, admins, brand: getBrand(events), testMode: events.testMode(), sessions: events.countSessions(), info: getInfo() };
   }
 
   function getInfo(): InfoSettings {
@@ -164,6 +171,15 @@ export function adminDb(events: EventDb) {
       return Number(run('INSERT INTO runs (name, distance_km, discipline, date, start_time, sort) VALUES (?, ?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
     }
     return run('UPDATE runs SET name = ?, distance_km = ?, discipline = ?, date = ?, start_time = ? WHERE id = ?', ...values, id).changes ? id : null;
+  }
+
+  function saveZone(id: number | null, z: ZoneData): number | null {
+    const values = [z.kind, z.shape, z.name.trim(), z.note?.trim() || null, JSON.stringify(z.points)] as const;
+    if (id === null) {
+      const sort = (db.prepare('SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM zones').get() as { n: number }).n;
+      return Number(run('INSERT INTO zones (kind, shape, name, note, points_json, sort) VALUES (?, ?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
+    }
+    return run('UPDATE zones SET kind = ?, shape = ?, name = ?, note = ?, points_json = ? WHERE id = ?', ...values, id).changes ? id : null;
   }
 
   function setRunGpx(id: number, filename: string, gpx: string, track: Track) {
@@ -260,6 +276,8 @@ export function adminDb(events: EventDb) {
       recomputePassages(db);
       return deleted;
     },
+    saveZone,
+    deleteZone: (id: number) => run('DELETE FROM zones WHERE id = ?', id).changes > 0,
     saveLocation,
     deleteLocation: (id: number) => run('DELETE FROM locations WHERE id = ?', id).changes > 0,
     functionTypeExists: (id: number) => exists('function_types', id),
