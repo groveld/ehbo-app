@@ -544,7 +544,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     return incidentsOf(state()).find((i) => i.id === id)!;
   }
 
-  /** Someone came to the team: no call, the team is already there. Only a person who isn't responsive still brings an AED. */
+  /**
+   * Started by the team itself: no call. Someone came to it, so it's on site at once; or it heard of it and still has to go there (`enRoute`),
+   * then it's accepted and the team taps on site when it arrives. Only a person who isn't responsive still brings an AED.
+   */
   function selfStart(me: Me, body: NewSelfIncident): LiveIncident {
     const existing = get('SELECT id FROM incidents WHERE client_id = ?', body.clientId);
     if (existing) return incidentsOf(state()).find((i) => i.id === existing.id)!;
@@ -559,18 +562,19 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     const offLocation = place !== null && !place.atLocation;
     const at = stamp();
     const aed = body.responsive === 'no';
+    const enRoute = body.enRoute && !position;
 
     const id = db.transaction(() => {
       const incidentId = insertIncident('first_aid', {
         client_id: body.clientId, location_id: location.id, reported_by: me.phone, what: body.what, persons: body.persons, responsive: body.responsive,
-        note: body.note?.trim() || null, aed: aed ? 1 : 0, status: 'on_site', stage: 'nearest', reported_at: at, sent_at: at,
-        team_id: team.id, accepted_by: me.phone, accepted_at: at, on_site_at: at, is_test: db.testMode() ? 1 : 0, self_started: 1,
+        note: body.note?.trim() || null, aed: aed ? 1 : 0, status: enRoute ? 'accepted' : 'on_site', stage: 'nearest', reported_at: at, sent_at: at,
+        team_id: team.id, accepted_by: me.phone, accepted_at: at, on_site_at: enRoute ? null : at, is_test: db.testMode() ? 1 : 0, self_started: 1,
         place_name: offLocation ? place.name : null, place_lat: offLocation ? position![1] : null, place_lng: offLocation ? position![0] : null,
       });
       addDispatch(incidentId, team.id, 'manual', 0);
       run('UPDATE dispatches SET accepted_at = ? WHERE help_request_id = ? AND team_id = ?', at, incidentId, team.id);
       run("UPDATE teams SET availability = 'available', stay_location_id = NULL WHERE id = ?", team.id);
-      log(incidentId, 'reported', `Zelf gestart door ${team.name} · ${offLocation ? place.name : location.name}`, team.id);
+      log(incidentId, 'reported', `Zelf gestart door ${team.name} · ${offLocation ? place.name : location.name}${enRoute ? ' · onderweg' : ''}`, team.id);
       return incidentId;
     });
 
@@ -583,7 +587,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
         alarmTeams(row, [aedTeam.team.id], 'EHBO-oproep · AED nodig');
       }
     }
-    copyToCoordinator(row, `${team.name} is zelf een incident gestart: ${summary(row)}${offLocation ? `, ${place.name}` : ''}.`);
+    copyToCoordinator(row, `${team.name} is zelf een incident gestart: ${summary(row)}${offLocation ? `, ${place.name}` : ''}${enRoute ? `, onderweg naar ${location.name}` : ''}.`);
     changed();
     return incidentsOf(state()).find((i) => i.id === id)!;
   }

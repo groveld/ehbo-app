@@ -75,6 +75,8 @@ export interface NewSelfIncident extends IncidentDetails {
   /** GPS of the team, when there is one and no post was chosen by hand. */
   lat: number | null;
   lng: number | null;
+  /** The chosen post is further than the at-a-post radius from the team: it starts en route and taps on site when it gets there. */
+  enRoute: boolean;
 }
 
 export interface CloseIncident {

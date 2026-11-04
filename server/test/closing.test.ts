@@ -196,7 +196,7 @@ test('the last member logging out during a call: the team goes off duty once the
 test('a team starts an incident itself: on site at once, the place by GPS, and no call to anyone else', () => {
   const mo = (): Me => ({ phone: DEMO.mobileEhbo, name: 'Mo', isAdmin: false, assignments: [{ kind: 'team', teamId: TEAM2(), title: '', letter: '+', color: '' }], home: 'first_aid' }) as Me;
   const [lat, lng] = [53.1512, 5.8344];
-  const body = { clientId: 'self-start-1', teamId: TEAM2(), locationId: WATER(), what: 'cramp' as const, persons: '1' as const, responsive: null, note: null };
+  const body = { clientId: 'self-start-1', teamId: TEAM2(), locationId: WATER(), what: 'cramp' as const, persons: '1' as const, responsive: null, note: null, enRoute: false };
 
   // Within the radius of the post: the post itself.
   const atLocation = calls.selfStart(mo(), { ...body, lat: lat + 0.0002, lng });
@@ -214,6 +214,14 @@ test('a team starts an incident itself: on site at once, the place by GPS, and n
   assert.equal(away.offLocation, true);
   assert.match(away.location.name, /^\d+ m van /);
   assert.equal(away.location.lat, lat + 0.002);
+  set("UPDATE help_requests SET status = 'closed'");
+
+  // A post chosen far from the team: accepted, en route, and on site only when the team says so.
+  const far = calls.selfStart(mo(), { ...body, clientId: 'self-start-4', lat: null, lng: null, enRoute: true });
+  assert.deepEqual([far.status, far.onSiteAt, far.teamId, far.selfStarted], ['accepted', null, TEAM2(), true]);
+  assert.ok(pushes.some((p) => p.phones.includes(DEMO.coordinator) && p.payload.body.includes('onderweg naar')));
+  calls.onSite(mo(), far.id);
+  assert.equal(incidentsOf(calls.state()).find((i) => i.id === far.id)?.status, 'on_site');
 });
 
 test('last contact is only for the coordinator, and only of what is open', () => {

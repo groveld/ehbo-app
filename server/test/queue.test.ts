@@ -84,12 +84,25 @@ test('a request made without signal is there at once, and follows its steps', ()
 test('an incident started without signal is there at once, on site, and can be closed', () => {
   const started = apply(state({ helpRequests: [] }), {
     type: 'selfStart', tempId: -9, locationId: 20, offLocation: true, location: { typeId: 1, name: '120 m van Waterpost', km: 3, lat: 53, lng: 5 },
-    body: { clientId: 'abcdefgh', teamId: 2, locationId: 20, lat: 53, lng: 5, what: 'cramp', persons: '1', responsive: null, note: null },
+    body: { clientId: 'abcdefgh', teamId: 2, locationId: 20, lat: 53, lng: 5, what: 'cramp', persons: '1', responsive: null, note: null, enRoute: false },
   });
   assert.deepEqual([incidentsOf(started)[0]?.status, incidentsOf(started)[0]?.teamId, started.teams[1]?.incidentId], ['on_site', 2, -9]);
   const closed = apply(started, { type: 'close', incidentId: -9, body: { outcome: 'treated', persons: '1', note: null, stayHere: false } });
   assert.equal(incidentsOf(closed)[0]?.status, 'closed');
   assert.equal(closed.teams[1]?.incidentId, null);
+});
+
+test('an incident started for a post further away begins en route', () => {
+  const started = apply(state({ helpRequests: [] }), {
+    type: 'selfStart', tempId: -9, locationId: 20, offLocation: false, location: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 },
+    body: { clientId: 'abcdefgh', teamId: 2, locationId: 20, lat: null, lng: null, what: null, persons: null, responsive: null, note: null, enRoute: true },
+  }, { type: 'onSite', incidentId: -9 });
+  assert.deepEqual([incidentsOf(started)[0]?.status, started.teams[1]?.incidentId], ['on_site', -9]);
+  const going = apply(state({ helpRequests: [] }), {
+    type: 'selfStart', tempId: -9, locationId: 20, offLocation: false, location: { typeId: 1, name: 'Waterpost', km: 3, lat: 53, lng: 5 },
+    body: { clientId: 'abcdefgh', teamId: 2, locationId: 20, lat: null, lng: null, what: null, persons: null, responsive: null, note: null, enRoute: true },
+  });
+  assert.deepEqual([incidentsOf(going)[0]?.status, incidentsOf(going)[0]?.onSiteAt], ['accepted', null]);
 });
 
 test('the server carries out a queued change once, with the time it happened', async () => {
