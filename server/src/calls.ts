@@ -296,7 +296,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
 
   /** Voor deelnemers: welke standplaatsen nu leeg zijn. Zonder de oproepen, dus licht genoeg om vaak op te vragen. */
   function ehboStatus(): FirstAidStatus {
-    return { awayLocationIds: awayLocationIds(teams(), liveTeams(), [...locations().values()], now().getTime(), atLocationM()), dataVersion: db.dataVersion() };
+    const all = [...locations().values()];
+    const allTeams = teams();
+    const open = all.some((p) => p.staffed && p.isOpen) || allTeams.some((u) => u.availability !== 'off_duty');
+    return { awayLocationIds: awayLocationIds(allTeams, liveTeams(), all, now().getTime(), atLocationM()), open, dataVersion: db.dataVersion() };
   }
 
   function state(): LiveState {

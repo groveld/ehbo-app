@@ -411,6 +411,17 @@ test('live stand via SSE: direct de stand, en elke wijziging', async () => {
   await reader.cancel();
 });
 
+test('participants see Bel EHBO only while a staffed location is open or a team is on duty', async () => {
+  const open = async () => (await app.inject({ url: '/api/first-aid-status' })).json().open;
+  assert.equal(await open(), false, 'before opening');
+  await ok(DEMO.locationLead, 'PUT', `/api/locations/${WATER()}/open`, { open: true });
+  assert.equal(await open(), true, 'a post is open');
+  await ok(DEMO.locationLead, 'PUT', `/api/locations/${WATER()}/open`, { open: false });
+  assert.equal(await open(), false);
+  await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${TEAM2()}/availability`, { availability: 'available' });
+  assert.equal(await open(), true, 'a team is on duty');
+});
+
 test('deelnemers zien welke standplaats leeg is, zonder posities of namen', async () => {
   const KRUISING = () => idOf('locations', 'Kruising 4');
   const status = async () => {
