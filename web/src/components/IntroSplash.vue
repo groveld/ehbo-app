@@ -44,6 +44,8 @@ function close() {
 // Het parcours is na 1,5 s getekend; daarna blijft de intro nog 2,5 s staan.
 onMounted(() => {
   timers.push(setTimeout(close, 4000));
+  // The map library is the biggest part of the app: fetch it while the intro is up, so the map is there when it ends.
+  void import('./EventMap.vue');
   window.addEventListener('keydown', close);
 });
 onBeforeUnmount(() => {

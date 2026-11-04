@@ -61,6 +61,10 @@ let watchId: number | null = null;
 let contextLost = false;
 /** Own position (#38): only on this phone, never sent. Mijn locatie centres once; a second tap follows until you move the map. */
 const locating = ref<'off' | 'shown' | 'follow'>('off');
+/** The first complete picture is there: until then the map is its plain background, so it doesn't build up in stages. */
+const ready = ref(false);
+/** Never wait longer than this, e.g. without tiles or signal. */
+const READY_MAX_MS = 1500;
 let userFix: { lng: number; lat: number; accuracy: number } | null = null;
 /** A fix worse than this shows a greyer dot. */
 const ROUGH_FIX_M = 50;
@@ -369,7 +373,8 @@ async function startUserLocation(ask = false) {
       const el = document.createElement('div');
       el.className = 'user-dot';
       el.style.zIndex = String(TEAM_LAYER);
-      el.innerHTML = '<span class="accuracy"></span>';
+      // The circle under the dot, and the dot on top: zoomed out the circle is smaller than the dot and must stay hidden under it.
+      el.innerHTML = '<span class="accuracy"></span><span class="core"></span>';
       userMarker = new maplibregl.Marker({ element: el }).setLngLat([coords.longitude, coords.latitude]).addTo(map);
       if (locating.value !== 'off') centreOnUser();
     }
@@ -407,6 +412,8 @@ function createMap() {
     // The credit is on the intro and the info page, so the map shows only the map.
     attributionControl: false,
     interactive: props.interactive,
+    // Labels at once, instead of fading in after the rest.
+    fadeDuration: 0,
     maxZoom: 18,
     // Only moving and zooming: no tilting or turning, by touch, mouse or keyboard.
     maxPitch: 0,
@@ -415,6 +422,11 @@ function createMap() {
     dragRotate: false,
   });
   map.on('webglcontextlost', () => { contextLost = true; });
+  // Everything in one go: tiles, labels, route and markers together.
+  ready.value = false;
+  const show = () => { ready.value = true; };
+  map.once('idle', show);
+  setTimeout(show, READY_MAX_MS);
   map.on('zoom', drawAccuracy);
   // Switching between count and flower is one class on the map, without drawing the markers again.
   const flower = () => container.value?.classList.toggle('flowers', map!.getZoom() >= FLOWER_ZOOM);
@@ -571,7 +583,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="event-map-wrap">
-    <div ref="container" class="event-map" :class="{ picking }" />
+    <div ref="container" class="event-map" :class="{ picking, ready }" />
     <button
       v-if="showUser && interactive" class="locate" :class="{ on: locating !== 'off', follow: locating === 'follow' }"
       :aria-label="locating === 'shown' ? 'Mijn locatie volgen' : 'Mijn locatie'" :aria-pressed="locating !== 'off'" @click="myLocation"
@@ -633,13 +645,16 @@ onBeforeUnmount(() => {
 @media (prefers-reduced-motion: reduce) {
   .event-map :deep(.post-marker.alert), .event-map :deep(.post-marker.task) { animation: none; }
 }
-.event-map :deep(.user-dot) {
-  width: 16px; height: 16px; border-radius: 50%; background: #1F6FB2; border: 3px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+.event-map :deep(.maplibregl-canvas), .event-map :deep(.maplibregl-marker) { transition: opacity .15s; }
+.event-map:not(.ready) :deep(.maplibregl-canvas), .event-map:not(.ready) :deep(.maplibregl-marker) { opacity: 0; }
+.event-map :deep(.user-dot) { width: 16px; height: 16px; }
+.event-map :deep(.user-dot .core) {
+  position: absolute; inset: 0; border-radius: 50%; background: #1F6FB2; border: 3px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
 }
-.event-map :deep(.user-dot.rough) { background: #7D8FA3; }
+.event-map :deep(.user-dot.rough .core) { background: #7D8FA3; }
 /* How precise the fix is: a light circle in metres, drawn under the dot. */
 .event-map :deep(.user-dot .accuracy) {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: -1; border-radius: 50%; pointer-events: none;
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none;
   background: rgba(31, 111, 178, .14); border: 1px solid rgba(31, 111, 178, .35);
 }
 </style>
