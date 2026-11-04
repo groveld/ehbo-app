@@ -144,10 +144,15 @@ function arrowImage() {
   return ctx.getImageData(0, 0, size, size);
 }
 
-/** One round of the dashes along the line, so they move from the team towards the call. */
+/** The line from a team to its call: thin, with short dashes close together (in line widths). */
+const CALL_LINE_WIDTH = 2;
+const DASH = 1.5;
+const GAP = 1.5;
+const DASH_STEP = 0.5;
+/** One round of the dashes along the line, so they move from the team towards the call: first the dash moves in, then the gap. */
 const DASH_STEPS = [
-  [0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0],
-  [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5],
+  ...Array.from({ length: DASH / DASH_STEP + 1 }, (_, n) => [n * DASH_STEP, GAP, DASH - n * DASH_STEP]),
+  ...Array.from({ length: GAP / DASH_STEP - 1 }, (_, n) => [0, (n + 1) * DASH_STEP, DASH, GAP - (n + 1) * DASH_STEP]),
 ];
 const DASH_STEP_MS = 90;
 
@@ -444,7 +449,7 @@ function createMap() {
       id: 'oproeplijnen',
       type: 'line',
       source: 'oproeplijnen',
-      paint: { 'line-color': '#C8261E', 'line-width': 3, 'line-dasharray': DASH_STEPS[0]! },
+      paint: { 'line-color': '#C8261E', 'line-width': CALL_LINE_WIDTH, 'line-dasharray': DASH_STEPS[0]! },
     });
     map!.addImage('route-arrow', arrowImage(), { pixelRatio: 2 });
     map!.addLayer({
