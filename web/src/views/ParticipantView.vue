@@ -1,15 +1,14 @@
 <script setup lang="ts">
 // 2.8 · Deelnemer, en het beginscherm van de app zonder aanmelding: naam van het evenement, route, starttijden met favoriete loop
-// vooraan, een legenda van de soorten posten, Bel EHBO en rechtsboven Aanmelden voor medewerkers.
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue';
-import type { FirstAidStatus } from '@ehbo/shared';
-import { api } from '../api.ts';
+// vooraan, een legenda van de soorten posten, Bel EHBO (als het evenement open is) en rechtsboven drie ronde knoppen: licht of donker, Info en Aanmelden.
+import { computed, defineAsyncComponent, onMounted } from 'vue';
+import { dark, setAppearance } from '../colorScheme.ts';
 import CallFirstAid from '../components/CallFirstAid.vue';
 import Icon from '../components/Icon.vue';
 import LocationBadge from '../components/LocationBadge.vue';
 import { useFavorites } from '../composables/useFavorites.ts';
+import { useFirstAidStatus } from '../composables/useFirstAidStatus.ts';
 import { canUseAsStaff } from '../platform.ts';
-import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 
 // The map library is large: the screen doesn't wait for it.
@@ -17,34 +16,11 @@ const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue')
 
 const store = usePackageStore();
 const { favorites, toggleFavorite } = useFavorites();
-const live = useLiveStore();
 /** Standplaatsen waar de mobiele EHBO nu niet is: grijs kruisje. Zonder bereik blijft de laatste stand staan. */
-const awayLocationIds = ref<number[]>([]);
+const { awayLocationIds } = useFirstAidStatus();
 // Medewerkers zetten de app eerst op het beginscherm; in de browser kan aanmelden alleen met ?browser=1.
 const staffRoute = canUseAsStaff ? { name: 'login' } : { name: 'install' };
-// Elke halve minuut, zolang de pagina in beeld is; mobiele eenheden delen hun positie elke minuut.
-async function refreshEhbo() {
-  if (document.visibilityState !== 'visible') return;
-  try {
-    const status = await api<FirstAidStatus>('/api/first-aid-status');
-    awayLocationIds.value = status.awayLocationIds;
-    // Participants have no live connection, so changes in admin reach them this way.
-    live.checkData(status.dataVersion);
-  } catch {
-    // Geen bereik.
-  }
-}
-let timer: ReturnType<typeof setInterval> | undefined;
-onMounted(() => {
-  store.refresh();
-  void refreshEhbo();
-  timer = setInterval(refreshEhbo, 30_000);
-  document.addEventListener('visibilitychange', refreshEhbo);
-});
-onBeforeUnmount(() => {
-  clearInterval(timer);
-  document.removeEventListener('visibilitychange', refreshEhbo);
-});
+onMounted(() => store.refresh());
 
 const runs = computed(() => {
   const all = store.pkg?.runs ?? [];
@@ -67,7 +43,13 @@ const legend = computed(() => {
     <!-- Deelnemers blijven hier; medewerkers melden zich rechtsboven aan. -->
     <header class="top">
       <h1>{{ store.pkg?.event.name }}</h1>
-      <RouterLink :to="staffRoute" class="login"><Icon name="people" :size="14" />Aanmelden</RouterLink>
+      <div class="actions">
+        <!-- What the app does with data, and the map licence (#127). -->
+        <!-- Same choice as in the staff menu; a tap picks the other one, so it no longer follows the phone. -->
+        <button class="round" :aria-label="dark ? 'Lichte weergave' : 'Donkere weergave'" @click="setAppearance(dark ? 'light' : 'dark')"><Icon :name="dark ? 'sun' : 'moon'" :size="18" /></button>
+        <RouterLink :to="{ name: 'info' }" class="round" aria-label="Info &amp; voorwaarden"><Icon name="info" :size="18" /></RouterLink>
+        <RouterLink :to="staffRoute" class="round" aria-label="Aanmelden"><Icon name="login" :size="18" /></RouterLink>
+      </div>
     </header>
 
     <template v-if="store.pkg">
@@ -96,8 +78,6 @@ const legend = computed(() => {
           <div v-for="type in legend" :key="type.id" class="list-row legend-item"><LocationBadge :type="type" :size="32" /><span class="title-line">{{ type.name }}</span></div>
         </div>
       </section>
-      <!-- What the app does with data, and the map licence (#127). -->
-      <RouterLink :to="{ name: 'info' }" class="info-link"><Icon name="info" :size="18" />Info &amp; voorwaarden</RouterLink>
     </template>
     <p v-else class="note">Geen bereik. Open deze pagina één keer met internet; daarna werkt hij ook zonder.</p>
 
@@ -108,13 +88,14 @@ const legend = computed(() => {
 <style scoped>
 .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: max(18px, env(safe-area-inset-top)) 0 10px; }
 h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
-.login {
-  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 999px;
-  border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: 13px; font-weight: 600; text-decoration: none;
+.actions { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+.round {
+  display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-2); text-decoration: none; cursor: pointer;
 }
 .map { height: clamp(200px, 35dvh, 420px); }
 .section { margin-top: 16px; }
-.runs { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.runs { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
 .run { display: flex; align-items: flex-start; border-radius: 14px; border: 1px solid var(--line); background: var(--card); }
 .run-view {
   flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0 10px 10px;
@@ -125,10 +106,5 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .star { color: #9A9CA3; }
 .favorite .star { color: #D9A400; fill: #F2C230; }
 .time { font-size: 16px; }
-/* Room at the end, so the Bel EHBO button doesn't cover the link. */
-.info-link {
-  align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 8px 0 72px;
-  color: var(--ink-2); font-size: 14px; font-weight: 600; text-decoration: none;
-}
 .legend-item { min-height: 52px; padding: 8px 14px; }
 </style>
