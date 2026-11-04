@@ -83,6 +83,8 @@ export const router = createRouter({
     { path: '/admin/runs/:id', name: 'admin-run', component: () => import('./views/admin/RunView.vue'), props: true, meta: { staff: true, admin: true } },
     { path: '/admin/locations', name: 'admin-locations', component: () => import('./views/admin/LocationsView.vue'), meta: { staff: true, admin: true } },
     { path: '/admin/locations/:id', name: 'admin-location', component: () => import('./views/admin/LocationView.vue'), props: true, meta: { staff: true, admin: true } },
+    { path: '/admin/zones', name: 'admin-zones', component: () => import('./views/admin/ZonesView.vue'), meta: { staff: true, admin: true } },
+    { path: '/admin/zones/:id', name: 'admin-zone', component: () => import('./views/admin/ZoneView.vue'), props: true, meta: { staff: true, admin: true } },
     { path: '/admin/teams', name: 'admin-teams', component: () => import('./views/admin/TeamsView.vue'), meta: { staff: true, admin: true } },
     { path: '/admin/teams/:id', name: 'admin-team', component: () => import('./views/admin/TeamView.vue'), props: true, meta: { staff: true, admin: true } },
     { path: '/:path(.*)*', redirect: '/' },
