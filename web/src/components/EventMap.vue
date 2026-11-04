@@ -575,14 +575,14 @@ onBeforeUnmount(() => {
     <button
       v-if="showUser && interactive" class="locate" :class="{ on: locating !== 'off', follow: locating === 'follow' }"
       :aria-label="locating === 'shown' ? 'Mijn locatie volgen' : 'Mijn locatie'" :aria-pressed="locating !== 'off'" @click="myLocation"
-    ><Icon name="gps" :size="22" /></button>
+    ><Icon name="gps" :size="18" /></button>
   </div>
 </template>
 
 <style scoped>
 .event-map-wrap { position: relative; width: 100%; height: 100%; }
 .locate {
-  position: absolute; right: 10px; bottom: 10px; z-index: 1; width: 44px; height: 44px; border-radius: 12px; border: 0;
+  position: absolute; right: 10px; bottom: 10px; z-index: 1; width: 36px; height: 36px; border-radius: 10px; border: 0;
   background: var(--card); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, .3); display: flex; align-items: center; justify-content: center;
 }
 .locate.on { color: #1F6FB2; }

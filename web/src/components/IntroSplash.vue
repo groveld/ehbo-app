@@ -54,7 +54,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="intro" :class="{ leaving }" role="dialog" :aria-label="name || 'Intro'" @pointerdown="close" @wheel.passive="close">
-    <!-- Fixed colours: the intro has its own look, apart from the event's theme. -->
+    <!-- Fixed colours: the intro has its own look, apart from the event's theme, and the same in dark mode. -->
     <svg class="art" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <path d="M-40 560C60 470 150 520 240 450S380 300 460 340V900H-40Z" fill="#F2C230" />
       <path d="M-40 700C70 640 170 700 280 640S400 560 460 580V900H-40Z" fill="#FFD95C" />
@@ -87,7 +87,7 @@ onBeforeUnmount(() => {
 .intro {
   position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; gap: 24px; overflow: hidden;
   padding: max(48px, env(safe-area-inset-top)) 24px max(64px, env(safe-area-inset-bottom));
-  background: #FF5C9E; color: var(--ink); cursor: pointer; touch-action: none; transition: opacity .2s;
+  background: #FF5C9E; color: #16181D; cursor: pointer; touch-action: none; transition: opacity .2s;
 }
 .intro.leaving { opacity: 0; }
 .art { position: absolute; inset: 0; width: 100%; height: 100%; }
