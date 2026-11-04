@@ -54,6 +54,9 @@ const subtitle = computed(() => {
 });
 
 // Eén stap omhoog: de kaart (navigation.ts).
+/** An EHBO team on duty and not busy can start an incident here: on site when it's there, otherwise en route first. */
+const myTeam = computed(() => (live.myTeamIds[0] !== undefined ? live.teamState(live.myTeamIds[0]) : null));
+const canStart = computed(() => !!myTeam.value && myTeam.value.availability !== 'off_duty' && !myTeam.value.incidentId);
 const back = () => router.back();
 
 /** Wat je doorgeeft als iemand vraagt waar de post is: het adres als dat is ingevuld, anders de GPS-positie. */
@@ -138,6 +141,9 @@ const hereText = (u: { name: string; kind: string }) => (u.kind === 'fixed' ? `E
       </p>
 
       <div class="grow" />
+      <RouterLink v-if="canStart" :to="{ name: 'self-start', query: { location: location.id } }" class="btn go start">
+        <Icon name="ehbo" :size="20" />Incident starten
+      </RouterLink>
       <div class="actions">
         <a v-if="contact" :href="telHref(contact.phone)" class="btn big"><Icon name="phone" :size="20" />Bel locatie</a>
         <a
@@ -169,6 +175,7 @@ h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
 .role { font-weight: 400; }
 .round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--ink); }
 .nearest { margin-top: 12px; align-items: center; }
+.start { margin-top: 18px; }
 .actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 10px; padding-top: 18px; }
 /* Twee knoppen naast elkaar zijn altijd even hoog. */
 .btn.big { height: 56px; font-size: 16px; }

@@ -110,12 +110,13 @@ export function applyAction(state: LiveState, { at, action }: QueuedAction, cont
     case 'selfStart': {
       const { body, tempId, location, offLocation, locationId } = action;
       const name = context.teams.find((u) => u.id === body.teamId)?.name ?? 'Eenheid';
+      const enRoute = body.enRoute && body.lat === null;
       const incident: LiveIncident = {
-        id: tempId, type: 'first_aid', handling: 'dispatch', isTest: state.testMode, selfStarted: true, offLocation, accuracyM: null, locationId, location, reportedBy: context.me?.phone ?? '', status: 'on_site', stage: 'nearest', aed: body.responsive === 'no',
+        id: tempId, type: 'first_aid', handling: 'dispatch', isTest: state.testMode, selfStarted: true, offLocation, accuracyM: null, locationId, location, reportedBy: context.me?.phone ?? '', status: enRoute ? 'accepted' : 'on_site', stage: 'nearest', aed: body.responsive === 'no',
         what: body.what, persons: body.persons, responsive: body.responsive, note: body.note, reportedAt: at, sentAt: at, escalatesAt: null,
-        teamId: body.teamId, acceptedBy: context.me, acceptedAt: at, onSiteAt: at, closedAt: null, outcome: null,
+        teamId: body.teamId, acceptedBy: context.me, acceptedAt: at, onSiteAt: enRoute ? null : at, closedAt: null, outcome: null,
         dispatches: [{ teamId: body.teamId, at, reason: 'manual', distanceKm: 0, declinedAt: null, acceptedAt: at }],
-        events: [{ at, type: 'reported', teamId: body.teamId, text: `Zelf gestart door ${name} · ${location.name}` }],
+        events: [{ at, type: 'reported', teamId: body.teamId, text: `Zelf gestart door ${name} · ${location.name}${enRoute ? ' · onderweg' : ''}` }],
       };
       return changeTeam({ ...state, helpRequests: [incident, ...state.helpRequests] }, body.teamId, (u) => ({ ...u, availability: 'available', nextAvailability: null, stayLocationId: null, incidentId: tempId }));
     }

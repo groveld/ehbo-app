@@ -1,9 +1,11 @@
 <script setup lang="ts">
-// EHBO: zelf een incident starten, als iemand naar je toe komt. Je bent er al, dus dit gaat meteen door naar afronden.
-// De plek: een vaste eenheid haar eigen post; een mobiele eenheid haar GPS (de post als die binnen de straal van thuis ligt), anders de standplaats.
+// EHBO: start an incident yourself. Someone came to you, so you're there and it goes straight to closing;
+// or you heard of it (by phone) and chose a post further than the at-a-post radius, then it starts en route with navigation until you tap on site.
+// The place: a fixed team its own post; a mobile team its GPS (the post when within the radius), otherwise the standplaats.
+// From a post's page (`?location=`) that post is chosen.
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { INCIDENT_PERSONS, INCIDENT_WHAT, RESPONSIVE, placeOf, type IncidentDetails, type LngLat } from '@ehbo/shared';
+import { useRoute, useRouter } from 'vue-router';
+import { INCIDENT_PERSONS, INCIDENT_WHAT, RESPONSIVE, distanceKm, placeOf, type IncidentDetails, type LngLat } from '@ehbo/shared';
 import Icon from '../components/Icon.vue';
 import { useSave } from '../composables/useSave.ts';
 import { teamOf } from '../incidents.ts';
@@ -17,6 +19,7 @@ const GPS_TIMEOUT_MS = 4_000;
 const store = usePackageStore();
 const live = useLiveStore();
 const router = useRouter();
+const route = useRoute();
 const { busy, error, run } = useSave();
 
 const teamId = computed(() => live.myTeamIds[0] ?? null);
@@ -29,12 +32,26 @@ const toggle = <K extends keyof IncidentDetails>(key: K, value: IncidentDetails[
 const gps = ref<LngLat | null>(null);
 const locating = ref(false);
 /** Chosen by hand; that goes above the GPS. */
-const chosen = ref<number | null>(null);
+const fromQuery = Number(route.query.location);
+const chosen = ref<number | null>(Number.isInteger(fromQuery) && locations.value.some((p) => p.id === fromQuery) ? fromQuery : null);
 
 const place = computed(() => (gps.value ? placeOf(locations.value, gps.value, atLocationM(store.pkg)) : null));
 /** Without GPS the place of the team: where it stayed, or its own post or standplaats. */
 const homeLocationId = computed(() => (teamId.value !== null ? live.teamState(teamId.value)?.stayLocationId : null) ?? team.value?.locationId ?? null);
 const locationId = computed(() => chosen.value ?? place.value?.locationId ?? homeLocationId.value);
+/**
+ * A post chosen by hand further than the radius from where the team is (its GPS, else its own post or standplaats) means going there first.
+ * Not knowing where either is counts as going there too: one tap on site is cheaper than a wrong arrival time.
+ */
+const enRoute = computed(() => {
+  if (chosen.value === null) return false;
+  if (!gps.value && chosen.value === homeLocationId.value) return false;
+  const target = locations.value.find((p) => p.id === chosen.value);
+  const home = locations.value.find((p) => p.id === homeLocationId.value);
+  const from: LngLat | null = gps.value ?? (home?.lat != null && home.lng != null ? [home.lng, home.lat] : null);
+  if (!from || target?.lat == null || target.lng == null) return true;
+  return distanceKm(from, [target.lng, target.lat]) * 1000 > atLocationM(store.pkg);
+});
 const placeText = computed(() => {
   if (chosen.value === null && place.value) return place.value.name;
   return locations.value.find((p) => p.id === locationId.value)?.name ?? null;
@@ -56,8 +73,9 @@ async function start() {
   if (teamId.value === null || locationId.value === null) return;
   const useGps = chosen.value === null ? gps.value : null;
   let id = 0;
-  const ok = await run(async () => { id = await live.selfStart({ teamId: teamId.value!, locationId: locationId.value!, position: useGps, ...form }); });
-  if (ok) void router.replace({ name: 'close-incident', params: { id } });
+  const going = enRoute.value;
+  const ok = await run(async () => { id = await live.selfStart({ teamId: teamId.value!, locationId: locationId.value!, position: useGps, enRoute: going, ...form }); });
+  if (ok) void router.replace({ name: going ? 'dispatch' : 'close-incident', params: { id } });
 }
 </script>
 
@@ -106,7 +124,7 @@ async function start() {
     <div class="stack gap-6 footer">
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
       <button class="btn go" :disabled="busy || locationId === null" @click="start">Incident starten</button>
-      <span class="small center">Je bent er al: hierna ga je direct naar afronden.</span>
+      <span class="small center">{{ enRoute ? 'Je bent er nog niet: hierna krijg je de route, tot je meldt dat je ter plaatse bent.' : 'Je bent er al: hierna ga je direct naar afronden.' }}</span>
     </div>
   </main>
 </template>

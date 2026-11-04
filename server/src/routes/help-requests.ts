@@ -87,8 +87,10 @@ export async function helpRequestRoutes(app: FastifyInstance, { db, calls, reque
     schema: {
       body: {
         type: 'object',
-        required: ['clientId', 'teamId', 'locationId', 'lat', 'lng', ...detailsRequired],
-        properties: { clientId, teamId: { type: 'integer', minimum: 1 }, locationId: { type: 'integer', minimum: 1 }, lat: coordinate(90), lng: coordinate(180), ...details },
+        required: ['clientId', 'teamId', 'locationId', 'lat', 'lng', 'enRoute', ...detailsRequired],
+        properties: {
+          clientId, teamId: { type: 'integer', minimum: 1 }, locationId: { type: 'integer', minimum: 1 }, lat: coordinate(90), lng: coordinate(180), enRoute: { type: 'boolean' }, ...details,
+        },
       },
     },
   }, async (request, reply) => reply.code(201).send(calls.at(actionHeaders(request)[1], () => calls.selfStart(request.me!, request.body))));

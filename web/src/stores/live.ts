@@ -459,7 +459,7 @@ export const useLiveStore = defineStore('live', () => {
     close: (incidentId: number, body: CloseIncident) => act({ type: 'close', incidentId, body }),
     withdraw: (incidentId: number) => act({ type: 'withdraw', incidentId }),
     /** Someone came to the team. Gives the id to open it with; without signal that's a temporary one, which keeps working afterwards. */
-    async selfStart({ teamId, locationId, position, ...details }: IncidentDetails & { teamId: number; locationId: number; position: LngLat | null }) {
+    async selfStart({ teamId, locationId, position, enRoute, ...details }: IncidentDetails & { teamId: number; locationId: number; position: LngLat | null; enRoute: boolean }) {
       const tempId = -Date.now();
       const known = pkg.locationById.get(locationId);
       const place = position ? placeOf(pkg.pkg?.locations ?? [], position, atLocationM(pkg.pkg)) : null;
@@ -470,7 +470,7 @@ export const useLiveStore = defineStore('live', () => {
           typeId: shown?.typeId ?? 0, name: place?.name ?? shown?.name ?? 'Locatie', km: shown?.km ?? null,
           lat: place && !place.atLocation ? position![1] : shown?.lat ?? null, lng: place && !place.atLocation ? position![0] : shown?.lng ?? null,
         },
-        body: { clientId: crypto.randomUUID(), teamId, locationId, lat: position?.[1] ?? null, lng: position?.[0] ?? null, ...details },
+        body: { clientId: crypto.randomUUID(), teamId, locationId, lat: position?.[1] ?? null, lng: position?.[0] ?? null, enRoute: position === null && enRoute, ...details },
       });
       return tempIds.value[tempId] ?? tempId;
     },
