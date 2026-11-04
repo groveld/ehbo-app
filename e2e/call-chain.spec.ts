@@ -367,11 +367,17 @@ test('participant: looking at a run keeps the favorites, and there can be severa
   const [one, two, three] = await Promise.all([0, 1, 2].map((i) => page.locator('.run').nth(i).boundingBox()));
   expect(one!.y).toBe(two!.y);
   expect(three!.y).toBeGreaterThan(one!.y);
-  // Light or dark from the header too, kept on the phone.
-  await page.getByRole('button', { name: 'Donkere weergave' }).click();
+  // Phone, light or dark from the header too, kept on the phone: each tap goes to the next.
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.getByRole('button', { name: 'Weergave: telefoon' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByRole('button', { name: 'Weergave: licht' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.reload();
-  await page.getByRole('button', { name: 'Lichte weergave' }).click();
+  await page.getByRole('button', { name: 'Weergave: donker' }).click();
+  await expect(page.getByRole('button', { name: 'Weergave: telefoon' })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('link', { name: 'Info & voorwaarden' }).click();
   await expect(page.getByRole('link', { name: 'OpenStreetMap-bijdragers' })).toBeVisible();

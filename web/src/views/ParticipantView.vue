@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // 2.8 · Deelnemer, en het beginscherm van de app zonder aanmelding: naam van het evenement, route, starttijden met favoriete loop
-// vooraan, een legenda van de soorten posten, Bel EHBO (als het evenement open is) en rechtsboven drie ronde knoppen: licht of donker, Info en Aanmelden.
+// vooraan, een legenda van de soorten posten, Bel EHBO (als het evenement open is) en rechtsboven drie ronde knoppen: weergave (telefoon, licht, donker), Info en Aanmelden.
 import { computed, defineAsyncComponent, onMounted } from 'vue';
-import { dark, setAppearance } from '../colorScheme.ts';
+import { APPEARANCES, appearance, setAppearance, type Appearance } from '../colorScheme.ts';
 import CallFirstAid from '../components/CallFirstAid.vue';
 import Icon from '../components/Icon.vue';
 import LocationBadge from '../components/LocationBadge.vue';
@@ -20,6 +20,13 @@ const { favorites, toggleFavorite } = useFavorites();
 const { awayLocationIds } = useFirstAidStatus();
 // Medewerkers zetten de app eerst op het beginscherm; in de browser kan aanmelden alleen met ?browser=1.
 const staffRoute = canUseAsStaff ? { name: 'login' } : { name: 'install' };
+/** Same three as in the staff menu; each tap goes to the next: phone, light, dark. */
+const APPEARANCE_ICON = { system: 'contrast', light: 'sun', dark: 'moon' } as const;
+const label = (a: Appearance) => APPEARANCES.find((x) => x.value === a)!.label.toLowerCase();
+function nextAppearance() {
+  const i = APPEARANCES.findIndex((a) => a.value === appearance.value);
+  setAppearance(APPEARANCES[(i + 1) % APPEARANCES.length]!.value);
+}
 onMounted(() => store.refresh());
 
 const runs = computed(() => {
@@ -45,10 +52,10 @@ const legend = computed(() => {
       <h1>{{ store.pkg?.event.name }}</h1>
       <div class="actions">
         <!-- What the app does with data, and the map licence (#127). -->
-        <!-- Same choice as in the staff menu; a tap picks the other one, so it no longer follows the phone. -->
-        <button class="round" :aria-label="dark ? 'Lichte weergave' : 'Donkere weergave'" @click="setAppearance(dark ? 'light' : 'dark')"><Icon :name="dark ? 'sun' : 'moon'" :size="18" /></button>
+        <!-- The icon shows the choice now: half a circle follows the phone, a sun is light, a moon dark. -->
+        <button class="round" :aria-label="`Weergave: ${label(appearance)}`" @click="nextAppearance"><Icon :name="APPEARANCE_ICON[appearance]" :size="18" /></button>
         <RouterLink :to="{ name: 'info' }" class="round" aria-label="Info &amp; voorwaarden"><Icon name="info" :size="18" /></RouterLink>
-        <RouterLink :to="staffRoute" class="round" aria-label="Aanmelden"><Icon name="login" :size="18" /></RouterLink>
+        <RouterLink :to="staffRoute" class="round" aria-label="Aanmelden"><Icon name="account" :size="18" /></RouterLink>
       </div>
     </header>
 
