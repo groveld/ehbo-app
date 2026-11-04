@@ -750,3 +750,57 @@ test('updating the app: a change still waiting in the old words is converted and
   expect((await ehbo.request.post(`/api/help-requests/${(await mine())!.id}/withdraw`)).ok()).toBe(true);
   expect((await ehbo.request.put(`/api/teams/${secondTeamId}/availability`, { data: { availability: 'off_duty' } })).ok()).toBe(true);
 });
+
+test('zones: an admin draws one point by point, and participants see the kinds in the legend', async ({ browser }) => {
+  const admin = await staffPhone(browser, PHONE.admin);
+  await admin.getByRole('link', { name: 'Menu' }).click();
+  await admin.getByRole('link', { name: 'Beheer' }).click();
+  await admin.getByRole('link', { name: /Zones/ }).click();
+  await expect(admin.getByText('Parkeren Buorren')).toBeVisible();
+  await admin.getByRole('link', { name: '+ Zone toevoegen' }).click();
+  await admin.getByLabel('Naam').fill('Parkeren e2e');
+  await admin.getByRole('button', { name: 'Vlak' }).click();
+
+  const canvas = admin.locator('.draw-map canvas');
+  await expect(canvas).toBeVisible();
+  const box = (await canvas.boundingBox())!;
+  // Through the canvas itself, so a tap never lands on the save button over the map.
+  const tap = (x: number, y: number) => canvas.click({ position: { x: box.width * x, y: box.height * y } });
+  const count = (text: string) => expect(admin.locator('.draw-actions').getByText(text, { exact: true })).toBeVisible();
+  for (const [x, y] of [[0.3, 0.2], [0.7, 0.2], [0.5, 0.45]] as const) await tap(x, y);
+  await count('3 punten');
+  await admin.getByRole('button', { name: 'Laatste punt weg' }).click();
+  await count('2 punten');
+  // An area needs three points: saving says so and keeps the drawing.
+  await admin.getByRole('button', { name: 'Opslaan' }).click();
+  await expect(admin.getByRole('alert')).toContainText('3 punten');
+  await tap(0.5, 0.45);
+  await count('3 punten');
+  await admin.getByRole('button', { name: 'Opslaan' }).click();
+  await expect(admin).toHaveURL(/\/admin\/zones$/);
+  await expect(admin.getByText('Parkeren e2e')).toBeVisible();
+
+  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
+  const participant = await context.newPage();
+  await participant.goto('/?browser=1');
+  await expect(participant.locator('.legend-item').filter({ hasText: 'Parkeren' })).toBeVisible();
+  await expect(participant.locator('.legend-item').filter({ hasText: 'Eten & drinken' })).toBeVisible();
+  const { zones } = await (await participant.request.get('/api/package')).json() as { zones: { name: string; shape: string; points: unknown[] }[] };
+  expect(zones.find((z) => z.name === 'Parkeren e2e')).toMatchObject({ shape: 'area', points: [expect.anything(), expect.anything(), expect.anything()] });
+  await context.close();
+
+  // Staff filter on the map tab: only the zones of that kind, with Navigeer.
+  await admin.getByRole('link', { name: 'Kaart' }).click();
+  await admin.getByLabel('Functie').selectOption({ label: 'Parkeren' });
+  await expect(admin.getByRole('link', { name: 'Navigeer naar Parkeren e2e' })).toBeVisible();
+  await admin.getByLabel('Functie').selectOption({ label: 'Alle' });
+
+  await admin.getByRole('link', { name: 'Menu' }).click();
+  await admin.getByRole('link', { name: 'Beheer' }).click();
+  await admin.getByRole('link', { name: /Zones/ }).click();
+  await admin.getByText('Parkeren e2e').click();
+  await admin.getByRole('button', { name: 'Zone verwijderen' }).click();
+  await admin.getByRole('dialog').getByRole('button', { name: 'Verwijderen' }).click();
+  await expect(admin).toHaveURL(/\/admin\/zones$/);
+  await expect(admin.getByText('Parkeren e2e')).toHaveCount(0);
+});

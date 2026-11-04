@@ -2,11 +2,12 @@
 // 2.8 · Deelnemer, en het beginscherm van de app zonder aanmelding: naam van het evenement, route, starttijden met favoriete loop
 // vooraan, een legenda van de soorten posten, Bel EHBO en rechtsboven Aanmelden voor medewerkers.
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue';
-import type { FirstAidStatus } from '@ehbo/shared';
+import { ZONE_KIND_ORDER, ZONE_KINDS, type FirstAidStatus } from '@ehbo/shared';
 import { api } from '../api.ts';
 import CallFirstAid from '../components/CallFirstAid.vue';
 import Icon from '../components/Icon.vue';
 import LocationBadge from '../components/LocationBadge.vue';
+import ZoneBadge from '../components/ZoneBadge.vue';
 import { useFavorites } from '../composables/useFavorites.ts';
 import { canUseAsStaff } from '../platform.ts';
 import { useLiveStore } from '../stores/live.ts';
@@ -60,6 +61,8 @@ const legend = computed(() => {
   const used = new Set(store.pkg?.locations.flatMap((p) => p.functionIds));
   return store.pkg?.functionTypes.filter((t) => used.has(t.id)) ?? [];
 });
+/** The kinds of zone on the map (#172): parking, eating and drinking. A tap on a zone says more. */
+const zoneKinds = computed(() => ZONE_KIND_ORDER.filter((k) => store.pkg?.zones?.some((z) => z.kind === k)));
 </script>
 
 <template>
@@ -90,10 +93,11 @@ const legend = computed(() => {
         </div>
       </section>
 
-      <section v-if="legend.length" class="stack gap-8 section">
+      <section v-if="legend.length || zoneKinds.length" class="stack gap-8 section">
         <span class="section-label">Legenda</span>
         <div class="list legend">
           <div v-for="type in legend" :key="type.id" class="list-row legend-item"><LocationBadge :type="type" :size="32" /><span class="title-line">{{ type.name }}</span></div>
+          <div v-for="k in zoneKinds" :key="k" class="list-row legend-item"><ZoneBadge :kind="k" :size="32" /><span class="title-line">{{ ZONE_KINDS[k].label }}</span></div>
         </div>
       </section>
       <!-- What the app does with data, and the map licence (#127). -->
