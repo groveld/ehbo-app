@@ -33,6 +33,11 @@ function teamSummary(state: AdminState) {
           <span class="main"><span class="title-line">Locaties</span><span class="sub">{{ state.locations.length }} locaties</span></span>
           <Icon name="forward" :size="18" />
         </RouterLink>
+        <RouterLink :to="{ name: 'admin-zones' }" class="list-row">
+          <Icon name="map" :size="20" />
+          <span class="main"><span class="title-line">Zones</span><span class="sub">{{ state.zones.length === 1 ? '1 zone' : `${state.zones.length} zones` }} · parkeren, eten en drinken</span></span>
+          <Icon name="forward" :size="18" />
+        </RouterLink>
         <RouterLink :to="{ name: 'admin-teams' }" class="list-row">
           <Icon name="ehbo" :size="20" />
           <span class="main"><span class="title-line">EHBO-eenheden</span><span class="sub">{{ state.teams.length }} eenheden</span></span>

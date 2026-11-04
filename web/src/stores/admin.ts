@@ -1,7 +1,7 @@
 // Beheer: de volledige stand van het evenement. Elke wijziging stuurt de nieuwe stand terug.
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, InfoSettings, LogoUpload, LocationData, Report, RunData, TeamData } from '@ehbo/shared';
+import type { AddAdminRequest, AdminState, CoreTeamEntry, EmergencyNumber, EventSettings, InfoSettings, LogoUpload, LocationData, Report, RunData, TeamData, ZoneData } from '@ehbo/shared';
 import { api, ApiRequestError } from '../api.ts';
 import { makeIconSet, makeLogo } from '../images.ts';
 import { useSessionStore } from './session.ts';
@@ -53,6 +53,8 @@ export const useAdminStore = defineStore('admin', () => {
     saveEvent: (e: EventSettings) => changeStyle('/api/admin/event', 'PUT', e),
     saveRun: (id: number | null, r: RunData) => change(id === null ? '/api/admin/runs' : `/api/admin/runs/${id}`, id === null ? 'POST' : 'PUT', r),
     deleteRun: (id: number) => change(`/api/admin/runs/${id}`, 'DELETE'),
+    saveZone: (id: number | null, z: ZoneData) => change(id === null ? '/api/admin/zones' : `/api/admin/zones/${id}`, id === null ? 'POST' : 'PUT', z),
+    deleteZone: (id: number) => change(`/api/admin/zones/${id}`, 'DELETE'),
     saveLocation: (id: number | null, p: LocationData) => change(id === null ? '/api/admin/locations' : `/api/admin/locations/${id}`, id === null ? 'POST' : 'PUT', p),
     deleteLocation: (id: number) => change(`/api/admin/locations/${id}`, 'DELETE'),
     saveTeam: (id: number | null, u: TeamData) => change(id === null ? '/api/admin/teams' : `/api/admin/teams/${id}`, id === null ? 'POST' : 'PUT', u),

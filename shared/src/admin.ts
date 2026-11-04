@@ -1,6 +1,7 @@
 // Beheer: vorm van de gegevens die het beheerscherm leest en opslaat.
 import type { Brand, EventStyle, InfoSection, LocationContactRole, TeamKind, TeamMobility } from './event.ts';
 import type { TeamAvailability } from './incident.ts';
+import type { Zone } from './zone.ts';
 
 /** Datum als jjjj-mm-dd, tijd als uu:mm. */
 export const DATE_PATTERN = '^\\d{4}-\\d{2}-\\d{2}$';
@@ -143,6 +144,7 @@ export interface AdminPerson {
 export interface AdminState {
   event: EventSettings;
   runs: AdminRun[];
+  zones: Zone[];
   functionTypes: FunctionTypeInfo[];
   locations: AdminLocation[];
   teams: AdminTeam[];

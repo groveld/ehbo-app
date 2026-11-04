@@ -2,7 +2,8 @@
 // Kaart met parcours en posten. Tegels, lettertypen en iconen komen van de eigen server (en staan offline in de cache).
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { dark } from '../colorScheme.ts';
-import { messageDialog } from '../composables/useDialog.ts';
+import { confirmDialog, messageDialog } from '../composables/useDialog.ts';
+import { navigationUrl } from '../navigate.ts';
 import { isIOS } from '../platform.ts';
 import Icon from './Icon.vue';
 import * as maplibregl from 'maplibre-gl';
@@ -11,7 +12,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { DARK, LIGHT, layers, type Flavor } from '@protomaps/basemaps';
 // MapLibre laadt zijn worker als los bestand; Vite ziet dat adres niet vanzelf, dus geven we het mee.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import { MARKER_ORDER, markerRank, type Bbox, type EventPackage, type LngLat, type PackageLocation } from '@ehbo/shared';
+import { MARKER_ORDER, ZONE_KINDS, markerRank, zoneCentre, type Bbox, type EventPackage, type LngLat, type PackageLocation, type Zone, type ZoneData } from '@ehbo/shared';
 import { iconSvg, functionTypeIcon } from '../icons.ts';
 import { isOnRun, type Ambulance } from '../locations.ts';
 import { assetUrl, tileUrl } from '../stores/package.ts';
@@ -47,7 +48,11 @@ const props = withDefaults(defineProps<{
   awayLocationIds?: number[];
   /** Kept in memory but not in view: no location, and nothing happens until it's back. */
   paused?: boolean;
-}>(), { locations: undefined, focusLocationId: null, highlightRunId: null, onlyHighlighted: false, wholeRoute: false, showUser: true, picking: false, picked: null, interactive: true, alertLocationIds: () => [], taskLocationIds: () => [], lines: () => [], ambulances: () => [], awayLocationIds: () => [], paused: false });
+  /** Which zones (#172); by default all of the package. */
+  zones?: Zone[];
+  /** Admin: the zone being drawn, with its points. */
+  draft?: ZoneData | null;
+}>(), { zones: undefined, draft: null, locations: undefined, focusLocationId: null, highlightRunId: null, onlyHighlighted: false, wholeRoute: false, showUser: true, picking: false, picked: null, interactive: true, alertLocationIds: () => [], taskLocationIds: () => [], lines: () => [], ambulances: () => [], awayLocationIds: () => [], paused: false });
 
 const emit = defineEmits<{ select: [locationId: number]; pick: [lngLat: LngLat] }>();
 
@@ -164,6 +169,92 @@ const lineFeatures = () => ({
   type: 'FeatureCollection' as const,
   features: props.lines.map((coordinates) => ({ type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates } })),
 });
+
+/** A zone on the map: a strip is a line drawn as a wide band, an area a closed polygon. */
+function zoneGeometry(z: Pick<ZoneData, 'shape' | 'points'>) {
+  if (z.shape === 'area' && z.points.length >= 3) return { type: 'Polygon' as const, coordinates: [[...z.points, z.points[0]!]] };
+  return { type: 'LineString' as const, coordinates: z.points };
+}
+
+const shownZones = () => (props.zones ?? props.pkg.zones ?? []).filter((z) => z.points.length >= 2);
+
+function zoneFeatures() {
+  return {
+    type: 'FeatureCollection' as const,
+    features: shownZones().flatMap((z) => [
+      { type: 'Feature' as const, properties: { id: z.id, color: ZONE_KINDS[z.kind].color }, geometry: zoneGeometry(z) },
+      // The letter in the middle, so a band along a road reads as parking without the legend.
+      { type: 'Feature' as const, properties: { id: z.id, color: ZONE_KINDS[z.kind].color, letter: ZONE_KINDS[z.kind].letter }, geometry: { type: 'Point' as const, coordinates: zoneCentre(z.points) } },
+    ]),
+  };
+}
+
+/** The zone being drawn: its shape so far, and every point tapped. */
+function draftFeatures() {
+  const d = props.draft;
+  if (!d) return { type: 'FeatureCollection' as const, features: [] };
+  const color = ZONE_KINDS[d.kind].color;
+  return {
+    type: 'FeatureCollection' as const,
+    features: [
+      ...(d.points.length >= 2 ? [{ type: 'Feature' as const, properties: { color }, geometry: zoneGeometry(d) }] : []),
+      ...d.points.map((p, i) => ({ type: 'Feature' as const, properties: { color, last: i === d.points.length - 1 }, geometry: { type: 'Point' as const, coordinates: p } })),
+    ],
+  };
+}
+
+function addZoneLayers() {
+  const m = map!;
+  m.addSource('zones', { type: 'geojson', data: zoneFeatures() });
+  m.addSource('zone-draft', { type: 'geojson', data: draftFeatures() });
+  // Below the runs: the course and the posts stay on top.
+  m.addLayer({ id: 'zone-areas', type: 'fill', source: 'zones', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.25 } });
+  m.addLayer({ id: 'zone-edges', type: 'line', source: 'zones', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': 0.8 } });
+  m.addLayer({
+    id: 'zone-strips', type: 'line', source: 'zones', filter: ['==', ['geometry-type'], 'LineString'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    // A few pixels far out, about a road's width close by.
+    paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['exponential', 2], ['zoom'], 12, 5, 15, 12, 18, 40], 'line-opacity': 0.45 },
+  });
+  m.addLayer({
+    id: 'zone-marks', type: 'circle', source: 'zones', filter: ['==', ['geometry-type'], 'Point'], minzoom: 13,
+    paint: { 'circle-radius': 9, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1.5 },
+  });
+  // The letter needs the map's fonts; without a map there's only the circle.
+  if (props.pkg.map) {
+    m.addLayer({
+      id: 'zone-letters', type: 'symbol', source: 'zones', filter: ['==', ['geometry-type'], 'Point'], minzoom: 13,
+      layout: { 'text-field': ['get', 'letter'], 'text-font': ['Noto Sans Medium'], 'text-size': 12, 'text-allow-overlap': true, 'text-ignore-placement': true },
+      paint: { 'text-color': '#FFFFFF' },
+    });
+  }
+}
+
+/** The draft goes on top of everything, so every tap is seen. */
+function addDraftLayers() {
+  const m = map!;
+  m.addLayer({ id: 'draft-area', type: 'fill', source: 'zone-draft', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.3 } });
+  m.addLayer({
+    id: 'draft-line', type: 'line', source: 'zone-draft', filter: ['!=', ['geometry-type'], 'Point'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 3, 'line-dasharray': [2, 1.5] },
+  });
+  m.addLayer({
+    id: 'draft-points', type: 'circle', source: 'zone-draft', filter: ['==', ['geometry-type'], 'Point'],
+    paint: { 'circle-radius': ['case', ['get', 'last'], 7, 5], 'circle-color': '#FFFFFF', 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 2.5 },
+  });
+}
+
+const ZONE_LAYERS = ['zone-areas', 'zone-strips', 'zone-marks'];
+
+/** A tap on a zone: what it is, and Navigeer to the spot you tapped, which is inside the zone. */
+async function openZone(point: maplibregl.PointLike, lngLat: maplibregl.LngLat) {
+  if (!map) return;
+  const id = map.queryRenderedFeatures(point, { layers: ZONE_LAYERS.filter((l) => map!.getLayer(l)) })[0]?.properties.id as number | undefined;
+  const zone = shownZones().find((z) => z.id === id);
+  if (!zone) return;
+  const go = await confirmDialog({ title: zone.name, text: [ZONE_KINDS[zone.kind].label, zone.note].filter(Boolean).join(' · '), confirm: 'Navigeer', cancel: 'Sluiten', tone: 'primary' });
+  if (go) window.location.href = navigationUrl(lngLat.lat, lngLat.lng, zone.name);
+}
 
 function runFeatures() {
   const routes = props.pkg.runs.filter((r) => r.line).length;
@@ -308,7 +399,8 @@ function drawPicked() {
 function routeBounds() {
   const run = focusRun();
   const located = [...props.pkg.locations, ...(props.locations ?? [])].filter((p) => p.lat !== null && p.lng !== null).map((p) => [p.lng!, p.lat!] as LngLat);
-  const points: LngLat[] = run ? run.line! : [...props.pkg.runs.flatMap((r) => r.line ?? []), ...located];
+  // Zones too (#172): a car park next to the course should be in view.
+  const points: LngLat[] = run ? run.line! : [...props.pkg.runs.flatMap((r) => r.line ?? []), ...located, ...shownZones().flatMap((z) => z.points)];
   return points.length ? points.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(points[0], points[0])) : null;
 }
 
@@ -442,6 +534,7 @@ function createMap() {
   map.on('load', () => {
     // De bronvermelding begint ingeklapt (alleen het ⓘ-knopje), zodat hij de kaart niet bedekt.
     container.value?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+    addZoneLayers();
     map!.addSource('lopen', { type: 'geojson', data: runFeatures() });
     map!.addSource('oproeplijnen', { type: 'geojson', data: lineFeatures() });
     map!.addLayer({
@@ -487,9 +580,11 @@ function createMap() {
       filter: ['==', ['geometry-type'], 'Point'],
       paint: { 'circle-radius': 7, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 2 },
     });
+    addDraftLayers();
   });
   map.on('click', (e) => {
     if (props.picking) emit('pick', [Math.round(e.lngLat.lng * 1e6) / 1e6, Math.round(e.lngLat.lat * 1e6) / 1e6]);
+    else void openZone(e.point, e.lngLat);
   });
   drawLocations();
   drawAmbulances();
@@ -535,6 +630,8 @@ watch(() => [props.locations, props.pkg, props.focusLocationId, props.highlightR
 // Wordt elke tel opnieuw berekend; alleen opnieuw tekenen als er echt iets verandert.
 watch(() => props.awayLocationIds.join(), drawLocations);
 watch(() => props.picked, drawPicked);
+watch(() => [props.zones, props.pkg], () => (map?.getSource('zones') as GeoJSONSource | undefined)?.setData(zoneFeatures()));
+watch(() => JSON.stringify(props.draft), () => (map?.getSource('zone-draft') as GeoJSONSource | undefined)?.setData(draftFeatures()));
 watch(() => props.ambulances, drawAmbulances);
 // Recalculated every second; only redraw when a line really moved.
 watch(() => JSON.stringify(props.lines), () => (map?.getSource('oproeplijnen') as GeoJSONSource | undefined)?.setData(lineFeatures()));

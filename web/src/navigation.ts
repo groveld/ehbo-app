@@ -14,7 +14,7 @@ const PARENT: Record<string, string> = {
   location: 'map', route: 'map', help: 'map',
   dispatch: 'first-aid', 'self-start': 'first-aid', assign: 'first-aid', 'assign-incident': 'assign',
   info: 'menu', check: 'menu', admin: 'menu', control: 'menu',
-  'admin-location': 'admin-locations', 'admin-team': 'admin-teams',
+  'admin-location': 'admin-locations', 'admin-team': 'admin-teams', 'admin-zone': 'admin-zones',
   'admin-run': 'admin-event', 'admin-app-icon': 'admin-event', 'admin-report-print': 'admin-report',
 };
 

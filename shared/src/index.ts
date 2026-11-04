@@ -8,6 +8,7 @@ export * from './incident.ts';
 export * from './request.ts';
 export * from './action.ts';
 export * from './report.ts';
+export * from './zone.ts';
 
 /** Push-abonnement zoals de browser het geeft (PushSubscription.toJSON()). */
 export interface PushSubscriptionData {

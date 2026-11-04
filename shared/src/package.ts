@@ -2,6 +2,7 @@
 import type { HelpRequestType } from './request.ts';
 import type { LocationPassages, FunctionTypeInfo } from './admin.ts';
 import type { LocationContactRole, TeamKind, TeamMobility } from './event.ts';
+import type { Zone } from './zone.ts';
 
 /** [lengtegraad, breedtegraad] */
 export type LngLat = [number, number];
@@ -80,6 +81,8 @@ export interface EventPackage {
   functionTypes: FunctionTypeInfo[];
   locations: PackageLocation[];
   runs: PackageRun[];
+  /** Parking and food (#172), for everyone. */
+  zones: Zone[];
   teams: PackageTeam[];
   coreTeam: { function: string; name: string; phone: string; isCoordinator: boolean }[];
   emergencyNumbers: { label: string; number: string }[];

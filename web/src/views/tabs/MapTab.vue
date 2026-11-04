@@ -1,12 +1,14 @@
 <script setup lang="ts">
 // 3.4 · Overzicht & kaart: alle posten en EHBO-teams, filter per soort en route, zoeken op naam of km, tellers voor de coördinator, en de lijst met bel- en navigeerknoppen.
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef, watch, watchEffect } from 'vue';
-import { QUIET_AFTER_MIN, isDueOpen, lacksPosition, type EventPackage, type LastSeen, type LngLat, type PackageLocation } from '@ehbo/shared';
+import { QUIET_AFTER_MIN, ZONE_KIND_ORDER, ZONE_KINDS, isDueOpen, lacksPosition, zoneCentre, type EventPackage, type LastSeen, type LngLat, type PackageLocation, type Zone, type ZoneKind } from '@ehbo/shared';
 import { api } from '../../api.ts';
 import { useRouter } from 'vue-router';
 import Icon from '../../components/Icon.vue';
 import LocationRow from '../../components/LocationRow.vue';
 import TeamRow from '../../components/TeamRow.vue';
+import ZoneBadge from '../../components/ZoneBadge.vue';
+import { navigationUrl } from '../../navigate.ts';
 import { clock } from '../../incidents.ts';
 import { callLines, coordinatorOf, isOnRun, staffed, mobileTeams, type Ambulance } from '../../locations.ts';
 import { useLiveStore } from '../../stores/live.ts';
@@ -23,8 +25,13 @@ const store = usePackageStore();
 const live = useLiveStore();
 const session = useSessionStore();
 const router = useRouter();
-/** A type of post, only the EHBO teams, or only what needs attention. */
-const filter = ref<number | 'teams' | 'attention' | null>(null);
+/** A type of post, only the EHBO teams, only what needs attention, or one kind of zone (#172). */
+const filter = ref<number | 'teams' | 'attention' | `zone:${ZoneKind}` | null>(null);
+const zoneKind = computed(() => (typeof filter.value === 'string' && filter.value.startsWith('zone:') ? filter.value.slice(5) as ZoneKind : null));
+/** The kinds of zone this event has, for the filter. */
+const zoneKinds = computed(() => ZONE_KIND_ORDER.filter((k) => store.pkg?.zones?.some((z) => z.kind === k)));
+/** All zones with Alle, one kind with its filter, none with any other filter. */
+const mapZones = computed<Zone[]>(() => (store.pkg?.zones ?? []).filter((z) => (filter.value === null || z.kind === zoneKind.value) && (!query.value.trim() || z.name.toLowerCase().includes(query.value.trim().toLowerCase()))));
 /** The route shown on the map; only runs with a GPX can be chosen. */
 const route = ref<number | null>(null);
 const routes = computed(() => store.pkg?.runs.filter((r) => r.line) ?? []);
@@ -53,7 +60,7 @@ const matches = (p: PackageLocation) => {
   return !q || p.name.toLowerCase().includes(q) || p.passages.some((r) => r.km.some((k) => String(Math.round(k * 10) / 10).startsWith(km)));
 };
 /** On the map; what isn't on the chosen route steps back there. */
-const mapLocations = computed(() => store.pkg?.locations.filter((p) => (typeof filter.value !== 'number' || p.functionIds.includes(filter.value)) && matches(p)) ?? []);
+const mapLocations = computed(() => (zoneKind.value ? [] : store.pkg?.locations.filter((p) => (typeof filter.value !== 'number' || p.functionIds.includes(filter.value)) && matches(p)) ?? []));
 /** In the list: only the chosen route, in its order. Open calls always stay, on top. */
 const routeKm = (p: PackageLocation) => p.passages.find((r) => r.runId === route.value)?.km[0] ?? Infinity;
 const helpHere = computed(() => !session.me?.assignments.some((a) => a.kind === 'team'));
@@ -99,7 +106,7 @@ const locations = computed(() => {
 });
 const teamList = computed(() => {
   const q = query.value.trim().toLowerCase();
-  if (typeof filter.value === 'number') return [];
+  if (typeof filter.value === 'number' || zoneKind.value) return [];
   return store.pkg?.teams.filter((u) => (!q || u.name.toLowerCase().includes(q)) && (filter.value !== 'attention' || lostTeams.value.includes(u.id) || quietTeam(u.id))) ?? [];
 });
 /** How the event is doing, for the coordinator and admins. */
@@ -118,11 +125,11 @@ const counters = computed(() => {
   ];
 });
 /** What the map shows. Out of view none of this is read, so nothing live reaches the map; opening the tab brings it up to date in one go. */
-const mapView = shallowRef<{ pkg: EventPackage; locations: PackageLocation[]; highlightRunId: number | null; alertLocationIds: number[]; taskLocationIds: number[]; lines: [LngLat, LngLat][]; ambulances: Ambulance[]; awayLocationIds: number[] } | null>(null);
+const mapView = shallowRef<{ pkg: EventPackage; locations: PackageLocation[]; zones: Zone[]; highlightRunId: number | null; alertLocationIds: number[]; taskLocationIds: number[]; lines: [LngLat, LngLat][]; ambulances: Ambulance[]; awayLocationIds: number[] } | null>(null);
 watchEffect(() => {
   if ((!props.active && mapView.value) || !store.pkg) return;
   mapView.value = {
-    pkg: store.pkg, locations: mapLocations.value, highlightRunId: route.value, alertLocationIds: alertIds.value, taskLocationIds: taskIds.value, lines: callLines(store.pkg, live.teams, live.incidents, live.serverNow), ambulances: mobile.value.ambulances, awayLocationIds: mobile.value.awayLocationIds,
+    pkg: store.pkg, locations: mapLocations.value, zones: mapZones.value, highlightRunId: route.value, alertLocationIds: alertIds.value, taskLocationIds: taskIds.value, lines: callLines(store.pkg, live.teams, live.incidents, live.serverNow), ambulances: mobile.value.ambulances, awayLocationIds: mobile.value.awayLocationIds,
   };
 });
 const banner = computed(() => {
@@ -156,6 +163,7 @@ const banner = computed(() => {
           <option :value="null">Alle</option>
           <option v-for="c in chips" :key="c.id" :value="c.id">{{ c.label }}</option>
           <option v-if="store.pkg.teams.length" value="teams">EHBO</option>
+          <option v-for="k in zoneKinds" :key="k" :value="`zone:${k}`">{{ ZONE_KINDS[k].label }}</option>
           <option v-if="isLead" value="attention">Vraagt aandacht</option>
         </select>
         <select v-if="routes.length" v-model="route" class="input route" :class="{ chosen: route !== null }" aria-label="Route">
@@ -170,7 +178,18 @@ const banner = computed(() => {
           <h2 class="section-title">EHBO<template v-if="!live.connected && live.state"> · laatste stand {{ clock(live.state.serverTime) }}</template></h2>
           <div class="list"><TeamRow v-for="u in teamList" :key="u.id" :pkg="store.pkg" :team="u" :attention="lostTeams.includes(u.id)" :quiet-minutes="quietTeam(u.id)" /></div>
         </section>
-        <template v-if="filter !== 'teams'">
+        <section v-if="zoneKind" class="stack gap-8">
+          <h2 class="section-title">{{ ZONE_KINDS[zoneKind].label }}</h2>
+          <div v-if="mapZones.length" class="list">
+            <div v-for="z in mapZones" :key="z.id" class="list-row zone-row">
+              <ZoneBadge :kind="z.kind" :size="40" />
+              <span class="main"><span class="title-line">{{ z.name }}</span><span v-if="z.note" class="sub">{{ z.note }}</span></span>
+              <a :href="navigationUrl(zoneCentre(z.points)[1], zoneCentre(z.points)[0], z.name)" class="round nav" :aria-label="`Navigeer naar ${z.name}`"><Icon name="navigate" :size="20" /></a>
+            </div>
+          </div>
+          <p v-else class="note">Geen zone gevonden.</p>
+        </section>
+        <template v-else-if="filter !== 'teams'">
           <section v-if="locations.length" class="stack gap-8">
             <h2 class="section-title">Locaties</h2>
             <div class="list"><LocationRow v-for="p in locations" :key="p.id" :pkg="store.pkg" :location="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="lateLocations.includes(p.id)" :quiet-minutes="quietLocation(p.id)" /></div>
@@ -207,5 +226,8 @@ const banner = computed(() => {
 .route { grid-column: 1 / -1; appearance: auto; font-size: 14px; font-weight: 600; }
 .route.chosen { grid-column: auto; }
 .route-info { height: 44px; }
+.zone-row { gap: 12px; }
+.zone-row .main { flex: 1; min-width: 0; }
+.zone-row .nav { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--primary); color: #FFFFFF; -webkit-touch-callout: none; }
 .type { width: auto; max-width: 130px; padding: 0 8px 0 12px; appearance: auto; font-size: 14px; font-weight: 600; }
 </style>
