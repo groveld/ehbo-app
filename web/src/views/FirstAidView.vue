@@ -81,6 +81,19 @@ const setAvailability = (value: TeamAvailability) => teamId.value !== null && ru
         Oproep · {{ i.location.name }}
       </RouterLink>
 
+      <!-- Calls nobody can take now. They come to whoever is free first; here so you can plan, also during a call. -->
+      <div v-if="live.waitingCalls.length" class="stack gap-8 gap-top">
+        <span class="section-title">Wachtende oproepen · {{ live.waitingCalls.length }}</span>
+        <div class="list">
+          <div v-for="i in live.waitingCalls" :key="i.id" class="list-row">
+            <span class="mono">{{ clock(i.reportedAt) }}</span>
+            <span class="grow">{{ i.location.name }}</span>
+            <strong v-if="i.aed" class="alarm">Niet aanspreekbaar</strong>
+          </div>
+        </div>
+        <span class="small">Ze komen naar de eerste eenheid die vrij is: niet aanspreekbaar eerst, daarna de dichtstbijzijnde.</span>
+      </div>
+
       <div class="stack gap-8 gap-top">
         <span class="section-title">Mijn status</span>
         <div class="choice-grid">
@@ -145,4 +158,5 @@ const setAvailability = (value: TeamAvailability) => teamId.value !== null && ru
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
 /* De onderrand van het scherm telt al; anders staan de knoppen dubbel zo ver van de tabbalk. */
 .form-footer { margin: 14px 0 -16px; }
+.alarm { color: var(--danger); font-size: 13px; }
 </style>

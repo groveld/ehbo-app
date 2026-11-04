@@ -201,6 +201,11 @@ async function onSite() {
         </dl>
       </div>
       <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar.</strong>{{ myTeam?.hasAed ? ' AED meenemen.' : '' }} Is 112 gebeld?</p>
+      <RouterLink v-if="live.waitingCalls.length" :to="{ name: 'first-aid' }" class="note warn gap-top waiting">
+        <span class="grow"><strong>{{ live.waitingCalls.length === 1 ? 'Er wacht nog 1 oproep' : `Er wachten nog ${live.waitingCalls.length} oproepen` }}</strong>
+          · {{ live.waitingCalls.map((i) => i.location.name).join(', ') }}</span>
+        <Icon name="forward" :size="16" />
+      </RouterLink>
 
       <div class="grow" />
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
@@ -280,4 +285,5 @@ async function onSite() {
 .done-icon.grey { background: var(--soft); color: var(--muted); }
 .muted { color: var(--muted); }
 .free { color: var(--ok-text); }
+.waiting { align-items: center; text-decoration: none; }
 </style>

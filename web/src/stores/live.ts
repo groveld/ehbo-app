@@ -239,9 +239,20 @@ export const useLiveStore = defineStore('live', () => {
   const needsAed = (incident: LiveIncident, teamId: number) =>
     incident.aed && hasAed(teamId) && !incident.dispatches.some((d) => d.acceptedAt && hasAed(d.teamId));
 
-  /** Oproepen waar een eenheid van mij op kan reageren: opgeroepen, niet geweigerd, nog niet aangenomen. */
+  /** Not busy with another call. A team on a call isn't rung for the next one (the server doesn't either). */
+  const freeFor = (teamId: number, incident: LiveIncident) => (teamState(teamId)?.incidentId ?? incident.id) === incident.id;
+
+  /** Oproepen waar een eenheid van mij op kan reageren: opgeroepen, niet geweigerd, nog niet aangenomen, en niet bezig met een andere. */
   const invitations = computed(() => openIncidents.value.filter((i) => i.dispatches.some((d) =>
-    myTeamIds.value.includes(d.teamId) && !d.declinedAt && !d.acceptedAt && (i.status === 'sent' || needsAed(i, d.teamId)))));
+    myTeamIds.value.includes(d.teamId) && !d.declinedAt && !d.acceptedAt && freeFor(d.teamId, i) && (i.status === 'sent' || needsAed(i, d.teamId)))));
+
+  /**
+   * Calls nobody can react to now: every team is busy or off duty. They go to the first team that becomes free, the worst first,
+   * so that's the order here: not responsive, then the oldest.
+   */
+  const waitingCalls = computed(() => openIncidents.value
+    .filter((i) => i.status === 'sent' && !i.dispatches.some((d) => !d.declinedAt && !d.acceptedAt && teamState(d.teamId)?.availability === 'available' && freeFor(d.teamId, i)))
+    .sort((a, b) => Number(b.aed) - Number(a.aed) || a.reportedAt.localeCompare(b.reportedAt)));
 
   /** Oproep waar een eenheid van mij mee bezig is. */
   const myActive = computed(() => openIncidents.value.find((i) => i.dispatches.some((d) => myTeamIds.value.includes(d.teamId) && d.acceptedAt)) ?? null);
@@ -446,7 +457,7 @@ export const useLiveStore = defineStore('live', () => {
   }
 
   return {
-    state, teams, connected, offline, syncing, serverNow, sharingTeam, incidents, openIncidents, invitations, myActive, myTeamIds, myLocationIds,
+    state, teams, connected, offline, syncing, serverNow, sharingTeam, incidents, openIncidents, invitations, waitingCalls, myActive, myTeamIds, myLocationIds,
     incidentById, teamState, locationOpen, locationState, secondsLeft, needsAed, refresh, connect, report, checkData,
     /** "Opnieuw laden": everything at once. */
     reload: () => Promise.all([syncData(), refresh()]),

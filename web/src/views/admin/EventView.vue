@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 1.1 · Evenement instellen: naam, data, lopen, de kaart, stijl en de EHBO-escalatietijd.
 import { computed, onBeforeUnmount, reactive, ref, watch, watchEffect } from 'vue';
-import { AT_LOCATION_MAX_M, AT_LOCATION_MIN_M, AT_LOCATION_STEP_M, DEFAULT_AT_LOCATION_M, DEFAULT_STYLE, ESCALATION_MAX_SECONDS, ESCALATION_MIN_SECONDS, SHORT_NAME_MAX, styleProblem, type EventSettings } from '@ehbo/shared';
+import { AT_LOCATION_MAX_M, AT_LOCATION_MIN_M, AT_LOCATION_STEP_M, DEFAULT_AT_LOCATION_M, DEFAULT_SHARE_AFTER_MIN, DEFAULT_STYLE, SHARE_AFTER_MAX_MIN, ESCALATION_MAX_SECONDS, ESCALATION_MIN_SECONDS, SHORT_NAME_MAX, styleProblem, type EventSettings } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 import MapSection from './MapSection.vue';
@@ -14,7 +14,7 @@ import { applyTheme } from '../../theme.ts';
 
 const admin = useAdminStore();
 const session = useSessionStore();
-const form = reactive<EventSettings>({ name: '', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atLocationM: DEFAULT_AT_LOCATION_M, style: { ...DEFAULT_STYLE } });
+const form = reactive<EventSettings>({ name: '', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atLocationM: DEFAULT_AT_LOCATION_M, shareAfterMin: DEFAULT_SHARE_AFTER_MIN, style: { ...DEFAULT_STYLE } });
 const loaded = ref(false);
 const saved = ref(false);
 const { busy, error, run } = useSave();
@@ -56,6 +56,10 @@ const step = (delta: number) => {
 
 const stepAtLocation = (delta: number) => {
   form.atLocationM = Math.min(AT_LOCATION_MAX_M, Math.max(AT_LOCATION_MIN_M, form.atLocationM + delta));
+};
+
+const stepShare = (delta: number) => {
+  form.shareAfterMin = Math.min(SHARE_AFTER_MAX_MIN, Math.max(0, form.shareAfterMin + delta));
 };
 
 async function save() {
@@ -152,6 +156,14 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
         <button class="step" aria-label="Groter" @click="stepAtLocation(AT_LOCATION_STEP_M)">+</button>
       </div>
       <p class="small">Zo dichtbij telt een plek als de locatie zelf: een mobiele EHBO-eenheid is thuis bij haar standplaats, en een incident of hulpvraag daar hoort bij die locatie. GPS op een telefoon wijkt vaak 10–30 m af; te klein, en een eenheid die stilstaat springt heen en weer tussen thuis en onderweg.</p>
+
+      <div class="card escalation">
+        <span class="grow"><strong>Oproep delen na:</strong></span>
+        <button class="step" aria-label="Korter" @click="stepShare(-1)">−</button>
+        <span class="mono seconds">{{ form.shareAfterMin }} min</span>
+        <button class="step" aria-label="Langer" @click="stepShare(1)">+</button>
+      </div>
+      <p class="small">Zijn alle EHBO-eenheden bezig, dan wacht een oproep op de eenheid die er het dichtst bij is. Een andere eenheid die vrij komt, neemt hem pas over als hij zo lang wacht; 0 is meteen. Niet aanspreekbaar gaat altijd meteen naar wie vrij is.</p>
     </template>
 
     <!-- Opslaan alleen als er iets gewijzigd is. -->

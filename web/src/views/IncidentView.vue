@@ -30,7 +30,11 @@ const atLocation = computed(() => live.myLocationIds.includes(incident.value?.lo
 /** The post, or who asked for help from where they were. */
 const canChange = computed(() => atLocation.value || isCoordinator.value || incident.value?.reportedBy === session.me?.phone);
 
-const pending = computed(() => incident.value?.dispatches.filter((d) => !d.declinedAt && !d.acceptedAt) ?? []);
+const pending = computed(() => incident.value?.dispatches.filter((d) => !d.declinedAt && !d.acceptedAt && (live.teamState(d.teamId)?.incidentId ?? incident.value!.id) === incident.value!.id) ?? []);
+/** Nobody can take it now: it waits for the first team that becomes free. */
+const waiting = computed(() => !!incident.value && live.waitingCalls.some((i) => i.id === incident.value!.id));
+/** Waiting because the teams are busy, or because nobody is on duty. */
+const allBusy = computed(() => (live.state?.teams ?? []).some((u) => u.availability === 'available' && u.incidentId !== null));
 const accepted = computed(() => incident.value?.dispatches.filter((d) => d.acceptedAt) ?? []);
 const left = computed(() => (incident.value ? live.secondsLeft(incident.value) : null));
 const teamName = (id: number) => teamOf(store.pkg, id)?.name ?? 'Eenheid';
@@ -73,7 +77,7 @@ const back = () => router.back();
 
     <!-- 4.2 · Verstuurd: we zoeken een EHBO'er -->
     <template v-else-if="incident.status === 'sent'">
-      <StatusBlock tone="orange" :label="`Melding verstuurd · ${clock(incident.sentAt)}`" title="We zoeken een EHBO'er" />
+      <StatusBlock tone="orange" :label="`Melding verstuurd · ${clock(incident.sentAt)}`" :title="waiting ? 'Je melding wacht' : 'We zoeken een EHBO\'er'" />
       <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar: bel ook 112.</strong> De dichtstbijzijnde eenheid met AED is opgeroepen.</p>
 
       <div class="card steps">
@@ -87,7 +91,11 @@ const back = () => router.back();
         </template>
         <div v-else class="step">
           <span class="mark busy" />
-          <span class="grow">{{ pending.length ? `Alle beschikbare eenheden worden opgeroepen (${pending.length})` : 'Geen beschikbare eenheid gevonden; de coördinator is gewaarschuwd' }}</span>
+          <span class="grow">{{
+            pending.length ? `Alle beschikbare eenheden worden opgeroepen (${pending.length})`
+            : allBusy ? 'Alle EHBO\'ers zijn bezig. Je melding wacht en gaat naar de eerste die vrij is. De coördinator is gewaarschuwd.'
+            : 'Er is nu geen EHBO\'er beschikbaar. De coördinator is gewaarschuwd.'
+          }}</span>
         </div>
         <div class="step" :class="{ later: incident.stage === 'nearest' }"><span class="mark" :class="{ done: incident.stage === 'all' }" /><span class="grow">Evenementcoördinator heeft een kopie</span></div>
       </div>
