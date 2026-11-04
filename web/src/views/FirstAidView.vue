@@ -6,7 +6,7 @@ import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
 import { clock, myDeployments, teamOf } from '../incidents.ts';
-import { coordinatorOf, coreTeamMember, kmLabel, shiftText } from '../locations.ts';
+import { callNextOf, kmLabel, shiftText } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -60,15 +60,7 @@ const othersFree = computed(() => {
   return { free: others.filter((u) => u.availability === 'available' && u.incidentId === null).length, total: others.length };
 });
 const today = computed(() => (teamId.value !== null ? myDeployments(live.incidents, teamId.value) : []));
-const ehboCoordinator = computed(() => coreTeamMember(store.pkg, 'EHBO-coördinator'));
-const coordinator = computed(() => coordinatorOf(store.pkg));
-/** De volgende in de lijn: de EHBO-coördinator, of de evenementcoördinator als je zelf EHBO-coördinator bent. */
-const callNext = computed(() => {
-  const me = session.me?.phone;
-  if (ehboCoordinator.value && ehboCoordinator.value.phone !== me) return { label: 'Bel EHBO-coördinator', phone: ehboCoordinator.value.phone };
-  if (coordinator.value && coordinator.value.phone !== me) return { label: 'Bel evenementcoördinator', phone: coordinator.value.phone };
-  return null;
-});
+const callNext = computed(() => callNextOf(store.pkg, session.me?.phone));
 
 /** The buttons: "Bezet" is shorter to tap than the status it sets, which still reads Niet beschikbaar everywhere. */
 const BUTTONS: Record<TeamAvailability, string> = { ...TEAM_AVAILABILITY, unavailable: 'Bezet' };
