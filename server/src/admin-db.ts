@@ -40,7 +40,7 @@ export function adminDb(events: EventDb) {
   );
 
   function getState(): AdminState {
-    const e = db.prepare('SELECT name, start_location, start_date, end_date, escalation_seconds, at_location_m FROM event WHERE id = 1').get() as Row;
+    const e = db.prepare('SELECT name, start_location, start_date, end_date, escalation_seconds, at_location_m, share_after_min FROM event WHERE id = 1').get() as Row;
     const event: EventSettings = {
       name: e.name as string,
       startLocation: e.start_location as string | null,
@@ -48,6 +48,7 @@ export function adminDb(events: EventDb) {
       endDate: e.end_date as string | null,
       escalationSeconds: e.escalation_seconds as number,
       atLocationM: e.at_location_m as number,
+      shareAfterMin: e.share_after_min as number,
       style: getStyle(events),
     };
 
@@ -150,8 +151,8 @@ export function adminDb(events: EventDb) {
 
   function saveEvent(e: EventSettings) {
     events.transaction(() => {
-      run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ?, at_location_m = ? WHERE id = 1',
-        e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds, e.atLocationM);
+      run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ?, at_location_m = ?, share_after_min = ? WHERE id = 1',
+        e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds, e.atLocationM, e.shareAfterMin);
       saveStyle(events, e.style);
     });
   }

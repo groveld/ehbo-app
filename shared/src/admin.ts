@@ -11,6 +11,8 @@ export const ESCALATION_MAX_SECONDS = 120;
 /** Within this distance of a post you count as at that post (#63). GPS on a phone is often 10–30 m off. */
 export const AT_LOCATION_MIN_M = 20;
 export const AT_LOCATION_MAX_M = 500;
+export const SHARE_AFTER_MAX_MIN = 30;
+export const DEFAULT_SHARE_AFTER_MIN = 5;
 export const AT_LOCATION_STEP_M = 10;
 
 export interface EventSettings {
@@ -22,6 +24,8 @@ export interface EventSettings {
   escalationSeconds: number;
   /** Within this many metres of a post a position counts as that post: a mobile team at its standplaats, a self-started incident, a help request. */
   atLocationM: number;
+  /** A waiting call belongs to the nearest team; another team that's free takes it over only after it waited this long. 0 is at once. */
+  shareAfterMin: number;
   style: EventStyle;
 }
 

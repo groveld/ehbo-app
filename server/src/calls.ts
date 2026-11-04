@@ -125,6 +125,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   /** Within this many metres of a post a position counts as that post (#63). */
   const atLocationM = () => get('SELECT at_location_m FROM event WHERE id = 1')!.at_location_m as number;
   const coordinator = () => db.coordinatorPhone();
+  /** A waiting call goes to a team other than its own only after this long (Delen na). */
+  const shareAfterMs = () => (get('SELECT share_after_min FROM event WHERE id = 1')!.share_after_min as number) * 60_000;
 
   function teams(): Team[] {
     const members = new Map<number, string[]>();
@@ -397,8 +399,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     notify([phone], { title: `EHBO-oproep · ${placeName(row)}`, body, tag: `kopie-${row.id as number}`, url: `/incident/${row.id as number}`, urgent });
   }
 
-  /** Eenheden die nog op deze oproep kunnen reageren: opgeroepen, niet geweigerd, niet aangenomen. */
-  const invited = (id: number) => dispatchesOf(id).filter((d) => !d.declinedAt && !d.acceptedAt).map((d) => d.teamId);
+  /** Teams called for this one that haven't answered: not declined, not accepted. */
+  const pending = (id: number) => dispatchesOf(id).filter((d) => !d.declinedAt && !d.acceptedAt).map((d) => d.teamId);
+  /** Of those, the ones that can still react: a team busy with another call isn't rung for this one. */
+  function invited(id: number) {
+    const busy = busyTeams();
+    return pending(id).filter((teamId) => (busy.get(teamId) ?? id) === id);
+  }
 
   // ---- Escalatie ----
 
@@ -415,20 +422,24 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     alarmTeams(updated, targets, 'EHBO-oproep · alle eenheden');
     copyToCoordinator(updated, targets.length
       ? `${reason}. Nu naar alle beschikbare eenheden (${targets.length}).`
-      : 'Geen beschikbare EHBO-eenheid. Bel zelf een eenheid of 112.', targets.length === 0);
+      : busyTeams().size
+        ? 'Alle EHBO-eenheden zijn bezig. De oproep wacht op de eerste die vrij is. Kan het niet wachten? Bel zelf een eenheid of 112.'
+        : 'Geen beschikbare EHBO-eenheid. Bel zelf een eenheid of 112.', targets.length === 0);
     setTimer(id, escalationMs(), () => repeat(id, 1));
     changed();
   }
 
-  /** Nog niemand aangenomen: alarm herhalen bij alle eenheden (ook wie inmiddels vrij is gekomen). */
+  /**
+   * Nobody accepted yet: ring the teams that were called again. A team that became free since gets a waiting call from offerOpenCalls,
+   * one at a time; with nobody to ring the call just waits for that.
+   */
   function repeat(id: number, count: number) {
     const row = incidentRow(id);
     if (row.status !== 'sent') return;
-    db.transaction(() => {
-      for (const { team, km } of freeTeams(targetOf(row))) addDispatch(id, team.id, 'all', km);
-      log(id, 'repeated', `Nog niemand heeft aangenomen; alarm opnieuw (${count})`);
-    });
-    alarmTeams(row, invited(id), 'EHBO-oproep · nog niemand');
+    const targets = invited(id);
+    if (!targets.length) return;
+    log(id, 'repeated', `Nog niemand heeft aangenomen; alarm opnieuw (${count})`);
+    alarmTeams(row, targets, 'EHBO-oproep · nog niemand');
     // Bij de eerste herhaling (dus na twee keer de escalatietijd) belt de coördinator zelf.
     if (count === 1) copyToCoordinator(row, 'Nog niemand heeft de oproep aangenomen. Bel de eenheden.', true);
     if (count < MAX_REPEATS) setTimer(id, escalationMs(), () => repeat(id, count + 1));
@@ -439,23 +450,68 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
    * These teams just became available. A call that's waiting with nobody to react to it goes to them at once, not at the next round.
    * A call that another available team still has stays with that team, and goes to everyone with the escalation as usual.
    */
-  function offerOpenCalls(teamIds: number[]) {
-    for (const row of all("SELECT * FROM incidents WHERE status = 'sent' ORDER BY id")) {
-      const id = row.id as number;
-      const free = freeTeams(targetOf(row));
-      const pending = invited(id);
-      if (free.some((c) => pending.includes(c.team.id))) continue;
-      const fresh = free.filter((c) => teamIds.includes(c.team.id));
-      if (!fresh.length) continue;
-      db.transaction(() => {
-        for (const { team, km } of fresh) {
-          addDispatch(id, team.id, 'all', km);
-          // Who said "kan niet" and is available now, gets the question again.
-          run('UPDATE dispatches SET declined_at = NULL WHERE help_request_id = ? AND team_id = ?', id, team.id);
-          log(id, 'sent', `Naar ${team.name} gestuurd: nu beschikbaar`, team.id);
-        }
+  /**
+   * Calls waiting because no free team can react go to teams that are free, one call per team at a time.
+   * The worst first (not responsive), then the nearest. A call belongs to the nearest team on duty, busy or not; another team takes it
+   * only once it waited Delen na (share_after_min), so each team keeps working its own stretch of the route. Not responsive is never kept.
+   * `again`: the team just became available, so it's asked again what it declined before. Gives whether anything was offered.
+   */
+  function offerOpenCalls(teamIds: number[], again = false) {
+    const waiting = all("SELECT * FROM incidents WHERE status = 'sent' ORDER BY id");
+    if (!waiting.length) return false;
+    const busy = busyTeams();
+    const locationMap = locations();
+    const onDuty = teams().filter((u) => u.availability === 'available');
+    const free = new Set(onDuty.filter((u) => !busy.has(u.id)).map((u) => u.id));
+    const lngLat = (p: { lat: number | null; lng: number | null }): [number, number] | null => (p.lat != null && p.lng != null ? [p.lng, p.lat] : null);
+    // A busy team is at its call, or on its way there.
+    const where = new Map(onDuty.map((u) => [u.id, busy.has(u.id) ? lngLat(targetOf(incidentRow(busy.get(u.id)!))) : teamPosition(u, locationMap)]));
+    const kmTo = (teamId: number, row: Row) => {
+      const [from, to] = [where.get(teamId), lngLat(targetOf(row))];
+      return from && to ? distanceKm(from, to) : null;
+    };
+    const ownTeam = (row: Row) => nearest(onDuty.map((u) => ({ team: u, km: kmTo(u.id, row) })))?.team ?? null;
+    const at = now().getTime();
+    const share = shareAfterMs();
+    const open = waiting.filter((row) => !invited(row.id as number).some((t) => free.has(t)));
+    const offered = new Set<number>();
+    for (const team of onDuty.filter((u) => teamIds.includes(u.id) && free.has(u.id))) {
+      // Asked while it was busy, so not rung: that one is still its own. Otherwise one call at a time.
+      const mine = waiting.filter((row) => invited(row.id as number).includes(team.id));
+      if (mine.length && !again) continue;
+      const choices = (mine.length ? mine : open).flatMap((row) => {
+        const id = row.id as number;
+        if (offered.has(id)) return [];
+        if (mine.length) return [{ row, km: kmTo(team.id, row), own: null }];
+        if (!again && dispatchesOf(id).some((d) => d.teamId === team.id && d.declinedAt)) return [];
+        const own = ownTeam(row);
+        const shared = own !== null && own.id !== team.id;
+        if (shared && row.aed !== 1 && at - new Date(row.reported_at as string).getTime() < share) return [];
+        return [{ row, km: kmTo(team.id, row), own: shared ? own : null }];
+      }).sort((a, b) => (b.row.aed as number) - (a.row.aed as number) || (a.km ?? Infinity) - (b.km ?? Infinity) || (a.row.id as number) - (b.row.id as number));
+      const pick = choices[0];
+      if (!pick) continue;
+      const id = pick.row.id as number;
+      offered.add(id);
+      if (!mine.length) db.transaction(() => {
+        addDispatch(id, team.id, 'all', pick.km === null ? null : Math.round(pick.km * 10) / 10);
+        // Who said "kan niet" and is available now, gets the question again.
+        run('UPDATE dispatches SET declined_at = NULL WHERE help_request_id = ? AND team_id = ?', id, team.id);
+        log(id, 'sent', `Naar ${team.name} gestuurd: ${pick.own ? `${pick.own.name} is nog bezig` : 'nu beschikbaar'}`, team.id);
       });
-      alarmTeams(row, fresh.map((c) => c.team.id), 'EHBO-oproep');
+      alarmTeams(pick.row, [team.id], 'EHBO-oproep');
+      if (!timers.has(id)) setTimer(id, escalationMs(), () => repeat(id, 2));
+    }
+    return offered.size > 0;
+  }
+
+  /** A team took a call: what it was asked as well and nobody else can answer now goes on at once, instead of after the escalation time. */
+  function nowBusy(team: Team) {
+    for (const r of all(`SELECT d.help_request_id AS id FROM dispatches d JOIN incidents i ON i.id = d.help_request_id
+                         WHERE d.team_id = ? AND i.status = 'sent' AND i.stage = 'nearest' AND d.accepted_at IS NULL AND d.declined_at IS NULL`, team.id)) {
+      if (invited(r.id as number).length) continue;
+      cancelTimer(r.id as number);
+      escalate(r.id as number, `${team.name} is bezig met een andere oproep`);
     }
   }
 
@@ -588,6 +644,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       }
     }
     copyToCoordinator(row, `${team.name} is zelf een incident gestart: ${summary(row)}${offLocation ? `, ${place.name}` : ''}${enRoute ? `, onderweg naar ${location.name}` : ''}.`);
+    nowBusy(team);
     changed();
     return incidentsOf(state()).find((i) => i.id === id)!;
   }
@@ -677,12 +734,13 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     }
     // Anderen hoeven niet meer te komen, behalve een AED-eenheid zolang er nog geen AED onderweg is.
     const aedComing = row.aed !== 1 || dispatchesOf(id).some((d) => d.acceptedAt && teamById(d.teamId)?.hasAed);
-    const released = invited(id).filter((teamId) => aedComing || !teamById(teamId)?.hasAed);
+    const released = pending(id).filter((teamId) => aedComing || !teamById(teamId)?.hasAed);
     for (const other of teams().filter((u) => released.includes(u.id))) {
       notify(other.members, { title: 'Oproep is al aangenomen', body: `${team.name} gaat naar ${placeName(row)}. Je hoeft niet te komen.`, tag: tag(id), url: teamUrl(id) });
     }
     notify(followers(row), { title: 'Hulp is onderweg', body: `${helper} komt eraan.`, tag: `melding-${id}`, url: `/incident/${id}` });
     copyToCoordinator(updated, `${manual ? 'Toegewezen aan' : 'Aangenomen door'} ${helper}.`);
+    nowBusy(team);
     changed();
     return state();
   }
@@ -710,9 +768,10 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     if (row.stage === 'nearest') {
       cancelTimer(id);
       escalate(id, `${team.name} kan niet`);
-    } else {
-      changed();
     }
+    // Free to take another one that's waiting.
+    offerOpenCalls([team.id]);
+    changed();
     return state();
   }
 
@@ -747,7 +806,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       log(id, 'closed', `Afgerond door ${team.name}${AFTER_CALL[then]}`, teamId);
     });
     copyToCoordinator(incidentRow(id), `Afgerond door ${team.name}.`);
-    offerOpenCalls([teamId]);
+    offerOpenCalls([teamId], true);
     changed();
     return state();
   }
@@ -768,6 +827,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       notify(team.members, { title: 'Melding ingetrokken', body: `${placeName(row)}: geen hulp meer nodig.`, tag: tag(id), url: teamUrl(id) });
     }
     copyToCoordinator(row, `Ingetrokken door ${row.place_name ? personName(me.phone) : location.name}.`);
+    // The team that was on its way is free for what's waiting.
+    offerOpenCalls(dispatchesOf(id).filter((d) => d.acceptedAt).map((d) => d.teamId), true);
     changed();
     return state();
   }
@@ -801,7 +862,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       return state();
     }
     db.transaction(() => putAvailability(team, availability));
-    if (availability === 'available') offerOpenCalls([team.id]);
+    if (availability === 'available') offerOpenCalls([team.id], true);
     changed();
     return state();
   }
@@ -835,7 +896,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
         if (team.availability !== 'unavailable') run('UPDATE teams SET availability = ? WHERE id = ?', open ? 'available' : 'off_duty', team.id);
       }
     });
-    if (open) offerOpenCalls(affected.map((u) => u.id));
+    if (open) offerOpenCalls(affected.map((u) => u.id), true);
     changed();
     return state();
   }
@@ -932,6 +993,8 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
     }
     const phone = coordinator();
     if (closed.length && phone) notify([phone], { title: 'Automatisch gesloten', body: closed.join(', '), tag: 'gesloten', url: '/control' });
+    // A waiting call that has waited Delen na can go to a free team elsewhere now.
+    if (offerOpenCalls(teams().map((u) => u.id))) touched = true;
     if (touched) changed();
   }
 
@@ -989,7 +1052,7 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
       for (const team of onDuty) run("UPDATE teams SET availability = 'available', keep_until = ?, closes_at = NULL WHERE id = ?", keepAfterOpening(planOf(team)), team.id);
     });
     for (const location of openLocations) notify(locationPhones(location.id), { title: `${location.name} is geopend`, body: 'De coördinator heeft je locatie geopend.', tag: `post-${location.id}`, url: `/location/${location.id}/start` });
-    offerOpenCalls(onDuty.map((u) => u.id));
+    offerOpenCalls(onDuty.map((u) => u.id), true);
     for (const team of onDuty) notify(team.members, { title: 'Je staat op Beschikbaar', body: 'De coördinator heeft je op Beschikbaar gezet.', tag: `dienst-${team.id}`, url: '/first-aid' });
     changed();
     return { state: state(), skipped };

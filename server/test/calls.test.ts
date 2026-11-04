@@ -442,7 +442,7 @@ test('the data version in the live state and for participants follows changes in
   assert.ok(pkg.version.startsWith(`${before.dataVersion}.`), 'the package version starts with it');
 
   await ok(DEMO.admin, 'PUT', '/api/admin/event', {
-    name: 'Nieuwe naam', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atLocationM: 30,
+    name: 'Nieuwe naam', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atLocationM: 30, shareAfterMin: 5,
     style: (await ok<AdminState>(DEMO.admin, 'GET', '/api/admin')).event.style,
   });
 

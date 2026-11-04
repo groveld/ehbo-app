@@ -27,7 +27,7 @@ const call = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: 
 const version = () => (db.raw.prepare('SELECT version FROM event').get() as { version: number }).version;
 
 const EVENT = {
-  name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 30, atLocationM: 30, style: DEFAULT_STYLE,
+  name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 30, atLocationM: 30, shareAfterMin: 5, style: DEFAULT_STYLE,
 };
 
 /** Begin van een PNG met de gevraagde maat, als base64; meer leest de server niet. */

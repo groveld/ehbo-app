@@ -550,6 +550,8 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   },
   // 26: the status a team picked during a call, carried out once the call is over.
   `ALTER TABLE teams ADD COLUMN next_availability TEXT CHECK (next_availability IN ('unavailable', 'off_duty'));`,
+  // 27: a waiting call goes to a team other than its own (the nearest) only after this many minutes.
+  `ALTER TABLE event ADD COLUMN share_after_min INTEGER NOT NULL DEFAULT 5;`,
 ];
 
 export interface EventRow {
