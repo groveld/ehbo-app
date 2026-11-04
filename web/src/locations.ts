@@ -62,6 +62,15 @@ export const coordinatorOf = (pkg: EventPackage | null) => pkg?.coreTeam.find((c
 /** Kernteamlid met deze functie, bijv. "EHBO-coördinator". */
 export const coreTeamMember = (pkg: EventPackage | null, fn: string) => pkg?.coreTeam.find((c) => sameFunction(c.function, fn)) ?? null;
 
+/** Next in line for an EHBO team: the EHBO coordinator, or the event coordinator when that's you. Never yourself. */
+export function callNextOf(pkg: EventPackage | null, me: string | undefined) {
+  const ehbo = coreTeamMember(pkg, 'EHBO-coördinator');
+  if (ehbo && ehbo.phone !== me) return { label: 'Bel EHBO-coördinator', phone: ehbo.phone };
+  const coordinator = coordinatorOf(pkg);
+  if (coordinator && coordinator.phone !== me) return { label: 'Bel evenementcoördinator', phone: coordinator.phone };
+  return null;
+}
+
 /** available: beschikbaar (groen); anders pauze of bezig met een oproep (rood). */
 export interface Ambulance { id: number; name: string; lng: number; lat: number; available: boolean; busy: boolean }
 
