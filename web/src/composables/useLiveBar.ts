@@ -42,6 +42,8 @@ export function useLiveBar() {
     const last = live.offline ? 'Laatst bekende stand' : null;
     if (incident.status === 'sent') {
       const left = live.secondsLeft(incident);
+      // Nobody can take it now: it waits for the first team that becomes free (the same as the follow-up screen).
+      if (live.waitingCalls.some((i) => i.id === incident.id)) return { tone: 'orange', title: 'Je melding wacht', sub: last ?? "Gaat naar de eerste EHBO'er die vrij is", to, more };
       return { tone: 'orange', title: "We zoeken een EHBO'er", sub: last ?? (left !== null ? `Nog ${left} s tot alle eenheden` : 'Alle eenheden zijn opgeroepen'), to, more };
     }
     const team = teamOf(store.pkg, incident.teamId);

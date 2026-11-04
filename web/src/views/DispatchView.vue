@@ -10,9 +10,10 @@ import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
 import { clock, incidentLog, incidentSummary, lastAddition, personsText, locationOf, travelMinutes, teamOf } from '../incidents.ts';
 import { navigationUrl } from '../navigate.ts';
-import { callLines, primaryContact } from '../locations.ts';
+import { callLines, callNextOf, primaryContact } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
+import { useSessionStore } from '../stores/session.ts';
 import { load, save } from '../storage.ts';
 
 // The map library is large: the screen doesn't wait for it.
@@ -21,6 +22,7 @@ const EventMap = defineAsyncComponent(() => import('../components/EventMap.vue')
 const props = defineProps<{ id: string }>();
 const store = usePackageStore();
 const live = useLiveStore();
+const session = useSessionStore();
 const router = useRouter();
 const { busy, error, run } = useSave();
 
@@ -30,6 +32,8 @@ const RING = 2 * Math.PI * 30;
 const incident = computed(() => live.incidentById(Number(props.id)));
 const location = computed(() => (incident.value ? locationOf(store.locationById, incident.value) : undefined));
 const contact = computed(() => (location.value ? primaryContact(location.value) : null));
+/** En route there's always someone to call: the post, or without a contact (a place without people, a self-started incident) the coordinator. */
+const enRouteCall = computed(() => (contact.value ? { label: 'Bel locatie', phone: contact.value.phone } : callNextOf(store.pkg, session.me?.phone)));
 
 /** Mijn eenheid voor deze oproep: die is opgeroepen of heeft aangenomen; anders mijn eerste eenheid. */
 const myDispatch = computed(() => incident.value?.dispatches.find((d) => live.myTeamIds.includes(d.teamId)) ?? null);
@@ -179,7 +183,7 @@ async function onSite() {
       </div>
       <!-- The same pair as on the post details: call on the left, navigate on the right. -->
       <div class="actions gap-top">
-        <a v-if="contact" :href="telHref(contact.phone)" class="btn big"><Icon name="phone" :size="20" />Bel locatie</a>
+        <a v-if="enRouteCall" :href="telHref(enRouteCall.phone)" class="btn big"><Icon name="phone" :size="20" />{{ enRouteCall.label }}</a>
         <a v-if="navUrl" :href="navUrl" class="btn primary"><Icon name="navigate" :size="20" />Navigeer</a>
       </div>
       <!-- Everything the post entered, also on site. -->
@@ -197,6 +201,11 @@ async function onSite() {
         </dl>
       </div>
       <p v-if="incident.aed" class="note warn gap-top"><strong>Niet aanspreekbaar.</strong>{{ myTeam?.hasAed ? ' AED meenemen.' : '' }} Is 112 gebeld?</p>
+      <RouterLink v-if="live.waitingCalls.length" :to="{ name: 'first-aid' }" class="note warn gap-top waiting">
+        <span class="grow"><strong>{{ live.waitingCalls.length === 1 ? 'Er wacht nog 1 oproep' : `Er wachten nog ${live.waitingCalls.length} oproepen` }}</strong>
+          · {{ live.waitingCalls.map((i) => i.location.name).join(', ') }}</span>
+        <Icon name="forward" :size="16" />
+      </RouterLink>
 
       <div class="grow" />
       <p v-if="error" class="error-text" role="alert">{{ error }}</p>
@@ -276,4 +285,5 @@ async function onSite() {
 .done-icon.grey { background: var(--soft); color: var(--muted); }
 .muted { color: var(--muted); }
 .free { color: var(--ok-text); }
+.waiting { align-items: center; text-decoration: none; }
 </style>

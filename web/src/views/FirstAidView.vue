@@ -6,7 +6,7 @@ import Icon from '../components/Icon.vue';
 import StatusBlock from '../components/StatusBlock.vue';
 import { useSave } from '../composables/useSave.ts';
 import { clock, myDeployments, teamOf } from '../incidents.ts';
-import { coordinatorOf, coreTeamMember, kmLabel, shiftText } from '../locations.ts';
+import { callNextOf, kmLabel, shiftText } from '../locations.ts';
 import { useLiveStore } from '../stores/live.ts';
 import { usePackageStore } from '../stores/package.ts';
 import { useSessionStore } from '../stores/session.ts';
@@ -60,15 +60,7 @@ const othersFree = computed(() => {
   return { free: others.filter((u) => u.availability === 'available' && u.incidentId === null).length, total: others.length };
 });
 const today = computed(() => (teamId.value !== null ? myDeployments(live.incidents, teamId.value) : []));
-const ehboCoordinator = computed(() => coreTeamMember(store.pkg, 'EHBO-coördinator'));
-const coordinator = computed(() => coordinatorOf(store.pkg));
-/** De volgende in de lijn: de EHBO-coördinator, of de evenementcoördinator als je zelf EHBO-coördinator bent. */
-const callNext = computed(() => {
-  const me = session.me?.phone;
-  if (ehboCoordinator.value && ehboCoordinator.value.phone !== me) return { label: 'Bel EHBO-coördinator', phone: ehboCoordinator.value.phone };
-  if (coordinator.value && coordinator.value.phone !== me) return { label: 'Bel evenementcoördinator', phone: coordinator.value.phone };
-  return null;
-});
+const callNext = computed(() => callNextOf(store.pkg, session.me?.phone));
 
 /** The buttons: "Bezet" is shorter to tap than the status it sets, which still reads Niet beschikbaar everywhere. */
 const BUTTONS: Record<TeamAvailability, string> = { ...TEAM_AVAILABILITY, unavailable: 'Bezet' };
@@ -88,6 +80,19 @@ const setAvailability = (value: TeamAvailability) => teamId.value !== null && ru
       <RouterLink v-for="i in live.invitations" :key="i.id" :to="{ name: 'dispatch', params: { id: i.id } }" class="btn danger gap-top">
         Oproep · {{ i.location.name }}
       </RouterLink>
+
+      <!-- Calls nobody can take now. They come to whoever is free first; here so you can plan, also during a call. -->
+      <div v-if="live.waitingCalls.length" class="stack gap-8 gap-top">
+        <span class="section-title">Wachtende oproepen · {{ live.waitingCalls.length }}</span>
+        <div class="list">
+          <div v-for="i in live.waitingCalls" :key="i.id" class="list-row">
+            <span class="mono">{{ clock(i.reportedAt) }}</span>
+            <span class="grow">{{ i.location.name }}</span>
+            <strong v-if="i.aed" class="alarm">Niet aanspreekbaar</strong>
+          </div>
+        </div>
+        <span class="small">Ze komen naar de eerste eenheid die vrij is: niet aanspreekbaar eerst, daarna de dichtstbijzijnde.</span>
+      </div>
 
       <div class="stack gap-8 gap-top">
         <span class="section-title">Mijn status</span>
@@ -153,4 +158,5 @@ const setAvailability = (value: TeamAvailability) => teamId.value !== null && ru
 .facts-list .list-row { min-height: 50px; font-size: 14px; }
 /* De onderrand van het scherm telt al; anders staan de knoppen dubbel zo ver van de tabbalk. */
 .form-footer { margin: 14px 0 -16px; }
+.alarm { color: var(--danger); font-size: 13px; }
 </style>
