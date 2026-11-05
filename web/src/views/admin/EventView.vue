@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 1.1 · Evenement instellen: naam, data, lopen, de kaart, stijl en de EHBO-escalatietijd.
 import { computed, onBeforeUnmount, reactive, ref, watch, watchEffect } from 'vue';
-import { AT_LOCATION_MAX_M, AT_LOCATION_MIN_M, AT_LOCATION_STEP_M, DEFAULT_AT_LOCATION_M, DEFAULT_SHARE_AFTER_MIN, DEFAULT_STYLE, SHARE_AFTER_MAX_MIN, ESCALATION_MAX_SECONDS, ESCALATION_MIN_SECONDS, SHORT_NAME_MAX, styleProblem, type EventSettings } from '@ehbo/shared';
+import { AT_LOCATION_MAX_M, AT_LOCATION_MIN_M, AT_LOCATION_STEP_M, DEFAULT_AT_LOCATION_M, DEFAULT_SHARE_AFTER_MIN, DEFAULT_STYLE, SHARE_AFTER_MAX_MIN, ESCALATION_MAX_SECONDS, LOGIN_CODE_MAX, defaultLoginCode, ESCALATION_MIN_SECONDS, SHORT_NAME_MAX, styleProblem, type EventSettings } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import Icon from '../../components/Icon.vue';
 import MapSection from './MapSection.vue';
@@ -14,7 +14,7 @@ import { applyTheme } from '../../theme.ts';
 
 const admin = useAdminStore();
 const session = useSessionStore();
-const form = reactive<EventSettings>({ name: '', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atLocationM: DEFAULT_AT_LOCATION_M, shareAfterMin: DEFAULT_SHARE_AFTER_MIN, style: { ...DEFAULT_STYLE } });
+const form = reactive<EventSettings>({ name: '', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atLocationM: DEFAULT_AT_LOCATION_M, shareAfterMin: DEFAULT_SHARE_AFTER_MIN, loginCode: '', style: { ...DEFAULT_STYLE } });
 const loaded = ref(false);
 const saved = ref(false);
 const { busy, error, run } = useSave();
@@ -27,6 +27,11 @@ watchEffect(() => {
   Object.assign(form, { ...admin.state.event, style: { ...admin.state.event.style } });
   markClean();
   loaded.value = true;
+});
+
+// The day of the event as the code moves along with the start date; a code of one's own stays.
+watch(() => form.startDate, (date, before) => {
+  if (loaded.value && form.loginCode === defaultLoginCode(before ?? null)) form.loginCode = defaultLoginCode(date || null);
 });
 
 const colorProblem = computed(() => styleProblem(form.style));
@@ -164,6 +169,19 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
         <button class="step" aria-label="Langer" @click="stepShare(1)">+</button>
       </div>
       <p class="small">Zijn alle EHBO-eenheden bezig, dan wacht een oproep op de eenheid die er het dichtst bij is. Een andere eenheid die vrij komt, neemt hem pas over als hij zo lang wacht; 0 is meteen. Niet aanspreekbaar gaat altijd meteen naar wie vrij is.</p>
+
+      <div class="form-field">
+        <label for="ev-code">Code voor aanmelden</label>
+        <input
+          id="ev-code" v-model="form.loginCode" class="input code" inputmode="numeric" pattern="[0-9]*" :maxlength="LOGIN_CODE_MAX"
+          autocomplete="off" @input="form.loginCode = form.loginCode.replace(/\D/g, '')"
+        >
+      </div>
+      <p class="small">
+        Medewerkers vullen deze code in bij het aanmelden; je noemt hem op de briefing. Zo komt een deelnemer die een nummer van een medewerker kent er niet in.
+        <template v-if="defaultLoginCode(form.startDate)">Standaard de dag van het evenement ({{ defaultLoginCode(form.startDate) }}).</template>
+        Leeg is geen code. Wie al is aangemeld, blijft aangemeld.
+      </p>
     </template>
 
     <!-- Opslaan alleen als er iets gewijzigd is. -->
@@ -176,6 +194,7 @@ const km = (value: number) => value.toLocaleString('nl-NL', { maximumFractionDig
 </template>
 
 <style scoped>
+.input.code { width: 140px; font-family: var(--mono); }
 .escalation { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .step { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--field-line); background: var(--field); font: 600 16px var(--sans); color: var(--ink); cursor: pointer; }
 .seconds { min-width: 44px; text-align: center; font-size: 15px; }

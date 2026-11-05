@@ -1,6 +1,6 @@
 // Evenement (openbaar), aanmelden, afmelden en wie ben ik.
 import type { FastifyInstance } from 'fastify';
-import { DEFAULT_INFO, normalizePhone, type ApiError, type InfoSection, type LoginRequest, type LoginUnknown, type Me, type PublicEvent } from '@ehbo/shared';
+import { DEFAULT_INFO, loginCodeOf, normalizePhone, type ApiError, type InfoSection, type LoginRequest, type LoginUnknown, type Me, type PublicEvent } from '@ehbo/shared';
 import { SESSION_COOKIE, hashSessionToken, newSessionToken, requireMe, sessionExpiry, sessionsEnded, sqliteTime } from '../auth.ts';
 import { getBrand, getStyle } from '../brand.ts';
 import type { Calls } from '../calls.ts';
@@ -37,13 +37,21 @@ export async function sessionRoutes(app: FastifyInstance, { db, calls }: { db: E
       info: info.map((s) => ({ title: fill(s.title), body: fill(s.body) })),
       style: getStyle(db),
       brand: getBrand(db),
+      needsLoginCode: loginCodeOf(event.login_code, event.start_date) !== '',
     };
   });
 
   app.post<{ Body: LoginRequest; Reply: Me | LoginUnknown | ApiError }>('/api/session', {
-    schema: { body: { type: 'object', required: ['phone'], properties: { phone: { type: 'string', maxLength: 32 } } } },
+    schema: { body: { type: 'object', required: ['phone'], properties: { phone: { type: 'string', maxLength: 32 }, code: { type: 'string', maxLength: 32 } } } },
   }, async (request, reply) => {
     if (recentFailures(request.ip).length >= LOGIN_LIMIT) return reply.code(429).send({ error: 'Te veel pogingen; wacht een minuut' });
+    // The code of the briefing first, so a participant who knows a number of the staff gets no further, not even to "unknown number".
+    const event = db.getEvent();
+    const code = loginCodeOf(event.login_code, event.start_date);
+    if (code && (request.body.code ?? '').replace(/\s/g, '') !== code) {
+      addFailure(request.ip);
+      return reply.code(403).send({ error: 'Deze code klopt niet. Je hoort de code op de briefing.' });
+    }
     const phone = normalizePhone(request.body.phone);
     if (!phone) {
       addFailure(request.ip);
@@ -62,7 +70,7 @@ export async function sessionRoutes(app: FastifyInstance, { db, calls }: { db: E
     // The first one in for a post or team finds it closed: opening it means "I'm here".
     calls.arrive(phone);
     const token = newSessionToken();
-    const expires = sessionExpiry(db.getEvent().end_date, new Date(), db.testMode());
+    const expires = sessionExpiry(event.end_date, new Date(), db.testMode());
     db.createSession(hashSessionToken(token), phone, userAgent, sqliteTime(expires));
     db.logLogin(phone, userAgent, 'ok');
     request.log.info({ phone: `…${phone.slice(-4)}` }, 'aangemeld');

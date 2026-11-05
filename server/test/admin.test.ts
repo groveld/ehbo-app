@@ -16,7 +16,7 @@ let adminCookie: string;
 let staffCookie: string;
 
 async function login(phone: string) {
-  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
+  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone, code: '31' } });
   assert.equal(res.statusCode, 200, res.body);
   return `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
 }
@@ -27,7 +27,7 @@ const call = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: 
 const version = () => (db.raw.prepare('SELECT version FROM event').get() as { version: number }).version;
 
 const EVENT = {
-  name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 30, atLocationM: 30, shareAfterMin: 5, style: DEFAULT_STYLE,
+  name: 'Silvesterloop 2026', startLocation: 'De Trilker', startDate: '2026-12-31', endDate: '2026-12-31', escalationSeconds: 30, atLocationM: 30, shareAfterMin: 5, loginCode: '31', style: DEFAULT_STYLE,
 };
 
 /** Begin van een PNG met de gevraagde maat, als base64; meer leest de server niet. */
@@ -78,6 +78,30 @@ test('evenement opslaan; einddatum niet voor begindatum', async () => {
   assert.equal((await call('PUT', '/api/admin/event', { ...event, endDate: '2026-12-30' })).statusCode, 400);
   assert.equal((await call('PUT', '/api/admin/event', { ...event, escalationSeconds: 5 })).statusCode, 400);
   assert.equal((await call('PUT', '/api/admin/event', { ...event, startDate: '31-12-2026' })).statusCode, 400);
+});
+
+test('the code of the briefing: the day of the event by default, one of its own, or none', async () => {
+  const attempt = (code?: string) => app.inject({ url: '/api/session', method: 'POST', payload: { phone: DEMO.locationLead, ...(code === undefined ? {} : { code }) }, remoteAddress: '10.0.9.1' });
+  const needs = async () => ((await app.inject({ url: '/api/event' })).json() as { needsLoginCode: boolean }).needsLoginCode;
+  assert.equal((await attempt()).statusCode, 403, 'no code');
+  assert.equal((await attempt('30')).statusCode, 403, 'wrong code');
+  assert.equal((await call('POST', '/api/session', { phone: '0611111111', code: '1' })).statusCode, 403, 'an unknown number gets no further either');
+  assert.equal((await attempt(' 31 ')).statusCode, 200, 'spaces are fine');
+  assert.equal(await needs(), true);
+
+  // Saved as the day it follows the start date; one of its own stays.
+  let state = (await call('PUT', '/api/admin/event', { ...EVENT, startDate: '2026-12-05', endDate: '2026-12-31', loginCode: '5' })).json() as AdminState;
+  assert.equal(state.event.loginCode, '5');
+  assert.equal((db.raw.prepare('SELECT login_code FROM event').get() as { login_code: string | null }).login_code, null);
+  state = (await call('PUT', '/api/admin/event', { ...EVENT, loginCode: '2026' })).json() as AdminState;
+  assert.equal(state.event.loginCode, '2026');
+  assert.equal((await attempt('31')).statusCode, 403);
+  assert.equal((await attempt('2026')).statusCode, 200);
+  assert.equal((await call('PUT', '/api/admin/event', { ...EVENT, loginCode: 'abc' })).statusCode, 400, 'digits only');
+  await call('PUT', '/api/admin/event', { ...EVENT, loginCode: '' });
+  assert.equal(await needs(), false);
+  assert.equal((await attempt()).statusCode, 200, 'no code at all');
+  await call('PUT', '/api/admin/event', EVENT);
 });
 
 test('how close counts as at a post: set by the admin, in the package, and used for a place', async () => {
@@ -214,14 +238,14 @@ test('post met contactpersonen; nieuw nummer kan daarna aanmelden', async () => 
   const saved = (res.json() as AdminState).locations.find((p) => p.name === 'Waterpost 5')!;
   assert.equal(saved.contacts[0]?.phone, '+31612345678', 'nummer genormaliseerd');
 
-  const me = (await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0612345678' } })).json();
+  const me = (await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0612345678', code: '31' } })).json();
   assert.equal(me.name, 'Nieuwe Vrijwilliger');
   assert.equal(me.home, 'location');
 
   // Wijzigen vervangt de contactpersonen; wie eraf gaat, verliest zijn rol.
   const edited = await call('PUT', `/api/admin/locations/${saved.id}`, { ...location, contacts: [] });
   assert.equal(edited.statusCode, 200);
-  assert.equal((await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0612345678' } })).statusCode, 404);
+  assert.equal((await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0612345678', code: '31' } })).statusCode, 404);
 
   const invalid = await call('POST', '/api/admin/locations', { ...location, contacts: [{ ...location.contacts[0], name: 'Piet', phone: '123' }] });
   assert.equal(invalid.statusCode, 400);
@@ -253,7 +277,7 @@ test('EHBO-eenheid: vast vraagt een post, mobiel niet', async () => {
   assert.equal(saved.mobility, 'bike');
   assert.equal(saved.members[0]?.phone, '+31687654321');
 
-  const me = (await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0687654321' } })).json();
+  const me = (await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0687654321', code: '31' } })).json();
   assert.equal(me.home, 'first_aid');
   assert.match(me.assignments[0].detail, /Mobiel \(fiets\) · Standplaats Kruising 4/);
 

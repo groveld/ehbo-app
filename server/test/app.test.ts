@@ -71,7 +71,7 @@ const api = (url: string, method: Method = 'GET', payload?: object, cookie?: str
 
 /** Meldt aan en geeft de cookie terug voor volgende verzoeken. */
 async function login(phone: string, remoteAddress = '10.0.0.1') {
-  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone }, remoteAddress });
+  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone, code: '31' }, remoteAddress });
   assert.equal(res.statusCode, 200, res.body);
   const cookie = res.cookies.find((c) => c.name === 'session');
   assert.ok(cookie, 'sessiecookie gezet');
@@ -174,11 +174,11 @@ test('aanmelden met een bekend nummer: rollen, startscherm en cookie', async () 
 });
 
 test('onbekend en ongeldig nummer', async () => {
-  const unknown = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0611111111' }, remoteAddress: '10.0.0.2' });
+  const unknown = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0611111111', code: '31' }, remoteAddress: '10.0.0.2' });
   assert.equal(unknown.statusCode, 404);
   assert.deepEqual(unknown.json(), { error: 'Dit nummer staat niet in de lijst', phone: '+31611111111', coordinatorPhone: DEMO.coordinator });
   assert.equal(unknown.cookies.length, 0);
-  const invalid = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '12345' }, remoteAddress: '10.0.0.2' });
+  const invalid = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: '12345', code: '31' }, remoteAddress: '10.0.0.2' });
   assert.equal(invalid.statusCode, 400);
   const log = db.raw.prepare('SELECT phone, result FROM login_log WHERE phone = ?').all('+31611111111');
   assert.deepEqual(log.map((r) => r.result), ['onbekend']);
@@ -186,10 +186,10 @@ test('onbekend en ongeldig nummer', async () => {
 
 test('mislukte aanmeldpogingen vanaf één adres worden afgeremd, gelukte niet', async () => {
   for (let i = 0; i < 12; i++) await login(DEMO.locationMember, '10.0.0.98');
-  const attempt = () => app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0611111111' }, remoteAddress: '10.0.0.99' });
+  const attempt = () => app.inject({ url: '/api/session', method: 'POST', payload: { phone: '0611111111', code: '31' }, remoteAddress: '10.0.0.99' });
   for (let i = 0; i < 10; i++) assert.equal((await attempt()).statusCode, 404);
   assert.equal((await attempt()).statusCode, 429);
-  const known = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: DEMO.locationMember }, remoteAddress: '10.0.0.99' });
+  const known = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: DEMO.locationMember, code: '31' }, remoteAddress: '10.0.0.99' });
   assert.equal(known.statusCode, 429, 'ook een bekend nummer moet even wachten');
 });
 

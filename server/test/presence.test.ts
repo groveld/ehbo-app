@@ -35,7 +35,7 @@ const start = async () => {
 };
 
 async function login(phone: string) {
-  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
+  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone, code: '31' } });
   assert.equal(res.statusCode, 200, res.body);
   return `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
 }

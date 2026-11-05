@@ -115,7 +115,7 @@ test('the server carries out a queued change once, with the time it happened', a
     calls: { notify: () => {}, schedule: () => () => {}, now: () => clock },
   });
   const cookie = async (phone: string) => {
-    const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
+    const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone, code: '31' } });
     return `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
   };
   const id = (table: string, name: string) => (db.raw.prepare(`SELECT id FROM ${table} WHERE name = ?`).get(name) as { id: number }).id;

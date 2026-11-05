@@ -24,7 +24,7 @@ beforeEach(async () => {
   seedDemo(db);
   app = buildApp({ db, vapid: { ...generateVapidKeys(), subject: 'mailto:test@example.org' }, build: { version: 'test', commit: 'x', builtAt: '' } });
   await app.ready();
-  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: DEMO.admin } });
+  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone: DEMO.admin, code: '31' } });
   cookie = `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
 });
 

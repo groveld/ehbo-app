@@ -47,7 +47,7 @@ function makeApp() {
 
 async function login(phone: string) {
   if (!cookies.has(phone)) {
-    const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
+    const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone, code: '31' } });
     assert.equal(res.statusCode, 200, res.body);
     cookies.set(phone, `session=${res.cookies.find((c) => c.name === 'session')!.value}`);
   }
@@ -458,7 +458,7 @@ test('the data version in the live state and for participants follows changes in
   assert.ok(pkg.version.startsWith(`${before.dataVersion}.`), 'the package version starts with it');
 
   await ok(DEMO.admin, 'PUT', '/api/admin/event', {
-    name: 'Nieuwe naam', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atLocationM: 30, shareAfterMin: 5,
+    name: 'Nieuwe naam', startLocation: null, startDate: null, endDate: null, escalationSeconds: 30, atLocationM: 30, shareAfterMin: 5, loginCode: '31',
     style: (await ok<AdminState>(DEMO.admin, 'GET', '/api/admin')).event.style,
   });
 
