@@ -73,9 +73,9 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   /** Geeft 'ok' of 'unknown'; gooit ApiRequestError bij een ongeldig nummer of te veel pogingen. */
-  async function login(phone: string): Promise<'ok' | 'unknown'> {
+  async function login(phone: string, code: string): Promise<'ok' | 'unknown'> {
     try {
-      me.value = await api<Me>('/api/session', { method: 'POST', body: { phone } });
+      me.value = await api<Me>('/api/session', { method: 'POST', body: { phone, code } });
       // Logging in replaces the old session on the server, so a logout still waiting is done.
       save(LOGOUT_KEY, null);
       unknown.value = null;

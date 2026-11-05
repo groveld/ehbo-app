@@ -29,7 +29,7 @@ const fakeSource: MapSource = {
 };
 
 async function login(phone: string) {
-  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone } });
+  const res = await app.inject({ url: '/api/session', method: 'POST', payload: { phone, code: '31' } });
   return `session=${res.cookies.find((c) => c.name === 'session')!.value}`;
 }
 

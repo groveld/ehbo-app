@@ -1,6 +1,7 @@
 // Beheer-API: alleen voor beheerders. Elke wijziging geeft de nieuwe stand terug.
 import type { FastifyInstance } from 'fastify';
 import {
+  LOGIN_CODE_PATTERN,
   COLOR_PATTERN,
   DATE_PATTERN,
   AT_LOCATION_MAX_M,
@@ -74,7 +75,7 @@ const idParams = { type: 'object', required: ['id'], properties: { id: { type: '
 
 const eventSchema = {
   type: 'object',
-  required: ['name', 'startLocation', 'startDate', 'endDate', 'escalationSeconds', 'atLocationM', 'shareAfterMin', 'style'],
+  required: ['name', 'startLocation', 'startDate', 'endDate', 'escalationSeconds', 'atLocationM', 'shareAfterMin', 'loginCode', 'style'],
   properties: {
     name: { type: 'string', minLength: 1, maxLength: 80 },
     startLocation: optionalText(120),
@@ -83,6 +84,7 @@ const eventSchema = {
     escalationSeconds: { type: 'integer', minimum: ESCALATION_MIN_SECONDS, maximum: ESCALATION_MAX_SECONDS },
     atLocationM: { type: 'integer', minimum: AT_LOCATION_MIN_M, maximum: AT_LOCATION_MAX_M },
     shareAfterMin: { type: 'integer', minimum: 0, maximum: SHARE_AFTER_MAX_MIN },
+    loginCode: { type: 'string', pattern: LOGIN_CODE_PATTERN },
     style: {
       type: 'object',
       required: ['shortName', 'primaryColor', 'accentColor'],

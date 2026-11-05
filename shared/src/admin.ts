@@ -27,6 +27,8 @@ export interface EventSettings {
   atLocationM: number;
   /** A waiting call belongs to the nearest team; another team that's free takes it over only after it waited this long. 0 is at once. */
   shareAfterMin: number;
+  /** The code staff type when they log in, told at the briefing; empty is none. Saved as the default (the day of the event) it follows the start date. */
+  loginCode: string;
   style: EventStyle;
 }
 

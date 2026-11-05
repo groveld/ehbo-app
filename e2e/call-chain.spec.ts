@@ -23,6 +23,8 @@ async function staffPhone(browser: Browser, phone: string, gps?: { latitude: num
   await page.goto('/?browser=1');
   await page.getByRole('link', { name: 'Aanmelden' }).click();
   await page.getByLabel('Je mobiele nummer').fill(phone);
+  // The code of the briefing: the day of the event (31 December).
+  await page.getByLabel('Code van de briefing').fill('31');
   await page.getByRole('button', { name: 'Verder' }).click();
   await page.getByRole('button', { name: 'Klopt, start' }).click();
   await page.getByRole('link', { name: 'Klaar, naar mijn startscherm' }).click();
@@ -39,6 +41,23 @@ async function expectFullMap(page: Page) {
 const installed = (page: Page) => page.waitForFunction(async () => {
   await navigator.serviceWorker.ready;
   return Boolean(navigator.serviceWorker.controller);
+});
+
+test('logging in asks for the code of the briefing: a wrong one gets no further', async ({ browser }) => {
+  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL' });
+  phones.push(context);
+  const page = await context.newPage();
+  await page.goto('/?browser=1');
+  await page.getByRole('link', { name: 'Aanmelden' }).click();
+  await page.getByLabel('Je mobiele nummer').fill(PHONE.locationLead);
+  await expect(page.getByRole('button', { name: 'Verder' })).toBeDisabled();
+  await page.getByLabel('Code van de briefing').fill('30');
+  await page.getByRole('button', { name: 'Verder' }).click();
+  await expect(page.getByRole('alert')).toContainText('Deze code klopt niet');
+  await expect(page).toHaveURL(/\/login/);
+  await page.getByLabel('Code van de briefing').fill('31');
+  await page.getByRole('button', { name: 'Verder' }).click();
+  await expect(page.getByRole('button', { name: 'Klopt, start' })).toBeVisible();
 });
 
 test('aanmelden → post open → EHBO-verzoek → oproep → accepteren → ter plaatse → afronden', async ({ browser }) => {

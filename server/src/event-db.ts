@@ -562,6 +562,8 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
     points_json TEXT NOT NULL,
     sort        INTEGER NOT NULL DEFAULT 0
   );`,
+  // 29: the code of the briefing for logging in; NULL is the day of the event, '' is none.
+  `ALTER TABLE event ADD COLUMN login_code TEXT;`,
 ];
 
 export interface EventRow {
@@ -572,6 +574,7 @@ export interface EventRow {
   info_json: string | null;
   info_policy: string | null;
   info_contact: string | null;
+  login_code: string | null;
 }
 
 export interface PersonRow {
@@ -678,7 +681,7 @@ export function openEventDb(dataDir: string, slug: string, { name, adminPhone }:
     countAdmins: db.prepare('SELECT COUNT(*) AS n FROM admins'),
     ensurePerson: db.prepare('INSERT INTO people (phone) VALUES (?) ON CONFLICT(phone) DO NOTHING'),
     addAdmin: db.prepare('INSERT INTO admins (phone) VALUES (?) ON CONFLICT(phone) DO NOTHING'),
-    getEvent: db.prepare('SELECT name, start_date, end_date, escalation_seconds, info_json, info_policy, info_contact FROM event WHERE id = 1'),
+    getEvent: db.prepare('SELECT name, start_date, end_date, escalation_seconds, info_json, info_policy, info_contact, login_code FROM event WHERE id = 1'),
     getPerson: db.prepare('SELECT phone, name FROM people WHERE phone = ?'),
     isAdmin: db.prepare('SELECT 1 FROM admins WHERE phone = ?'),
     locationAssignments: db.prepare(`

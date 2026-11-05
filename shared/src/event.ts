@@ -149,6 +149,8 @@ export interface PublicEvent {
   info: InfoSection[];
   style: EventStyle;
   brand: Brand;
+  /** Logging in asks for the code of the briefing. */
+  needsLoginCode: boolean;
 }
 
 /** Eén plek of functie waarop iemand is ingepland. */
@@ -193,7 +195,19 @@ export interface Me {
 /** POST /api/session */
 export interface LoginRequest {
   phone: string;
+  /** The code everyone hears at the briefing, when the event has one. */
+  code?: string;
 }
+
+/** A code of at most this many digits: easy to say and to type. */
+export const LOGIN_CODE_MAX = 8;
+export const LOGIN_CODE_PATTERN = '^[0-9]{0,8}$';
+
+/** Without one of its own the code is the day of the event: 31 for 31 December. No start date: no code. */
+export const defaultLoginCode = (startDate: string | null) => (startDate ? String(Number(startDate.slice(8, 10))) : '');
+
+/** The code that counts: the admin's own (empty is none), otherwise the day of the event. */
+export const loginCodeOf = (stored: string | null, startDate: string | null) => stored ?? defaultLoginCode(startDate);
 
 /** POST /api/session met een onbekend nummer (404). */
 export interface LoginUnknown extends ApiError {

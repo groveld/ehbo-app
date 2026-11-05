@@ -19,7 +19,7 @@ import type {
   Zone,
   ZoneData,
 } from '@ehbo/shared';
-import { isStaffed, mainFunction } from '@ehbo/shared';
+import { defaultLoginCode, isStaffed, loginCodeOf, mainFunction } from '@ehbo/shared';
 import { getBrand, getStyle, saveStyle } from './brand.ts';
 import type { EventDb } from './event-db.ts';
 import { recomputePassages, type Track } from './gpx.ts';
@@ -42,7 +42,7 @@ export function adminDb(events: EventDb) {
   );
 
   function getState(): AdminState {
-    const e = db.prepare('SELECT name, start_location, start_date, end_date, escalation_seconds, at_location_m, share_after_min FROM event WHERE id = 1').get() as Row;
+    const e = db.prepare('SELECT name, start_location, start_date, end_date, escalation_seconds, at_location_m, share_after_min, login_code FROM event WHERE id = 1').get() as Row;
     const event: EventSettings = {
       name: e.name as string,
       startLocation: e.start_location as string | null,
@@ -51,6 +51,7 @@ export function adminDb(events: EventDb) {
       escalationSeconds: e.escalation_seconds as number,
       atLocationM: e.at_location_m as number,
       shareAfterMin: e.share_after_min as number,
+      loginCode: loginCodeOf(e.login_code as string | null, e.start_date as string | null),
       style: getStyle(events),
     };
 
@@ -158,8 +159,10 @@ export function adminDb(events: EventDb) {
 
   function saveEvent(e: EventSettings) {
     events.transaction(() => {
-      run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ?, at_location_m = ?, share_after_min = ? WHERE id = 1',
-        e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds, e.atLocationM, e.shareAfterMin);
+      // The day of the event is kept as no code of its own, so it moves along with the start date.
+      const code = e.loginCode.trim();
+      run('UPDATE event SET name = ?, start_location = ?, start_date = ?, end_date = ?, escalation_seconds = ?, at_location_m = ?, share_after_min = ?, login_code = ? WHERE id = 1',
+        e.name.trim(), e.startLocation?.trim() || null, e.startDate, e.endDate, e.escalationSeconds, e.atLocationM, e.shareAfterMin, code === defaultLoginCode(e.startDate) ? null : code);
       saveStyle(events, e.style);
     });
   }

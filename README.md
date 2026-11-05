@@ -3,7 +3,7 @@
 App voor de EHBO-coördinatie bij evenementen. Wat er werkt:
 
 1. **Installeren** als app op het beginscherm (iPhone en Android).
-2. **Aanmelden** met je telefoonnummer: de app zoekt zelf je functie en post op. Daarna meldingen en locatie aanzetten met een testmelding; info & voorwaarden staan in het menu.
+2. **Aanmelden** met je telefoonnummer en de code van de briefing (standaard de dag van het evenement, 31): de app zoekt zelf je functie en post op. Daarna meldingen en locatie aanzetten met een testmelding; info & voorwaarden staan in het menu.
 3. **Beheer** (alleen beheerders): evenement en lopen met GPX, info & voorwaarden, stijl (groot logo, vierkant logo als app-icoon, kleuren, korte naam), posten met GPS-positie en contactpersonen, EHBO-eenheden, kernteam, noodnummers en beheerders. Wie je als contact of lid invoert, kan met dat nummer inloggen.
 4. **Overzicht** voor medewerkers: kaart met alle posten, filter per soort, lijsten met bel- en navigeerknop, alle contacten, en per post de aanrijroute en de dichtstbijzijnde EHBO. Open oproepen staan rood bovenaan.
 5. **EHBO-oproepen**: de post zet zijn post open en vraagt EHBO aan; de dichtstbijzijnde beschikbare eenheid krijgt een alarm, na 30 s alle beschikbare eenheden. Accepteren, ter plaatse, afronden; de evenementcoördinator kijkt mee en kan zelf een eenheid inzetten.
@@ -157,7 +157,7 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | GET | `/api/package` | iedereen | Evenementpakket voor offline gebruik; medewerkers krijgen ook contacten, eenheden en kernteam. `If-None-Match` geeft 304 |
 | GET | `/map/<versie>/…` | iedereen | Kaarttegels, lettertypen en iconen |
 | GET/POST | `/api/admin/map` | beheerder | Kaart ophalen (op de achtergrond) en de voortgang |
-| POST | `/api/session` | iedereen | Aanmelden `{ phone }`; zet de sessiecookie. 404 als het nummer onbekend is |
+| POST | `/api/session` | iedereen | Aanmelden `{ phone, code }`; zet de sessiecookie. 403 bij een verkeerde code, 404 als het nummer onbekend is |
 | DELETE | `/api/session` | iedereen | Afmelden `{ endpoint? }`: het nummer wordt op al zijn toestellen afgemeld en krijgt geen meldingen meer. Is de laatste van een post of eenheid weg, dan gaat die dicht |
 | GET | `/api/me` | medewerker | Naam, rollen en startscherm |
 | POST | `/api/subscriptions` | medewerker | Abonnement opslaan `{ subscription }` |
@@ -185,4 +185,4 @@ Omgevingsvariabelen: `PORT` (3000), `HOST` (0.0.0.0), `DATA_DIR` (/data), `ADMIN
 | DELETE | `/api/admin/test-data` | beheerder | Proefoproepen en -aanvragen wissen |
 | PUT | `/api/admin/info` | beheerder | Info & voorwaarden `{ sections, policy, contact }`; `sections: null` = standaardtekst |
 
-Het nummer is in deze versie een identificatie, geen beveiliging (zie het functioneel ontwerp). Mislukte aanmeldpogingen worden per IP-adres afgeremd en elke aanmelding komt in het logboek.
+Het nummer is een identificatie, geen beveiliging. Daarom vraagt de aanmelding ook de code van de briefing: standaard de dag van het evenement, aan te passen of uit te zetten in Beheer › Evenement. Noem hem op de briefing, en zet hem niet op iets dat deelnemers zien (zie het functioneel ontwerp). Mislukte aanmeldpogingen worden per IP-adres afgeremd en elke aanmelding komt in het logboek.
