@@ -176,26 +176,26 @@ test('loop toevoegen, GPX uploaden en verwijderen', async () => {
   assert.equal((await call('DELETE', `/api/admin/runs/${run.id}`)).statusCode, 404);
 });
 
-test('zones: a strip and an area, in the package for participants too, and drawn points checked', async () => {
-  const strip = { kind: 'parking', shape: 'strip', name: 'Langs de Dorpsstraat', note: 'Vol vanaf 11:00', points: [[5.86, 53.17], [5.861, 53.171]] };
-  let res = await call('POST', '/api/admin/zones', strip);
+test('zones: an area, in the package for participants too, and drawn points checked', async () => {
+  const area = { kind: 'parking', name: 'Langs de Dorpsstraat', note: 'Vol vanaf 11:00', points: [[5.86, 53.17], [5.861, 53.171], [5.862, 53.17]] };
+  let res = await call('POST', '/api/admin/zones', area);
   assert.equal(res.statusCode, 200, res.body);
   const zone = (res.json() as AdminState).zones.at(-1)!;
-  assert.deepEqual({ ...zone, id: 0 }, { ...strip, id: 0 });
+  assert.deepEqual({ ...zone, id: 0 }, { ...area, id: 0 });
   const before = version();
 
-  res = await call('PUT', `/api/admin/zones/${zone.id}`, { ...strip, shape: 'area', note: null, kind: 'food', points: [[5.86, 53.17], [5.861, 53.171]] });
-  assert.equal(res.statusCode, 400, 'an area needs three points');
+  res = await call('PUT', `/api/admin/zones/${zone.id}`, { ...area, note: null, kind: 'food', points: [[5.86, 53.17], [5.861, 53.171]] });
+  assert.equal(res.statusCode, 400, 'a zone needs three points');
   assert.match(res.json().error, /3 punten/);
-  res = await call('PUT', `/api/admin/zones/${zone.id}`, { ...strip, shape: 'area', note: null, kind: 'food', points: [[5.86, 53.17], [5.861, 53.171], [5.862, 53.17]] });
+  res = await call('PUT', `/api/admin/zones/${zone.id}`, { ...area, note: null, kind: 'food' });
   assert.equal(res.statusCode, 200, res.body);
   assert.ok(version() > before, 'a new package version');
-  assert.equal((await call('POST', '/api/admin/zones', { ...strip, kind: 'camping' })).statusCode, 400);
-  assert.equal((await call('POST', '/api/admin/zones', strip, staffCookie)).statusCode, 403);
+  assert.equal((await call('POST', '/api/admin/zones', { ...area, kind: 'camping' })).statusCode, 400);
+  assert.equal((await call('POST', '/api/admin/zones', area, staffCookie)).statusCode, 403);
 
   const pkg = (await app.inject({ url: '/api/package' })).json() as EventPackage;
   assert.equal(pkg.staff, false);
-  assert.deepEqual(pkg.zones.find((z) => z.id === zone.id), { id: zone.id, kind: 'food', shape: 'area', name: 'Langs de Dorpsstraat', note: null, points: [[5.86, 53.17], [5.861, 53.171], [5.862, 53.17]] });
+  assert.deepEqual(pkg.zones.find((z) => z.id === zone.id), { id: zone.id, kind: 'food', name: 'Langs de Dorpsstraat', note: null, points: [[5.86, 53.17], [5.861, 53.171], [5.862, 53.17]] });
 
   assert.equal((await call('DELETE', `/api/admin/zones/${zone.id}`)).statusCode, 200);
   assert.equal((await call('DELETE', `/api/admin/zones/${zone.id}`)).statusCode, 404);

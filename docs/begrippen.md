@@ -19,8 +19,7 @@ The decisions of 30 Oct still hold: "melding" and "locatie" may each keep two me
 | Route | `route` (table `routes`) | A distance to run or walk, with its GPX | loop, parcours, `runs`, `track_json` |
 | Keerpunt | `turnaround` | Where a route turns back | `keerpunt`, `posts.run_id` |
 | Km-punt | `kmPoint` (table `km_points`) | A pass of a route along a location | `post_passages` |
-| Zone | `zone` (table `zones`) | An area on the map for participants: parking, or eating and drinking (#172). A strip along a road or a closed area | |
-| Strook, Vlak | `strip`, `area` | The two shapes of a zone | |
+| Zone | `zone` (table `zones`) | An area on the map for participants: parking, or eating and drinking (#172). Always a closed area; along a road a narrow one | |
 
 **Decided:** the code says `location` (#84), not `posts` as #83 had it. The km points keep `passages` in the code (`recomputePassages`); only their table is `km_points`. The main function is still `type_id`/`typeId`.
 

@@ -799,7 +799,6 @@ test('zones: an admin draws one point by point, and participants see the kinds i
   await expect(admin.getByText('Parkeren Buorren')).toBeVisible();
   await admin.getByRole('link', { name: '+ Zone toevoegen' }).click();
   await admin.getByLabel('Naam').fill('Parkeren e2e');
-  await admin.getByRole('button', { name: 'Vlak' }).click();
 
   const canvas = admin.locator('.draw-map canvas');
   await expect(canvas).toBeVisible();
@@ -825,8 +824,10 @@ test('zones: an admin draws one point by point, and participants see the kinds i
   await participant.goto('/?browser=1');
   await expect(participant.locator('.legend-item').filter({ hasText: 'Parkeren' })).toBeVisible();
   await expect(participant.locator('.legend-item').filter({ hasText: 'Eten & drinken' })).toBeVisible();
-  const { zones } = await (await participant.request.get('/api/package')).json() as { zones: { name: string; shape: string; points: unknown[] }[] };
-  expect(zones.find((z) => z.name === 'Parkeren e2e')).toMatchObject({ shape: 'area', points: [expect.anything(), expect.anything(), expect.anything()] });
+  // The sign on the map, also zoomed out: parking close together is one P with a count.
+  await expect(participant.locator('.zone-marker', { hasText: 'P' }).first()).toBeVisible();
+  const { zones } = await (await participant.request.get('/api/package')).json() as { zones: { name: string; points: unknown[] }[] };
+  expect(zones.find((z) => z.name === 'Parkeren e2e')).toMatchObject({ points: [expect.anything(), expect.anything(), expect.anything()] });
   await context.close();
 
   // Staff filter on the map tab: only the zones of that kind, with Navigeer.

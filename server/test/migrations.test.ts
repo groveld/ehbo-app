@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { MIGRATIONS, openEventDb } from '../src/event-db.ts';
+import { MIGRATIONS, openEventDb, stripToArea } from '../src/event-db.ts';
 
 test('team and contact values become English, and a rebuilt table keeps what refers to it', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ehbo-migrate-'));
@@ -60,4 +60,37 @@ test('team and contact values become English, and a rebuilt table keeps what ref
   assert.equal(rows('SELECT * FROM team_members').length, 0);
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('a zone is always an area: a strip becomes a narrow area along the same road (30)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ehbo-migrate-'));
+  fs.mkdirSync(path.join(dir, 'events'));
+  const old = new DatabaseSync(path.join(dir, 'events', 'zones.sqlite'));
+  for (const step of MIGRATIONS.slice(0, 29)) typeof step === 'string' ? old.exec(step) : step(old);
+  const line = [[5.806, 53.139], [5.8072, 53.1394], [5.8084, 53.1398]];
+  const field = [[5.809, 53.1418], [5.8104, 53.1418], [5.8104, 53.1426]];
+  old.exec(`
+    PRAGMA user_version = 29;
+    INSERT INTO event (id, name) VALUES (1, 'Oud');
+    INSERT INTO zones (id, kind, shape, name, points_json) VALUES (1, 'parking', 'strip', 'Langs de weg', '${JSON.stringify(line)}'), (2, 'food', 'area', 'Veld', '${JSON.stringify(field)}');
+  `);
+  old.close();
+
+  const db = openEventDb(dir, 'zones', { name: 'Oud' });
+  const zones = db.raw.prepare('SELECT * FROM zones ORDER BY id').all() as { points_json: string; shape?: string }[];
+  assert.equal(zones[0]!.shape, undefined, 'no shape any more');
+  const band = JSON.parse(zones[0]!.points_json) as [number, number][];
+  assert.equal(band.length, 6, 'out along one side, back along the other');
+  assert.deepEqual(band, stripToArea(line as [number, number][], 12));
+  assert.deepEqual(JSON.parse(zones[1]!.points_json), field, 'an area stays as it was');
+  db.close();
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('a strip as an area is as wide as asked, on both sides of the line', () => {
+  const band = stripToArea([[5.8, 53.1], [5.801, 53.1]], 12);
+  // A line going east: one side 6 m north, the other 6 m south.
+  const metres = (lat: number) => (lat - 53.1) * 110_540;
+  assert.ok(Math.abs(metres(band[0]![1]) - 6) < 0.2);
+  assert.ok(Math.abs(metres(band[3]![1]) + 6) < 0.2);
 });

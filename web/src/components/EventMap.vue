@@ -12,7 +12,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { DARK, LIGHT, layers, type Flavor } from '@protomaps/basemaps';
 // MapLibre laadt zijn worker als los bestand; Vite ziet dat adres niet vanzelf, dus geven we het mee.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import { MARKER_ORDER, ZONE_KINDS, markerRank, zoneCentre, type Bbox, type EventPackage, type LngLat, type PackageLocation, type Zone, type ZoneData } from '@ehbo/shared';
+import { MARKER_ORDER, ZONE_KINDS, ZONE_POINTS_MIN, markerRank, zoneCentre, type Bbox, type EventPackage, type LngLat, type PackageLocation, type Zone, type ZoneData, type ZoneKind } from '@ehbo/shared';
 import { iconSvg, functionTypeIcon } from '../icons.ts';
 import { isOnRun, type Ambulance } from '../locations.ts';
 import { assetUrl, tileUrl } from '../stores/package.ts';
@@ -60,6 +60,9 @@ const container = ref<HTMLDivElement>();
 let map: maplibregl.Map | null = null;
 let markers: maplibregl.Marker[] = [];
 let ambulanceMarkers: maplibregl.Marker[] = [];
+let zoneMarkers: maplibregl.Marker[] = [];
+/** What the zone icons show now, so they're only drawn again when that changes. */
+let zoneMarkersKey = '';
 let userMarker: maplibregl.Marker | null = null;
 let pickedMarker: maplibregl.Marker | null = null;
 let watchId: number | null = null;
@@ -170,23 +173,74 @@ const lineFeatures = () => ({
   features: props.lines.map((coordinates) => ({ type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates } })),
 });
 
-/** A zone on the map: a strip is a line drawn as a wide band, an area a closed polygon. */
-function zoneGeometry(z: Pick<ZoneData, 'shape' | 'points'>) {
-  if (z.shape === 'area' && z.points.length >= 3) return { type: 'Polygon' as const, coordinates: [[...z.points, z.points[0]!]] };
+/** A zone is a closed area; while drawing, two points are a line so far. */
+function zoneGeometry(z: Pick<ZoneData, 'points'>) {
+  if (z.points.length >= ZONE_POINTS_MIN) return { type: 'Polygon' as const, coordinates: [[...z.points, z.points[0]!]] };
   return { type: 'LineString' as const, coordinates: z.points };
 }
 
-const shownZones = () => (props.zones ?? props.pkg.zones ?? []).filter((z) => z.points.length >= 2);
+const shownZones = () => (props.zones ?? props.pkg.zones ?? []).filter((z) => z.points.length >= ZONE_POINTS_MIN);
 
 function zoneFeatures() {
   return {
     type: 'FeatureCollection' as const,
-    features: shownZones().flatMap((z) => [
-      { type: 'Feature' as const, properties: { id: z.id, color: ZONE_KINDS[z.kind].color }, geometry: zoneGeometry(z) },
-      // The letter in the middle, so a band along a road reads as parking without the legend.
-      { type: 'Feature' as const, properties: { id: z.id, color: ZONE_KINDS[z.kind].color, letter: ZONE_KINDS[z.kind].letter }, geometry: { type: 'Point' as const, coordinates: zoneCentre(z.points) } },
-    ]),
+    features: shownZones().map((z) => ({ type: 'Feature' as const, properties: { id: z.id, color: ZONE_KINDS[z.kind].color }, geometry: zoneGeometry(z) })),
   };
+}
+
+/** Zone icons of one kind closer together than this on screen are one icon with a count; zoomed in they come apart again. */
+const ZONE_MERGE_PX = 44;
+
+/** The zones per icon at this zoom: each kind on its own, so parking never hides in food. */
+function zoneGroups() {
+  const groups: { kind: ZoneKind; zones: Zone[]; points: maplibregl.Point[] }[] = [];
+  for (const z of shownZones()) {
+    const at = map!.project(zoneCentre(z.points));
+    const near = groups.find((g) => g.kind === z.kind && g.points.some((p) => p.dist(at) < ZONE_MERGE_PX));
+    if (near) {
+      near.zones.push(z);
+      near.points.push(at);
+    } else groups.push({ kind: z.kind, zones: [z], points: [at] });
+  }
+  return groups;
+}
+
+const escapeHtml = (text: string) => text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+/** One icon per zone, or per group far out: always in view, also where the area itself is only a few pixels. */
+function drawZoneMarkers() {
+  if (!map) return;
+  const groups = zoneGroups();
+  const key = JSON.stringify(groups.map((g) => g.zones.map((z) => [z.id, z.name, z.kind, z.points])));
+  if (key === zoneMarkersKey) return;
+  zoneMarkersKey = key;
+  for (const m of zoneMarkers) m.remove();
+  zoneMarkers = groups.map((g) => {
+    const kind = ZONE_KINDS[g.kind];
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'zone-marker';
+    el.style.background = kind.color;
+    const single = g.zones.length === 1 ? g.zones[0]! : null;
+    el.innerHTML = `${kind.letter}${single ? `<span class="zone-name">${escapeHtml(single.name)}</span>` : `<span class="zone-count">${g.zones.length}</span>`}`;
+    el.setAttribute('aria-label', single ? `${single.name}, ${kind.label}` : `${g.zones.length} × ${kind.label}, tik om in te zoomen`);
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (props.picking) return;
+      if (single) {
+        const [lng, lat] = zoneCentre(single.points);
+        void openZoneDialog(single, lat, lng);
+        return;
+      }
+      // Several together: zoom in until they're apart.
+      const bounds = new maplibregl.LngLatBounds();
+      for (const z of g.zones) for (const p of z.points) bounds.extend(p);
+      map!.fitBounds(bounds, { padding: 60, maxZoom: FLOWER_ZOOM + 1 });
+    });
+    const centres = g.zones.map((z) => zoneCentre(z.points));
+    const at: LngLat = [centres.reduce((s, c) => s + c[0], 0) / centres.length, centres.reduce((s, c) => s + c[1], 0) / centres.length];
+    return new maplibregl.Marker({ element: el }).setLngLat(at).addTo(map!);
+  });
 }
 
 /** The zone being drawn: its shape so far, and every point tapped. */
@@ -207,27 +261,9 @@ function addZoneLayers() {
   const m = map!;
   m.addSource('zones', { type: 'geojson', data: zoneFeatures() });
   m.addSource('zone-draft', { type: 'geojson', data: draftFeatures() });
-  // Below the runs: the course and the posts stay on top.
-  m.addLayer({ id: 'zone-areas', type: 'fill', source: 'zones', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.25 } });
-  m.addLayer({ id: 'zone-edges', type: 'line', source: 'zones', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': 0.8 } });
-  m.addLayer({
-    id: 'zone-strips', type: 'line', source: 'zones', filter: ['==', ['geometry-type'], 'LineString'],
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    // A few pixels far out, about a road's width close by.
-    paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['exponential', 2], ['zoom'], 12, 5, 15, 12, 18, 40], 'line-opacity': 0.45 },
-  });
-  m.addLayer({
-    id: 'zone-marks', type: 'circle', source: 'zones', filter: ['==', ['geometry-type'], 'Point'], minzoom: 13,
-    paint: { 'circle-radius': 9, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1.5 },
-  });
-  // The letter needs the map's fonts; without a map there's only the circle.
-  if (props.pkg.map) {
-    m.addLayer({
-      id: 'zone-letters', type: 'symbol', source: 'zones', filter: ['==', ['geometry-type'], 'Point'], minzoom: 13,
-      layout: { 'text-field': ['get', 'letter'], 'text-font': ['Noto Sans Medium'], 'text-size': 12, 'text-allow-overlap': true, 'text-ignore-placement': true },
-      paint: { 'text-color': '#FFFFFF' },
-    });
-  }
+  // Below the runs: the course and the posts stay on top. Clearly coloured, so a car park reads as one without the legend.
+  m.addLayer({ id: 'zone-areas', type: 'fill', source: 'zones', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.3 } });
+  m.addLayer({ id: 'zone-edges', type: 'line', source: 'zones', layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-opacity': 0.9 } });
 }
 
 /** The draft goes on top of everything, so every tap is seen. */
@@ -244,16 +280,18 @@ function addDraftLayers() {
   });
 }
 
-const ZONE_LAYERS = ['zone-areas', 'zone-strips', 'zone-marks'];
-
-/** A tap on a zone: what it is, and Navigeer to the spot you tapped, which is inside the zone. */
-async function openZone(point: maplibregl.PointLike, lngLat: maplibregl.LngLat) {
-  if (!map) return;
-  const id = map.queryRenderedFeatures(point, { layers: ZONE_LAYERS.filter((l) => map!.getLayer(l)) })[0]?.properties.id as number | undefined;
-  const zone = shownZones().find((z) => z.id === id);
-  if (!zone) return;
+/** A zone: what it is, and Navigeer to this spot in it. */
+async function openZoneDialog(zone: Zone, lat: number, lng: number) {
   const go = await confirmDialog({ title: zone.name, text: [ZONE_KINDS[zone.kind].label, zone.note].filter(Boolean).join(' · '), confirm: 'Navigeer', cancel: 'Sluiten', tone: 'primary' });
-  if (go) window.location.href = navigationUrl(lngLat.lat, lngLat.lng, zone.name);
+  if (go) window.location.href = navigationUrl(lat, lng, zone.name);
+}
+
+/** A tap on a zone's area: Navigeer to the spot you tapped, which is inside the zone. */
+function openZone(point: maplibregl.PointLike, lngLat: maplibregl.LngLat) {
+  if (!map?.getLayer('zone-areas')) return;
+  const id = map.queryRenderedFeatures(point, { layers: ['zone-areas'] })[0]?.properties.id as number | undefined;
+  const zone = shownZones().find((z) => z.id === id);
+  if (zone) void openZoneDialog(zone, lngLat.lat, lngLat.lng);
 }
 
 function runFeatures() {
@@ -524,6 +562,9 @@ function createMap() {
   const flower = () => container.value?.classList.toggle('flowers', map!.getZoom() >= FLOWER_ZOOM);
   map.on('zoom', flower);
   map.on('load', flower);
+  // Zone icons merge and come apart with the zoom.
+  map.on('zoomend', drawZoneMarkers);
+  map.on('load', drawZoneMarkers);
   // Moving the map yourself stops following.
   map.on('dragstart', () => { if (locating.value === 'follow') locating.value = 'shown'; });
   map.on('webglcontextrestored', () => { contextLost = false; });
@@ -584,7 +625,7 @@ function createMap() {
   });
   map.on('click', (e) => {
     if (props.picking) emit('pick', [Math.round(e.lngLat.lng * 1e6) / 1e6, Math.round(e.lngLat.lat * 1e6) / 1e6]);
-    else void openZone(e.point, e.lngLat);
+    else openZone(e.point, e.lngLat);
   });
   drawLocations();
   drawAmbulances();
@@ -630,7 +671,10 @@ watch(() => [props.locations, props.pkg, props.focusLocationId, props.highlightR
 // Wordt elke tel opnieuw berekend; alleen opnieuw tekenen als er echt iets verandert.
 watch(() => props.awayLocationIds.join(), drawLocations);
 watch(() => props.picked, drawPicked);
-watch(() => [props.zones, props.pkg], () => (map?.getSource('zones') as GeoJSONSource | undefined)?.setData(zoneFeatures()));
+watch(() => [props.zones, props.pkg], () => {
+  (map?.getSource('zones') as GeoJSONSource | undefined)?.setData(zoneFeatures());
+  if (map?.loaded()) drawZoneMarkers();
+});
 watch(() => JSON.stringify(props.draft), () => (map?.getSource('zone-draft') as GeoJSONSource | undefined)?.setData(draftFeatures()));
 watch(() => props.ambulances, drawAmbulances);
 // Recalculated every second; only redraw when a line really moved.
@@ -730,6 +774,21 @@ onBeforeUnmount(() => {
 }
 .event-map.flowers :deep(.post-marker .petals), .event-map :deep(.post-marker.open .petals) { display: block; }
 .event-map.flowers :deep(.post-marker .count), .event-map :deep(.post-marker.open .count) { display: none; }
+/* A zone: the sign in its colour (P for parking), below every post. Its name close by; far out zones of one kind are one icon with a count. */
+.event-map :deep(.zone-marker) {
+  width: 28px; height: 28px; padding: 0; border-radius: 7px; border: 2px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+  color: #FFFFFF; font: 700 16px var(--sans); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 0;
+}
+.event-map.picking :deep(.zone-marker) { pointer-events: none; }
+.event-map :deep(.zone-marker .zone-count) {
+  position: absolute; right: -8px; top: -7px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; border: 1.5px solid #FFFFFF;
+  background: #16181D; color: #FFFFFF; font: 700 9px var(--sans); display: flex; align-items: center; justify-content: center;
+}
+.event-map :deep(.zone-marker .zone-name) {
+  display: none; position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 6px;
+  background: rgba(255, 255, 255, .92); color: #16181D; font: 700 11px var(--sans); white-space: nowrap; pointer-events: none;
+}
+.event-map.flowers :deep(.zone-marker .zone-name) { display: block; }
 .event-map :deep(.team-marker) {
   width: 28px; height: 28px; border-radius: 50%; background: #FFFFFF; border: 2px solid #0A7D4F; color: #0A7D4F;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
