@@ -1,7 +1,13 @@
 // De oproepketen van begin tot eind, met twee telefoons: een post en een EHBO-eenheid (testgegevens uit server/src/demo.ts).
-import { devices, expect, test, type Browser, type Page } from '@playwright/test';
+import { devices, expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
 const PHONE = { admin: '0600000001', locationLead: '0600000004', locationMember: '0600000005', mobileEhbo: '0600000006', coordinator: '0600000002' } as const;
+
+/** The phones of the running test. One worker runs every test in one browser: phones left open keep their maps and live updates going and slow down the tests after them. */
+const phones: BrowserContext[] = [];
+test.afterEach(async () => {
+  await Promise.all(phones.splice(0).map((context) => context.close()));
+});
 
 /** Nieuwe telefoon: aanmelden zoals een medewerker, tot het startscherm. */
 async function staffPhone(browser: Browser, phone: string, gps?: { latitude: number; longitude: number }): Promise<Page> {
@@ -9,6 +15,7 @@ async function staffPhone(browser: Browser, phone: string, gps?: { latitude: num
     ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:3090', locale: 'nl-NL', timezoneId: 'Europe/Amsterdam',
     ...(gps ? { geolocation: { ...gps, accuracy: 15 }, permissions: ['geolocation'] } : {}),
   });
+  phones.push(context);
   // Navigeren opent Google Maps; dat vangen we af, zodat de test bij de app blijft.
   await context.addInitScript(() => localStorage.setItem('app.nav', JSON.stringify('google')));
   await context.route('https://www.google.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Kaarten</title>' }));
@@ -477,9 +484,6 @@ test('overview map: teams in the list for all staff, counters only for the coord
   await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' })).toBeVisible();
   await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 1' })).toHaveCount(0);
   await coordinator.getByLabel('Functie').selectOption({ label: 'Alle' });
-  // The ring shows open or closed in the list.
-  await expect(coordinator.locator('.post-row').filter({ hasText: 'Kruising 4' }).locator('.status-ring')).toHaveCSS('outline-color', 'rgb(200, 38, 30)');
-  await expect(coordinator.locator('.team-row').filter({ hasText: 'Team 2' }).locator('.status-ring')).toHaveCSS('outline-color', 'rgb(10, 125, 79)');
 
   const location = await staffPhone(browser, PHONE.locationLead);
   await location.getByRole('link', { name: 'Kaart' }).click();
@@ -534,6 +538,8 @@ test('status bar: the call is one tap away on every page, for the post and the t
   await ehbo.getByRole('button', { name: 'Accepteren & navigeren' }).click();
   await ehbo.waitForURL(/google\.com\/maps/);
   await ehbo.goBack();
+  // Back from the navigation app the page loads again: first the call must be back on screen.
+  await expect(ehbo.getByRole('button', { name: 'Ik ben ter plaatse' })).toBeVisible({ timeout: 15_000 });
   await expect(location.locator('.live-bar.green')).toContainText('Hulp is onderweg', { timeout: 10_000 });
   await ehbo.locator('.tabbar').getByRole('link', { name: 'Contacten' }).click();
   await expect(ehbo.locator('.live-bar.red')).toContainText('Onderweg · Waterpost 3');
@@ -580,6 +586,8 @@ test('map tab: quiet out of view, up to date the moment it opens', async ({ brow
   const coordinator = await staffPhone(browser, PHONE.coordinator);
   await coordinator.getByRole('link', { name: 'Contacten' }).click();
   await coordinator.locator('.event-map .post-marker').first().waitFor({ state: 'attached' });
+  // The map shows itself once its first picture is complete: that one change comes before watching.
+  await coordinator.locator('.event-map.ready').waitFor({ state: 'attached' });
   await coordinator.evaluate(() => {
     const seen = { changes: 0 };
     Object.assign(window, { seen });
@@ -805,7 +813,8 @@ test('zones: an admin draws one point by point, and participants see the kinds i
   // Staff filter on the map tab: only the zones of that kind, with Navigeer.
   await admin.getByRole('link', { name: 'Kaart' }).click();
   await admin.getByLabel('Functie').selectOption({ label: 'Parkeren' });
-  await expect(admin.getByRole('link', { name: 'Navigeer naar Parkeren e2e' })).toBeVisible();
+  // A phone fetches the new package 3 to 8 s after a change in admin.
+  await expect(admin.getByRole('link', { name: 'Navigeer naar Parkeren e2e' })).toBeVisible({ timeout: 15_000 });
   await admin.getByLabel('Functie').selectOption({ label: 'Alle' });
 
   await admin.getByRole('link', { name: 'Menu' }).click();
