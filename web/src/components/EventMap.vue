@@ -698,7 +698,8 @@ onBeforeUnmount(() => {
 .locate.follow { background: #1F6FB2; color: #FFFFFF; }
 /* Geen position op de markers zelf: MapLibre zet ze absoluut; relatief maken laat ze verschuiven. */
 /* isolate: the markers' z-index only counts inside the map, so a banner or button over the map stays on top. */
-.event-map { isolation: isolate; width: 100%; height: 100%; border-radius: 18px; overflow: hidden; background: #E9E7E1; }
+/* clip-path as well: Safari doesn't clip markers on their own layer (fading, moving) by overflow with a rounded corner, so they showed outside the map while dragging. */
+.event-map { isolation: isolate; width: 100%; height: 100%; border-radius: 18px; overflow: hidden; clip-path: inset(0 round 18px); background: #E9E7E1; }
 :root[data-theme="dark"] .event-map { background: #1A1C20; }
 .event-map.picking :deep(.maplibregl-canvas) { cursor: crosshair; }
 .event-map :deep(.post-marker) {
