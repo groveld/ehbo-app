@@ -192,7 +192,7 @@ const banner = computed(() => {
         <template v-else-if="filter !== 'teams'">
           <section v-if="locations.length" class="stack gap-8">
             <h2 class="section-title">Locaties</h2>
-            <div class="list"><LocationRow v-for="p in locations" :key="p.id" :pkg="store.pkg" :location="p" :alert="alertIds.includes(p.id)" :open="!closedIds.includes(p.id)" :late="lateLocations.includes(p.id)" :quiet-minutes="quietLocation(p.id)" /></div>
+            <div class="list"><LocationRow v-for="p in locations" :key="p.id" :pkg="store.pkg" :location="p" :alert="alertIds.includes(p.id)" :late="lateLocations.includes(p.id)" :quiet-minutes="quietLocation(p.id)" /></div>
           </section>
           <p v-if="!store.pkg.locations.length" class="note">Er zijn nog geen locaties ingevoerd.</p>
           <p v-else-if="!locations.length && !teamList.length" class="note">{{ filter === 'attention' ? 'Niets vraagt nu aandacht.' : 'Geen locatie gevonden.' }}</p>

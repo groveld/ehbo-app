@@ -42,7 +42,7 @@ const phone = computed(() => props.team.members[0]?.phone ?? null);
 
 <template>
   <div class="team-row list-row">
-    <LocationBadge :type="ehboType" :size="40" class="status-ring" :class="{ on: status.tone === 'available', off: status.tone === 'off_duty' }" />
+    <LocationBadge :type="ehboType" :size="40" />
     <span class="text">
       <span class="name">{{ team.name }}<span class="status" :class="status.tone">{{ status.label }}</span></span>
       <span class="sub" :class="{ attention }">{{ where }}<template v-if="team.hasAed"> · AED</template><template v-if="shift"> · {{ shift }}</template></span>
