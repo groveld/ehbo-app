@@ -426,11 +426,10 @@ test('participants see Bel EHBO only while the coordinator it calls is logged in
   cookies.delete(DEMO.coordinator);
   assert.equal(await open(), false, 'after logging out');
 
-  // Without a number Bel EHBO calls 112, which follows the event being open.
+  // Without a number participants get no button at all, also no 112.
+  await login(DEMO.coordinator);
   db.raw.prepare('UPDATE core_team SET phone = NULL').run();
-  assert.equal(await open(), true, 'a post is open');
-  await ok(DEMO.locationLead, 'PUT', `/api/locations/${WATER()}/open`, { open: false });
-  assert.equal(await open(), false);
+  assert.equal(await open(), false, 'no number to call');
 });
 
 test('deelnemers zien welke standplaats leeg is, zonder posities of namen', async () => {

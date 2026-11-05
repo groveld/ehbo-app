@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Bel EHBO for participants: a floating button at the bottom right that grows to the left with its text. The EHBO coordinator (or the event coordinator) sends help; without a number it calls 112.
+// Bel EHBO for participants: a floating button at the bottom right that grows to the left with its text. The EHBO coordinator (or the event coordinator) sends help; without a number there is no button (participants never get 112 here).
 // Only while the coordinator it calls is logged in (`open` in /api/first-aid-status): before and after, nobody answers that number.
 import { telHref } from '@ehbo/shared';
 import { useFirstAidStatus } from '../composables/useFirstAidStatus.ts';
@@ -11,8 +11,8 @@ const { open } = useFirstAidStatus();
 </script>
 
 <template>
-  <a v-if="open" :href="store.pkg?.ehboPhone ? telHref(store.pkg.ehboPhone) : 'tel:112'" class="call-ehbo" :aria-label="store.pkg?.ehboPhone ? 'Bel EHBO' : 'Noodgeval: bel 112'">
-    <Icon name="ehbo" :size="24" />{{ store.pkg?.ehboPhone ? 'Bel EHBO' : 'Bel 112' }}
+  <a v-if="open && store.pkg?.ehboPhone" :href="telHref(store.pkg.ehboPhone)" class="call-ehbo" aria-label="Bel EHBO">
+    <Icon name="ehbo" :size="24" />Bel EHBO
   </a>
 </template>
 

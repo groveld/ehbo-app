@@ -10,7 +10,7 @@ import { assetPaths, mapMeta, mapVersion, MAX_ZOOM } from '../map.ts';
 /** Ophogen als de vorm van het pakket verandert, zodat telefoons met een oud pakket het nieuwe ophalen (geen 304). */
 const PACKAGE_FORMAT = 13;
 
-/** Bel EHBO calls the EHBO coordinator, else the event coordinator; null when neither has a number (then the button calls 112). */
+/** Bel EHBO calls the EHBO coordinator, else the event coordinator; null when neither has a number (then participants have no button). */
 export function ehboPhone(db: EventDb): string | null {
   const coreTeam = db.raw.prepare('SELECT function, phone, is_coordinator FROM core_team WHERE phone IS NOT NULL ORDER BY sort, id').all() as { function: string; phone: string; is_coordinator: number }[];
   return (coreTeam.find((c) => sameFunction(c.function, 'EHBO-coördinator')) ?? coreTeam.find((c) => c.is_coordinator === 1))?.phone ?? null;
@@ -85,11 +85,9 @@ export async function packageRoutes(app: FastifyInstance, { db, calls }: { db: E
 
   // Voor iedereen, ook zonder aanmelding: welke standplaatsen nu zonder EHBO zijn (grijs kruisje). Geen posities of namen.
   // Bel EHBO shows only while the person it calls is logged in, so nobody calls them before or after the event.
-  // Without a number it calls 112, which stays tied to the event being open.
   app.get<{ Reply: FirstAidStatus }>('/api/first-aid-status', async (_request, reply) => {
     reply.header('Cache-Control', 'no-store');
-    const status = calls.ehboStatus();
     const phone = ehboPhone(db);
-    return phone ? { ...status, open: db.hasSession(phone) } : status;
+    return { ...calls.ehboStatus(), open: phone !== null && db.hasSession(phone) };
   });
 }

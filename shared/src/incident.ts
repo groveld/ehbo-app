@@ -238,7 +238,7 @@ export function awayLocationIds(
 /** GET /api/first-aid-status: voor iedereen, ook deelnemers. Alleen welke posten nu zonder EHBO zijn; geen posities of namen. */
 export interface FirstAidStatus {
   awayLocationIds: number[];
-  /** Participants see Bel EHBO only when this is true: the EHBO (or event) coordinator it calls is logged in; without that number, something is open (a staffed location or a team on duty). */
+  /** Participants see Bel EHBO only when this is true: the EHBO (or event) coordinator it calls has a number and is logged in. */
   open: boolean;
   /** Same as in the live state: participants have no live connection. */
   dataVersion: string;
