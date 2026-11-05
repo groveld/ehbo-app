@@ -1,6 +1,6 @@
 // Verzonnen gegevens om lokaal en in tests mee te werken. Alle nummers zijn nep (06-0000 xxxx bestaat niet).
 import type { LngLat } from '@ehbo/shared';
-import type { EventDb } from './event-db.ts';
+import { stripToArea, type EventDb } from './event-db.ts';
 import { distanceKm, recomputePassages } from './gpx.ts';
 
 export const DEMO = {
@@ -61,9 +61,10 @@ export function seedDemo(db: EventDb) {
     sql.prepare('INSERT OR IGNORE INTO location_functions (location_id, type_id) SELECT id, type_id FROM locations').run();
     recomputePassages(sql);
 
-    // Zones (#172): a parking strip along the road to the start, and a field to eat and drink next to it.
-    const zone = sql.prepare('INSERT INTO zones (kind, shape, name, note, points_json, sort) VALUES (?, ?, ?, ?, ?, ?)');
-    zone.run('parking', 'strip', 'Parkeren Buorren', 'Vol vanaf 11:00', JSON.stringify([[5.8060, 53.1390], [5.8072, 53.1394], [5.8084, 53.1398]]), 0);
-    zone.run('food', 'area', 'Eten bij De Trilker', null, JSON.stringify([[5.8090, 53.1418], [5.8104, 53.1418], [5.8104, 53.1426], [5.8090, 53.1426]]), 1);
+    // Zones (#172): parking along the road to the start (a narrow area), a car park, and a field to eat and drink next to it.
+    const zone = sql.prepare('INSERT INTO zones (kind, name, note, points_json, sort) VALUES (?, ?, ?, ?, ?)');
+    zone.run('parking', 'Parkeren Buorren', 'Vol vanaf 11:00', JSON.stringify(stripToArea([[5.8060, 53.1390], [5.8072, 53.1394], [5.8084, 53.1398]], 12)), 0);
+    zone.run('parking', 'Parkeerplaats sporthal', null, JSON.stringify([[5.8030, 53.1372], [5.8046, 53.1372], [5.8046, 53.1380], [5.8030, 53.1380]]), 1);
+    zone.run('food', 'Eten bij De Trilker', null, JSON.stringify([[5.8090, 53.1418], [5.8104, 53.1418], [5.8104, 53.1426], [5.8090, 53.1426]]), 2);
   });
 }

@@ -66,7 +66,7 @@ export function adminDb(events: EventDb) {
     }));
 
     const zones: Zone[] = all('SELECT * FROM zones ORDER BY sort, id').map((z) => ({
-      id: z.id as number, kind: z.kind as Zone['kind'], shape: z.shape as Zone['shape'], name: z.name as string, note: z.note as string | null,
+      id: z.id as number, kind: z.kind as Zone['kind'], name: z.name as string, note: z.note as string | null,
       points: JSON.parse(z.points_json as string) as Zone['points'],
     }));
 
@@ -177,12 +177,12 @@ export function adminDb(events: EventDb) {
   }
 
   function saveZone(id: number | null, z: ZoneData): number | null {
-    const values = [z.kind, z.shape, z.name.trim(), z.note?.trim() || null, JSON.stringify(z.points)] as const;
+    const values = [z.kind, z.name.trim(), z.note?.trim() || null, JSON.stringify(z.points)] as const;
     if (id === null) {
       const sort = (db.prepare('SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM zones').get() as { n: number }).n;
-      return Number(run('INSERT INTO zones (kind, shape, name, note, points_json, sort) VALUES (?, ?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
+      return Number(run('INSERT INTO zones (kind, name, note, points_json, sort) VALUES (?, ?, ?, ?, ?)', ...values, sort).lastInsertRowid);
     }
-    return run('UPDATE zones SET kind = ?, shape = ?, name = ?, note = ?, points_json = ? WHERE id = ?', ...values, id).changes ? id : null;
+    return run('UPDATE zones SET kind = ?, name = ?, note = ?, points_json = ? WHERE id = ?', ...values, id).changes ? id : null;
   }
 
   function setRunGpx(id: number, filename: string, gpx: string, track: Track) {

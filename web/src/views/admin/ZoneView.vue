@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// One zone (#172): kind, shape, name, a note, and the zone itself, drawn by tapping points on the map.
+// One zone (#172): kind, name, a note, and the area itself, drawn by tapping its corners on the map.
 import { computed, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import { ZONE_KIND_ORDER, ZONE_KINDS, ZONE_SHAPES, zoneProblem, type ZoneData } from '@ehbo/shared';
+import { ZONE_KIND_ORDER, ZONE_KINDS, zoneProblem, type ZoneData } from '@ehbo/shared';
 import AdminPage from '../../components/AdminPage.vue';
 import EventMap from '../../components/EventMap.vue';
 import { useDirty } from '../../composables/useDirty.ts';
@@ -19,7 +19,7 @@ const save = useSave();
 const isNew = computed(() => props.id === 'nieuw');
 const zone = computed(() => admin.state?.zones.find((z) => z.id === Number(props.id)) ?? null);
 
-const form = reactive<ZoneData>({ kind: 'parking', shape: 'strip', name: '', note: null, points: [] });
+const form = reactive<ZoneData>({ kind: 'parking', name: '', note: null, points: [] });
 const loaded = ref(false);
 const { dirty, markClean } = useDirty(() => form);
 const canSave = computed(() => isNew.value || dirty.value);
@@ -33,16 +33,15 @@ watchEffect(() => {
 /** The others as they are; this one is drawn from the form, so every tap shows at once. */
 const otherZones = computed(() => pkg.pkg?.zones.filter((z) => z.id !== Number(props.id)) ?? []);
 const problem = computed(() => zoneProblem(form));
-const hint = computed(() => (form.shape === 'strip'
-  ? 'Tik punt voor punt langs de weg, van het ene eind naar het andere.'
-  : 'Tik de hoeken van het vlak rondom; het vlak sluit vanzelf.'));
+/** A strip along a road is a narrow area too: along one side there and back along the other. */
+const hint = 'Tik de hoeken rondom; de zone sluit vanzelf. Parkeren langs een weg: tik langs de ene kant heen en langs de andere kant terug.';
 
 async function submit() {
   if (problem.value) {
     save.error.value = problem.value;
     return;
   }
-  const data: ZoneData = { kind: form.kind, shape: form.shape, name: form.name, note: form.note?.trim() || null, points: form.points };
+  const data: ZoneData = { kind: form.kind, name: form.name, note: form.note?.trim() || null, points: form.points };
   if (await save.run(() => admin.saveZone(isNew.value ? null : Number(props.id), data))) router.push({ name: 'admin-zones' });
 }
 
@@ -76,19 +75,12 @@ async function remove() {
       </div>
 
       <div class="form-field">
-        <span class="section-label">Vorm</span>
-        <div class="choice-grid two">
-          <button v-for="(s, key) in ZONE_SHAPES" :key="key" class="option" :aria-pressed="form.shape === key" @click="form.shape = key">{{ s.label }}</button>
-        </div>
-      </div>
-
-      <div class="form-field">
         <span class="section-label">Op de kaart</span>
         <div v-if="pkg.pkg" class="draw-map">
           <EventMap :pkg="pkg.pkg" :zones="otherZones" :draft="form" picking @pick="(p) => form.points.push(p)" />
         </div>
         <p v-else class="note">De kaart is er nog niet. Open deze pagina met bereik.</p>
-        <span class="small">{{ hint }} Zoom in voor een precieze lijn.</span>
+        <span class="small">{{ hint }} Zoom in om precies te tikken.</span>
         <div class="draw-actions">
           <span class="small mono">{{ form.points.length === 1 ? '1 punt' : `${form.points.length} punten` }}</span>
           <button class="add-link" :disabled="!form.points.length" @click="form.points.pop()">Laatste punt weg</button>

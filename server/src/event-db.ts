@@ -564,7 +564,38 @@ export const MIGRATIONS: (string | ((db: DatabaseSync) => void))[] = [
   );`,
   // 29: the code of the briefing for logging in; NULL is the day of the event, '' is none.
   `ALTER TABLE event ADD COLUMN login_code TEXT;`,
+  // 30: a zone is always an area: a strip becomes a narrow area along the same road, as wide as it was drawn close by.
+  (db: DatabaseSync) => {
+    const strips = db.prepare("SELECT id, points_json FROM zones WHERE shape = 'strip'").all() as { id: number; points_json: string }[];
+    const save = db.prepare('UPDATE zones SET points_json = ? WHERE id = ?');
+    for (const z of strips) save.run(JSON.stringify(stripToArea(JSON.parse(z.points_json) as [number, number][], STRIP_WIDTH_M)), z.id);
+    db.exec('ALTER TABLE zones DROP COLUMN shape');
+  },
 ];
+
+/** How wide a strip was on the map close by, about a road. */
+const STRIP_WIDTH_M = 12;
+
+/** A line as a band of this width: one side out, the other side back. In metres around the first point, which is precise enough for a street. */
+export function stripToArea(line: [number, number][], widthM: number): [number, number][] {
+  if (line.length < 2) return line;
+  const lat0 = line[0]![1];
+  const mx = 111_320 * Math.cos((lat0 * Math.PI) / 180);
+  const my = 110_540;
+  const xy = line.map(([lng, lat]) => [lng * mx, lat * my] as const);
+  const half = widthM / 2;
+  const side = (sign: number) => xy.map(([x, y], i) => {
+    // The direction at a point: from the point before to the point after.
+    const [ax, ay] = xy[Math.max(0, i - 1)]!;
+    const [bx, by] = xy[Math.min(xy.length - 1, i + 1)]!;
+    const length = Math.hypot(bx - ax, by - ay) || 1;
+    const nx = -(by - ay) / length;
+    const ny = (bx - ax) / length;
+    const round = (v: number) => Math.round(v * 1e6) / 1e6;
+    return [round((x + sign * half * nx) / mx), round((y + sign * half * ny) / my)] as [number, number];
+  });
+  return [...side(1), ...side(-1).reverse()];
+}
 
 export interface EventRow {
   name: string;

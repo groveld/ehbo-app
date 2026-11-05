@@ -128,10 +128,9 @@ const runSchema = {
 const coordinate = { type: 'array', minItems: 2, maxItems: 2, items: [{ type: 'number', minimum: -180, maximum: 180 }, { type: 'number', minimum: -90, maximum: 90 }] } as const;
 const zoneSchema = {
   type: 'object',
-  required: ['kind', 'shape', 'name', 'note', 'points'],
+  required: ['kind', 'name', 'note', 'points'],
   properties: {
     kind: { type: 'string', enum: ['parking', 'food'] },
-    shape: { type: 'string', enum: ['strip', 'area'] },
     name: { type: 'string', minLength: 1, maxLength: 60 },
     note: optionalText(200),
     points: { type: 'array', maxItems: ZONE_POINTS_MAX, items: coordinate },

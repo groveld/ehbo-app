@@ -2,8 +2,6 @@
 import type { LngLat } from './package.ts';
 
 export type ZoneKind = 'parking' | 'food';
-/** A strip along a road (a line drawn as a wide band), or a closed area such as a car park or field. */
-export type ZoneShape = 'strip' | 'area';
 
 /** Fixed per kind, like the colours of the functions: the legend and the map say the same. */
 export const ZONE_KINDS: Record<ZoneKind, { label: string; letter: string; color: string }> = {
@@ -12,15 +10,12 @@ export const ZONE_KINDS: Record<ZoneKind, { label: string; letter: string; color
 };
 export const ZONE_KIND_ORDER: ZoneKind[] = ['parking', 'food'];
 
-export const ZONE_SHAPES: Record<ZoneShape, { label: string; minPoints: number }> = {
-  strip: { label: 'Strook langs de weg', minPoints: 2 },
-  area: { label: 'Vlak', minPoints: 3 },
-};
+/** A zone is always an area, a closed polygon: a strip along a road is a narrow area. */
+export const ZONE_POINTS_MIN = 3;
 export const ZONE_POINTS_MAX = 200;
 
 export interface ZoneData {
   kind: ZoneKind;
-  shape: ZoneShape;
   name: string;
   /** Such as "vol vanaf 11:00" or "€ 2". */
   note: string | null;
@@ -32,9 +27,8 @@ export interface Zone extends ZoneData {
 }
 
 /** What's wrong with a drawn zone, or null when it can be saved. */
-export function zoneProblem(z: Pick<ZoneData, 'shape' | 'points'>): string | null {
-  const min = ZONE_SHAPES[z.shape].minPoints;
-  if (z.points.length < min) return z.shape === 'strip' ? 'Tik minstens 2 punten langs de weg' : 'Tik minstens 3 punten voor een vlak';
+export function zoneProblem(z: Pick<ZoneData, 'points'>): string | null {
+  if (z.points.length < ZONE_POINTS_MIN) return `Tik minstens ${ZONE_POINTS_MIN} punten voor een zone`;
   if (z.points.length > ZONE_POINTS_MAX) return `Hoogstens ${ZONE_POINTS_MAX} punten`;
   return null;
 }
