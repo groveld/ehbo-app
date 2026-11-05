@@ -416,15 +416,20 @@ test('live stand via SSE: direct de stand, en elke wijziging', async () => {
   await reader.cancel();
 });
 
-test('participants see Bel EHBO only while a staffed location is open or a team is on duty', async () => {
+test('participants see Bel EHBO only while the coordinator it calls is logged in', async () => {
   const open = async () => (await app.inject({ url: '/api/first-aid-status' })).json().open;
-  assert.equal(await open(), false, 'before opening');
   await ok(DEMO.locationLead, 'PUT', `/api/locations/${WATER()}/open`, { open: true });
-  assert.equal(await open(), true, 'a post is open');
-  await ok(DEMO.locationLead, 'PUT', `/api/locations/${WATER()}/open`, { open: false });
-  assert.equal(await open(), false);
-  await ok(DEMO.mobileEhbo, 'PUT', `/api/teams/${TEAM2()}/availability`, { availability: 'available' });
-  assert.equal(await open(), true, 'a team is on duty');
+  assert.equal(await open(), false, 'an open post is not enough');
+  await login(DEMO.coordinator);
+  assert.equal(await open(), true, 'the coordinator is logged in');
+  assert.ok((await app.inject({ method: 'DELETE', url: '/api/session', headers: { cookie: await login(DEMO.coordinator) } })).statusCode < 300);
+  cookies.delete(DEMO.coordinator);
+  assert.equal(await open(), false, 'after logging out');
+
+  // Without a number participants get no button at all, also no 112.
+  await login(DEMO.coordinator);
+  db.raw.prepare('UPDATE core_team SET phone = NULL').run();
+  assert.equal(await open(), false, 'no number to call');
 });
 
 test('deelnemers zien welke standplaats leeg is, zonder posities of namen', async () => {
