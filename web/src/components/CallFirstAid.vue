@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Bel EHBO for participants: a floating button at the bottom right that grows to the left with its text. The EHBO coordinator (or the event coordinator) sends help; without a number it calls 112.
-// Only while the event is open (a staffed location or a team on duty): before and after, nobody answers that number.
+// Only while the coordinator it calls is logged in (`open` in /api/first-aid-status): before and after, nobody answers that number.
 import { telHref } from '@ehbo/shared';
 import { useFirstAidStatus } from '../composables/useFirstAidStatus.ts';
 import { usePackageStore } from '../stores/package.ts';
