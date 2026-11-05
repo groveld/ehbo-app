@@ -3,21 +3,19 @@
 import { computed } from 'vue';
 import { telHref, type EventPackage, type PackageLocation } from '@ehbo/shared';
 import { navigationUrl } from '../navigate.ts';
-import { kmLabel, staffed, primaryContact, teamsAt } from '../locations.ts';
+import { kmLabel, primaryContact, teamsAt } from '../locations.ts';
 import Icon from './Icon.vue';
 import LocationBadge from './LocationBadge.vue';
 
 /**
  * alert: er is een open oproep bij deze post (rode rand en badge).
- * open: open or closed, as a ring around the icon. late: it should be open by now.
+ * late: it should be open by now.
  */
-const props = defineProps<{ pkg: EventPackage; location: PackageLocation; alert?: boolean; open: boolean; late?: boolean; quietMinutes?: number | null }>();
+const props = defineProps<{ pkg: EventPackage; location: PackageLocation; alert?: boolean; late?: boolean; quietMinutes?: number | null }>();
 const type = computed(() => props.pkg.functionTypes.find((t) => t.id === props.location.typeId));
 /** The other functions of this location, small next to the main one (#83). */
 const others = computed(() => props.location.functionIds.filter((id) => id !== props.location.typeId).map((id) => props.pkg.functionTypes.find((t) => t.id === id)).filter((t) => t !== undefined));
 const contact = computed(() => primaryContact(props.location));
-/** Open or closed only means something where people are (#69). */
-const hasPeople = computed(() => staffed(props.pkg, props.location));
 /** km-punt, dan de EHBO-eenheid die hier staat (met kruisje), anders de contactpersoon. */
 const teams = computed(() => teamsAt(props.pkg, props.location.id).map((u) => u.name).join(', '));
 const who = computed(() => teams.value || contact.value?.name || '');
@@ -27,8 +25,7 @@ const km = computed(() => kmLabel(props.location));
 <template>
   <div class="post-row list-row" :class="{ alert }">
     <RouterLink :to="{ name: 'location', params: { id: location.id } }" class="main">
-      <LocationBadge :type="type" :size="40" :class="{ 'status-ring': hasPeople, on: open }" />
-      <span v-if="hasPeople" class="visually-hidden">{{ open ? 'Open' : 'Dicht' }}</span>
+      <LocationBadge :type="type" :size="40" />
       <span class="text">
         <span class="name">{{ location.name }}<span v-if="others.length" class="others"><LocationBadge v-for="t in others" :key="t.id" :type="t" :size="18" /></span></span>
         <span v-if="late" class="late">Nog dicht</span>

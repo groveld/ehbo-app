@@ -66,10 +66,12 @@ function putAvailability(state: LiveState, teamId: number, availability: TeamAva
     ? { ...u, availability, nextAvailability: null, stayLocationId: null, position: null, closesAt: null }
     : { ...u, availability, nextAvailability: null }));
   const team = context.teams.find((u) => u.id === teamId);
-  if (team?.kind !== 'fixed' || team.locationId === null || availability === 'unavailable') return changed;
+  if (team?.kind !== 'fixed' || team.locationId === null) return changed;
+  // Not available is still on duty: the post is open, only the team isn't free.
+  if (availability !== 'off_duty') return setLocationOpen(changed, team.locationId, true);
   const othersOnDuty = context.teams.some((u) => u.id !== teamId && u.kind === 'fixed' && u.locationId === team.locationId
     && (changed.teams.find((l) => l.id === u.id)?.availability ?? 'off_duty') !== 'off_duty');
-  return availability === 'available' || !othersOnDuty ? setLocationOpen(changed, team.locationId, availability === 'available') : changed;
+  return othersOnDuty ? changed : setLocationOpen(changed, team.locationId, false);
 }
 
 /** Teams whose call is over carry out the status they picked during it. */
