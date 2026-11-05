@@ -29,6 +29,8 @@ export const PATHS = {
   drop: '<path d="M12 2.7c-3 4-6 7.2-6 10.8a6 6 0 0 0 12 0c0-3.6-3-6.8-6-10.8z"/>',
   cone: '<path d="M12 3 4 21h16L12 3z"/><path d="M8.5 13h7"/>',
   personAdd: '<circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M19 8v6"/><path d="M22 11h-6"/>',
+  /** Everything back in view: four corners. */
+  overview: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
   gps: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/><circle cx="12" cy="12" r="7"/>',
   flag: '<path d="M4 22V4"/><path d="M4 15s1.5-1.5 4.5-1.5 4.5 2 7.5 2 4-1.5 4-1.5V4s-1 1.5-4 1.5-4.5-2-7.5-2S4 4 4 4"/>',
   stamp: '<path d="M5 21h14"/><path d="M19.3 13.7a2.5 2.5 0 0 0-1.8-.7h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.7-.3-1.3-.7-1.8z"/><path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13"/>',

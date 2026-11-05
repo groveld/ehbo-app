@@ -519,6 +519,15 @@ async function startUserLocation(ask = false) {
   }, { enableHighAccuracy: true, maximumAge: 10_000 });
 }
 
+/** Overzicht: everything (or the chosen run) back in view, also from a map zoomed in on one post. Stops following. */
+function overview() {
+  if (!map) return;
+  if (locating.value === 'follow') locating.value = 'shown';
+  const bounds = routeBounds();
+  if (bounds) map.fitBounds(bounds, { padding: 32, maxZoom: 16, duration: 500 });
+  else if (props.pkg.map) map.fitBounds(props.pkg.map.bbox as Bbox, { duration: 500 });
+}
+
 /** Mijn locatie: first centre on you (asking for permission when needed), then follow you. */
 function myLocation() {
   if (!('geolocation' in navigator)) {
@@ -725,21 +734,26 @@ onBeforeUnmount(() => {
 <template>
   <div class="event-map-wrap">
     <div ref="container" class="event-map" :class="{ picking, ready }" />
-    <button
-      v-if="showUser && interactive" class="locate" :class="{ on: locating !== 'off', follow: locating === 'follow' }"
-      :aria-label="locating === 'shown' ? 'Mijn locatie volgen' : 'Mijn locatie'" :aria-pressed="locating !== 'off'" @click="myLocation"
-    ><Icon name="gps" :size="18" /></button>
+    <div v-if="interactive" class="map-buttons">
+      <button class="map-button" aria-label="Overzicht" @click="overview"><Icon name="overview" :size="18" /></button>
+      <button
+        v-if="showUser" class="map-button" :class="{ on: locating !== 'off', follow: locating === 'follow' }"
+        :aria-label="locating === 'shown' ? 'Mijn locatie volgen' : 'Mijn locatie'" :aria-pressed="locating !== 'off'" @click="myLocation"
+      ><Icon name="gps" :size="18" /></button>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .event-map-wrap { position: relative; width: 100%; height: 100%; }
-.locate {
-  position: absolute; right: 10px; bottom: 10px; z-index: 1; width: 36px; height: 36px; border-radius: 10px; border: 0;
+/* Overzicht above Mijn locatie, bottom right. */
+.map-buttons { position: absolute; right: 10px; bottom: 10px; z-index: 1; display: flex; flex-direction: column; gap: 8px; }
+.map-button {
+  width: 36px; height: 36px; padding: 0; border-radius: 10px; border: 0;
   background: var(--card); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, .3); display: flex; align-items: center; justify-content: center;
 }
-.locate.on { color: #1F6FB2; }
-.locate.follow { background: #1F6FB2; color: #FFFFFF; }
+.map-button.on { color: #1F6FB2; }
+.map-button.follow { background: #1F6FB2; color: #FFFFFF; }
 /* Geen position op de markers zelf: MapLibre zet ze absoluut; relatief maken laat ze verschuiven. */
 /* isolate: the markers' z-index only counts inside the map, so a banner or button over the map stays on top. */
 /* clip-path as well: Safari doesn't clip markers on their own layer (fading, moving) by overflow with a rounded corner, so they showed outside the map while dragging. */
