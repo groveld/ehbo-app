@@ -839,8 +839,9 @@ export function createCalls(db: EventDb, { notify: send, schedule = defaultSched
   /** Puts a team on this status, with what comes with it. Inside a transaction. */
   function putAvailability(team: Team, availability: TeamAvailability) {
     run('UPDATE teams SET availability = ?, next_availability = NULL WHERE id = ?', availability, team.id);
-    // Vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde (functioneel ontwerp, "Post open of dicht"), zolang er geen andere dienst staat.
-    if (team.kind === 'fixed' && team.locationId !== null && availability === 'available') setLocation(team.locationId, true);
+    // Fixed team: on duty and its own EHBO post open are the same (design doc, "Post open of dicht"), as long as no other shift is still there.
+    // Not available is still on duty, so the post is open, only not free.
+    if (team.kind === 'fixed' && team.locationId !== null && availability !== 'off_duty') setLocation(team.locationId, true);
     if (team.kind === 'fixed' && team.locationId !== null && availability === 'off_duty' && !otherShiftOnDuty(team)) setLocation(team.locationId, false);
     if (availability === 'off_duty') {
       run('UPDATE teams SET stay_location_id = NULL, keep_until = NULL, closes_at = NULL WHERE id = ?', team.id);

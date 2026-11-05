@@ -181,6 +181,11 @@ test('vaste eenheid: in dienst en de eigen EHBO-post open zijn hetzelfde', async
   assert.equal(state.locations.find((p) => p.id === ehboLocation)?.isOpen, true);
   state = await ok(DEMO.ehbo, 'PUT', `/api/locations/${ehboLocation}/open`, { open: false });
   assert.equal(state.teams.find((u) => u.id === TEAM1())?.availability, 'off_duty');
+  // Not available is on duty too: the post opens, only the team isn't free.
+  state = await ok(DEMO.ehbo, 'PUT', `/api/teams/${TEAM1()}/availability`, { availability: 'unavailable' });
+  assert.equal(state.locations.find((p) => p.id === ehboLocation)?.isOpen, true);
+  state = await ok(DEMO.ehbo, 'PUT', `/api/teams/${TEAM1()}/availability`, { availability: 'off_duty' });
+  assert.equal(state.locations.find((p) => p.id === ehboLocation)?.isOpen, false);
   assert.equal((await call(DEMO.ehbo, 'PUT', `/api/teams/${TEAM2()}/availability`, { availability: 'available' })).statusCode, 403, 'niet je eigen eenheid');
 });
 
